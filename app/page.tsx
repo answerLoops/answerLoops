@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { AnimatedChat } from '@/components/animated-chat'
 import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 import { MarketingPage, TrialCta } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORDERED_PLANS } from '@/lib/billing/plans'
-import { GITHUB_URL } from '@/lib/site'
+import { GITHUB_URL, marketingSiteEnabled } from '@/lib/site'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
 import {
   ArrowUpRight,
@@ -53,6 +54,12 @@ const FAQ_ITEMS = [
   },
 ]
 export default function LandingPage() {
+  // A self-hosted install has already chosen not to buy a hosted plan, so the
+  // landing page is at best noise and at worst a checkout funnel pointing at
+  // our Stripe account. Root goes where a self-hoster actually wants it: the
+  // product. Unauthenticated requests carry on to /login from there.
+  if (!marketingSiteEnabled()) redirect('/dashboard')
+
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',

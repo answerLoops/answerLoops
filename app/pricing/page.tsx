@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { redirect } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ORDERED_PLANS, TRIAL_DAYS } from '@/lib/billing/plans'
 import { PricingToggle } from '@/components/marketing/pricing-toggle'
@@ -14,6 +14,7 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 import { PRICING_FAQ } from '@/lib/marketing/pricing'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
+import { marketingSiteEnabled } from '@/lib/site'
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: 'Pricing — answerLoops',
@@ -95,6 +96,12 @@ export default async function PricingPage({
 }: {
   searchParams: Promise<{ resume?: string; checkout?: string }>
 }) {
+  // Not served by a self-hosted install: there is no hosted plan to sell there,
+  // and the page would be advertising our pricing from somebody else's domain.
+  if (!marketingSiteEnabled()) notFound()
+
+  // Two ways to arrive here mid-flow, and landing on a plain pricing page with
+  // no explanation in either case reads as the product losing your progress.
   const { resume, checkout } = await searchParams
   const navState = await resolveNavState()
   if (resume === '1' && navState === 'active') redirect('/dashboard')

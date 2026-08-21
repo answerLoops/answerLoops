@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 /**
@@ -61,9 +61,21 @@ function loadPricing(state: NavState, params: Params = {}) {
 
 const RESUME_BANNER = /pick a plan to finish setting up/i
 
+// The marketing surface only renders on the managed deployment; without this
+// the page 404s before any of the resume behaviour below is reachable. That
+// gate has its own tests in marketing-surface-gate.test.ts — here it just needs
+// to be out of the way.
+const ORIGINAL_MODE = process.env.DEPLOYMENT_MODE
+
 beforeEach(() => {
+  process.env.DEPLOYMENT_MODE = 'cloud'
   mocks.redirect.mockClear()
   mocks.resolveNavState.mockReset()
+})
+
+afterAll(() => {
+  if (ORIGINAL_MODE === undefined) delete process.env.DEPLOYMENT_MODE
+  else process.env.DEPLOYMENT_MODE = ORIGINAL_MODE
 })
 
 describe('a subscriber sent to pricing by the sign-in flow is forwarded on', () => {

@@ -1,7 +1,8 @@
 import type { MetadataRoute } from 'next'
 import { docsSource } from '@/lib/docs/source'
+import { marketingSiteEnabled, MARKETING_URL } from '@/lib/site'
 
-const BASE_URL = 'https://answerloops.com'
+const BASE_URL = MARKETING_URL
 
 // Captured once when this module is first loaded — i.e. per deploy, not per
 // request. `new Date()` inline meant every crawl saw a lastmod of "right now",
@@ -43,6 +44,12 @@ const STATIC_ROUTES: { path: string; priority: number; changeFrequency: ChangeFr
 ]
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  // Every URL below is on our own domain. Served from a self-hosted install it
+  // would be a sitemap for somebody else's site, advertising pages that install
+  // should not be serving in the first place. robots.txt already disallows the
+  // whole origin there; this makes the sitemap itself empty rather than wrong.
+  if (!marketingSiteEnabled()) return []
+
   const staticEntries: MetadataRoute.Sitemap = STATIC_ROUTES.map(({ path, priority, changeFrequency }) => ({
     url: `${BASE_URL}${path}`,
     lastModified: DEPLOY_TIME,
