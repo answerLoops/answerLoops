@@ -7,6 +7,7 @@ import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
+import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 
 export const metadata: Metadata = {
   title: 'AnswerLoops — Support that lives in your community',
@@ -248,33 +249,6 @@ function Outcomes() {
   )
 }
 
-const LOOP_STEPS = [
-  {
-    n: '01',
-    title: 'Listen everywhere',
-    body: 'Questions arrive from Discord, Slack, a Discourse or Circle forum, GitHub, Telegram, email, or your embedded widget. The channel changes; the workflow does not.',
-    accent: 'from-indigo-500 to-blue-500',
-  },
-  {
-    n: '02',
-    title: 'Ground every answer',
-    body: 'AnswerLoops classifies intent and retrieves the most relevant docs, URLs, PDFs, and previously resolved tickets before drafting.',
-    accent: 'from-blue-500 to-cyan-400',
-  },
-  {
-    n: '03',
-    title: 'Review before posting',
-    body: 'A separate reviewer model grades completeness and confidence. Strong answers publish in seconds; uncertain ones become editable drafts.',
-    accent: 'from-cyan-400 to-emerald-400',
-  },
-  {
-    n: '04',
-    title: 'Learn from the outcome',
-    body: 'Feedback removes weak answers and human resolutions flow back into the knowledge base, so deflection improves without a retraining ritual.',
-    accent: 'from-emerald-400 to-blue-500',
-  },
-]
-
 function HowItWorks() {
   return (
     <section id="how-it-works" className="relative overflow-hidden bg-[#050914] py-24 text-white sm:py-32">
@@ -298,22 +272,8 @@ function HowItWorks() {
           </div>
         </div>
 
-        <div className="relative">
-          <div className="absolute bottom-10 left-[27px] top-10 w-px bg-gradient-to-b from-blue-500/50 via-cyan-400/30 to-transparent sm:left-[35px]" />
-          {LOOP_STEPS.map((item, index) => (
-            <article key={item.n} className="landing-reveal relative grid grid-cols-[56px_1fr] gap-4 border-b border-white/8 py-9 first:pt-0 last:border-b-0 sm:grid-cols-[72px_1fr] sm:gap-6 sm:py-12">
-              <div className={`relative z-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-gradient-to-br ${item.accent} p-px sm:h-[70px] sm:w-[70px]`}>
-                <div className="flex h-full w-full items-center justify-center rounded-[calc(1rem-1px)] bg-[#080d19] text-xs font-semibold text-white/70 sm:text-sm">{item.n}</div>
-              </div>
-              <div className="pt-1 sm:pt-2">
-                <div className="mb-3 flex items-center gap-3">
-                  <h3 className="text-xl font-semibold tracking-[-0.025em] sm:text-2xl">{item.title}</h3>
-                  {index === 2 && <span className="hidden rounded-full bg-blue-500/15 px-2 py-1 text-[0.5625rem] font-medium text-blue-200 sm:inline">THE SAFETY LAYER</span>}
-                </div>
-                <p className="max-w-xl text-sm leading-relaxed text-slate-300/55 sm:text-base">{item.body}</p>
-              </div>
-            </article>
-          ))}
+        <div className="landing-reveal lg:col-span-1">
+          <WorkflowDiagram />
         </div>
       </div>
     </section>
