@@ -83,13 +83,13 @@ describe('the header CTA matches what the visitor can actually do', () => {
     // missing, or the trial button pointing somewhere that cannot start one.
     render(<Nav state="anonymous" />)
 
-    const trial = screen.getByRole('link', { name: /start trial/i })
+    const trial = screen.getByRole('link', { name: /start for \$0/i })
     expect(
       trial.getAttribute('href'),
       'the trial is free, so the plan is a small decision and belongs after auth, not before it',
     ).toBe('/login')
 
-    const signIn = screen.getByRole('link', { name: /^sign in$/i })
+    const signIn = screen.getByRole('link', { name: /^log in$/i })
     expect(
       signIn.getAttribute('href'),
       'returning users must land on the sign-in framing, not "Create your account"',
@@ -103,8 +103,8 @@ describe('the header CTA matches what the visitor can actually do', () => {
     // renders a perfectly reasonable-looking header, and the loss only shows
     // up as the half of visitors who quietly leave.
     render(<Nav state="anonymous" />)
-    expect(screen.queryByRole('link', { name: /start trial/i })).not.toBeNull()
-    expect(screen.queryByRole('link', { name: /^sign in$/i })).not.toBeNull()
+    expect(screen.queryByRole('link', { name: /start for \$0/i })).not.toBeNull()
+    expect(screen.queryByRole('link', { name: /^log in$/i })).not.toBeNull()
   })
 
   it('does not send a signed-out visitor to a source repository from the header', () => {
