@@ -16,13 +16,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://answerloops.com'),
-  title: 'AnswerLoops',
+  title: 'answerLoops',
   description:
     'Prepare support answers from your documentation, review drafts, and choose which connected channels can send replies automatically. Hosted or self-hosted.',
   openGraph: {
     type: 'website',
-    siteName: 'AnswerLoops',
-    title: 'AnswerLoops — Answers from your documentation',
+    siteName: 'answerLoops',
+    title: 'answerLoops — Answers from your documentation',
     description:
       'Answers from your documentation, separate AI review, and automatic replies you control. Hosted or self-hosted.',
     // Social card image comes from app/opengraph-image.tsx (1200×630) via the
@@ -30,7 +30,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AnswerLoops — Answers from your documentation',
+    title: 'answerLoops — Answers from your documentation',
     description:
       'Answers from your documentation, separate AI review, and automatic replies you control. Hosted or self-hosted.',
   },

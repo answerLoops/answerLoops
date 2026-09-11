@@ -1,13 +1,13 @@
 ---
 title: Discourse
-description: Connect a Discourse forum to AnswerLoops so new topics and replies in watched categories flow through the same confidence-gated support pipeline as every other channel.
+description: Connect a Discourse forum to answerLoops so new topics and replies in watched categories flow through the same confidence-gated support pipeline as every other channel.
 ---
 
 ## Overview
 
-Discourse is the forum platform many open-source projects, product communities, and education communities run as their primary support surface. AnswerLoops ingests new topics and posts from the categories you choose, runs each one through the standard triage → retrieval → confidence-review → escalation pipeline, and posts grounded answers back into the topic as a bot user.
+Discourse is the forum platform many open-source projects, product communities, and education communities run as their primary support surface. answerLoops ingests new topics and posts from the categories you choose, runs each one through the standard triage → retrieval → confidence-review → escalation pipeline, and posts grounded answers back into the topic as a bot user.
 
-The connection is per-organization: you create an API key inside your own Discourse admin, scoped to a bot account, and it is stored encrypted in your AnswerLoops database. There is no shared platform-wide app and no OAuth flow. Inbound events arrive over a Discourse webhook — no polling.
+The connection is per-organization: you create an API key inside your own Discourse admin, scoped to a bot account, and it is stored encrypted in your answerLoops database. There is no shared platform-wide app and no OAuth flow. Inbound events arrive over a Discourse webhook — no polling.
 
 <Callout type="info">
   **Automatic Deflections** is off by default, same as every other channel. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss, and the topic gets no automatic reply. Turn it on in **Settings → Discourse → Edit → Automatic Deflections → Save** once you've reviewed enough approved drafts to trust answers going out unsupervised.
@@ -19,7 +19,7 @@ The connection is per-organization: you create an API key inside your own Discou
 
 ### 1. Create a bot user
 
-In Discourse, create (or pick) a dedicated account for AnswerLoops to post as — for example `answerloops-bot`. Give it Trust Level 1 or higher so it can reply in the categories you want covered.
+In Discourse, create (or pick) a dedicated account for answerLoops to post as — for example `answerloops-bot`. Give it Trust Level 1 or higher so it can reply in the categories you want covered.
 
 ### 2. Create an API key
 
@@ -30,7 +30,7 @@ Go to **Admin → API → New API Key**:
 
 Copy the key — Discourse only shows it once.
 
-### 3. Connect in AnswerLoops
+### 3. Connect in answerLoops
 
 Go to **Settings → Discourse** and fill in:
 
@@ -49,7 +49,7 @@ Click **Update** to save.
 
 ### 4. Register the webhook
 
-After saving, click **Register webhook** on the Discourse card. AnswerLoops calls your forum's admin API to create (or update) a webhook that points at `/api/discourse/webhook`, subscribed to topic and post events, signed with a per-organization secret.
+After saving, click **Register webhook** on the Discourse card. answerLoops calls your forum's admin API to create (or update) a webhook that points at `/api/discourse/webhook`, subscribed to topic and post events, signed with a per-organization secret.
 
 If your Discourse instance blocks admin API webhook management, the card also shows the **Payload URL** and **Secret** so you can add the webhook by hand in **Admin → API → Webhooks** — subscribe it to the **Topic Event** and **Post Event** groups, set **Content type** to `application/json`, and leave **Check TLS certificate** on.
 
@@ -77,7 +77,7 @@ Discourse is configured entirely per-organization through the Settings UI. There
 
 <AccordionGroup>
   <Accordion title="Webhook calls return 401">
-    Every inbound webhook is verified two ways: the `X-Discourse-Instance` header must match the site URL you saved, and the payload's `X-Discourse-Event-Signature` must be a valid HMAC of the body under the secret AnswerLoops generated. A 401 means one of those drifted — re-save the integration to mint a fresh secret, then click **Register webhook** again (or update the secret on the manual webhook).
+    Every inbound webhook is verified two ways: the `X-Discourse-Instance` header must match the site URL you saved, and the payload's `X-Discourse-Event-Signature` must be a valid HMAC of the body under the secret answerLoops generated. A 401 means one of those drifted — re-save the integration to mint a fresh secret, then click **Register webhook** again (or update the secret on the manual webhook).
   </Accordion>
   <Accordion title="Register webhook fails with a 502">
     Registration needs the API key to be able to read and write `web_hooks`. If the key is scoped *Granular* without the `web_hooks` scope, or scoped to a non-admin single user, Discourse refuses the call. Recreate the key with the `web_hooks` scope (or a *Global* key) and try again — or add the webhook manually using the URL and secret shown on the card.
@@ -89,7 +89,7 @@ Discourse is configured entirely per-organization through the Settings UI. There
     The API key must be allowed to post as the **Bot username** you configured. A *Single User* key is locked to that one account — make sure it's the same username. The bot account also needs enough trust level to reply in the target category.
   </Accordion>
   <Accordion title="Answers post twice or loop">
-    AnswerLoops skips any post whose author matches the configured **Bot username**, so its own replies never re-enter the pipeline. If you see a loop, the bot username in Settings doesn't exactly match the account the API key posts as — fix the username and re-save.
+    answerLoops skips any post whose author matches the configured **Bot username**, so its own replies never re-enter the pipeline. If you see a loop, the bot username in Settings doesn't exactly match the account the API key posts as — fix the username and re-save.
   </Accordion>
   <Accordion title="Escalation user isn't mentioned">
     The mention only fires when a post's confidence score is below **Confidence threshold**. If answers are landing above the bar every time, there's nothing to escalate — lower the threshold, or check the ticket's score on the dashboard.

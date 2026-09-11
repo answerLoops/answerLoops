@@ -7,7 +7,7 @@ import { removeEmailDomainAction } from '@/app/actions/integrations'
 
 /**
  * Removing a verified sending domain deletes it at the email provider, not
- * only in AnswerLoops, and it cannot be undone from here — re-adding means
+ * only in answerLoops, and it cannot be undone from here — re-adding means
  * verifying from scratch with new DNS records and waiting for propagation.
  *
  * It used to fire on a single click with no confirmation. These tests pin the

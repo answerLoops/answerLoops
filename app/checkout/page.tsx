@@ -20,7 +20,7 @@ import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Start your trial — AnswerLoops',
+  title: 'Start your trial — answerLoops',
   robots: { index: false, follow: false },
 }
 

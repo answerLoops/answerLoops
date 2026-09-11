@@ -5,9 +5,9 @@ import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'AI drafts the answer. Your settings control the reply. | AnswerLoops',
+  title: 'AI drafts the answer. Your settings control the reply. | answerLoops',
   description:
-    'AnswerLoops uses two AI steps: one drafts a response from your knowledge base, and another reviews it. Your team chooses which channels can send qualifying answers automatically.',
+    'answerLoops uses two AI steps: one drafts a response from your knowledge base, and another reviews it. Your team chooses which channels can send qualifying answers automatically.',
   alternates: { canonical: '/agentic-support' },
 }
 
@@ -17,7 +17,7 @@ export default async function AgenticSupportPage() {
       navState={await resolveNavState()}
       eyebrow="Agentic support"
       title="AI drafts the answer. Your settings control the reply."
-      intro="AnswerLoops uses two AI steps: one drafts a response from your knowledge base, and another reviews it. Your team chooses which channels can send qualifying answers automatically."
+      intro="answerLoops uses two AI steps: one drafts a response from your knowledge base, and another reviews it. Your team chooses which channels can send qualifying answers automatically."
       sections={[
         {
           title: 'Draft from your documentation',
@@ -73,7 +73,7 @@ export default async function AgenticSupportPage() {
       schema={{
         name: 'AI drafts the answer. Your settings control the reply.',
         description:
-          'AnswerLoops uses two AI steps: one drafts a response from your knowledge base, and another reviews it. Your team chooses which channels can send qualifying answers automatically.',
+          'answerLoops uses two AI steps: one drafts a response from your knowledge base, and another reviews it. Your team chooses which channels can send qualifying answers automatically.',
         path: '/agentic-support',
       }}
     >

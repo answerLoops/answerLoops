@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { MarketingPage, PageHero } from '@/components/marketing/layout'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — AnswerLoops',
+  title: 'Terms of Service — answerLoops',
   description:
-    'Terms governing access to and use of the AnswerLoops hosted service, subscriptions, connected channels, and AI features.',
+    'Terms governing access to and use of the answerLoops hosted service, subscriptions, connected channels, and AI features.',
 }
 
 const EFFECTIVE_DATE = 'August 22, 2026'
@@ -46,7 +46,7 @@ export default function TermsOfServicePage() {
         <div className="mx-auto max-w-3xl px-5 sm:px-8">
           <p className="text-sm leading-relaxed text-slate-600">
             These Terms of Service (&ldquo;Terms&rdquo;) govern access to and
-            use of the AnswerLoops hosted websites, applications, APIs, bots,
+            use of the answerLoops hosted websites, applications, APIs, bots,
             widgets, and related services (the &ldquo;Service&rdquo;). By
             creating an account, accepting an invitation to a workspace,
             starting a trial, purchasing a subscription, or using the Service,
@@ -123,15 +123,15 @@ export default function TermsOfServicePage() {
             title="2. Cloud and self-hosted editions"
           >
             <p>
-              These Terms apply to AnswerLoops Cloud and the public AnswerLoops
+              These Terms apply to answerLoops Cloud and the public answerLoops
               websites. They do not replace or change the open-source license
-              governing AnswerLoops source code. If you download, modify, or
+              governing answerLoops source code. If you download, modify, or
               operate the self-hosted edition, your use of that software is
               governed by the license included with the source code, currently
               the GNU Affero General Public License version 3.
             </p>
             <p>
-              You, not AnswerLoops, operate a self-hosted deployment and are
+              You, not answerLoops, operate a self-hosted deployment and are
               responsible for its infrastructure, configuration, security,
               availability, legal compliance, notices to its users, and
               relationships with any third-party providers. Hosted support,
@@ -160,7 +160,7 @@ export default function TermsOfServicePage() {
 
           <Section id="service" title="4. The Service">
             <p>
-              AnswerLoops turns messages from connected support channels into
+              answerLoops turns messages from connected support channels into
               tickets, searches the knowledge base you provide, drafts and
               evaluates AI-generated replies, posts qualifying answers when you
               enable automatic responses, and routes other questions for human
@@ -187,11 +187,11 @@ export default function TermsOfServicePage() {
               &ldquo;Customer Content&rdquo; means the messages, tickets, files,
               knowledge-base materials, prompts, replies, contact details, and
               other data you or your users submit to or connect with the
-              Service. As between you and AnswerLoops, you retain ownership of
+              Service. As between you and answerLoops, you retain ownership of
               Customer Content.
             </p>
             <p>
-              You grant AnswerLoops a worldwide, non-exclusive, limited license
+              You grant answerLoops a worldwide, non-exclusive, limited license
               to host, copy, transmit, display, modify, and otherwise process
               Customer Content only as needed to provide, secure, support, and
               improve the Service, comply with law, and follow your
@@ -201,7 +201,7 @@ export default function TermsOfServicePage() {
             </p>
             <p>
               You represent that you have all rights, permissions, notices, and
-              consents needed for AnswerLoops to process Customer Content and
+              consents needed for answerLoops to process Customer Content and
               communicate through each channel you connect. You are responsible
               for the legality, accuracy, and quality of Customer Content; the
               responses sent from your workspace; your use of leads or contact
@@ -257,7 +257,7 @@ export default function TermsOfServicePage() {
               are not responsible for third-party services, their acts or
               omissions, or changes that interrupt an integration. Disconnecting
               a service stops new processing but does not automatically delete
-              content already incorporated into your AnswerLoops workspace; the
+              content already incorporated into your answerLoops workspace; the
               Privacy Policy explains retention and deletion.
             </p>
           </Section>
@@ -314,10 +314,10 @@ export default function TermsOfServicePage() {
             title="9. Subscriptions, trials, and billing"
           >
             <p>
-              AnswerLoops Cloud plans are billed in advance on a monthly or
+              answerLoops Cloud plans are billed in advance on a monthly or
               annual basis at the price and in the currency shown at checkout.
               Taxes may be added where required. A valid payment method is
-              required. By starting a subscription, you authorize AnswerLoops
+              required. By starting a subscription, you authorize answerLoops
               and its payment processor to charge that method for recurring
               fees, applicable taxes, and any other amount you approve.
             </p>
@@ -421,9 +421,9 @@ export default function TermsOfServicePage() {
                 Privacy Policy
               </Link>{' '}
               explains how we collect, use, retain, and disclose personal data.
-              To the extent AnswerLoops processes personal data in Customer
+              To the extent answerLoops processes personal data in Customer
               Content on your behalf, you are the controller or business and
-              AnswerLoops is the processor or service provider, unless
+              answerLoops is the processor or service provider, unless
               applicable law assigns different roles. Any separately executed
               data processing addendum controls for that processing.
             </p>
@@ -444,7 +444,7 @@ export default function TermsOfServicePage() {
             <p>
               We may suspend or terminate access if you materially breach these
               Terms, fail to pay amounts due, create a security or legal risk,
-              or use the Service in a way that could harm AnswerLoops, our
+              or use the Service in a way that could harm answerLoops, our
               providers, our users, or third parties. When reasonably possible,
               we will notify you and provide an opportunity to cure before
               suspension or termination. We may act immediately when needed to
@@ -462,7 +462,7 @@ export default function TermsOfServicePage() {
             <p>
               To the maximum extent permitted by law, the Service, AI outputs,
               trial features, and support are provided &ldquo;as is&rdquo; and
-              &ldquo;as available.&rdquo; AnswerLoops disclaims all express,
+              &ldquo;as available.&rdquo; answerLoops disclaims all express,
               implied, statutory, and other warranties, including warranties of
               merchantability, fitness for a particular purpose, title,
               non-infringement, accuracy, and uninterrupted or error-free
@@ -487,10 +487,10 @@ export default function TermsOfServicePage() {
               if advised that such damages were possible.
             </p>
             <p>
-              To the maximum extent permitted by law, AnswerLoops&apos; total
+              To the maximum extent permitted by law, answerLoops&apos; total
               liability arising out of or relating to the Service or these Terms
               will not exceed the greater of US $100 or the fees you paid to
-              AnswerLoops for the Service during the 12 months before the event
+              answerLoops for the Service during the 12 months before the event
               giving rise to liability. These limits apply regardless of the
               legal theory and do not limit liability that cannot lawfully be
               limited.
@@ -500,7 +500,7 @@ export default function TermsOfServicePage() {
           <Section id="indemnification" title="16. Indemnification">
             <p>
               To the extent permitted by law, you will defend, indemnify, and
-              hold harmless AnswerLoops and its personnel from third-party
+              hold harmless answerLoops and its personnel from third-party
               claims, damages, losses, and reasonable costs arising from
               Customer Content, your use of the Service in violation of these
               Terms or law, or your infringement or violation of another
@@ -508,7 +508,7 @@ export default function TermsOfServicePage() {
               claim, allow you to control the defense and settlement, and
               reasonably cooperate at your expense. You may not settle a claim
               in a way that admits fault by or imposes obligations on
-              AnswerLoops without our written consent.
+              answerLoops without our written consent.
             </p>
           </Section>
 

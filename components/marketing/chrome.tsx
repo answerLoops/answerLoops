@@ -45,7 +45,7 @@ export function Nav({ state }: { state?: NavState }) {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-4 sm:px-8">
-        <Link href="/" aria-label="AnswerLoops home" className="shrink-0">
+        <Link href="/" aria-label="answerLoops home" className="shrink-0">
           <NavWordmark />
         </Link>
         <nav
@@ -167,7 +167,7 @@ export function Footer() {
           </div>
         </div>
         <div className="mt-10 flex flex-col gap-4 border-t border-slate-200 pt-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
-          <p>© 2026 AnswerLoops</p>
+          <p>© 2026 answerLoops</p>
           <div className="flex flex-wrap gap-5">
             <Link href="/privacy">Privacy Policy</Link>
             <Link href="/terms">Terms of Service</Link>

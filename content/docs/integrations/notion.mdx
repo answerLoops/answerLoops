@@ -5,11 +5,11 @@ description: Connect a Notion workspace and sync its pages and databases into th
 
 ## Overview
 
-Notion is a **Knowledge Base source**, not a support channel — it doesn't bring in tickets, it feeds the content the AI answers from. Connect a workspace, and AnswerLoops pulls every page and database your Notion integration can see into the KB, alongside URL crawls, file uploads, GitHub repo sync, and resolved tickets.
+Notion is a **Knowledge Base source**, not a support channel — it doesn't bring in tickets, it feeds the content the AI answers from. Connect a workspace, and answerLoops pulls every page and database your Notion integration can see into the KB, alongside URL crawls, file uploads, GitHub repo sync, and resolved tickets.
 
 Two things make Notion different from the other KB sources:
 
-- **You control scope by sharing.** There's no page picker in AnswerLoops. A Notion integration only sees pages that have been explicitly shared with it, so you decide what syncs by sharing (or unsharing) pages in Notion.
+- **You control scope by sharing.** There's no page picker in answerLoops. A Notion integration only sees pages that have been explicitly shared with it, so you decide what syncs by sharing (or unsharing) pages in Notion.
 - **Notion imports unpublished.** Its content is searchable from the dashboard immediately, but it is **not** used to answer customer questions or served to the website widget until you click **Publish to widget** on the Knowledge Base page. Every other source publishes on import; Notion is the exception because workspace docs are often internal drafts. Your publish choice is kept across re-syncs.
 
 ## Prerequisites
@@ -21,15 +21,15 @@ There is no environment variable to configure for Notion itself — it is set up
 
 ## 1. Create a Notion internal integration
 
-In Notion, go to **Settings → Connections → Develop or manage integrations → New integration**. Give it a name (e.g. `AnswerLoops`), select the workspace, and create it. Copy the **Internal Integration Secret** — it starts with `ntn_` or `secret_`.
+In Notion, go to **Settings → Connections → Develop or manage integrations → New integration**. Give it a name (e.g. `answerLoops`), select the workspace, and create it. Copy the **Internal Integration Secret** — it starts with `ntn_` or `secret_`.
 
 The integration only needs read access. It does not need any of the "capabilities" checkboxes beyond the default read content permission.
 
 ## 2. Share the pages you want synced
 
-For each Notion page or database you want in the KB, open it, click **•••  → Connections**, and add your integration. Sharing a page also shares its subpages. AnswerLoops syncs everything the integration can see — nothing more.
+For each Notion page or database you want in the KB, open it, click **•••  → Connections**, and add your integration. Sharing a page also shares its subpages. answerLoops syncs everything the integration can see — nothing more.
 
-## 3. Connect in AnswerLoops
+## 3. Connect in answerLoops
 
 Go to **Settings → Notion**, paste the Internal Integration Secret, and click **Connect**. The card shows the connected workspace name once it validates the token.
 

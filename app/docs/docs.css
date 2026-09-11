@@ -1,5 +1,5 @@
 /*
- * Fumadocs UI theme, remapped onto AnswerLoops' brand tokens instead of
+ * Fumadocs UI theme, remapped onto answerLoops' brand tokens instead of
  * fumadocs-ui's own neutral defaults. `../globals.css` (loaded once from
  * the root layout) already defines every color/radius/font this file
  * reads via `var(...)` — this file only translates those tokens into the

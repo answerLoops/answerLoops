@@ -76,7 +76,7 @@ export async function sendInviteAction(
             You're invited to join ${orgName}
           </h2>
           <p style="color:#6b7280;font-size:14px;margin-bottom:24px">
-            ${inviterName} has invited you to join their workspace on AnswerLoops as a <strong>${role}</strong>.
+            ${inviterName} has invited you to join their workspace on answerLoops as a <strong>${role}</strong>.
             This invite expires in ${INVITE_TTL_DAYS} days.
           </p>
           <a href="${inviteUrl}"

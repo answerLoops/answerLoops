@@ -5,7 +5,7 @@ description: Connect Circle posts and comments to your support queue and configu
 
 ## Overview
 
-AnswerLoops receives posts and comments from the Circle spaces you select, prepares replies from workspace knowledge, and runs a separate AI review. Configure automatic replies for the questions that qualify, or review drafts with your team.
+answerLoops receives posts and comments from the Circle spaces you select, prepares replies from workspace knowledge, and runs a separate AI review. Configure automatic replies for the questions that qualify, or review drafts with your team.
 
 Inbound events arrive through Circle Workflows configured by your community administrator.
 
@@ -15,7 +15,7 @@ Inbound events arrive through Circle Workflows configured by your community admi
 
 In Circle, go to **Settings → Developers → Tokens**, create a new token, and choose type **Admin V2**. Copy it.
 
-### 2. Connect in AnswerLoops
+### 2. Connect in answerLoops
 
 Go to **Settings → Circle** and fill in:
 
@@ -59,7 +59,7 @@ Circle is configured entirely per-organization in the Settings UI. There is no c
     Check the Circle Workflow is **active** and its recent runs show the webhook action succeeded. Confirm the URL matches exactly and the `X-AnswerLoops-Token` header (or `?token=` query) carries the secret shown on the Circle card. If you set **Watched space IDs**, a post in any other space is ignored on purpose — clear the field to watch everything. Posts shorter than 10 characters are skipped.
   </Accordion>
   <Accordion title="Tickets are created but the content is empty or truncated">
-    Circle Workflow webhook payloads vary in how much of the post body they include. AnswerLoops falls back to the Admin API to fetch the full body — make sure the **Admin API token** you saved is a valid **Admin V2** token and hasn't been revoked.
+    Circle Workflow webhook payloads vary in how much of the post body they include. answerLoops falls back to the Admin API to fetch the full body — make sure the **Admin API token** you saved is a valid **Admin V2** token and hasn't been revoked.
   </Accordion>
   <Accordion title="A draft appears but no reply is posted">
     Check the channel's automatic-reply setting and confidence threshold. Review the draft in the ticket queue if it does not qualify for an automatic reply.

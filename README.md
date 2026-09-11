@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./.github/readme/hero.svg" alt="AnswerLoops — open-source AI support infrastructure for teams whose support lives in a community" width="100%" />
+<img src="./.github/readme/hero.svg" alt="answerLoops — open-source AI support infrastructure for teams whose support lives in a community" width="100%" />
 
 <br />
 
@@ -16,7 +16,7 @@
 
 **Scenario: Someone in your community Discord asks how to set up webhooks using YOUR software. That question has already been asked multiple times, but now it can be added to your knowledge source .**
 
-That's the job AnswerLoops takes off your hands. It sits in the community channels where your users already ask for help — Discord, Slack, your forum, GitHub Issues, email, a chat widget — and answers the questions it's already seen the answer to. Not with a canned macro. The answerLoops agent reads your docs, your resolved tickets, whatever you've fed it, drafts a confident answer, and a second agent checks its own work before it posts. If it's not confident, it doesn't guess — it hands the question to a person with the draft already written, so the human is editing, not starting from a blank reply.
+That's the job answerLoops takes off your hands. It sits in the community channels where your users already ask for help — Discord, Slack, your forum, GitHub Issues, email, a chat widget — and answers the questions it's already seen the answer to. Not with a canned macro. The answerLoops agent reads your docs, your resolved tickets, whatever you've fed it, drafts a confident answer, and a second agent checks its own work before it posts. If it's not confident, it doesn't guess — it hands the question to a person with the draft already written, so the human is editing, not starting from a blank reply.
 
 Every question the agent handles is one your team didn't have to. Every one it can't handle yet shows up in a knowledge-gaps list, so you know exactly what to document next to continue filling the documentation gap.
 
@@ -25,7 +25,7 @@ It's for teams whose support already happens in public — a dev tool with a Dis
 Self-hostable — clone it, run `docker compose up`, keep every answer and every byte of data on your own infrastructure. No usage caps, nothing metered, nothing phoning home.
 
 <div align="center">
-  <img src="./.github/readme/dashboard.png" alt="AnswerLoops dashboard showing deflection rate, open tickets, AI drafts, SLA status, and recent support activity" width="100%" />
+  <img src="./.github/readme/dashboard.png" alt="answerLoops dashboard showing deflection rate, open tickets, AI drafts, SLA status, and recent support activity" width="100%" />
 </div>
 
 ## What you get
@@ -42,7 +42,7 @@ Self-hostable — clone it, run `docker compose up`, keep every answer and every
 ## How the loop works
 
 <div align="center">
-  <img src="./.github/readme/workflow.svg" alt="AnswerLoops workflow: community channels flow through one ticket model, grounded retrieval, confidence review, and automatic or human resolution before improving reusable knowledge" width="100%" />
+  <img src="./.github/readme/workflow.svg" alt="answerLoops workflow: community channels flow through one ticket model, grounded retrieval, confidence review, and automatic or human resolution before improving reusable knowledge" width="100%" />
 </div>
 
 The pipeline lives in [`lib/ingest/pipeline.ts`](./lib/ingest/pipeline.ts). Each channel adapter only handles its own auth, message parsing, and reply delivery. Everything after that — ticket creation, retrieval, drafting, review, analytics, escalation — is the same code regardless of where the question came from.
@@ -79,13 +79,13 @@ The pipeline lives in [`lib/ingest/pipeline.ts`](./lib/ingest/pipeline.ts). Each
 <details>
 <summary><strong>See the unified inbox</strong></summary>
 <br />
-<img src="./.github/readme/tickets.png" alt="Unified AnswerLoops inbox with support tickets from multiple channels" width="100%" />
+<img src="./.github/readme/tickets.png" alt="Unified answerLoops inbox with support tickets from multiple channels" width="100%" />
 </details>
 
 <details>
 <summary><strong>See confidence review and escalation</strong></summary>
 <br />
-<img src="./.github/readme/ticket-detail.png" alt="AnswerLoops ticket detail with AI confidence review, evidence, and human escalation" width="100%" />
+<img src="./.github/readme/ticket-detail.png" alt="answerLoops ticket detail with AI confidence review, evidence, and human escalation" width="100%" />
 </details>
 
 ## Run it locally

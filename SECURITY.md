@@ -2,7 +2,7 @@
 
 ## Reporting a vulnerability
 
-If you believe you've found a security vulnerability in AnswerLoops — in the hosted service or the self-hosted open-source edition — please report it privately rather than opening a public GitHub issue.
+If you believe you've found a security vulnerability in answerLoops — in the hosted service or the self-hosted open-source edition — please report it privately rather than opening a public GitHub issue.
 
 Email **security@answerloops.com** with:
 
@@ -21,12 +21,12 @@ Email **security@answerloops.com** with:
 
 This policy covers:
 
-- The AnswerLoops hosted application
-- The AnswerLoops open-source codebase in this repository, including the self-hosted Docker deployment
+- The answerLoops hosted application
+- The answerLoops open-source codebase in this repository, including the self-hosted Docker deployment
 
 ## Out of scope
 
-- Vulnerabilities in third-party services AnswerLoops integrates with (Discord, Slack, Google Chat, GitHub, Telegram, your AI provider, Stripe, etc.) — please report those directly to the provider.
+- Vulnerabilities in third-party services answerLoops integrates with (Discord, Slack, Google Chat, GitHub, Telegram, your AI provider, Stripe, etc.) — please report those directly to the provider.
 - Social engineering, physical security, or denial-of-service testing.
 
-Thank you for helping keep AnswerLoops and its users safe.
+Thank you for helping keep answerLoops and its users safe.

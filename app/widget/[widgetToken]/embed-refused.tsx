@@ -24,7 +24,7 @@ export function EmbedRefused({
   const hint =
     reason === 'origin-unknown'
       ? 'This can happen when the page blocks referrer information. Loading the widget over HTTPS usually resolves it.'
-      : 'Add this domain under Settings → Widget → Allowed domains in AnswerLoops.'
+      : 'Add this domain under Settings → Widget → Allowed domains in answerLoops.'
 
   return (
     <div className="flex h-full items-center justify-center bg-white p-6">

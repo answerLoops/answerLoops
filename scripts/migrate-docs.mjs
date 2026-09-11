@@ -136,7 +136,7 @@ function writeRootMeta(groups) {
   }
   writeFileSync(
     join(DEST_ROOT, 'meta.json'),
-    JSON.stringify({ title: 'AnswerLoops Docs', pages }, null, 2) + '\n'
+    JSON.stringify({ title: 'answerLoops Docs', pages }, null, 2) + '\n'
   )
 }
 

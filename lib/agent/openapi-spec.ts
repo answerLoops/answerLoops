@@ -32,9 +32,9 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
   return {
     openapi: '3.1.0',
     info: {
-      title: 'AnswerLoops Agent API',
+      title: 'answerLoops Agent API',
       description:
-        'REST API for AI agents and non-MCP frameworks (LangChain, AutoGen, custom bots) to search a knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline every other AnswerLoops channel uses. MCP-native clients (Claude Code, Cursor) should use the MCP server at POST /api/mcp instead; this REST surface exists for tooling that speaks HTTP + OpenAPI, not JSON-RPC.',
+        'REST API for AI agents and non-MCP frameworks (LangChain, AutoGen, custom bots) to search a knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline every other answerLoops channel uses. MCP-native clients (Claude Code, Cursor) should use the MCP server at POST /api/mcp instead; this REST surface exists for tooling that speaks HTTP + OpenAPI, not JSON-RPC.',
       version: '1.1.0',
     },
     servers: [{ url: origin }],

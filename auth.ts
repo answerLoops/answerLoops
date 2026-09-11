@@ -87,7 +87,7 @@ async function provisionUser(
   // No welcome email here. Creating an account is not the same as becoming a
   // customer: under the auth-first signup flow the account exists from the
   // moment someone finishes OAuth, before they have seen a plan or entered a
-  // card. Sending "Welcome to AnswerLoops" at this point greets everyone who
+  // card. Sending "Welcome to answerLoops" at this point greets everyone who
   // abandons checkout with a message about a product they never started, and
   // it also meant an account created before its subscription — the ordinary
   // shape of an abandoned-then-resumed signup — got its one welcome at the

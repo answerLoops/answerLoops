@@ -1,11 +1,11 @@
 ---
 title: Telegram Bot Setup
-description: Connect AnswerLoops to a Telegram group or supergroup.
+description: Connect answerLoops to a Telegram group or supergroup.
 ---
 
 ## How it works
 
-AnswerLoops uses Telegram's **webhook API** — no persistent process required. Telegram pushes updates to your AnswerLoops instance via `POST /api/telegram/webhook`. The platform triage, embeds, and AI answer the question, then replies in the same chat.
+answerLoops uses Telegram's **webhook API** — no persistent process required. Telegram pushes updates to your answerLoops instance via `POST /api/telegram/webhook`. The platform triage, embeds, and AI answer the question, then replies in the same chat.
 
 ## 1. Create a bot with BotFather
 
@@ -13,7 +13,7 @@ AnswerLoops uses Telegram's **webhook API** — no persistent process required. 
 2. Send `/newbot` and follow the prompts
 3. Copy the bot token — format: `123456789:AAHdqTcv...`
 
-## 2. Configure in AnswerLoops Settings
+## 2. Configure in answerLoops Settings
 
 Go to **Settings → Telegram** and enter:
 
@@ -32,7 +32,7 @@ For a supergroup: go to Group Info → Edit → Administrators → Add Administr
 
 ## 4. Register the webhook
 
-After saving the token, click **Register webhook** in Settings. This calls Telegram's `setWebhook` API and points it at your AnswerLoops instance.
+After saving the token, click **Register webhook** in Settings. This calls Telegram's `setWebhook` API and points it at your answerLoops instance.
 
 You can also call this endpoint directly:
 

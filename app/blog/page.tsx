@@ -4,23 +4,23 @@ import { MarketingPage, PageHero } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { BLOG_POSTS, formatPostDate } from './posts'
 export const metadata: Metadata = {
-  title: 'AnswerLoops blog',
+  title: 'answerLoops blog',
   description:
-    'Notes from the founders on community support and building AnswerLoops.',
+    'Notes from the founders on community support and building answerLoops.',
   alternates: { canonical: '/blog' },
 }
 export default function BlogIndexPage() {
   return (
     <MarketingPage>
       <PageSchema
-        name="AnswerLoops blog"
-        description="Notes on community support and building AnswerLoops."
+        name="answerLoops blog"
+        description="Notes on community support and building answerLoops."
         path="/blog"
         type="CollectionPage"
       />
       <PageHero eyebrow="Blog" title="Notes on community support">
         <p>
-          What we are learning while building AnswerLoops and using it in our
+          What we are learning while building answerLoops and using it in our
           communities.
         </p>
       </PageHero>

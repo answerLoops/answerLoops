@@ -47,7 +47,7 @@ export const orgs = pgTable('orgs', {
   nextTicketNumber: integer('next_ticket_number').notNull().default(1),
   // Free platform-key AI trial: a brand-new org with no AI provider
   // configured gets PLATFORM_KEY_TRIAL_LIMIT tickets fully AI-processed on
-  // AnswerLoops' own key, so they see auto-triage/drafting/deflection work
+  // answerLoops' own key, so they see auto-triage/drafting/deflection work
   // before deciding to add their own key. One-time (lifetime), not monthly —
   // unlike billing's deflection limit, which resets every period. Assigned
   // atomically the same way as nextTicketNumber above; see

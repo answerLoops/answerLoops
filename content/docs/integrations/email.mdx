@@ -5,11 +5,11 @@ description: Turn a customer-owned support domain into an AI-triaged ticket queu
 
 ## Overview
 
-AnswerLoops accepts inbound support email through a customer-owned domain configured for managed email receiving, not inbox polling. Every message that arrives is triaged, embedded against your knowledge base, and answered by the AI pipeline, then threaded back to the sender with proper RFC 5322 headers (`Message-ID` / `In-Reply-To` / `References`) so a customer's next reply lands in the same ticket instead of opening a new one.
+answerLoops accepts inbound support email through a customer-owned domain configured for managed email receiving, not inbox polling. Every message that arrives is triaged, embedded against your knowledge base, and answered by the AI pipeline, then threaded back to the sender with proper RFC 5322 headers (`Message-ID` / `In-Reply-To` / `References`) so a customer's next reply lands in the same ticket instead of opening a new one.
 
 Two things are independent and configured separately:
 
-- **Inbound mail** — verify a domain you own in AnswerLoops and add the displayed DNS records. The managed email service sends a signed received-mail event to AnswerLoops, which retrieves and ingests the message for the matching organization. See [Setup](#setup) below.
+- **Inbound mail** — verify a domain you own in answerLoops and add the displayed DNS records. The managed email service sends a signed received-mail event to answerLoops, which retrieves and ingests the message for the matching organization. See [Setup](#setup) below.
 - **Outbound sending (the `From:` address)** — either the platform default, a domain you verify, or your own connected Gmail/Outlook mailbox. See [Custom domain](#custom-domain-verified-sending) and [Connect a mailbox](#connect-a-mailbox-gmail-or-outlook-send-only-oauth) below.
 
 All email tickets appear in the unified ticket list with an Email source badge.
@@ -26,7 +26,7 @@ All email tickets appear in the unified ticket list with an Email source badge.
 
 The platform email credentials and webhook signing secret must be set on the app service. They are used for sending, domain verification, retrieving received messages, and verifying signed events.
 
-### 2. Configure in AnswerLoops
+### 2. Configure in answerLoops
 
 Go to **Settings → Channels → Email** and fill in:
 
@@ -37,7 +37,7 @@ Go to **Settings → Channels → Email** and fill in:
 | Confidence threshold | `confidenceThreshold` | 0–1, default `0.8`. Answers scoring below this are routed to a human instead of posting automatically. |
 | Automatic Deflections | `autoDeflectEnabled` | See the callout above. Off by default. |
 
-Choose **Use your own domain**, enter the domain or support subdomain that should receive tickets, and submit it. AnswerLoops registers the domain for both sending and receiving and displays the DKIM, return-path/SPF, and inbound MX records required by the managed email service.
+Choose **Use your own domain**, enter the domain or support subdomain that should receive tickets, and submit it. answerLoops registers the domain for both sending and receiving and displays the DKIM, return-path/SPF, and inbound MX records required by the managed email service.
 
 ### 3. Add DNS records and verify
 
@@ -49,7 +49,7 @@ Click **Check verification status** after DNS propagation. Once the domain is ve
 support@yourdomain.com
 ```
 
-The managed email service delivers signed received-mail events to `POST https://yourapp.com/api/email/ingest`. AnswerLoops verifies the event, resolves the organization from the recipient domain, retrieves the full message, and sends it through the normal ticket pipeline.
+The managed email service delivers signed received-mail events to `POST https://yourapp.com/api/email/ingest`. answerLoops verifies the event, resolves the organization from the recipient domain, retrieves the full message, and sends it through the normal ticket pipeline.
 
 <Note>
   Full self-hosting details, including a deeper reliability writeup (loop detection, idempotency, spam handling) live on the [Email Channel Setup](/docs/self-hosting/email-channel) page.
@@ -61,11 +61,11 @@ The managed email service delivers signed received-mail events to `POST https://
 
 The professional option for outbound sending — replies go out with your own domain in the `From:` address instead of the platform default, and unlike connecting a personal mailbox, verification doesn't depend on any login staying active.
 
-Without domain verification, a raw `From:` override is spoofing from the receiving mail server's perspective — Gmail/Outlook will flag or reject mail claiming a domain the sending infrastructure was never authorized (via SPF/DKIM) to send as. Verification proves ownership before AnswerLoops will send as that domain.
+Without domain verification, a raw `From:` override is spoofing from the receiving mail server's perspective — Gmail/Outlook will flag or reject mail claiming a domain the sending infrastructure was never authorized (via SPF/DKIM) to send as. Verification proves ownership before answerLoops will send as that domain.
 
 1. Go to **Settings → Channels → Email** and find **Use your own domain**.
 2. Enter the domain you want replies to come from (e.g. `yourcompany.com`) and click **Use your own domain**.
-3. AnswerLoops registers the domain with the managed email service and shows the required DKIM, return-path/SPF, and inbound MX records — add them at your domain's DNS host.
+3. answerLoops registers the domain with the managed email service and shows the required DKIM, return-path/SPF, and inbound MX records — add them at your domain's DNS host.
 4. Click **Check verification status** once the records have propagated (this can take a few minutes to a few hours depending on your DNS host).
 5. Once verified, customers can send to `support@<your-domain>` and replies automatically send from `noreply@<your-domain>` — no separate toggle or mailbox login is needed.
 
@@ -77,20 +77,20 @@ Removing a verified domain reverts sending to the platform default (`RESEND_FROM
 
 The quick option for outbound sending — connect your own Gmail or Outlook mailbox so replies go out through it directly and inherit its sender reputation, no DNS work required. Unlike the custom-domain path, this depends on the connection staying valid (a password change or long inactivity can revoke it). **Only one mailbox connection can exist per org at a time** — connecting Outlook while Gmail is connected (or vice versa) replaces the existing connection.
 
-AnswerLoops only ever requests permission to *send* mail as you — it never reads your inbox.
+answerLoops only ever requests permission to *send* mail as you — it never reads your inbox.
 
 1. Go to **Settings → Channels → Email** and find **Connect a mailbox**.
-2. Click **Connect Gmail** or **Connect Outlook** and approve AnswerLoops on the provider's consent screen.
+2. Click **Connect Gmail** or **Connect Outlook** and approve answerLoops on the provider's consent screen.
 3. Once approved, replies automatically send from your connected mailbox — no separate toggle needed.
 
 If the consent screen completes but the settings page does not show the mailbox as connected, make sure the OAuth callback URL and the deployment's app URL are configured for the same deployment. Hosted deployments that use a separate app subdomain must also share the authentication cookie across the apex domain so the callback can complete.
 
-If the connection is ever revoked (password change, admin revocation, long inactivity), AnswerLoops detects it the next time it tries to send, emails your org's admins the same day with a reconnect link, and falls replies back to the platform default in the meantime — nothing is silently dropped. The Email card shows a distinct "connection lost — reconnect" state until you reconnect.
+If the connection is ever revoked (password change, admin revocation, long inactivity), answerLoops detects it the next time it tries to send, emails your org's admins the same day with a reconnect link, and falls replies back to the platform default in the meantime — nothing is silently dropped. The Email card shows a distinct "connection lost — reconnect" state until you reconnect.
 
 Removing the connection reverts sending to the platform default.
 
 <Note>
-  Outlook-sent replies thread slightly differently than platform- or Gmail-sent ones in the customer's own mail client — Microsoft Graph's sending API can't carry a `References` header the way the other paths can, so only partial thread context (`In-Reply-To`) comes through. AnswerLoops's own internal ticket-threading is unaffected either way.
+  Outlook-sent replies thread slightly differently than platform- or Gmail-sent ones in the customer's own mail client — Microsoft Graph's sending API can't carry a `References` header the way the other paths can, so only partial thread context (`In-Reply-To`) comes through. answerLoops's own internal ticket-threading is unaffected either way.
 </Note>
 
 ---
@@ -120,10 +120,10 @@ The webhook signing secret is used only by the platform endpoint. Customers do n
     The platform email credentials must be valid, and the reply-from address (custom domain, connected mailbox, or the configured default) must belong to a verified sending domain (or, for Gmail/Outlook, a currently-connected mailbox). An unverified sending domain prevents delivery; check the app logs for the provider error.
   </Accordion>
   <Accordion title="Customer replies open a new ticket instead of threading">
-    Threading depends on the customer's mail client preserving `In-Reply-To`/`References` headers, which most clients do automatically. If a reply genuinely can't be matched to an existing ticket's Message-ID chain, AnswerLoops treats it as a new inbound message rather than guessing — this is deliberate to avoid misfiling unrelated mail into an old ticket.
+    Threading depends on the customer's mail client preserving `In-Reply-To`/`References` headers, which most clients do automatically. If a reply genuinely can't be matched to an existing ticket's Message-ID chain, answerLoops treats it as a new inbound message rather than guessing — this is deliberate to avoid misfiling unrelated mail into an old ticket.
   </Accordion>
   <Accordion title="Same email keeps generating duplicate tickets">
-    Every inbound email is keyed on its RFC `Message-ID`, so a provider's webhook retry should be a no-op. If duplicates are appearing, check that the sending mail server is generating a stable `Message-ID` per message (some legacy on-prem mail servers omit it, in which case AnswerLoops falls back to the provider's own id).
+    Every inbound email is keyed on its RFC `Message-ID`, so a provider's webhook retry should be a no-op. If duplicates are appearing, check that the sending mail server is generating a stable `Message-ID` per message (some legacy on-prem mail servers omit it, in which case answerLoops falls back to the provider's own id).
   </Accordion>
   <Accordion title="Automatic Deflections toggle isn't affecting replies">
     Confirm you clicked **Update** after toggling — the setting only takes effect after the form is saved, and the read-only summary view on the card won't reflect an unsaved change. Also note it only changes what happens on **high-confidence** answers; low-confidence answers always go to the draft queue regardless of this setting.

@@ -11,15 +11,15 @@ import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 
 export const metadata: Metadata = {
-  title: 'AnswerLoops — AI support for your community',
+  title: 'answerLoops — AI support for your community',
   description:
     'Draft support replies from your documentation, review answers with their sources, and manage questions across your community channels. Open source and self-hostable.',
   alternates: { canonical: '/' },
 }
 const FAQ_ITEMS = [
   {
-    q: 'What does AnswerLoops do?',
-    a: 'AnswerLoops brings community support questions into one queue. It drafts replies from your knowledge base, checks those drafts against their sources, and gives your team control over when answers are sent.',
+    q: 'What does answerLoops do?',
+    a: 'answerLoops brings community support questions into one queue. It drafts replies from your knowledge base, checks those drafts against their sources, and gives your team control over when answers are sent.',
   },
   {
     q: 'Can I review answers before they are sent?',
@@ -34,11 +34,11 @@ const FAQ_ITEMS = [
     a: 'New hosted workspaces include a one-time allowance of five AI-processed tickets. After that, connect your provider account and pay its usage charges directly. Custom model endpoints are available on Enterprise and self-hosted deployments.',
   },
   {
-    q: 'Can I run AnswerLoops on my own infrastructure?',
+    q: 'Can I run answerLoops on my own infrastructure?',
     a: 'Yes. The source is available under AGPL-3.0. You operate the application and storage, configure the connected services, and cover your infrastructure and model costs.',
   },
   {
-    q: 'Can my own agents use AnswerLoops?',
+    q: 'Can my own agents use answerLoops?',
     a: 'Yes. Every hosted plan includes MCP and REST API access for searching knowledge, reading FAQs and tickets, generating answers, and creating support tickets. Usage limits depend on your plan.',
   },
 ]
@@ -46,7 +46,7 @@ export default function LandingPage() {
   const schema = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'AnswerLoops',
+    name: 'answerLoops',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     provider: { '@id': ORGANIZATION_ID },
@@ -62,7 +62,7 @@ export default function LandingPage() {
   return (
     <MarketingPage>
       <PageSchema
-        name="AnswerLoops — AI support for your community"
+        name="answerLoops — AI support for your community"
         description={metadata.description!}
         path="/"
       />

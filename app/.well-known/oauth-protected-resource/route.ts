@@ -21,7 +21,7 @@ export function GET(req: Request) {
   const origin = new URL(req.url).origin
   return Response.json({
     resource: origin,
-    resource_name: 'AnswerLoops Agent API',
+    resource_name: 'answerLoops Agent API',
     scopes_supported: [...ALL_SCOPES],
     scope_descriptions: API_SCOPES,
     bearer_methods_supported: ['header'],

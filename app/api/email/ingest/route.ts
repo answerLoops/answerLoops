@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     const recipientDomain = recipient.includes('@') ? recipient.split('@').pop()!.toLowerCase() : ''
     const domain = recipientDomain ? await getEmailDomainByDomain(recipientDomain) : null
     if (!domain || domain.status !== 'verified') {
-      logger.warn('received email has no verified AnswerLoops domain', { module: MOD, recipientDomain })
+      logger.warn('received email has no verified answerLoops domain', { module: MOD, recipientDomain })
       return Response.json({ ok: true })
     }
 

@@ -3,7 +3,7 @@ title: Knowledge Base
 description: Import, manage, and search your knowledge base so the AI can deflect questions accurately.
 ---
 
-AnswerLoops searches the knowledge base for material relevant to a question and uses it to draft a reply. Keep articles current and review imported content before using it for customer answers.
+answerLoops searches the knowledge base for material relevant to a question and uses it to draft a reply. Keep articles current and review imported content before using it for customer answers.
 
 ## Import methods
 
@@ -50,7 +50,7 @@ Connect a GitHub repository and sync its markdown files into the KB.
 1. Go to **Knowledge Base → GitHub Sync**
 2. Select the repository from the picker (requires GitHub App installed on your org)
 3. Click **Sync now** to queue an import of all `.md` and `.mdx` files
-4. Optionally enable **Auto-sync on push** — AnswerLoops receives a webhook from GitHub on every push to the default branch and queues a re-sync automatically
+4. Optionally enable **Auto-sync on push** — answerLoops receives a webhook from GitHub on every push to the default branch and queues a re-sync automatically
 
 The sync respects the repo's file tree. Each markdown file becomes its own source entry.
 
@@ -65,8 +65,8 @@ GitHub and Notion syncs run as background jobs — the Knowledge Base page shows
 Connect a Notion workspace and pull its pages and databases into the KB — useful for teams that keep their support content in Notion rather than a published docs site.
 
 1. In Notion, go to **Settings → Connections → Develop or manage integrations** and create an **internal integration**. Copy its **Internal Integration Secret** (starts with `ntn_` or `secret_`).
-2. Open each Notion page or database you want synced, click **•••  → Connections**, and add your integration. AnswerLoops syncs everything the integration can see — you control the scope by sharing or unsharing pages in Notion.
-3. In AnswerLoops, go to **Settings → Notion**, paste the token, and click **Connect**.
+2. Open each Notion page or database you want synced, click **•••  → Connections**, and add your integration. answerLoops syncs everything the integration can see — you control the scope by sharing or unsharing pages in Notion.
+3. In answerLoops, go to **Settings → Notion**, paste the token, and click **Connect**.
 4. Go to the **Knowledge Base** page and click **Sync now** in the Notion panel. Each Notion page (and each row of a shared database) is converted to text, split into chunks, and embedded like every other source. Re-syncing replaces the previous Notion content.
 
 <Note>

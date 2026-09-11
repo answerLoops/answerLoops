@@ -5,7 +5,7 @@ import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Set the rules for automated replies | AnswerLoops',
+  title: 'Set the rules for automated replies | answerLoops',
   description:
     'Start with drafts your team reviews. Enable automatic replies for a channel after testing your knowledge sources and confidence threshold.',
   alternates: { canonical: '/support-workflow' },
@@ -21,7 +21,7 @@ export default async function SupportWorkflowPage() {
       sections={[
         {
           title: '1. Connect a channel',
-          body: 'Select the conversations AnswerLoops should receive.',
+          body: 'Select the conversations answerLoops should receive.',
           details: [
             'Incoming questions appear in the shared ticket queue.',
             'Each ticket retains its source.',

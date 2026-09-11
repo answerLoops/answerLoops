@@ -4,10 +4,10 @@ description: Use your own OpenAI API key for answer generation and embeddings.
 ---
 
 OpenAI is the default AI provider. It's the one provider that covers **both**
-jobs AnswerLoops needs a model for — generating answers and creating the
+jobs answerLoops needs a model for — generating answers and creating the
 embeddings that power knowledge-base search — with a single key.
 
-A new cloud workspace runs on AnswerLoops' key as a free trial (5 AI-answered
+A new cloud workspace runs on answerLoops' key as a free trial (5 AI-answered
 tickets). Adding your own key here removes that limit and bills usage to your
 OpenAI account. A self-hosted deployment uses the `OPENAI_API_KEY` from its
 environment until an org overrides it here.
@@ -18,7 +18,7 @@ In the [OpenAI dashboard](https://platform.openai.com/api-keys), create a
 secret key. It starts with `sk-`. You'll also need billing set up on the
 OpenAI account.
 
-## 2. Configure in AnswerLoops
+## 2. Configure in answerLoops
 
 1. **Settings → AI Model → Edit** (owner or admin).
 2. **Chat provider:** OpenAI.

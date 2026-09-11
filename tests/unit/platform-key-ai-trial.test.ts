@@ -4,7 +4,7 @@ import path from 'node:path'
 import { drizzle } from 'drizzle-orm/pg-proxy'
 
 // A brand-new org with no AI provider configured gets 5 lifetime free
-// tickets fully AI-processed on AnswerLoops' own platform key, so they see
+// tickets fully AI-processed on answerLoops' own platform key, so they see
 // auto-triage/drafting/deflection actually work before deciding whether to
 // add their own key. After the 5th, a dashboard banner tells them to add
 // one. User-requested: "let a user see the whole platform working before

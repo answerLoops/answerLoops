@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { ComparisonPage } from '@/components/marketing/comparison-page'
 export const metadata: Metadata = {
-  title: 'AnswerLoops vs Intercom',
+  title: 'answerLoops vs Intercom',
   description:
-    'Intercom and AnswerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself.',
+    'Intercom and answerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself.',
   alternates: { canonical: '/vs/intercom' },
 }
 export default function Page() {
@@ -13,7 +13,7 @@ export default function Page() {
       slug="intercom"
       source="https://fin.ai/"
       competitorSummary="Intercom combines a helpdesk with Fin, its AI customer agent. Fin also connects to other helpdesks."
-      intro="Intercom and AnswerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself."
+      intro="Intercom and answerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself."
       rows={[
         {
           feature: 'Channels',

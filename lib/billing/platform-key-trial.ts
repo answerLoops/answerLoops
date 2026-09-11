@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db/drizzle'
 
 /**
  * Lifetime free-trial ticket count an org with no configured AI provider
- * gets on AnswerLoops' own platform key, before onboarding requires their
+ * gets on answerLoops' own platform key, before onboarding requires their
  * own key. One-time per org, not monthly — deliberately smaller than a
  * billing concern (see lib/billing/usage.ts's deflectionsPerMonth), just
  * enough for a new signup to see auto-triage/drafting/deflection actually

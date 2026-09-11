@@ -16,7 +16,7 @@ export interface DiscordGuild {
 
 export class DiscordGuildTakenError extends Error {
   constructor(guildId: string) {
-    super(`Discord server ${guildId} is already connected to another AnswerLoops org`)
+    super(`Discord server ${guildId} is already connected to another answerLoops org`)
     this.name = 'DiscordGuildTakenError'
   }
 }

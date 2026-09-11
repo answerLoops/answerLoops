@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: Fixes for common issues encountered when self-hosting AnswerLoops.
+description: Fixes for common issues encountered when self-hosting answerLoops.
 ---
 
 ## App won't start
@@ -16,7 +16,7 @@ docker compose logs app --tail=50
 - **Missing required env var** — the logs will name the variable. Add it to `.env` and restart.
 - **`DATABASE_URL` wrong or Postgres not ready** — Postgres takes a few seconds to initialise on first boot. Wait 10 seconds and run `docker compose restart app`.
 - **Port 3000 already in use** — change the host port in `docker-compose.yml`, e.g. `"3001:3000"`.
-- **`AUTH_SECRET` or `AUTH_URL` missing** — AnswerLoops uses Auth.js v5. The correct variable names are `AUTH_SECRET` and `AUTH_URL`, **not** `NEXTAUTH_SECRET` / `NEXTAUTH_URL`. Rename them if you are upgrading from an older deployment.
+- **`AUTH_SECRET` or `AUTH_URL` missing** — answerLoops uses Auth.js v5. The correct variable names are `AUTH_SECRET` and `AUTH_URL`, **not** `NEXTAUTH_SECRET` / `NEXTAUTH_URL`. Rename them if you are upgrading from an older deployment.
 
 ## Database connection refused
 
@@ -94,7 +94,7 @@ Replies inside threads fire `MessageCreate` and continue to work as before. Only
 
 ## Discord channel picker shows "loading…" indefinitely
 
-The channel picker in the AnswerLoops UI calls Discord's API to list channels. It requires `DISCORD_TOKEN` to be set on the **app** service, not only on the bot service.
+The channel picker in the answerLoops UI calls Discord's API to list channels. It requires `DISCORD_TOKEN` to be set on the **app** service, not only on the bot service.
 
 Check your `docker-compose.yml` or environment config and ensure `DISCORD_TOKEN` is present in the `app` service's environment block, then restart:
 

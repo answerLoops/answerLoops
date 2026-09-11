@@ -147,7 +147,7 @@ export async function getValidOutlookAccessToken(
 
 // Microsoft has no direct token-revoke endpoint the way Google does — the
 // real revoke is the user removing the app from their My Apps page.
-// AnswerLoops's own "Disconnect" only needs to stop using the token, which
+// answerLoops's own "Disconnect" only needs to stop using the token, which
 // deleting the connection row already achieves; this is a documented no-op
 // kept as a function so the call site in disconnectOauthAction stays
 // provider-symmetric with Gmail's revokeGmailToken.

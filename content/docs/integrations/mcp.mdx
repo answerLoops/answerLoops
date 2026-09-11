@@ -3,10 +3,10 @@ title: MCP Server
 description: Give any AI agent (Claude, Cursor, your own bot) direct access to your knowledge base, FAQ, and tickets via the Model Context Protocol.
 ---
 
-AnswerLoops ships an [MCP](https://modelcontextprotocol.io) server so any MCP-compatible agent can search your knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline that powers Discord, Slack, and email.
+answerLoops ships an [MCP](https://modelcontextprotocol.io) server so any MCP-compatible agent can search your knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline that powers Discord, Slack, and email.
 
 <Tip>
-  This is what makes AnswerLoops agent-first: the tools below aren't a separate integration bolted on top, they call the exact same triage/answer pipeline every other channel uses, including deflection-limit metering and org-scoped data isolation.
+  This is what makes answerLoops agent-first: the tools below aren't a separate integration bolted on top, they call the exact same triage/answer pipeline every other channel uses, including deflection-limit metering and org-scoped data isolation.
 </Tip>
 
 Not using an MCP-native client? The [Agent API](/docs/integrations/agent-api) exposes the same operations as plain REST + OpenAPI, for frameworks like LangChain or AutoGen that don't speak MCP's JSON-RPC transport. Same API key works for both.
@@ -32,7 +32,7 @@ Not using an MCP-native client? The [Agent API](/docs/integrations/agent-api) ex
 }
 ```
 
-Revoke a key any time from the same page. It is rejected immediately and removed from the active-key list. AnswerLoops retains the revoked database record for audit history without presenting it as a usable workspace credential.
+Revoke a key any time from the same page. It is rejected immediately and removed from the active-key list. answerLoops retains the revoked database record for audit history without presenting it as a usable workspace credential.
 
 ## Transport
 
@@ -118,4 +118,4 @@ The second exists because only high-confidence answers are billed as deflections
 
 `get_tickets` and `search_kb` return text that community members wrote — support tickets and the KB articles promoted from them. Anyone who can file a ticket through any channel can put arbitrary text in there, and that text lands in your agent's context when it calls these tools.
 
-Prompt your agent to treat tool results as untrusted content to reason about, never as instructions to follow. AnswerLoops keeps the blast radius small by design: `create_ticket` is the only tool that writes anything, and no tool can modify the knowledge base, change settings, or touch billing.
+Prompt your agent to treat tool results as untrusted content to reason about, never as instructions to follow. answerLoops keeps the blast radius small by design: `create_ticket` is the only tool that writes anything, and no tool can modify the knowledge base, change settings, or touch billing.

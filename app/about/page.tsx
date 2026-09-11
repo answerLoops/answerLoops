@@ -7,17 +7,17 @@ import {
 } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 export const metadata: Metadata = {
-  title: 'About AnswerLoops',
+  title: 'About answerLoops',
   description:
-    'Nathan and Faith Tarbert built AnswerLoops to manage support for their online communities.',
+    'Nathan and Faith Tarbert built answerLoops to manage support for their online communities.',
   alternates: { canonical: '/about' },
 }
 export default function AboutPage() {
   return (
     <MarketingPage>
       <PageSchema
-        name="About AnswerLoops"
-        description="The founders and the problem behind AnswerLoops."
+        name="About answerLoops"
+        description="The founders and the problem behind answerLoops."
         path="/about"
       />
       <PageHero
@@ -25,7 +25,7 @@ export default function AboutPage() {
         title="Built from the work of running a community."
       >
         <p>
-          We built AnswerLoops after answering the same support questions across
+          We built answerLoops after answering the same support questions across
           the communities we managed.
         </p>
       </PageHero>
@@ -45,13 +45,13 @@ export default function AboutPage() {
           </p>
           <p>
             We wanted a shared place for those questions and the documentation
-            needed to answer them. AnswerLoops grew out of that work: receive a
+            needed to answer them. answerLoops grew out of that work: receive a
             question, prepare a reply from existing knowledge, review it, and
             keep useful resolutions available for the next person.
           </p>
           <h2>How we build it</h2>
           <p>
-            We still run the company and use AnswerLoops in our own communities.
+            We still run the company and use answerLoops in our own communities.
             The source is available under AGPL-3.0, and teams can use the hosted
             service or operate a deployment themselves.
           </p>
