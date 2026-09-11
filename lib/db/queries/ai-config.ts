@@ -64,11 +64,21 @@ export async function saveOrgAIConfig(
     embedding_model: string
     embedding_api_key?: string | null
     embedding_base_url?: string | null
+    // Drop the stored key rather than keeping it — used when the provider
+    // changed and the caller intentionally left the key field blank (only
+    // valid for a keyless openai-compatible endpoint).
+    clear_chat_api_key?: boolean
+    clear_embedding_api_key?: boolean
   }
 ): Promise<void> {
   const now = new Date().toISOString()
   const encChatKey = config.chat_api_key ? encryptToken(config.chat_api_key) : null
   const encEmbedKey = config.embedding_api_key ? encryptToken(config.embedding_api_key) : null
+  // On an update: undefined = leave as-is, null = wipe, a value = overwrite.
+  const chatKeyUpdate =
+    encChatKey !== null ? { chatApiKey: encChatKey } : config.clear_chat_api_key ? { chatApiKey: null } : {}
+  const embedKeyUpdate =
+    encEmbedKey !== null ? { embeddingApiKey: encEmbedKey } : config.clear_embedding_api_key ? { embeddingApiKey: null } : {}
 
   await getDb()
     .insert(aiConfigs)
@@ -89,12 +99,11 @@ export async function saveOrgAIConfig(
       set: {
         chatProvider: config.chat_provider,
         chatModel: config.chat_model,
-        // null means "keep existing key" — only overwrite when a new value is provided
-        ...(encChatKey !== null ? { chatApiKey: encChatKey } : {}),
+        ...chatKeyUpdate,
         chatBaseUrl: config.chat_base_url ?? null,
         embeddingProvider: config.embedding_provider,
         embeddingModel: config.embedding_model,
-        ...(encEmbedKey !== null ? { embeddingApiKey: encEmbedKey } : {}),
+        ...embedKeyUpdate,
         embeddingBaseUrl: config.embedding_base_url ?? null,
         updatedAt: now,
       },

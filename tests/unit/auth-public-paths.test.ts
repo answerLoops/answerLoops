@@ -88,8 +88,9 @@ describe('auth.ts PUBLIC_PATHS covers every self-authenticating API route', () =
   })
 
   it('keeps public website pages on the marketing host when APP_URL is configured', () => {
-    const websiteMatch = authSrc.match(/const WEBSITE_PATHS = \[([\s\S]*?)\]/)
-    if (!websiteMatch) throw new Error('Could not find WEBSITE_PATHS in auth.ts')
+    const websitePathsSrc = fs.readFileSync(path.join(process.cwd(), 'lib/marketing/website-paths.ts'), 'utf-8')
+    const websiteMatch = websitePathsSrc.match(/export const WEBSITE_PATHS = \[([\s\S]*?)\] as const/)
+    if (!websiteMatch) throw new Error('Could not find WEBSITE_PATHS in lib/marketing/website-paths.ts')
     const websitePaths = websiteMatch[1].split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean)
 
     for (const route of publicPageRoutes) {

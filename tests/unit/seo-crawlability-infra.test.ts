@@ -84,7 +84,11 @@ describe('auth.ts path lists', () => {
   })
 
   it('lists /llms-full.txt in WEBSITE_PATHS so it stays on the marketing host', () => {
-    expect(covers(listFor('WEBSITE_PATHS'), '/llms-full.txt')).toBe(true)
+    const websitePathsSrc = read('lib/marketing/website-paths.ts')
+    const m = websitePathsSrc.match(/export const WEBSITE_PATHS = \[([\s\S]*?)\] as const/)
+    if (!m) throw new Error('Could not find WEBSITE_PATHS in lib/marketing/website-paths.ts')
+    const websitePaths = m[1].split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean)
+    expect(covers(websitePaths, '/llms-full.txt')).toBe(true)
   })
 })
 

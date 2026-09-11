@@ -116,7 +116,7 @@ export async function embeddingModel(
   return openai.embedding(defaultId)
 }
 
-function buildChatProvider(provider: string, apiKey: string | null, baseUrl: string | null) {
+export function buildChatProvider(provider: string, apiKey: string | null, baseUrl: string | null) {
   switch (provider) {
     case 'anthropic':
       return createAnthropic({ apiKey: apiKey ?? undefined })
@@ -131,4 +131,21 @@ function buildChatProvider(provider: string, apiKey: string | null, baseUrl: str
     default:
       return createOpenAI({ apiKey: apiKey ?? undefined })
   }
+}
+
+/**
+ * Resolve an embedding model from an explicit provider/key/baseURL, without a
+ * DB read — used by the "Test connection" action, which needs to try the
+ * values the user just typed rather than what's persisted. Only OpenAI and
+ * OpenAI-compatible endpoints do embeddings here, matching EMBEDDING_PROVIDERS.
+ */
+export function buildEmbeddingModel(
+  modelId: string,
+  apiKey: string | null,
+  baseUrl: string | null,
+): EmbeddingModel {
+  return createOpenAI({
+    apiKey: apiKey ?? undefined,
+    baseURL: baseUrl ?? undefined,
+  }).embedding(modelId)
 }

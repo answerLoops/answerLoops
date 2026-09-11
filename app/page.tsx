@@ -395,7 +395,7 @@ function Features() {
                   </div>
                 ))}
               </div>
-              <div className="mt-auto pt-7 text-[0.625rem] text-white/30">Auto-post threshold: 90% · configurable by category</div>
+              <div className="mt-auto pt-7 text-[0.625rem] text-white/30">Auto-post threshold: 80% · configurable by category</div>
             </div>
           </article>
         </div>

@@ -24,7 +24,7 @@ It's not for teams running a traditional help desk like Zendesk, online stores d
 
 ## Pricing
 
-Self-hosted: free forever (AGPL-3.0). Hosted (managed SaaS): Standard $49/mo (500 deflections, hard cap), Pro $149/mo (3,000 deflections, then $5 per 100 over), Enterprise $499/mo (unlimited) — all with a 14-day free trial, tiered by monthly deflection volume. Annual billing takes 20% off every tier.
+Self-hosted: free forever (AGPL-3.0). Hosted (managed SaaS), billed monthly: Standard $49/mo (500 deflections, hard cap), Pro $149/mo (3,000 deflections, then $5 per 100 over), Enterprise $499/mo (unlimited) — all with a 14-day free trial, tiered by monthly deflection volume. Billed annually, each tier is 20% cheaper per month (Standard $39/mo, Pro $119/mo, Enterprise $399/mo), charged as one annual total. The pricing page defaults to the annual toggle, so $39/mo is what a first-time visitor sees for Standard; $49/mo is the same plan billed monthly.
 
 ## Integrations
 
@@ -45,12 +45,16 @@ Self-hosted: free forever (AGPL-3.0). Hosted (managed SaaS): Standard $49/mo (50
 
 <!-- BEGIN GENERATED PUBLIC LINKS -->
 - Marketing site: https://answerloops.com
+- About: https://answerloops.com/about
 - Agentic support overview: https://answerloops.com/agentic-support
+- Blog: https://answerloops.com/blog
+- Blog: Managing every community platform from one place: https://answerloops.com/blog/managing-every-community-platform-from-one-place
 - /architecture: https://answerloops.com/architecture
 - /discord-github-support: https://answerloops.com/discord-github-support
 - /mcp-support-agents: https://answerloops.com/mcp-support-agents
 - /open-source-support: https://answerloops.com/open-source-support
 - Pricing: https://answerloops.com/pricing
+- Alternatives & comparisons: https://answerloops.com/alternatives
 - Privacy policy: https://answerloops.com/privacy
 - /self-hosted-ai-support: https://answerloops.com/self-hosted-ai-support
 - /self-hosting-proof: https://answerloops.com/self-hosting-proof

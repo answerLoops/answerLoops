@@ -102,11 +102,16 @@ describe('GitHub webhook fails closed without a secret', () => {
 })
 
 describe('AI config writes are owner/admin only', () => {
-  it('saveAIConfigAction and clearAIConfigAction gate on requireOrgAccess([owner, admin])', () => {
+  it('every ai-config action gates on requireOrgAccess([owner, admin])', () => {
     const src = read('app/actions/ai-config.ts')
     expect(src).not.toContain('DEFAULT_ORG_ID')
-    const matches = src.match(/requireOrgAccess\(\['owner', 'admin'\]\)/g) ?? []
-    expect(matches.length).toBe(2)
+    // one shared owner/admin gate helper, called by save, clear, and test
+    expect(src).toContain("requireOrgAccess(['owner', 'admin'])")
+    for (const fn of ['saveAIConfigAction', 'clearAIConfigAction', 'testAIConfigAction']) {
+      const body = src.slice(src.indexOf(`export async function ${fn}`))
+      const end = body.indexOf('\nexport ', 1)
+      expect((end === -1 ? body : body.slice(0, end)), fn).toContain('resolveOrgForAIConfig()')
+    }
   })
 
   it('the ai-config read routes drop the default-org fallback', () => {
