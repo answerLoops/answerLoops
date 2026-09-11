@@ -90,7 +90,11 @@ Every tenant-data query requires an explicit `org_id` — there is no silent def
 ## 7. Deployment
 
 - Multi-stage `Dockerfile` (deps → build → runner, no build toolchain in the final image), non-root user.
+<<<<<<< Updated upstream
 - Two services: **app** (dashboard + API, `pnpm start`) and **bot** (Discord gateway listener + background sweeps, `pnpm bot:start`). The bot also runs the maintenance sweeps — org purge, stuck-ticket recovery, and the **KB sync worker**, which claims rows from `kb_sync_jobs` and drives each one by calling `POST /api/kb/sync-jobs/run` on the app with `BOT_SECRET`. Notion/GitHub KB syncs are enqueued (by "Sync now" and the GitHub push webhook) rather than run inline in those requests.
+=======
+- Two services: **app** (dashboard + API, `pnpm start`) and **bot** (Discord gateway listener, `pnpm bot:start`).
+>>>>>>> Stashed changes
 - `docker-compose.prod.yml` (self-hosted, both services from the one image) for production; `docker compose up` (dev target) for local development with a local Postgres.
 - Migrations run automatically on startup — no manual migration step.
 - The `Dockerfile` / compose files above are the self-hosted path. A PaaS deploy builds from the repo instead — Railway reads `railway.toml` / `railway.bot.toml` and builds each service with Nixpacks. See `docs/self-hosting/` for the full self-host guide.
