@@ -17,7 +17,7 @@ All variables are set in your `.env` file (local) or in your hosting provider's 
 | `DIRECT_DATABASE_URL` | Non-pooled connection string for `LISTEN`/`NOTIFY` only (config hot-reload, live team and dashboard updates). Required whenever `DATABASE_URL` is a pooled connection (Neon `-pooler`, PgBouncer, etc.) — falls back to `DATABASE_URL` otherwise |
 | `AUTH_SECRET` | Random 32-byte secret used to sign Auth.js v5 session tokens and the OAuth `state` for channel connect flows. Generate with `openssl rand -hex 32` |
 | `AUTH_URL` | Full public URL of your deployment, e.g. `https://answerloops.com`. Used by Auth.js for OAuth callbacks |
-| `ENCRYPTION_KEY` | 32-byte hex key used to encrypt stored API keys at rest. Generate with `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | 32-byte hex key used to encrypt stored API keys at rest. Generate with `openssl rand -hex 32`. In production (`NODE_ENV=production`) it is mandatory — saving a credential without it throws instead of storing plaintext |
 
 ## Networking
 

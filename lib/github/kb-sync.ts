@@ -99,7 +99,7 @@ export async function syncRepoToKB(
       for (const chunk of chunks) {
         if (created >= budget) break
         try {
-          const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`)
+          const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`, orgId)
           await createArticleFromSource({ question: chunk.question, answer: chunk.answer, embedding, model: EMBEDDING_MODEL, sourceId: source.id }, orgId)
           created++
         } catch (err) {
@@ -277,7 +277,7 @@ export async function syncDiscussionsToKB(
     const article = buildDiscussionArticle(d)
     if (!article) continue
     try {
-      const embedding = await embedText(`${article.question}\n\n${article.answer}`)
+      const embedding = await embedText(`${article.question}\n\n${article.answer}`, orgId)
       await createArticleFromSource(
         { question: article.question, answer: article.answer, embedding, model: EMBEDDING_MODEL, sourceId: source.id, sourcePage: d.number },
         orgId
@@ -329,7 +329,7 @@ export async function syncSingleDiscussionToKB(
     return
   }
 
-  const embedding = await embedText(`${article.question}\n\n${article.answer}`)
+  const embedding = await embedText(`${article.question}\n\n${article.answer}`, orgId)
   await upsertArticleFromSource(
     { question: article.question, answer: article.answer, embedding, model: EMBEDDING_MODEL, sourceId: source.id, sourcePage: discussion.number },
     orgId

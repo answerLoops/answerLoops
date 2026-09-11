@@ -18,7 +18,7 @@ The scanners themselves — Trivy (dependencies, secrets, image), Semgrep (SAST)
     Security fixes ship as regular releases. See [Upgrading](/docs/self-hosting/upgrading) — pull the latest image or `git pull` + rebuild regularly rather than pinning to an old version indefinitely.
   </Step>
   <Step title="Set a real ENCRYPTION_KEY">
-    AI provider API keys and bot tokens are encrypted at rest using AES-256-GCM, keyed by `ENCRYPTION_KEY`. Without it set, secrets are stored in plaintext — see [Environment Variables](/docs/self-hosting/environment-variables). Generate one with `openssl rand -hex 32` and never commit it to source control.
+    AI provider API keys and bot tokens are encrypted at rest using AES-256-GCM, keyed by `ENCRYPTION_KEY`. A production build (`NODE_ENV=production`) refuses to save a credential without it, rather than falling back to plaintext — see [Environment Variables](/docs/self-hosting/environment-variables). Generate one with `openssl rand -hex 32` and never commit it to source control.
   </Step>
   <Step title="Set a real AUTH_SECRET">
     Auth.js signs and encrypts session tokens with `AUTH_SECRET`. Generate a unique value per deployment — never reuse the example value from `.env.local.example`.

@@ -62,10 +62,23 @@ describe('encryptToken / decryptToken', () => {
     process.env.ENCRYPTION_KEY = TEST_KEY
   })
 
-  it('falls back to plaintext when ENCRYPTION_KEY is absent', async () => {
+  it('falls back to plaintext when ENCRYPTION_KEY is absent (non-production)', async () => {
     delete process.env.ENCRYPTION_KEY
     const { encryptToken } = await getModule()
     expect(encryptToken('noop')).toBe('noop')
+  })
+
+  it('refuses to store a credential unencrypted when ENCRYPTION_KEY is absent in production', async () => {
+    delete process.env.ENCRYPTION_KEY
+    const prev = process.env.NODE_ENV
+    // NODE_ENV is readonly in the types; assign through the record
+    ;(process.env as Record<string, string | undefined>).NODE_ENV = 'production'
+    try {
+      const { encryptToken } = await getModule()
+      expect(() => encryptToken('sk-live-secret')).toThrow(/ENCRYPTION_KEY is not set/)
+    } finally {
+      ;(process.env as Record<string, string | undefined>).NODE_ENV = prev
+    }
   })
 
   it('decryptToken returns null for enc: value when key is absent', async () => {

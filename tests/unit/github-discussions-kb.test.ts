@@ -49,6 +49,16 @@ describe('lib/github/kb-sync.ts — discussion sync', () => {
     expect(src).toMatch(/if \(!d\.answer \|\| !d\.answer\.body\.trim\(\)\) return null/)
   })
 
+  it('passes orgId to every embedText call so a BYO-embedding org gets its own model', () => {
+    // All three GitHub KB embed sites (repo files, discussion backfill, single
+    // discussion) must forward orgId — otherwise those chunks embed with the
+    // platform-default model and land in a different vector space than the rest
+    // of that org's KB. Matches the Notion sync path.
+    const calls = [...src.matchAll(/embedText\([^)]*\)/g)].map((m) => m[0])
+    expect(calls.length).toBeGreaterThanOrEqual(3)
+    for (const call of calls) expect(call, call).toMatch(/,\s*orgId\)$/)
+  })
+
   it('dedups KB articles per discussion via sourcePage = discussion number, not by re-creating on every sync', () => {
     // Backfill (fresh source each run — create is correct here)
     expect(src).toMatch(/createArticleFromSource\(\s*\{ question: article\.question, answer: article\.answer, embedding, model: EMBEDDING_MODEL, sourceId: source\.id, sourcePage: d\.number \}/)

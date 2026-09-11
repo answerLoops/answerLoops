@@ -12,7 +12,18 @@ function getKey(): Buffer | null {
 
 export function encryptToken(plaintext: string): string {
   const key = getKey()
-  if (!key) return plaintext // dev fallback — set ENCRYPTION_KEY in prod
+  if (!key) {
+    // A missing key in production means this credential — an AI provider key, a
+    // bot token, a webhook secret — gets written to the database in cleartext
+    // with no error. The plaintext path is a local-dev convenience only; fail
+    // loud anywhere it actually matters.
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error(
+        'ENCRYPTION_KEY is not set — refusing to store a credential unencrypted. Generate one: openssl rand -hex 32'
+      )
+    }
+    return plaintext
+  }
 
   const iv = crypto.randomBytes(IV_LEN)
   const cipher = crypto.createCipheriv(ALGORITHM, key, iv)
