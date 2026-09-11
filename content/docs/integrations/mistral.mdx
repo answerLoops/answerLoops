@@ -1,8 +1,42 @@
 ---
 title: Mistral
-description: Coming soon.
+description: Use Mistral's models for answer generation, with an OpenAI key for embeddings.
 ---
 
-<Info>
-  This page is being written. For Discord setup see [Discord Bot Setup](/docs/self-hosting/discord-bot). For Slack see [Slack App Setup](/docs/self-hosting/slack-app).
-</Info>
+Mistral's models generate the answers AnswerLoops drafts. This integration
+covers **chat only** — knowledge-base search still needs an OpenAI key for
+embeddings alongside it.
+
+Available on every plan. Usage bills to your Mistral account.
+
+## 1. Get an API key
+
+Create a key in [La Plateforme](https://console.mistral.ai/api-keys). Add a
+payment method for production use.
+
+## 2. Configure in AnswerLoops
+
+1. **Settings → AI Model → Edit** (owner or admin).
+2. **Chat provider:** Mistral.
+3. **Model ID:** e.g. `mistral-large-latest`, `mistral-small-latest`,
+   `codestral-latest` — the field suggests current options; see the
+   [Mistral models list](https://docs.mistral.ai/getting-started/models/models_overview/)
+   for exact names.
+4. **API key:** paste your Mistral key.
+5. **Embeddings:** leave the provider on OpenAI and enter an **OpenAI API key**
+   in the embedding key field — required, or knowledge-base search and KB
+   imports fail after you save.
+6. Click **Test connection**, then **Save**.
+
+## Models
+
+| Use | Choice |
+|---|---|
+| Best answers | `mistral-large-latest` |
+| Cheaper | `mistral-small-latest` |
+| Code-heavy KBs | `codestral-latest` |
+
+## Related
+
+- [AI Model settings](/docs/product/ai-config)
+- [OpenAI integration](/docs/integrations/openai) — for the embedding key

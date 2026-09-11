@@ -127,7 +127,7 @@ Throttled requests carry a `Retry-After` header in seconds — back off for that
 
 ## Rate limits
 
-60 requests/minute per organization (shared across all of that org's keys), plus a generous per-IP limit (300/minute) that applies before a key is even resolved.
+Rate limited per organization (shared across all of that org's keys). The ceiling is plan-scaled: 50/minute on Standard, 150/minute on Pro, 300/minute on Enterprise (and on self-hosted). A generous per-IP limit (300/minute) also applies before a key is even resolved.
 
 These are separate buckets from the MCP server's, so heavy REST traffic can't starve your MCP quota or vice versa. Both are backed by the same shared store and enforced across every running instance, so neither surface offers a way around the other's ceiling.
 

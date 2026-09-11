@@ -1,8 +1,42 @@
 ---
 title: Google Gemini
-description: Coming soon.
+description: Use Google's Gemini models for answer generation, with an OpenAI key for embeddings.
 ---
 
-<Info>
-  This page is being written. For Discord setup see [Discord Bot Setup](/docs/self-hosting/discord-bot). For Slack see [Slack App Setup](/docs/self-hosting/slack-app).
-</Info>
+Google's Gemini models generate the answers AnswerLoops drafts. This
+integration covers **chat only** — knowledge-base search still needs an OpenAI
+key for embeddings alongside it.
+
+Available on every plan. Usage bills to your Google AI account.
+
+## 1. Get an API key
+
+Create a key in [Google AI Studio](https://aistudio.google.com/apikey). The
+free tier is generous for evaluation; add billing for production traffic.
+
+## 2. Configure in AnswerLoops
+
+1. **Settings → AI Model → Edit** (owner or admin).
+2. **Chat provider:** Google Gemini.
+3. **Model ID:** e.g. `gemini-2.5-flash`, `gemini-2.5-pro`,
+   `gemini-2.0-flash` — the field suggests current options; see the
+   [Gemini models list](https://ai.google.dev/gemini-api/docs/models) for exact
+   names.
+4. **API key:** paste your Google AI Studio key.
+5. **Embeddings:** leave the provider on OpenAI and enter an **OpenAI API key**
+   in the embedding key field — required, or knowledge-base search and KB
+   imports fail after you save.
+6. Click **Test connection**, then **Save**.
+
+## Models
+
+| Use | Choice |
+|---|---|
+| Balanced | `gemini-2.5-flash` |
+| Best answers | `gemini-2.5-pro` |
+| Cheapest | `gemini-2.0-flash-lite` |
+
+## Related
+
+- [AI Model settings](/docs/product/ai-config)
+- [OpenAI integration](/docs/integrations/openai) — for the embedding key
