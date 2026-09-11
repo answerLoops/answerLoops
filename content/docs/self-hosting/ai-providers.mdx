@@ -32,7 +32,9 @@ Supported providers:
 
 ## Embeddings
 
-Embeddings always use OpenAI's `text-embedding-3-small` by default. This can be changed per-org in Settings → Embeddings.
+Embeddings use OpenAI's `text-embedding-3-small` by default. This can be changed per-org in Settings → Embeddings.
+
+Only OpenAI does embeddings natively. If the chat provider is anything else (Anthropic, Gemini, Groq, Mistral), enter a separate **OpenAI API key** in the embedding key field — the save is rejected without one, and knowledge-base search and every KB import would otherwise fail. An OpenAI-compatible endpoint can serve embeddings too (e.g. Ollama's `nomic-embed-text`).
 
 <Info>
   Embedding vectors are stored in the database alongside each KB article. Changing the embedding model requires re-importing all KB articles.

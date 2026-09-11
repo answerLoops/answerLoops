@@ -8,8 +8,9 @@ import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { resolveOrgIdForSessionUpdate, resolveOrgAccess } from '@/lib/auth/membership'
 import { orgHasProductAccess, isAccessExempt } from '@/lib/billing/access'
 import { appOrigin } from '@/lib/site'
+import { isWebsitePath } from '@/lib/marketing/website-paths'
 
-const PUBLIC_PATHS = ['/', '/login', '/api/auth', '/api/ingest', '/api/feedback', '/api/slack', '/api/widget', '/widget', '/api/billing/webhook', '/api/waitlist', '/api/health', '/api/github/webhook', '/api/email/ingest', '/api/mcp', '/api/agent', '/openapi.json', '/.well-known', '/api/google-chat', '/api/nav-state', '/api/kb/sync-jobs/run', '/vs', '/pricing', '/agentic-support', '/docs', '/privacy', '/terms', '/robots.txt', '/sitemap.xml', '/llms.txt', '/llms-full.txt', '/architecture', '/discord-github-support', '/mcp-support-agents', '/open-source-support', '/self-hosted-ai-support', '/self-hosting-proof', '/support-example', '/support-workflow']
+const PUBLIC_PATHS = ['/', '/login', '/api/auth', '/api/ingest', '/api/feedback', '/api/slack', '/api/widget', '/widget', '/api/billing/webhook', '/api/waitlist', '/api/health', '/api/github/webhook', '/api/email/ingest', '/api/mcp', '/api/agent', '/openapi.json', '/.well-known', '/api/google-chat', '/api/nav-state', '/api/kb/sync-jobs/run', '/vs', '/alternatives', '/about', '/blog', '/pricing', '/agentic-support', '/docs', '/privacy', '/terms', '/robots.txt', '/sitemap.xml', '/llms.txt', '/llms-full.txt', '/architecture', '/discord-github-support', '/mcp-support-agents', '/open-source-support', '/self-hosted-ai-support', '/self-hosting-proof', '/support-example', '/support-workflow']
 const ONBOARDING_PATH = '/onboarding'
 const ACCOUNT_DELETED_PATH = '/account-deleted'
 const START_TRIAL_PATH = '/start-trial'
@@ -24,11 +25,10 @@ function isPublic(pathname: string): boolean {
 // from PUBLIC_PATHS above: that one governs what needs a session, this one
 // governs what host something lives on, and the two questions don't have the
 // same answer — /login needs no session but is still part of the platform,
-// while /docs, /privacy, and /terms need no session and genuinely are the website.
-const WEBSITE_PATHS = ['/', '/pricing', '/agentic-support', '/vs', '/docs', '/privacy', '/terms', '/robots.txt', '/sitemap.xml', '/llms.txt', '/llms-full.txt', '/architecture', '/discord-github-support', '/mcp-support-agents', '/open-source-support', '/self-hosted-ai-support', '/self-hosting-proof', '/support-example', '/support-workflow']
-function isWebsitePath(pathname: string): boolean {
-  return WEBSITE_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
-}
+// while /docs, /privacy, and /terms need no session and genuinely are the
+// website. The list itself lives in lib/marketing/website-paths.ts, shared
+// with next.config.ts's redirects() — that's the other half of the host
+// split, sending a website path hit on the app subdomain back here.
 
 function getAllowedEmails(): string[] {
   return (process.env.ALLOWED_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)

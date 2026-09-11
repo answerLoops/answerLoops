@@ -27,7 +27,7 @@ describe('app/actions/ai-config.ts — saveAIConfigAction entitlement scope', ()
 
   it('parses the form before checking any entitlement, so provider choice can gate the check', () => {
     const s = src()
-    const parseIdx = s.indexOf('SaveSchema.safeParse(raw)')
+    const parseIdx = s.indexOf('SaveSchema.safeParse(Object.fromEntries(formData))')
     const gateIdx = s.indexOf("orgHasFeature(orgId, 'custom_ai_model_config')")
     expect(parseIdx).toBeGreaterThan(-1)
     expect(gateIdx).toBeGreaterThan(parseIdx)

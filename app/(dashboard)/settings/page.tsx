@@ -7,7 +7,8 @@ import { updateSLAAction } from '@/app/actions/sla'
 import { saveDiscordIntegrationAction, deleteDiscordIntegrationAction, saveDiscordGuildChannelsAction, removeDiscordGuildAction, updateDiscordAutoDeflectAction, saveSlackChannelsAction, deleteSlackIntegrationAction, saveTelegramIntegrationAction, deleteTelegramIntegrationAction, saveDiscourseIntegrationAction, deleteDiscourseIntegrationAction, saveCircleIntegrationAction, deleteCircleIntegrationAction, saveEmailIntegrationAction, deleteEmailIntegrationAction, startEmailDomainVerificationAction, checkEmailDomainVerificationAction, removeEmailDomainAction, disconnectOauthAction, generateGoogleChatConnectCodeAction, saveGoogleChatSettingsAction, deleteGoogleChatIntegrationAction, getCurrentDeploymentMode } from '@/app/actions/integrations'
 import { sendInviteAction, revokeInviteAction, removeMemberAction, transferOwnershipAction } from '@/app/actions/invitations'
 import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction } from '@/app/actions/widget'
-import { saveAIConfigAction, clearAIConfigAction } from '@/app/actions/ai-config'
+import { saveAIConfigAction, clearAIConfigAction, testAIConfigAction } from '@/app/actions/ai-config'
+import type { AIConnectionResult } from '@/lib/ai/test-connection'
 import { saveROIConfigAction } from '@/app/actions/roi'
 import { createApiKeyAction, revokeApiKeyAction } from '@/app/actions/api-keys'
 import { API_SCOPES, ALL_SCOPES } from '@/lib/agent/scopes'
@@ -2938,6 +2939,22 @@ export function AIModelSection() {
   const { toastMessage, showToast } = useToast()
   const [, startClearTransition] = useTransition()
   const [trialStatus, setTrialStatus] = useState<{ used: number; limit: number; remaining: number; exhausted: boolean } | null>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const [testing, startTest] = useTransition()
+  const [testResult, setTestResult] = useState<AIConnectionResult | null>(null)
+  const [testError, setTestError] = useState<string | null>(null)
+
+  function runTest() {
+    if (!formRef.current) return
+    setTestResult(null)
+    setTestError(null)
+    const fd = new FormData(formRef.current)
+    startTest(async () => {
+      const res = await testAIConfigAction(null, fd)
+      if (res.error) setTestError(res.error)
+      else if (res.result) setTestResult(res.result)
+    })
+  }
 
   const [saveState, saveAction, savePending] = useActionState(
     async (prev: unknown, fd: FormData) => {
@@ -3036,7 +3053,7 @@ export function AIModelSection() {
 
         {/* Edit form */}
         {showForm && (
-          <form key={editing ? 'edit' : 'new'} action={saveAction} className="space-y-4">
+          <form ref={formRef} key={editing ? 'edit' : 'new'} action={saveAction} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Chat provider</label>
               <select
@@ -3185,10 +3202,27 @@ export function AIModelSection() {
             {(clearState as { error?: string } | null)?.error && (
               <p className="text-xs text-red-600">{(clearState as { error?: string }).error}</p>
             )}
+            {testError && <p className="text-xs text-red-600">{testError}</p>}
+            {testResult && (
+              <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs space-y-1">
+                {(['chat', 'embedding'] as const).map((k) => {
+                  const check = testResult[k]
+                  return (
+                    <p key={k} className={check.ok ? 'text-green-700' : 'text-red-600'}>
+                      <span className="font-medium capitalize">{k}:</span>{' '}
+                      {check.ok ? 'connection OK' : (check.error ?? 'failed')}
+                    </p>
+                  )
+                })}
+              </div>
+            )}
 
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button type="submit" size="sm" disabled={savePending}>
                 {savePending ? 'Saving…' : configured ? 'Update' : 'Save'}
+              </Button>
+              <Button type="button" size="sm" variant="secondary" onClick={runTest} disabled={testing}>
+                {testing ? 'Testing…' : 'Test connection'}
               </Button>
               {editing && (
                 <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>

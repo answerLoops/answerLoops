@@ -1,8 +1,71 @@
 ---
-title: Ai Config
-description: Coming soon.
+title: AI Model
+description: Bring your own LLM provider for chat and embeddings, or run on the free trial and the platform default.
 ---
 
-<Info>
-  This page is being written. Check back soon or open an issue on [GitHub](https://github.com/answerLoops/answerLoops).
-</Info>
+AnswerLoops uses a language model to draft answers and an embedding model to
+search your knowledge base. **Settings → AI Model** controls which provider and
+models an org uses.
+
+## What runs by default
+
+| State | What's used |
+|---|---|
+| A new cloud org, no key configured | AnswerLoops' key, metered as a **free trial** — 5 AI‑answered tickets, lifetime, per org |
+| Trial used up, still no key | AI drafting stops; connect a provider to resume |
+| Self‑hosted | The `OPENAI_API_KEY` in your environment |
+| Any org with a provider configured here | That provider, for every AI call |
+
+The card shows where you stand — trial credits remaining, "trial used up", or
+the configured provider and model.
+
+## Bring your own provider
+
+Included on every plan for the named providers below. A custom
+OpenAI‑compatible endpoint (your own base URL — Ollama, LM Studio, vLLM, a
+proxy) is part of **Custom AI model configuration**, which is Enterprise.
+
+| Provider | Chat | Embeddings |
+|---|---|---|
+| OpenAI | ✓ | ✓ (same key covers both) |
+| Anthropic | ✓ | — needs a separate OpenAI key for embeddings |
+| Google Gemini | ✓ | — separate OpenAI key |
+| Groq | ✓ | — separate OpenAI key |
+| Mistral | ✓ | — separate OpenAI key |
+| OpenAI‑compatible endpoint | ✓ (Enterprise) | ✓ (Enterprise) |
+
+Only OpenAI does embeddings natively. If your chat provider is anything else,
+enter an **OpenAI API key under Embeddings** — otherwise knowledge‑base search
+and every ingest fails after you save. The form asks for it automatically and
+the save is rejected with a clear message if it's missing.
+
+### Steps
+
+1. **Settings → AI Model → Edit** (or **Save** for a first‑time setup — owner or
+   admin only).
+2. Pick the **chat provider** and enter its **model ID** (e.g. `claude-sonnet-4-6`,
+   `gemini-2.5-flash`) and **API key**.
+3. Pick the **embedding provider** and model. Add an OpenAI embedding key if the
+   chat provider isn't OpenAI.
+4. Click **Test connection** — this makes a one‑token call to each provider with
+   the values you entered (nothing is saved yet) and reports `chat: connection
+   OK` / `embedding: …` or a specific error (rejected key, unknown model,
+   unreachable endpoint).
+5. Click **Save**.
+
+### Changing provider later
+
+If you switch the chat or embedding provider and leave the key field blank, the
+save is rejected — the stored key belonged to the previous provider and would
+fail on every call. Enter a key for the new provider. (A keyless local endpoint
+is the exception: switching to `openai-compatible` with no key clears the old
+one.)
+
+Leaving a key field blank on an update to the **same** provider keeps the
+stored key — the field shows "Key saved".
+
+## Reset
+
+**Reset to platform default** deletes the org's AI config. A cloud org falls
+back to the trial (or, if exhausted, to no AI); a self‑hosted deployment falls
+back to its environment key.

@@ -19,12 +19,16 @@ type ChangeFrequency = MetadataRoute.Sitemap[number]['changeFrequency']
 // "Links" block from this list. priority is relative within this site only.
 const STATIC_ROUTES: { path: string; priority: number; changeFrequency: ChangeFrequency }[] = [
   { path: '', priority: 1.0, changeFrequency: 'weekly' },
+  { path: '/about', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/agentic-support', priority: 0.8, changeFrequency: 'monthly' },
+  { path: '/blog', priority: 0.6, changeFrequency: 'weekly' },
+  { path: '/blog/managing-every-community-platform-from-one-place', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/architecture', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/discord-github-support', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/mcp-support-agents', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/open-source-support', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/pricing', priority: 0.9, changeFrequency: 'weekly' },
+  { path: '/alternatives', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/privacy', priority: 0.2, changeFrequency: 'yearly' },
   { path: '/self-hosted-ai-support', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/self-hosting-proof', priority: 0.6, changeFrequency: 'monthly' },

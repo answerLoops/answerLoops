@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import { createMDX } from "fumadocs-mdx/next";
 import docsNav from "./docs/docs.json" with { type: "json" };
+import { MARKETING_PAGE_PATHS } from "./lib/marketing/website-paths";
 
 // Headers applied to every route except the embeddable widget — see below.
 const frameBlockingHeaders = [
@@ -153,6 +154,28 @@ const nextConfig: NextConfig = {
         destination: `/docs/${LEGACY_SLUG_OVERRIDES[id] ?? id}`,
         permanent: true,
       })),
+      // Every marketing page is reachable on the app subdomain too — Railway's
+      // one-hostname-per-port Custom Domain plan means both hosts share this
+      // one deployment, so nothing stops app.answerloops.com/pricing from
+      // rendering. Left alone, that duplicates every marketing page onto a
+      // second indexable host and confuses anything trying to answer "what
+      // does this product do" from the app URL. Send each one back to its
+      // canonical home on the root marketing domain — exact path and any
+      // nested path underneath it (e.g. /docs/introduction, /vs/chatbase).
+      ...MARKETING_PAGE_PATHS.flatMap((path) => [
+        {
+          source: path,
+          has: [{ type: 'host' as const, value: 'app.answerloops.com' }],
+          destination: `https://answerloops.com${path}`,
+          permanent: true,
+        },
+        {
+          source: `${path}/:rest*`,
+          has: [{ type: 'host' as const, value: 'app.answerloops.com' }],
+          destination: `https://answerloops.com${path}/:rest*`,
+          permanent: true,
+        },
+      ]),
     ]
   },
 }

@@ -1,8 +1,49 @@
 ---
-title: Openai
-description: Coming soon.
+title: OpenAI
+description: Use your own OpenAI API key for answer generation and embeddings.
 ---
 
-<Info>
-  This page is being written. For Discord setup see [Discord Bot Setup](/docs/self-hosting/discord-bot). For Slack see [Slack App Setup](/docs/self-hosting/slack-app).
-</Info>
+OpenAI is the default AI provider. It's the one provider that covers **both**
+jobs AnswerLoops needs a model for — generating answers and creating the
+embeddings that power knowledge-base search — with a single key.
+
+A new cloud workspace runs on AnswerLoops' key as a free trial (5 AI-answered
+tickets). Adding your own key here removes that limit and bills usage to your
+OpenAI account. A self-hosted deployment uses the `OPENAI_API_KEY` from its
+environment until an org overrides it here.
+
+## 1. Get an API key
+
+In the [OpenAI dashboard](https://platform.openai.com/api-keys), create a
+secret key. It starts with `sk-`. You'll also need billing set up on the
+OpenAI account.
+
+## 2. Configure in AnswerLoops
+
+1. **Settings → AI Model → Edit** (owner or admin).
+2. **Chat provider:** OpenAI.
+3. **Model ID:** e.g. `gpt-4o`, `gpt-4o-mini`, `gpt-4.1`, `o4-mini` — the field
+   suggests current options.
+4. **API key:** paste your `sk-` key.
+5. **Embeddings:** leave the provider on OpenAI. The same key is used — no
+   second key to enter.
+6. Click **Test connection** to confirm the key and model work, then **Save**.
+
+## Models
+
+| Use | Good choices |
+|---|---|
+| Answer quality | `gpt-4o`, `gpt-4.1` |
+| Cheaper / faster | `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-4.1-nano` |
+| Reasoning | `o3`, `o3-mini`, `o4-mini` |
+| Embeddings | `text-embedding-3-small` (default), `text-embedding-3-large` |
+
+See the [OpenAI models list](https://platform.openai.com/docs/models) for the
+full catalogue and pricing.
+
+## Related
+
+- [AI Model settings](/docs/product/ai-config) — trial, provider switching, and
+  the test-connection check
+- [Self-hosting: AI providers](/docs/self-hosting/ai-providers) — the
+  environment-level platform key

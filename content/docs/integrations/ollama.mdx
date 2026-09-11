@@ -1,8 +1,52 @@
 ---
 title: Ollama
-description: Coming soon.
+description: Run answer generation on a local model through Ollama's OpenAI-compatible API.
 ---
 
-<Info>
-  This page is being written. For Discord setup see [Discord Bot Setup](/docs/self-hosting/discord-bot). For Slack see [Slack App Setup](/docs/self-hosting/slack-app).
-</Info>
+Ollama runs open models on your own machine and exposes an OpenAI-compatible
+API. AnswerLoops talks to it through the **OpenAI-compatible** provider option
+— point it at Ollama's base URL, leave the key blank.
+
+<Warning>
+  The OpenAI-compatible provider (any custom endpoint, Ollama included) is part
+  of **Custom AI model configuration**, which is on the Enterprise plan.
+  Self-hosted deployments have it unconditionally.
+</Warning>
+
+Chat runs locally. Embeddings can too (Ollama serves embedding models), or you
+can keep embeddings on OpenAI's hosted API — that's the only part that would
+leave your network.
+
+## 1. Run Ollama
+
+```bash
+ollama serve
+ollama pull llama3.2
+ollama pull nomic-embed-text   # only if you want local embeddings
+```
+
+## 2. Configure in AnswerLoops
+
+1. **Settings → AI Model → Edit** (owner or admin).
+2. **Chat provider:** OpenAI-compatible.
+3. **Base URL:** `http://localhost:11434/v1` — or, when AnswerLoops runs in
+   Docker on macOS/Windows, `http://host.docker.internal:11434/v1`.
+4. **Model ID:** `llama3.2` (or whatever you pulled).
+5. **API key:** leave blank — Ollama doesn't authenticate.
+6. **Embeddings:** either
+   - **OpenAI-compatible** with the same base URL and model `nomic-embed-text`, or
+   - **OpenAI** with a hosted key (embeddings then leave your network).
+7. Click **Test connection** — it will fail if the base URL isn't reachable
+   from the AnswerLoops server — then **Save**.
+
+<Warning>
+  Ollama runs on the host, not inside the AnswerLoops container. Use
+  `host.docker.internal` (Mac/Windows) or the host's LAN IP (Linux) as the base
+  URL, not `localhost`.
+</Warning>
+
+## Related
+
+- [Self-hosting: AI providers](/docs/self-hosting/ai-providers) — the same
+  setup from the self-hoster's angle
+- [AI Model settings](/docs/product/ai-config)

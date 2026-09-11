@@ -40,7 +40,7 @@ Streamable HTTP, JSON-RPC 2.0, single endpoint: `POST /api/mcp`.
 
 - `initialize` and `notifications/initialized` don't require auth (standard MCP handshake)
 - Every other method requires `Authorization: Bearer <key>` — the key resolves to an organization, and every tool call is scoped to that org's data only
-- Rate limited per organization (shared across all of that org's keys), enforced globally across every running instance so the limit holds regardless of how many instances are deployed behind it: 60 requests/minute, plus a generous per-IP limit (300/minute) that applies before a key is even resolved. The same counters back the [Agent API](/docs/integrations/agent-api), so a key can't get a second allowance by switching surfaces
+- Rate limited per organization (shared across all of that org's keys), enforced globally across every running instance so the limit holds regardless of how many instances are deployed behind it. The ceiling is plan-scaled — 50/minute on Standard, 150/minute on Pro, 300/minute on Enterprise and self-hosted — plus a generous per-IP limit (300/minute) that applies before a key is even resolved. The same counters back the [Agent API](/docs/integrations/agent-api), so a key can't get a second allowance by switching surfaces
 - Throttled requests return `429` with a `Retry-After` header (seconds) and JSON-RPC error code `-32002`, which is distinct from the generic internal-error code so your client can back off instead of alerting
 - If you send an `MCP-Protocol-Version` header, it must be a revision this server implements (`2024-11-05`) — anything else is rejected up front rather than silently ignored
 - Request bodies are capped at 64KB — larger requests get a 413 before the body is read
