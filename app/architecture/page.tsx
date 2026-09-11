@@ -5,9 +5,9 @@ import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'How a question becomes a reviewed answer | AnswerLoops',
+  title: 'How a question becomes a reviewed answer | answerLoops',
   description:
-    'AnswerLoops records the question, retrieves relevant knowledge, drafts a reply, and runs a separate AI review. Channel settings determine whether the reply posts automatically or waits for your team.',
+    'answerLoops records the question, retrieves relevant knowledge, drafts a reply, and runs a separate AI review. Channel settings determine whether the reply posts automatically or waits for your team.',
   alternates: { canonical: '/architecture' },
 }
 
@@ -17,7 +17,7 @@ export default async function ArchitecturePage() {
       navState={await resolveNavState()}
       eyebrow="Architecture"
       title="How a question becomes a reviewed answer"
-      intro="AnswerLoops records the question, retrieves relevant knowledge, drafts a reply, and runs a separate AI review. Channel settings determine whether the reply posts automatically or waits for your team."
+      intro="answerLoops records the question, retrieves relevant knowledge, drafts a reply, and runs a separate AI review. Channel settings determine whether the reply posts automatically or waits for your team."
       sections={[
         {
           title: 'Keep the conversation attached',
@@ -73,7 +73,7 @@ export default async function ArchitecturePage() {
       schema={{
         name: 'How a question becomes a reviewed answer',
         description:
-          'AnswerLoops records the question, retrieves relevant knowledge, drafts a reply, and runs a separate AI review. Channel settings determine whether the reply posts automatically or waits for your team.',
+          'answerLoops records the question, retrieves relevant knowledge, drafts a reply, and runs a separate AI review. Channel settings determine whether the reply posts automatically or waits for your team.',
         path: '/architecture',
       }}
     >

@@ -130,7 +130,7 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
-      // Old Mintlify root ("what is AnswerLoops") lived at the docs
+      // Old Mintlify root ("what is answerLoops") lived at the docs
       // subdomain's `/`. Fumadocs serves the same content at `/docs`.
       {
         source: '/',

@@ -16,7 +16,7 @@ export interface PageSchemaProps {
 
 export function PageSchema({ name, description, path, breadcrumbs = [], type = 'WebPage' }: PageSchemaProps) {
   const url = `https://answerloops.com${path}`
-  const items = [{ name: 'AnswerLoops', path: '/' }, ...breadcrumbs, { name, path }]
+  const items = [{ name: 'answerLoops', path: '/' }, ...breadcrumbs, { name, path }]
     .filter((item, index, all) => all.findIndex((candidate) => candidate.path === item.path) === index)
 
   const jsonLd = {

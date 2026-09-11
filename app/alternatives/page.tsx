@@ -7,9 +7,9 @@ import {
 } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 export const metadata: Metadata = {
-  title: 'Compare AnswerLoops',
+  title: 'Compare answerLoops',
   description:
-    'Compare AnswerLoops with Intercom, Chatbase, Plain, Pylon, and Zendesk AI.',
+    'Compare answerLoops with Intercom, Chatbase, Plain, Pylon, and Zendesk AI.',
   alternates: { canonical: '/alternatives' },
 }
 const COMPARISONS = [
@@ -48,7 +48,7 @@ export default function AlternativesPage() {
   return (
     <MarketingPage>
       <PageSchema
-        name="Compare AnswerLoops"
+        name="Compare answerLoops"
         description="Product comparisons for teams evaluating AI support."
         path="/alternatives"
         type="CollectionPage"
@@ -67,7 +67,7 @@ export default function AlternativesPage() {
         <div className="marketing-container marketing-grid">
           {COMPARISONS.map((c) => (
             <article className="marketing-card" key={c.slug}>
-              <h2 className="!text-xl">AnswerLoops vs {c.name}</h2>
+              <h2 className="!text-xl">answerLoops vs {c.name}</h2>
               <p>{c.summary}</p>
               <Link className="marketing-text-link" href={`/vs/${c.slug}`}>
                 Compare {c.name} →

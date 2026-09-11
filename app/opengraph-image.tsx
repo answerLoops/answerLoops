@@ -4,7 +4,7 @@ import { ImageResponse } from 'next/og'
 // Next wires this into both the OpenGraph and Twitter image slots. The old
 // setup pointed both at the 900×900 square logo, which social platforms
 // letterbox badly and which reads as "no card" on X/LinkedIn/Slack unfurls.
-export const alt = 'AnswerLoops — Answers from your documentation'
+export const alt = 'answerLoops — Answers from your documentation'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 

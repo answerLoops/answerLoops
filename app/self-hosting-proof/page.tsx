@@ -4,7 +4,7 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Plan your AnswerLoops deployment | AnswerLoops',
+  title: 'Plan your answerLoops deployment | answerLoops',
   description:
     'Run the application and channel services on infrastructure you manage. Before launch, configure authentication, storage, model access, backups, and updates.',
   alternates: { canonical: '/self-hosting-proof' },
@@ -15,7 +15,7 @@ export default async function SelfHostingProofPage() {
     <ProofPage
       navState={await resolveNavState()}
       eyebrow="Self hosting proof"
-      title="Plan your AnswerLoops deployment"
+      title="Plan your answerLoops deployment"
       intro="Run the application and channel services on infrastructure you manage. Before launch, configure authentication, storage, model access, backups, and updates."
       sections={[
         {
@@ -70,7 +70,7 @@ export default async function SelfHostingProofPage() {
         },
       ]}
       schema={{
-        name: 'Plan your AnswerLoops deployment',
+        name: 'Plan your answerLoops deployment',
         description:
           'Run the application and channel services on infrastructure you manage. Before launch, configure authentication, storage, model access, backups, and updates.',
         path: '/self-hosting-proof',

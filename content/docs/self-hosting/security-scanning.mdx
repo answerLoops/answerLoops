@@ -1,9 +1,9 @@
 ---
 title: Security Scanning
-description: What AnswerLoops does to ship secure releases, and what you should check when self-hosting.
+description: What answerLoops does to ship secure releases, and what you should check when self-hosting.
 ---
 
-Every AnswerLoops release goes through automated dependency, secret, and code-level security scanning before it merges — you're deploying code that's already been checked. This page covers what that means for you as a self-hoster, and the security practices worth following in your own deployment.
+Every answerLoops release goes through automated dependency, secret, and code-level security scanning before it merges — you're deploying code that's already been checked. This page covers what that means for you as a self-hoster, and the security practices worth following in your own deployment.
 
 ## What's already covered before you deploy
 
@@ -24,7 +24,7 @@ The scanners themselves — Trivy (dependencies, secrets, image), Semgrep (SAST)
     Auth.js signs and encrypts session tokens with `AUTH_SECRET`. Generate a unique value per deployment — never reuse the example value from `.env.local.example`.
   </Step>
   <Step title="Run behind HTTPS">
-    Terminate TLS in front of AnswerLoops (Railway, Fly.io, and most PaaS providers do this automatically; if you're running raw Docker on your own box, put a reverse proxy like Caddy or nginx in front of it). OAuth callbacks and webhook signature checks assume the deployment is reachable over HTTPS.
+    Terminate TLS in front of answerLoops (Railway, Fly.io, and most PaaS providers do this automatically; if you're running raw Docker on your own box, put a reverse proxy like Caddy or nginx in front of it). OAuth callbacks and webhook signature checks assume the deployment is reachable over HTTPS.
   </Step>
   <Step title="Keep webhook secrets private">
     `GITHUB_WEBHOOK_SECRET`, `SLACK_SIGNING_SECRET`, `RESEND_WEBHOOK_SECRET`, and `BOT_SECRET` all guard inbound webhook endpoints against forged requests. Treat them the same as API keys — never commit them, never log them.
@@ -36,4 +36,4 @@ The scanners themselves — Trivy (dependencies, secrets, image), Semgrep (SAST)
 
 ## Reporting a vulnerability
 
-If you find a security issue in AnswerLoops itself, open an issue on [GitHub](https://github.com/answerLoops/answerLoops/issues) or reach out through the contact info in the repo. Please don't include working exploit details in a public issue for anything that looks exploitable in a live deployment — flag it first so it can be triaged privately.
+If you find a security issue in answerLoops itself, open an issue on [GitHub](https://github.com/answerLoops/answerLoops/issues) or reach out through the contact info in the repo. Please don't include working exploit details in a public issue for anything that looks exploitable in a live deployment — flag it first so it can be triaged privately.

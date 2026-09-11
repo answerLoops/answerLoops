@@ -1,13 +1,13 @@
 ---
 title: Telegram
-description: Connect a Telegram bot to AnswerLoops so questions in your group chats get AI-drafted answers and show up in your ticket list.
+description: Connect a Telegram bot to answerLoops so questions in your group chats get AI-drafted answers and show up in your ticket list.
 ---
 
 ## Overview
 
-AnswerLoops connects to Telegram through a bot you create and control — there's no shared platform-wide bot and no OAuth flow. Every message sent to the bot in a monitored chat (10+ characters, from a real user rather than another bot) is ingested as a ticket. The bot replies in the same chat when AI confidence is above your threshold **and Automatic Deflections is turned on**; otherwise the answer is held as a draft on the dashboard and the chat gets no reply.
+answerLoops connects to Telegram through a bot you create and control — there's no shared platform-wide bot and no OAuth flow. Every message sent to the bot in a monitored chat (10+ characters, from a real user rather than another bot) is ingested as a ticket. The bot replies in the same chat when AI confidence is above your threshold **and Automatic Deflections is turned on**; otherwise the answer is held as a draft on the dashboard and the chat gets no reply.
 
-Because the bot is per-organization, the token you generate with @BotFather is stored encrypted in your AnswerLoops database — it's never shared with other orgs, and self-hosted deployments don't need a platform-wide credential to make Telegram work.
+Because the bot is per-organization, the token you generate with @BotFather is stored encrypted in your answerLoops database — it's never shared with other orgs, and self-hosted deployments don't need a platform-wide credential to make Telegram work.
 
 <Callout type="info">
   **Automatic Deflections** is off by default, same as every other channel. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss, and the Telegram chat gets no automatic reply. Turn it on in **Settings → Telegram → Edit → Automatic Deflections → Save** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
@@ -30,16 +30,16 @@ Telegram bots are created by talking to Telegram's own bot, [@BotFather](https:/
   Keep this chat open. You'll come back to BotFather later if you need to change the bot's group privacy settings (see Troubleshooting below).
 </Tip>
 
-### 2. Paste the token into AnswerLoops
+### 2. Paste the token into answerLoops
 
 1. Go to **Settings → Channels → Telegram**
 2. Paste the token into **Bot Token** and click **Connect**
 
-AnswerLoops validates the token's format and calls Telegram's `getMe` API to confirm it's real before saving it. If it's rejected, double-check you copied the whole string including the part after the colon.
+answerLoops validates the token's format and calls Telegram's `getMe` API to confirm it's real before saving it. If it's rejected, double-check you copied the whole string including the part after the colon.
 
 ### 3. The webhook registers itself
 
-Telegram doesn't push messages to you automatically — it has to be told where to send them. **Connect** does this for you: once the token validates, AnswerLoops calls Telegram's `setWebhook` API with your app's public URL (`AUTH_URL`) and a per-org secret, and Telegram starts POSTing new messages to `/api/telegram/webhook`. If that call fails (for example `AUTH_URL` isn't a publicly reachable HTTPS URL), the token is still saved and the card shows a **Register webhook** button to retry once the URL is fixed.
+Telegram doesn't push messages to you automatically — it has to be told where to send them. **Connect** does this for you: once the token validates, answerLoops calls Telegram's `setWebhook` API with your app's public URL (`AUTH_URL`) and a per-org secret, and Telegram starts POSTing new messages to `/api/telegram/webhook`. If that call fails (for example `AUTH_URL` isn't a publicly reachable HTTPS URL), the token is still saved and the card shows a **Register webhook** button to retry once the URL is fixed.
 
 <Note>
   Re-register the webhook (the **Register webhook** button on the Telegram card) any time your public URL (`AUTH_URL`) changes. Rotating the bot token and re-saving registers it again automatically.
@@ -47,7 +47,7 @@ Telegram doesn't push messages to you automatically — it has to be told where 
 
 ### 4. Add the bot to a chat and find its chat ID
 
-Add your bot to the Telegram group or supergroup you want AnswerLoops to monitor (or just message it directly for a 1:1 chat). By default AnswerLoops listens to **every** chat the bot is a member of — you only need chat IDs if you want to restrict it to specific chats.
+Add your bot to the Telegram group or supergroup you want answerLoops to monitor (or just message it directly for a 1:1 chat). By default answerLoops listens to **every** chat the bot is a member of — you only need chat IDs if you want to restrict it to specific chats.
 
 To find a chat ID:
 
@@ -80,19 +80,19 @@ Telegram is configured per-organization through the Settings UI — there's no b
 
 <AccordionGroup>
   <Accordion title="Bot Token rejected when saving">
-    AnswerLoops checks the token against Telegram's expected format (digits, a colon, then a 35-character alphanumeric string) and also calls Telegram's `getMe` API to confirm the token is live. A rejection usually means the token was truncated when copied from BotFather, or the bot was deleted/regenerated — go back to @BotFather, send `/token` for your bot, and copy the fresh value.
+    answerLoops checks the token against Telegram's expected format (digits, a colon, then a 35-character alphanumeric string) and also calls Telegram's `getMe` API to confirm the token is live. A rejection usually means the token was truncated when copied from BotFather, or the bot was deleted/regenerated — go back to @BotFather, send `/token` for your bot, and copy the fresh value.
   </Accordion>
   <Accordion title="Connected, but the webhook didn't register">
     Connecting calls Telegram's `setWebhook` API with your app's public URL. If `AUTH_URL` isn't set to a real, publicly reachable HTTPS URL, Telegram refuses it — `localhost` and private/internal hostnames don't work here. The token is still saved; set `AUTH_URL` to your public app URL and click **Register webhook** on the Telegram card to finish. Until then the bot receives nothing.
   </Accordion>
   <Accordion title="Bot is in the group but never responds">
-    Telegram bots run in **privacy mode** by default in group chats: they only receive messages that start with `/`, mention the bot by `@username`, or are replies to the bot's own messages — everything else is invisible to the bot even though it's in the group. If you want AnswerLoops to see all group messages, message @BotFather, send `/setprivacy`, select your bot, and choose **Disable**. This has no effect on 1:1 chats, which the bot always sees in full.
+    Telegram bots run in **privacy mode** by default in group chats: they only receive messages that start with `/`, mention the bot by `@username`, or are replies to the bot's own messages — everything else is invisible to the bot even though it's in the group. If you want answerLoops to see all group messages, message @BotFather, send `/setprivacy`, select your bot, and choose **Disable**. This has no effect on 1:1 chats, which the bot always sees in full.
   </Accordion>
   <Accordion title="Messages are being ignored">
     Two filters run before a message reaches the AI pipeline: messages from other bots are always dropped, and messages under 10 characters are skipped as too short to be a real question. If you've set specific **Chat IDs to monitor**, messages from any other chat are silently ignored too — leave the field blank to monitor every chat the bot is in.
   </Accordion>
   <Accordion title="Webhook returns 401 Unauthorized">
-    Every Telegram webhook call must include the secret token AnswerLoops registered with `setWebhook`. A 401 means either the secret has drifted out of sync (re-save the integration to generate a fresh one, then re-register the webhook) or something other than Telegram is calling the endpoint directly.
+    Every Telegram webhook call must include the secret token answerLoops registered with `setWebhook`. A 401 means either the secret has drifted out of sync (re-save the integration to generate a fresh one, then re-register the webhook) or something other than Telegram is calling the endpoint directly.
   </Accordion>
   <Accordion title="Escalation username isn't getting mentioned">
     The escalation username only fires when a message's AI confidence score is below **Confidence threshold**. If the AI is answering confidently every time, there's nothing to escalate — lower the threshold if you want more messages routed to a human, or check the ticket's confidence score on the dashboard to see where it's landing.

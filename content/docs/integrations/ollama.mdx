@@ -4,7 +4,7 @@ description: Run answer generation on a local model through Ollama's OpenAI-comp
 ---
 
 Ollama runs open models on your own machine and exposes an OpenAI-compatible
-API. AnswerLoops talks to it through the **OpenAI-compatible** provider option
+API. answerLoops talks to it through the **OpenAI-compatible** provider option
 — point it at Ollama's base URL, leave the key blank.
 
 <Warning>
@@ -25,11 +25,11 @@ ollama pull llama3.2
 ollama pull nomic-embed-text   # only if you want local embeddings
 ```
 
-## 2. Configure in AnswerLoops
+## 2. Configure in answerLoops
 
 1. **Settings → AI Model → Edit** (owner or admin).
 2. **Chat provider:** OpenAI-compatible.
-3. **Base URL:** `http://localhost:11434/v1` — or, when AnswerLoops runs in
+3. **Base URL:** `http://localhost:11434/v1` — or, when answerLoops runs in
    Docker on macOS/Windows, `http://host.docker.internal:11434/v1`.
 4. **Model ID:** `llama3.2` (or whatever you pulled).
 5. **API key:** leave blank — Ollama doesn't authenticate.
@@ -37,10 +37,10 @@ ollama pull nomic-embed-text   # only if you want local embeddings
    - **OpenAI-compatible** with the same base URL and model `nomic-embed-text`, or
    - **OpenAI** with a hosted key (embeddings then leave your network).
 7. Click **Test connection** — it will fail if the base URL isn't reachable
-   from the AnswerLoops server — then **Save**.
+   from the answerLoops server — then **Save**.
 
 <Warning>
-  Ollama runs on the host, not inside the AnswerLoops container. Use
+  Ollama runs on the host, not inside the answerLoops container. Use
   `host.docker.internal` (Mac/Windows) or the host's LAN IP (Linux) as the base
   URL, not `localhost`.
 </Warning>

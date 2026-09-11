@@ -1,9 +1,9 @@
 {
   "schema_version": "v1",
-  "name_for_human": "AnswerLoops",
+  "name_for_human": "answerLoops",
   "name_for_model": "answerloops",
   "description_for_human": "AI community support platform that auto-answers repeat Discord, Slack, Google Chat, GitHub, Telegram, and email questions from your knowledge base, escalating only the hard ones to a human.",
-  "description_for_model": "Use AnswerLoops to search an organization's support knowledge base, retrieve FAQs, list or open support tickets, and generate grounded answers to community support questions. AnswerLoops classifies incoming questions, searches prior resolved tickets and knowledge base articles for a matching answer, drafts a response, and grades its own confidence before auto-answering or routing to a human. Two agent-facing surfaces exist, both authenticated with the same per-org Bearer API key generated in Settings -> API Keys: an MCP server (JSON-RPC 2.0 over Streamable HTTP) at POST /api/mcp for MCP-native clients (Claude Code, Cursor), and a REST API at /api/agent/* (documented in the linked OpenAPI spec) for non-MCP frameworks like LangChain or AutoGen. Both expose the same operations: search_kb, get_faq, get_tickets, create_ticket, generate_answer.",
+  "description_for_model": "Use answerLoops to search an organization's support knowledge base, retrieve FAQs, list or open support tickets, and generate grounded answers to community support questions. answerLoops classifies incoming questions, searches prior resolved tickets and knowledge base articles for a matching answer, drafts a response, and grades its own confidence before auto-answering or routing to a human. Two agent-facing surfaces exist, both authenticated with the same per-org Bearer API key generated in Settings -> API Keys: an MCP server (JSON-RPC 2.0 over Streamable HTTP) at POST /api/mcp for MCP-native clients (Claude Code, Cursor), and a REST API at /api/agent/* (documented in the linked OpenAPI spec) for non-MCP frameworks like LangChain or AutoGen. Both expose the same operations: search_kb, get_faq, get_tickets, create_ticket, generate_answer.",
   "auth": {
     "type": "none"
   },

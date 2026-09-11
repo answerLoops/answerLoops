@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Behavioral coverage for the platform-key trial decision inside
 // processCommunityMessage (lib/ingest/pipeline.ts): a brand-new org with no
 // AI provider configured gets 5 lifetime free tickets fully AI-processed on
-// AnswerLoops' own key. The static structural checks live in
+// answerLoops' own key. The static structural checks live in
 // platform-key-ai-trial.test.ts — this file proves the actual runtime
 // decision (which purpose gets threaded to triage/embed/agent) for each
 // combination of "has own key" / "deployment mode" / "trial remaining",

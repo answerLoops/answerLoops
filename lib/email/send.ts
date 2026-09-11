@@ -122,15 +122,15 @@ export async function sendWaitlistConfirmation(email: string): Promise<void> {
   const result = await client().emails.send({
     from,
     to: [email],
-    subject: "You're on the AnswerLoops waitlist",
+    subject: "You're on the answerLoops waitlist",
     html: `
       <div style="${BASE_STYLE}">
-        <img src="https://answerloops.com/logo.png" alt="AnswerLoops" style="height:48px;margin-bottom:24px" />
+        <img src="https://answerloops.com/logo.png" alt="answerLoops" style="height:48px;margin-bottom:24px" />
         <h2 style="font-size:20px;font-weight:700;color:#111827;margin-bottom:8px">
           You're on the list.
         </h2>
         <p style="${MUTED};margin-bottom:16px">
-          Thanks for your interest in AnswerLoops — AI support that lives in your community.
+          Thanks for your interest in answerLoops — AI support that lives in your community.
           We'll email you the moment we open early access.
         </p>
         <p style="${MUTED};margin-bottom:24px">
@@ -172,15 +172,15 @@ export async function sendWelcomeEmail(email: string, name: string | null): Prom
       from: fromAddress,
       to: [email],
       replyTo: SUPPORT_EMAIL,
-      subject: 'Welcome to AnswerLoops',
+      subject: 'Welcome to answerLoops',
       html: `
         <div style="${BASE_STYLE}">
-          <img src="https://answerloops.com/logo.png" alt="AnswerLoops" style="height:48px;margin-bottom:24px" />
+          <img src="https://answerloops.com/logo.png" alt="answerLoops" style="height:48px;margin-bottom:24px" />
           <h2 style="font-size:20px;font-weight:700;color:#111827;margin-bottom:8px">
             ${greeting}
           </h2>
           <p style="${MUTED};margin-bottom:16px">
-            Thanks for signing up. AnswerLoops answers the repeat questions your
+            Thanks for signing up. answerLoops answers the repeat questions your
             community keeps asking, so your team can spend its time on the ones
             that actually need a person.
           </p>
@@ -199,7 +199,7 @@ export async function sendWelcomeEmail(email: string, name: string | null): Prom
             — a person reads it.
           </p>
           <p style="color:#9ca3af;font-size:12px;margin-top:32px">
-            You're receiving this because you created an AnswerLoops workspace.
+            You're receiving this because you created an answerLoops workspace.
           </p>
         </div>
       `,

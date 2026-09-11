@@ -87,7 +87,7 @@ export async function POST(request: Request) {
     }
     await completeGoogleChatPairing(pending.org_id, spaceName)
     logger.info('Google Chat space paired', { module: MOD, orgId: pending.org_id, spaceName })
-    return Response.json({ text: '✅ This space is now connected. Questions posted here will flow into your AnswerLoops dashboard.' })
+    return Response.json({ text: '✅ This space is now connected. Questions posted here will flow into your answerLoops dashboard.' })
   }
 
   const integration = await getIntegrationByGoogleChatSpace(spaceName)

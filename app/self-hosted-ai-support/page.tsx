@@ -4,7 +4,7 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Run AnswerLoops on your infrastructure | AnswerLoops',
+  title: 'Run answerLoops on your infrastructure | answerLoops',
   description:
     'Deploy the application and channel services yourself. Choose your model configuration and take responsibility for database operations, backups, and updates.',
   alternates: { canonical: '/self-hosted-ai-support' },
@@ -14,7 +14,7 @@ export default async function Page() {
     <IntentPage
       navState={await resolveNavState()}
       eyebrow="Use case"
-      title="Run AnswerLoops on your infrastructure"
+      title="Run answerLoops on your infrastructure"
       intro="Deploy the application and channel services yourself. Choose your model configuration and take responsibility for database operations, backups, and updates."
       audience="Teams that need control over deployment and are prepared to operate the services behind their support workflow."
       highlights={[
@@ -56,7 +56,7 @@ export default async function Page() {
         {
           question: 'Is there a subscription fee?',
           answer:
-            'The self-hosted edition has no AnswerLoops subscription fee. Infrastructure and model-provider costs are your responsibility.',
+            'The self-hosted edition has no answerLoops subscription fee. Infrastructure and model-provider costs are your responsibility.',
         },
         {
           question: 'Does self-hosting keep all data local?',
@@ -75,7 +75,7 @@ export default async function Page() {
         },
       ]}
       schema={{
-        name: 'Run AnswerLoops on your infrastructure',
+        name: 'Run answerLoops on your infrastructure',
         description:
           'Deploy the application and channel services yourself. Choose your model configuration and take responsibility for database operations, backups, and updates.',
         path: '/self-hosted-ai-support',

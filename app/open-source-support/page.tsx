@@ -4,7 +4,7 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Support your project across community channels | AnswerLoops',
+  title: 'Support your project across community channels | answerLoops',
   description:
     'Collect questions from Discord, GitHub, forums, and other connected channels. Prepare answers from your project documentation and keep requests that need maintainer judgment in the ticket queue.',
   alternates: { canonical: '/open-source-support' },
@@ -32,7 +32,7 @@ export default async function Page() {
         },
         {
           title: 'Run the source yourself',
-          body: 'AnswerLoops is available under AGPL-3.0, with a documented self-hosting setup.',
+          body: 'answerLoops is available under AGPL-3.0, with a documented self-hosting setup.',
         },
       ]}
       workflow={[
@@ -44,7 +44,7 @@ export default async function Page() {
         {
           step: '02',
           title: 'Connect the community',
-          body: 'Choose the channels and repositories where you want AnswerLoops to receive questions.',
+          body: 'Choose the channels and repositories where you want answerLoops to receive questions.',
         },
         {
           step: '03',
@@ -56,7 +56,7 @@ export default async function Page() {
         {
           question: 'Is self-hosting free?',
           answer:
-            'There is no AnswerLoops subscription fee for the AGPL-3.0 self-hosted edition. You pay for infrastructure and any model services you use.',
+            'There is no answerLoops subscription fee for the AGPL-3.0 self-hosted edition. You pay for infrastructure and any model services you use.',
         },
         {
           question: 'What stays with maintainers?',

@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { ComparisonPage } from '@/components/marketing/comparison-page'
 export const metadata: Metadata = {
-  title: 'AnswerLoops vs Zendesk AI',
+  title: 'answerLoops vs Zendesk AI',
   description:
-    'Compare the scope of the support platform and the total operating cost. Zendesk combines agent seats, plan allowances, and optional add-ons; AnswerLoops combines a hosted answer allowance with separate model costs, or can be self-hosted.',
+    'Compare the scope of the support platform and the total operating cost. Zendesk combines agent seats, plan allowances, and optional add-ons; answerLoops combines a hosted answer allowance with separate model costs, or can be self-hosted.',
   alternates: { canonical: '/vs/zendesk-ai' },
 }
 export default function Page() {
@@ -13,7 +13,7 @@ export default function Page() {
       slug="zendesk-ai"
       source="https://www.zendesk.com/pricing/"
       competitorSummary="Zendesk offers a support suite with ticketing, AI agents, and additional products for support operations."
-      intro="Compare the scope of the support platform and the total operating cost. Zendesk combines agent seats, plan allowances, and optional add-ons; AnswerLoops combines a hosted answer allowance with separate model costs, or can be self-hosted."
+      intro="Compare the scope of the support platform and the total operating cost. Zendesk combines agent seats, plan allowances, and optional add-ons; answerLoops combines a hosted answer allowance with separate model costs, or can be self-hosted."
       rows={[
         {
           feature: 'Platform',

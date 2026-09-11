@@ -276,7 +276,7 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
         {inviteUrl ? (
           <>
             <div className="space-y-1.5">
-              <p className="text-sm font-semibold text-gray-800">Add AnswerLoops to your Discord server</p>
+              <p className="text-sm font-semibold text-gray-800">Add answerLoops to your Discord server</p>
               <p className="text-xs text-gray-500">Click below, pick your server, click Authorize — you'll be brought right back.</p>
             </div>
             <a
@@ -604,7 +604,7 @@ function SlackFlow({ onDone, onBack, slackConnected }: { onDone: () => void; onB
             <p className="text-sm font-semibold text-purple-900">Connect Slack in one click</p>
           </div>
           <p className="text-xs text-purple-700">
-            Click below to authorize AnswerLoops in your Slack workspace. You&apos;ll pick which channels to monitor after connecting.
+            Click below to authorize answerLoops in your Slack workspace. You&apos;ll pick which channels to monitor after connecting.
           </p>
         </div>
         {connectError && (
@@ -948,7 +948,7 @@ export default function OnboardingWizard({ initialName }: { initialName: string 
                   <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 14.5v-9l7 4.5-7 4.5z"/>
                 </svg>
               </div>
-              <span className="text-sm font-bold text-gray-900 tracking-tight">AnswerLoops</span>
+              <span className="text-sm font-bold text-gray-900 tracking-tight">answerLoops</span>
             </div>
 
             {/* Progress stepper */}

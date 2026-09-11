@@ -58,7 +58,7 @@ describe('the public repository URL', () => {
       if (EXEMPT.has(file)) continue
       if (!TEXT_EXTENSIONS.has(path.extname(file))) continue
       const contents = readFileSync(path.join(repoRoot, file), 'utf-8')
-      for (const match of contents.matchAll(/https:\/\/github\.com\/AnswerLoops\/[A-Za-z-]+/gi)) {
+      for (const match of contents.matchAll(/https:\/\/github\.com\/answerLoops\/[A-Za-z-]+/gi)) {
         const url = match[0]
         if (!url.startsWith(GITHUB_URL)) offenders.push(`${file}: ${url}`)
       }

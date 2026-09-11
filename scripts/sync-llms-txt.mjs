@@ -23,11 +23,11 @@ const LABELS = {
   '/blog/managing-every-community-platform-from-one-place': 'Blog: Managing support across community platforms',
   '/privacy': 'Privacy policy',
   '/terms': 'Terms of service',
-  '/vs/chatbase': 'AnswerLoops vs Chatbase',
-  '/vs/intercom': 'AnswerLoops vs Intercom',
-  '/vs/plain': 'AnswerLoops vs Plain',
-  '/vs/pylon': 'AnswerLoops vs Pylon',
-  '/vs/zendesk-ai': 'AnswerLoops vs Zendesk AI',
+  '/vs/chatbase': 'answerLoops vs Chatbase',
+  '/vs/intercom': 'answerLoops vs Intercom',
+  '/vs/plain': 'answerLoops vs Plain',
+  '/vs/pylon': 'answerLoops vs Pylon',
+  '/vs/zendesk-ai': 'answerLoops vs Zendesk AI',
 }
 
 // The order llms.txt should present integrations in: first-class community

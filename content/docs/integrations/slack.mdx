@@ -1,13 +1,13 @@
 ---
 title: Slack
-description: Connect a Slack workspace to AnswerLoops via 1-click OAuth, an optional Events API webhook, or polling mode with no admin approval required.
+description: Connect a Slack workspace to answerLoops via 1-click OAuth, an optional Events API webhook, or polling mode with no admin approval required.
 ---
 
 ## Overview
 
-AnswerLoops connects to Slack in one of two ways, and the two are independent of each other:
+answerLoops connects to Slack in one of two ways, and the two are independent of each other:
 
-- **OAuth install** — an admin authorizes AnswerLoops from the workspace's **Add to Slack** screen. AnswerLoops receives a bot token (`xoxb-…`) and a channel picker loads automatically. Message delivery into AnswerLoops then happens either via the **Events API webhook** (real-time) or, on self-hosted deployments only, by falling back to polling.
+- **OAuth install** — an admin authorizes answerLoops from the workspace's **Add to Slack** screen. answerLoops receives a bot token (`xoxb-…`) and a channel picker loads automatically. Message delivery into answerLoops then happens either via the **Events API webhook** (real-time) or, on self-hosted deployments only, by falling back to polling.
 - **Polling mode (manual setup)** — a bot token, team ID, and channel IDs are pasted in by hand, with no OAuth authorization and no public webhook at all. This is the path for someone who can't get a Slack admin to click "Authorize," or who can't expose a public URL for Slack to call.
 
 Every connected channel appears in the unified ticket list with a Slack source badge. Slack is a Standard-plan-and-above feature — `saveSlackIntegrationAction`, `saveSlackChannelsAction`, and the `/api/slack/install` route all gate on the `slack_integration` entitlement and return an error before touching the workspace if the org's plan doesn't include it.
@@ -21,9 +21,9 @@ Every connected channel appears in the unified ticket list with a Slack source b
 ## Option 1: 1-click OAuth (recommended)
 
 1. In **Settings → Channels → Slack** (or the onboarding wizard), click **Add to Slack**
-2. AnswerLoops requests the `channels:history`, `channels:read`, `channels:join`, `chat:write`, `reactions:write`, and `users:read` scopes and redirects to Slack's authorization screen
+2. answerLoops requests the `channels:history`, `channels:read`, `channels:join`, `chat:write`, `reactions:write`, and `users:read` scopes and redirects to Slack's authorization screen
 3. An admin picks the workspace and approves
-4. Slack redirects back to `/api/slack/callback`, which exchanges the code for a bot token and stores it (along with the team ID and an internally-generated `bot_secret` used to authenticate the bot's own traffic back to AnswerLoops)
+4. Slack redirects back to `/api/slack/callback`, which exchanges the code for a bot token and stores it (along with the team ID and an internally-generated `bot_secret` used to authenticate the bot's own traffic back to answerLoops)
 5. The channel picker opens automatically, listing every public channel in the workspace via `conversations.list`
 6. Select the channels to monitor and click **Save channels**
 
@@ -35,11 +35,11 @@ Every connected channel appears in the unified ticket list with a Slack source b
 
 Slack never adds a bot to a channel just because a scope was granted — the bot has to explicitly call `conversations.join`. Both `saveSlackChannelsAction` (editing channels post-connect) and `saveSlackIntegrationAction` (manual setup) call this for every selected channel as part of the save, so picking a channel and clicking **Save** is enough to make it work immediately — there's no separate "invite the bot" step for public channels.
 
-**Private channels are the one exception.** Slack doesn't let any bot self-join a private channel — this is a platform limit, not something AnswerLoops works around. If a save includes a private channel, the join call fails with `not_in_channel`-adjacent errors and the UI shows a warning like:
+**Private channels are the one exception.** Slack doesn't let any bot self-join a private channel — this is a platform limit, not something answerLoops works around. If a save includes a private channel, the join call fails with `not_in_channel`-adjacent errors and the UI shows a warning like:
 
 > Joined 2/3 channels automatically. Private channels need a manual invite in Slack (Channel → Integrations → Add apps): C09876ZYXWV
 
-You still need to `/invite @AnswerLoops` (or add the app via that channel's **Integrations → Add apps**) for any private channel yourself.
+You still need to `/invite @answerLoops` (or add the app via that channel's **Integrations → Add apps**) for any private channel yourself.
 
 ---
 
@@ -50,7 +50,7 @@ The Events API webhook is what gives OAuth-connected workspaces instant delivery
 1. In your Slack app's **Event Subscriptions**, set the Request URL to `{YOUR_DOMAIN}/api/slack/events` — the self-hosted Settings page surfaces this exact URL once Slack is connected
 2. Subscribe to the `message.channels` and `reaction_added` bot events
 3. Slack sends a `url_verification` challenge on save; `/api/slack/events` answers it before any signature check runs
-4. Every subsequent event is verified against `SLACK_SIGNING_SECRET` using the `x-slack-request-timestamp` and `x-slack-signature` headers — a request that fails verification gets a `403`, and an event for a team AnswerLoops has no integration record for is rejected the same way
+4. Every subsequent event is verified against `SLACK_SIGNING_SECRET` using the `x-slack-request-timestamp` and `x-slack-signature` headers — a request that fails verification gets a `403`, and an event for a team answerLoops has no integration record for is rejected the same way
 
 Once wired up, new messages create tickets in real time, and 👍/👎 or 1️⃣–5️⃣ reactions on a bot reply are read as feedback votes or CSAT ratings respectively.
 
@@ -63,7 +63,7 @@ Self-hosted only — every managed-cloud org already gets real-time delivery thr
 1. Go to **Settings → Channels → Slack** and click **Set up manually instead** (only shown on self-hosted deployments, next to **Add to Slack**)
 2. Paste a bot token (`xoxb-…`), the workspace's Team ID (`T…`), and one or more channel IDs
 3. A signing secret is optional here — only required if you also plan to wire up the Events API webhook alongside polling
-4. AnswerLoops calls `conversations.join` on every listed channel the same way OAuth does, then starts polling `conversations.history` on that channel every `SLACK_POLL_INTERVAL_SECONDS` (default 60, minimum recommended 30)
+4. answerLoops calls `conversations.join` on every listed channel the same way OAuth does, then starts polling `conversations.history` on that channel every `SLACK_POLL_INTERVAL_SECONDS` (default 60, minimum recommended 30)
 
 **A channel's first poll never backfills history.** The poller seeds its cursor to the newest message already in the channel and tickets nothing on that pass — exactly like Discord's gateway, which never sees anything posted before the bot joined. Only messages posted after the first poll become tickets. This is deliberate: without it, connecting Slack to an active community channel would flood the ticket list with the channel's entire recent history on day one.
 
@@ -102,7 +102,7 @@ SLACK_POLL_INTERVAL_SECONDS=60  # default. Minimum recommended: 30.
 The channel picker's save form (**Settings → Slack → Edit channels**) also sets three per-workspace fields stored on the integration record:
 
 - **Escalation User Group ID** (optional) — a Slack user group or user ID (`S…` or `U…`) pinged when the AI's confidence is below threshold
-- **Confidence threshold** (0–1, default `0.8`) — the AI answer confidence required before AnswerLoops treats a question as answerable at all
+- **Confidence threshold** (0–1, default `0.8`) — the AI answer confidence required before answerLoops treats a question as answerable at all
 - **Automatic Deflections** — off by default; see the callout above
 
 These map directly to the `escalation_role_id`, `confidence_threshold`, and `auto_deflect_enabled` fields on the integration record, alongside `bot_token`, `team_id`, and `channel_ids`.
@@ -128,7 +128,7 @@ Add `{AUTH_URL}/api/slack/callback` to your Slack app's **OAuth & Permissions �
 
 <AccordionGroup>
   <Accordion title="A selected channel never produces tickets ('not_in_channel')">
-    Saving a channel selection calls `conversations.join` for every public channel automatically, so this usually means the channel is **private**. Slack doesn't allow any bot to self-join a private channel — invite it manually with `/invite @AnswerLoops` or via that channel's **Integrations → Add apps**, then re-save the channel list so the poller or webhook path picks it up.
+    Saving a channel selection calls `conversations.join` for every public channel automatically, so this usually means the channel is **private**. Slack doesn't allow any bot to self-join a private channel — invite it manually with `/invite @answerLoops` or via that channel's **Integrations → Add apps**, then re-save the channel list so the poller or webhook path picks it up.
   </Accordion>
   <Accordion title="Tickets show a raw Slack ID (like U0BMB9H6SFQ) instead of a name">
     The `users:read` scope resolves user IDs to display names via `users.info`. It was added after some workspaces first connected, and OAuth grants aren't retroactive — a workspace that authorized before this scope existed keeps its old-scoped token. Disconnect and reconnect Slack (**Settings → Slack → Disconnect**, then **Add to Slack** again) to pick up the new scope.
@@ -137,7 +137,7 @@ Add `{AUTH_URL}/api/slack/callback` to your Slack app's **OAuth & Permissions �
     This shouldn't happen — a channel's first poll intentionally seeds its cursor to the newest existing message and tickets nothing on that pass, so only messages posted after the connection become tickets. If you're seeing old history come in as tickets, check whether the channel was previously connected and disconnected (the cursor is tied to org + channel and isn't reset on disconnect).
   </Accordion>
   <Accordion title="Events API webhook returns 403 Forbidden">
-    Either the signing secret doesn't match what's configured in your Slack app's **Basic Information → Signing Secret** (make sure `SLACK_SIGNING_SECRET` on the server matches), or AnswerLoops has no integration record for that team ID at all — confirm the workspace completed OAuth or manual setup with the matching Team ID before wiring up Event Subscriptions.
+    Either the signing secret doesn't match what's configured in your Slack app's **Basic Information → Signing Secret** (make sure `SLACK_SIGNING_SECRET` on the server matches), or answerLoops has no integration record for that team ID at all — confirm the workspace completed OAuth or manual setup with the matching Team ID before wiring up Event Subscriptions.
   </Accordion>
   <Accordion title="'Add to Slack' fails with a plan error">
     Slack is a Standard-plan-and-above feature. `/api/slack/install`, `saveSlackIntegrationAction`, and `saveSlackChannelsAction` all check the `slack_integration` entitlement and return an error before contacting Slack if the org's current plan doesn't include it — upgrade the plan and retry.
@@ -146,6 +146,6 @@ Add `{AUTH_URL}/api/slack/callback` to your Slack app's **OAuth & Permissions �
     **Set up manually instead** only appears on self-hosted deployments — managed cloud always has a working Events API webhook, so the polling fallback is intentionally hidden there. If you're self-hosting and don't see it, confirm the deployment mode detection (`getCurrentDeploymentMode`) is correctly reporting `self-hosted`.
   </Accordion>
   <Accordion title="Reactions aren't registering as feedback or CSAT ratings">
-    Only 👍/👎 (`+1`/`thumbsup`, `-1`/`thumbsdown`) map to feedback votes, and only 1️⃣–5️⃣ (`one` through `five`) map to CSAT ratings — other emoji reactions are ignored. The reaction also has to land on the specific message AnswerLoops posted (the answer message for votes, the CSAT prompt message for ratings); reacting on the original question does nothing.
+    Only 👍/👎 (`+1`/`thumbsup`, `-1`/`thumbsdown`) map to feedback votes, and only 1️⃣–5️⃣ (`one` through `five`) map to CSAT ratings — other emoji reactions are ignored. The reaction also has to land on the specific message answerLoops posted (the answer message for votes, the CSAT prompt message for ratings); reacting on the original question does nothing.
   </Accordion>
 </AccordionGroup>

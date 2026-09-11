@@ -5,7 +5,7 @@ const MOD = 'google-chat/auth'
 
 // Unlike Slack/Discord (a bot token per connected org/guild), Google Chat's
 // unlisted-app model has exactly one app identity for every org — the Chat
-// app itself, owned by AnswerLoops' own Google Cloud project. Sending a
+// app itself, owned by answerLoops' own Google Cloud project. Sending a
 // message therefore authenticates as that single service account, scoped to
 // the chat.bot scope, not as a per-org credential. Per-org routing happens
 // separately, by mapping the incoming event's space id to an `integrations`

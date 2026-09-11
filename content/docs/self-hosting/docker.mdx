@@ -1,6 +1,6 @@
 ---
 title: Docker Setup
-description: Running AnswerLoops with Docker Compose.
+description: Running answerLoops with Docker Compose.
 ---
 
 Everything here assumes you've already cloned the repo and filled in a real `.env.local` — see the [self-host quickstart](/docs/quickstart-self-host) if you haven't done that part yet. Docker Compose reads that file; it doesn't generate secrets or register OAuth apps for you.
@@ -8,7 +8,7 @@ Everything here assumes you've already cloned the repo and filled in a real `.en
 ## Run a published image (no build)
 
 Official images are published to the GitHub Container Registry, so you can run
-AnswerLoops without building anything:
+answerLoops without building anything:
 
 ```bash
 docker compose -f docker-compose.ghcr.yml up -d

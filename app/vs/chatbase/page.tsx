@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { ComparisonPage } from '@/components/marketing/comparison-page'
 export const metadata: Metadata = {
-  title: 'AnswerLoops vs Chatbase',
+  title: 'answerLoops vs Chatbase',
   description:
-    'Chatbase now covers more than a website widget. Compare its customer-service channels and agent configuration with AnswerLoops’ community ticket workflow and self-hosting option.',
+    'Chatbase now covers more than a website widget. Compare its customer-service channels and agent configuration with answerLoops’ community ticket workflow and self-hosting option.',
   alternates: { canonical: '/vs/chatbase' },
 }
 export default function Page() {
@@ -13,7 +13,7 @@ export default function Page() {
       slug="chatbase"
       source="https://www.chatbase.co/"
       competitorSummary="Chatbase offers AI agents for chat, email, and voice, with a helpdesk for AI and human conversations."
-      intro="Chatbase now covers more than a website widget. Compare its customer-service channels and agent configuration with AnswerLoops’ community ticket workflow and self-hosting option."
+      intro="Chatbase now covers more than a website widget. Compare its customer-service channels and agent configuration with answerLoops’ community ticket workflow and self-hosting option."
       rows={[
         {
           feature: 'Channels',

@@ -30,8 +30,8 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
         nav={{
           title: (
             <>
-              <Image src="/logo.png" alt="AnswerLoops" width={24} height={24} />
-              <span className="font-semibold">AnswerLoops Docs</span>
+              <Image src="/logo.png" alt="answerLoops" width={24} height={24} />
+              <span className="font-semibold">answerLoops Docs</span>
             </>
           ),
           // Absolute, not relative — this is the docs site's own logo/home

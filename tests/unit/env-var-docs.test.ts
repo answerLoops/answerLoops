@@ -6,7 +6,7 @@ import path from 'path'
 // infra-test convention, new env vars get a simple string-presence check
 // against the docs file(s) they're supposed to live in — not a full parse of
 // the mdx table. This currently covers DEPLOYMENT_MODE, added to gate
-// plan-tier billing/entitlements between AnswerLoops' managed cloud
+// plan-tier billing/entitlements between answerLoops' managed cloud
 // deployment and self-hosted installs (see lib/billing/entitlements-server.ts
 // getDeploymentMode() — covered in depth by entitlements.test.ts and
 // metering-reservation.test.ts; this file only checks the docs stayed in sync).

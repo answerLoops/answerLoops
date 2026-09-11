@@ -5,7 +5,7 @@ import { AnimatedChat } from '@/components/animated-chat'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Inspect a question, source, draft, and review | AnswerLoops',
+  title: 'Inspect a question, source, draft, and review | answerLoops',
   description:
     'This illustrative example follows a workspace invitation question. Select each step to see the information used to prepare the reply.',
   alternates: { canonical: '/support-example' },

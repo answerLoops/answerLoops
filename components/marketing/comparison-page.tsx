@@ -29,14 +29,14 @@ export function ComparisonPage({
   return (
     <MarketingPage>
       <PageSchema
-        name={`AnswerLoops vs ${competitor}`}
+        name={`answerLoops vs ${competitor}`}
         description={intro}
         path={`/vs/${slug}`}
         breadcrumbs={[{ name: 'Comparisons', path: '/alternatives' }]}
       />
       <PageHero
         eyebrow="Product comparison"
-        title={`AnswerLoops vs ${competitor}`}
+        title={`answerLoops vs ${competitor}`}
       >
         <p>{intro}</p>
       </PageHero>
@@ -62,12 +62,12 @@ export function ComparisonPage({
           >
             <table className="marketing-table">
               <caption className="sr-only">
-                AnswerLoops and {competitor}: selected capabilities
+                answerLoops and {competitor}: selected capabilities
               </caption>
               <thead>
                 <tr>
                   <th scope="col">Consideration</th>
-                  <th scope="col">AnswerLoops</th>
+                  <th scope="col">answerLoops</th>
                   <th scope="col">{competitor}</th>
                 </tr>
               </thead>
@@ -84,7 +84,7 @@ export function ComparisonPage({
           </div>
           <div className="marketing-grid mt-10">
             <article className="marketing-card">
-              <h2 className="!text-xl">Consider AnswerLoops when</h2>
+              <h2 className="!text-xl">Consider answerLoops when</h2>
               <p>{bestFor.us}</p>
             </article>
             <article className="marketing-card">
@@ -93,7 +93,7 @@ export function ComparisonPage({
             </article>
           </div>
           <p className="mt-8">
-            For AnswerLoops, compare the{' '}
+            For answerLoops, compare the{' '}
             <Link className="marketing-text-link" href="/pricing">
               hosted plan limits and model costs
             </Link>

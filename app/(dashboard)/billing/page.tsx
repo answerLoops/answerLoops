@@ -370,7 +370,7 @@ export default function BillingPage() {
             <div className="rounded-xl border border-gray-200 bg-white p-5">
               <p className="text-sm font-medium text-gray-900">Self-hosted — no usage limit</p>
               <p className="text-xs text-gray-500 mt-1">
-                This deployment isn&apos;t connected to AnswerLoops billing, so there&apos;s no plan or deflection cap to manage —
+                This deployment isn&apos;t connected to answerLoops billing, so there&apos;s no plan or deflection cap to manage —
                 you&apos;re running your own instance against your own AI, database, and hosting costs.
               </p>
             </div>

@@ -1,21 +1,21 @@
 ---
 title: Stripe
-description: How AnswerLoops connects billing to Stripe.
+description: How answerLoops connects billing to Stripe.
 ---
 
-AnswerLoops uses Stripe Checkout for hosted-plan trials and subscriptions. Stripe
+answerLoops uses Stripe Checkout for hosted-plan trials and subscriptions. Stripe
 handles payment details, trial timing, invoices, and the customer portal; the
 application stores the subscription state needed to grant access.
 
 ## Customer lifecycle
 
-Signing in with Google creates an AnswerLoops user and workspace, but it does
+Signing in with Google creates an answerLoops user and workspace, but it does
 not create a Stripe Customer. Opening or abandoning Checkout also does not count
 as becoming a customer. A Stripe Customer is attached to the workspace when
 Stripe sends the successful `checkout.session.completed` webhook, at the same
 time the subscription and welcome email are processed.
 
-When an existing subscriber changes plans, AnswerLoops reuses that workspace's
+When an existing subscriber changes plans, answerLoops reuses that workspace's
 Stripe Customer so the billing history stays together.
 
 ## Webhook setup
@@ -31,4 +31,4 @@ For a cloud deployment, configure Stripe to send these events to
 Set `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in the deployment
 environment. The webhook is the source of truth for the local subscription
 record, so access can take a short moment to appear after Checkout redirects
-back to AnswerLoops.
+back to answerLoops.

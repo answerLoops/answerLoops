@@ -1,16 +1,16 @@
 ---
 title: Slack App Setup
-description: Set up Slack for AnswerLoops — 1-click OAuth or polling mode (no webhook, no admin required).
+description: Set up Slack for answerLoops — 1-click OAuth or polling mode (no webhook, no admin required).
 ---
 
-AnswerLoops offers two Slack connection paths. Both feed into the same AI pipeline. Pick based on your security posture.
+answerLoops offers two Slack connection paths. Both feed into the same AI pipeline. Pick based on your security posture.
 
 ## Option A: 1-click OAuth (recommended)
 
 ### 1. Create a Slack App
 
 1. Go to [api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → **From scratch**
-2. Name it (e.g. "AnswerLoops") and select your workspace
+2. Name it (e.g. "answerLoops") and select your workspace
 
 ### 2. Configure OAuth scopes
 
@@ -23,7 +23,7 @@ Go to **OAuth & Permissions** → **Bot Token Scopes** and add:
 - `users:read`
 
 <Info>
-  `channels:join` lets AnswerLoops add the bot to a public channel automatically the moment you select it in the channel picker — without it, Slack never adds the bot to a channel on its own, so `conversations.history` fails with `not_in_channel` and messages silently never ingest. Private channels are a hard Slack platform limit either way: a bot can never join one on its own, so those still need a human to add the app via the channel's **Integrations → Add apps**. `users:read` resolves a message's raw user ID to a display name — without it, tickets show an opaque ID (e.g. `U0BMB9H6SFQ`) instead of a name.
+  `channels:join` lets answerLoops add the bot to a public channel automatically the moment you select it in the channel picker — without it, Slack never adds the bot to a channel on its own, so `conversations.history` fails with `not_in_channel` and messages silently never ingest. Private channels are a hard Slack platform limit either way: a bot can never join one on its own, so those still need a human to add the app via the channel's **Integrations → Add apps**. `users:read` resolves a message's raw user ID to a display name — without it, tickets show an opaque ID (e.g. `U0BMB9H6SFQ`) instead of a name.
 </Info>
 
 <Info>
@@ -51,13 +51,13 @@ SLACK_SIGNING_SECRET=<your-signing-secret>
 AUTH_URL=https://your-domain.com
 ```
 
-### 5. Connect in AnswerLoops
+### 5. Connect in answerLoops
 
 Go to **Settings → Integrations → Slack** → **Add to Slack**. Authorize the workspace. The channel picker loads automatically.
 
 ### 6. (Optional) Enable real-time Events API
 
-By default AnswerLoops polls for new messages. For instant delivery:
+By default answerLoops polls for new messages. For instant delivery:
 
 1. **Event Subscriptions** → Enable Events → Request URL: `https://your-domain.com/api/slack/events`
 2. Subscribe to bot events: `message.channels`, `reaction_added`
@@ -101,7 +101,7 @@ Click **Install to Workspace** → **Allow**. Copy the **Bot User OAuth Token** 
 - **Team ID**: your workspace URL — `https://app.slack.com/client/T0123ABCDE` — the `T…` part
 - **Channel IDs**: right-click a channel → **Copy link** — last segment (e.g. `C01234ABCDE`)
 
-### 4. Connect in AnswerLoops
+### 4. Connect in answerLoops
 
 Go to **Settings → Integrations → Slack** → click **Set up manually instead**. Enter the bot token, team ID, and channel IDs.
 
@@ -121,4 +121,4 @@ SLACK_POLL_INTERVAL_SECONDS=60  # default. Minimum recommended: 30.
 
 For **public** channels, selecting them in **Settings → Integrations → Slack**'s channel picker joins the bot automatically — no manual step needed, as long as the `channels:join` scope above is granted.
 
-**Private** channels can't be auto-joined by any bot — that's a Slack platform limit, not an AnswerLoops one. Add the app manually: open the channel → **Integrations** tab → **Add apps** → select your Slack app (more reliable than `/invite @YourBotName`, which doesn't always work for bot users depending on workspace settings).
+**Private** channels can't be auto-joined by any bot — that's a Slack platform limit, not an answerLoops one. Add the app manually: open the channel → **Integrations** tab → **Add apps** → select your Slack app (more reliable than `/invite @YourBotName`, which doesn't always work for bot users depending on workspace settings).

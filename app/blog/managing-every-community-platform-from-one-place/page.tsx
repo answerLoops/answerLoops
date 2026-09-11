@@ -70,7 +70,7 @@ export default function ManagingEveryPlatformPost() {
           </p>
           <h2>Keep questions in one queue</h2>
           <p>
-            AnswerLoops connects to {channelListSentence()}. Questions become
+            answerLoops connects to {channelListSentence()}. Questions become
             tickets with their source attached, so the team can review requests
             together and reply in the conversation where each one started.
           </p>

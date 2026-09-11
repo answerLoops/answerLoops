@@ -6,7 +6,7 @@ export const WEBSITE_ID = 'https://answerloops.com/#website'
 /**
  * The canonical public identity graph shared by every crawlable route.
  *
- * Keep this limited to relationships that AnswerLoops can verify and control:
+ * Keep this limited to relationships that answerLoops can verify and control:
  * the canonical site, repository, documentation, logo, and support contact.
  * Additional social profiles belong here only once they are official and
  * maintained by the project.
@@ -17,7 +17,7 @@ export const siteIdentityJsonLd = {
     {
       '@type': 'Organization',
       '@id': ORGANIZATION_ID,
-      name: 'AnswerLoops',
+      name: 'answerLoops',
       url: 'https://answerloops.com',
       logo: {
         '@type': 'ImageObject',
@@ -36,14 +36,14 @@ export const siteIdentityJsonLd = {
     {
       '@type': 'WebSite',
       '@id': WEBSITE_ID,
-      name: 'AnswerLoops',
+      name: 'answerLoops',
       url: 'https://answerloops.com',
       publisher: { '@id': ORGANIZATION_ID },
     },
     {
       '@type': 'WebPage',
       '@id': 'https://answerloops.com/docs',
-      name: 'AnswerLoops Documentation',
+      name: 'answerLoops Documentation',
       url: 'https://answerloops.com/docs',
       isPartOf: { '@id': WEBSITE_ID },
       about: { '@id': ORGANIZATION_ID },
