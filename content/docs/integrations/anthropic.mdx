@@ -1,8 +1,44 @@
 ---
 title: Anthropic
-description: Coming soon.
+description: Use Anthropic's Claude models for answer generation, with an OpenAI key for embeddings.
 ---
 
-<Info>
-  This page is being written. For Discord setup see [Discord Bot Setup](/docs/self-hosting/discord-bot). For Slack see [Slack App Setup](/docs/self-hosting/slack-app).
-</Info>
+Anthropic's Claude models generate the answers AnswerLoops drafts. Claude
+handles **chat only** — Anthropic has no embeddings API — so knowledge-base
+search still needs an OpenAI key for embeddings alongside it.
+
+Available on every plan. Usage bills to your Anthropic account.
+
+## 1. Get an API key
+
+In the [Anthropic Console](https://console.anthropic.com/settings/keys),
+create a key. Make sure the workspace has credit or billing configured.
+
+## 2. Configure in AnswerLoops
+
+1. **Settings → AI Model → Edit** (owner or admin).
+2. **Chat provider:** Anthropic.
+3. **Model ID:** e.g. `claude-sonnet-4-6`, `claude-haiku-4-5-20251001` — the
+   field suggests current options; see the
+   [Claude models list](https://docs.anthropic.com/en/docs/about-claude/models)
+   for exact names.
+4. **API key:** paste your Anthropic key.
+5. **Embeddings:** leave the provider on OpenAI and enter an **OpenAI API key**
+   in the embedding key field. This is required — without it, every
+   knowledge-base search and every KB import fails after you save. AnswerLoops
+   tells you if it's missing.
+6. Click **Test connection** — it checks the Claude key and the OpenAI
+   embedding key separately — then **Save**.
+
+## Models
+
+| Use | Choice |
+|---|---|
+| Best answers | `claude-sonnet-4-6`, `claude-opus-4-8` |
+| Fast / cheap | `claude-haiku-4-5-20251001` |
+
+## Related
+
+- [AI Model settings](/docs/product/ai-config) — the embedding-key requirement
+  and how provider switching is handled
+- [OpenAI integration](/docs/integrations/openai) — for the embedding key
