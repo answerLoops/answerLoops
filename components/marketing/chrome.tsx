@@ -131,11 +131,19 @@ export function Footer() {
             <div>
               <div className="mb-3 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-white/60">Compare</div>
               <div className="flex flex-col gap-2">
+                <Link href="/alternatives" className="text-xs text-white/50 transition-colors hover:text-white/85">All alternatives</Link>
                 <Link href="/vs/intercom" className="text-xs text-white/50 transition-colors hover:text-white/85">vs Intercom</Link>
                 <Link href="/vs/zendesk-ai" className="text-xs text-white/50 transition-colors hover:text-white/85">vs Zendesk AI</Link>
                 <Link href="/vs/chatbase" className="text-xs text-white/50 transition-colors hover:text-white/85">vs Chatbase</Link>
                 <Link href="/vs/pylon" className="text-xs text-white/50 transition-colors hover:text-white/85">vs Pylon</Link>
                 <Link href="/vs/plain" className="text-xs text-white/50 transition-colors hover:text-white/85">vs Plain</Link>
+              </div>
+            </div>
+            <div>
+              <div className="mb-3 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-white/60">Company</div>
+              <div className="flex flex-col gap-2">
+                <Link href="/about" className="text-xs text-white/50 transition-colors hover:text-white/85">About</Link>
+                <Link href="/blog" className="text-xs text-white/50 transition-colors hover:text-white/85">Blog</Link>
               </div>
             </div>
             <div>
