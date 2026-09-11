@@ -1,112 +1,174 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useRef, useState } from 'react'
+import { Check, FileText, Pause, Play, ScanLine, Sparkles } from 'lucide-react'
+import { IntegrationIcon } from '@/components/marketing/integration-icon'
 
-const STEPS = ['Question', 'Source', 'Draft', 'Review'] as const
+const STAGES = [
+  'Question received',
+  'Retrieving sources',
+  'Drafting answer',
+  'Reviewing answer',
+  'Reply delivered',
+]
+
+const CHANNELS = [
+  { name: 'Discord', color: '#5865f2', destination: '#integrations' },
+  { name: 'Telegram', color: '#229ed9', destination: 'support chat' },
+  { name: 'Circle', color: '#7c3aed', destination: 'the community' },
+]
 
 export function AnimatedChat() {
-  const [step, setStep] = useState(0)
+  const threadRef = useRef<HTMLDivElement>(null)
+  const [stage, setStage] = useState(0)
+  const [channelIndex, setChannelIndex] = useState(0)
+  const [paused, setPaused] = useState(false)
+  const [reducedMotion, setReducedMotion] = useState(true)
+  const [visible, setVisible] = useState(true)
+
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const syncMotion = () => setReducedMotion(preference.matches)
+    const syncVisibility = () => setVisible(!document.hidden)
+    syncMotion()
+    syncVisibility()
+    preference.addEventListener('change', syncMotion)
+    document.addEventListener('visibilitychange', syncVisibility)
+    return () => {
+      preference.removeEventListener('change', syncMotion)
+      document.removeEventListener('visibilitychange', syncVisibility)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (paused || reducedMotion || !visible) return
+    const timer = window.setTimeout(
+      () => {
+        if (stage === STAGES.length - 1) {
+          setStage(0)
+          setChannelIndex((current) => (current + 1) % CHANNELS.length)
+          return
+        }
+        setStage((current) => current + 1)
+      },
+      stage === 4 ? 6500 : stage === 0 ? 1800 : 3000,
+    )
+    return () => window.clearTimeout(timer)
+  }, [stage, paused, reducedMotion, visible])
+
+  useEffect(() => {
+    if (reducedMotion || paused) return
+    const thread = threadRef.current
+    if (thread) thread.scrollTop = stage === 0 ? 0 : thread.scrollHeight
+  }, [stage, reducedMotion, paused])
+
+  const current = reducedMotion ? 4 : stage
+  const channel = CHANNELS[channelIndex]
   return (
-    <div className="marketing-example" aria-label="Example support workflow">
-      <div className="marketing-example-header">
-        <strong>answerLoops / Support</strong>
-        <span>Illustrative example</span>
+    <figure
+      className="support-demo support-demo-hero"
+      data-channel={channel.name.toLowerCase()}
+      aria-label="Live answer loop: an answer agent drafts from documentation and a second agent reviews it"
+    >
+      <div className="support-demo-header">
+        <span className="support-demo-title support-demo-channel">
+          <IntegrationIcon name={channel.name} color={channel.color} />
+          <span>answerLoops / {channel.name}</span>
+        </span>
+        <span className="support-demo-live">LIVE ANSWER LOOP</span>
       </div>
-      <div
-        className="marketing-example-tabs"
-        role="group"
-        aria-label="Example steps"
-      >
-        {STEPS.map((label, index) => (
+      <div className="support-demo-thread" ref={threadRef}>
+        <div className="demo-question">
+          <span className="demo-avatar">JD</span>
+          <div>
+            <div className="demo-message-meta">
+              <strong>Developer</strong>
+              <span>#integrations</span>
+            </div>
+            <p>
+              Our webhook retries created duplicate orders. How do we prevent
+              that without dropping events?
+            </p>
+          </div>
+        </div>
+        {current >= 1 && (
+          <div className="demo-sources demo-enter">
+            <FileText size={16} />
+            <div>
+              <span>Retrieved from the knowledge base</span>
+              <div className="demo-source-chips">
+                <span>Webhook delivery</span>
+                <span>Idempotency guide</span>
+              </div>
+            </div>
+          </div>
+        )}
+        {current >= 2 && (
+          <div className="demo-answer demo-enter">
+            <div className="demo-message-meta">
+              <Sparkles size={17} />
+              <strong>Answer agent</strong>
+              <span>Draft</span>
+            </div>
+            <p>
+              Retries can deliver the same event more than once. Use the{' '}
+              <code>event_id</code> to make processing idempotent:
+            </p>
+            <ol>
+              <li>Check whether the event was already processed.</li>
+              <li>Save the order and a unique event ID in one transaction.</li>
+              <li>
+                For a duplicate, return success without creating another order.
+              </li>
+            </ol>
+            <div className="demo-citations">
+              Sources <span>[1] Webhook delivery</span>
+              <span>[2] Idempotency guide</span>
+            </div>
+          </div>
+        )}
+        {current >= 3 && (
+          <div className="demo-review demo-enter">
+            <ScanLine size={18} />
+            <div>
+              <strong>Review agent</strong>
+              <p>
+                Checked retry behavior and duplicate handling against both
+                sources.
+              </p>
+              <span>
+                <Check size={13} /> Source-grounded <Check size={13} />{' '}
+                Threshold met
+              </span>
+            </div>
+          </div>
+        )}
+        {current >= 4 && (
+          <div className="demo-delivered demo-enter">
+            <Check size={15} />
+            <span>Reply sent to {channel.destination}</span>
+            <span>Auto-reply enabled</span>
+          </div>
+        )}
+      </div>
+      <figcaption className="support-demo-footer">
+        <span>
+          <span className="demo-dot" />
+          {STAGES[current]}
+        </span>
+        {!reducedMotion && (
           <button
-            key={label}
             type="button"
-            aria-pressed={step === index}
-            aria-controls="support-example-content"
-            onClick={() => setStep(index)}
+            onClick={() => setPaused((value) => !value)}
+            aria-label={
+              paused ? 'Play example animation' : 'Pause example animation'
+            }
           >
-            {index + 1}. {label}
+            {paused ? <Play size={14} /> : <Pause size={14} />}{' '}
+            {paused ? 'Play' : 'Pause'}
           </button>
-        ))}
-      </div>
-      <div
-        id="support-example-content"
-        className="marketing-example-body"
-        aria-live="polite"
-      >
-        {step === 0 && (
-          <>
-            <p className="marketing-eyebrow">Discord / #support</p>
-            <h3>A member asks for help</h3>
-            <blockquote>
-              How do I add a teammate to our answerLoops workspace?
-            </blockquote>
-            <p>
-              The question appears in your support queue with a link to the
-              original conversation.
-            </p>
-            <p>Follow the steps above to see the source, draft, and review.</p>
-          </>
         )}
-        {step === 1 && (
-          <>
-            <p className="marketing-eyebrow">Knowledge base</p>
-            <h3>Find the relevant instructions</h3>
-            <blockquote>
-              Workspace owners and admins can invite teammates from Settings.
-              Enter an email address, choose a role, and send the invitation.
-            </blockquote>
-            <Link href="/docs/product/team" className="marketing-text-link">
-              Source: Invite your team
-            </Link>
-            <p>
-              The draft uses the instructions retrieved from your knowledge
-              base.
-            </p>
-          </>
-        )}
-        {step === 2 && (
-          <>
-            <p className="marketing-eyebrow">Suggested reply</p>
-            <h3>A draft your team can review</h3>
-            <blockquote>
-              Open Settings and find the Team section. Enter your teammate’s
-              email, choose their role, and send the invite. You’ll need an
-              owner or admin role to invite someone.
-            </blockquote>
-            <Link href="/docs/product/team" className="marketing-text-link">
-              Read the team guide
-            </Link>
-            <p>Check the wording and source before approving the reply.</p>
-          </>
-        )}
-        {step === 3 && (
-          <>
-            <p className="marketing-eyebrow">Reply controls</p>
-            <h3>You choose when replies go out</h3>
-            <p>
-              A separate AI review checks the draft against its sources. With
-              automatic replies off, the draft waits for your team to approve
-              it.
-            </p>
-            <p>
-              When you enable automatic replies for a channel, answers that meet
-              its configured threshold can post there. Other questions remain in
-              the queue for your team.
-            </p>
-            <Link
-              href="/docs/product/ai-deflection"
-              className="marketing-text-link mt-4"
-            >
-              Read about answer review
-            </Link>
-          </>
-        )}
-      </div>
-      <div className="marketing-example-caption">
-        Example content. No customer data or measured performance results.
-      </div>
-    </div>
+      </figcaption>
+    </figure>
   )
 }
