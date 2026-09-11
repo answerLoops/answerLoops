@@ -1,6 +1,6 @@
 ---
 title: AI Model
-description: Bring your own LLM provider for chat and embeddings, or run on the free trial and the platform default.
+description: Configure chat and embedding providers, test connections, and manage the introductory AI allowance.
 ---
 
 AnswerLoops uses a language model to draft answers and an embedding model to
@@ -14,7 +14,7 @@ models an org uses.
 | A new cloud org, no key configured | AnswerLoops' key, metered as a **free trial** — 5 AI‑answered tickets, lifetime, per org |
 | Trial used up, still no key | AI drafting stops; connect a provider to resume |
 | Self‑hosted | The `OPENAI_API_KEY` in your environment |
-| Any org with a provider configured here | That provider, for every AI call |
+| A workspace with saved model settings | Its configured chat and embedding services |
 
 The card shows where you stand — trial credits remaining, "trial used up", or
 the configured provider and model.
@@ -23,7 +23,7 @@ the configured provider and model.
 
 Included on every plan for the named providers below. A custom
 OpenAI‑compatible endpoint (your own base URL — Ollama, LM Studio, vLLM, a
-proxy) is part of **Custom AI model configuration**, which is Enterprise.
+proxy) is part of **Custom AI model configuration**, which is included on Enterprise and in the self-hosted edition.
 
 | Provider | Chat | Embeddings |
 |---|---|---|
@@ -34,7 +34,7 @@ proxy) is part of **Custom AI model configuration**, which is Enterprise.
 | Mistral | ✓ | — separate OpenAI key |
 | OpenAI‑compatible endpoint | ✓ (Enterprise) | ✓ (Enterprise) |
 
-Only OpenAI does embeddings natively. If your chat provider is anything else,
+In AnswerLoops, OpenAI is the named provider option for embeddings. If your chat provider is anything else,
 enter an **OpenAI API key under Embeddings** — otherwise knowledge‑base search
 and every ingest fails after you save. The form asks for it automatically and
 the save is rejected with a clear message if it's missing.

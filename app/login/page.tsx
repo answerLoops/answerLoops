@@ -14,7 +14,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   OAuthCreateAccount: 'Could not create account. Try again.',
   OAuthAccountNotLinked: 'This email is already linked to another provider.',
   Callback: 'Sign-in callback failed. Try again.',
-  AccessDenied: 'AnswerLoops is currently invite-only. Join the waitlist at answerloops.com.',
+  AccessDenied:
+    'We could not sign you in with this account. Try again or contact hello@answerloops.com for help.',
   Default: 'Something went wrong. Try again.',
 }
 
@@ -45,11 +46,15 @@ export default async function LoginPage({ searchParams }: Props) {
     // to somebody who clicked an annual card.
     const parsed = parseBillingInterval(interval)
     const resume = plan
-      ? `/checkout?plan=${encodeURIComponent(plan)}${parsed ? `&interval=${parsed}` : ''}`
+      ? `/checkout?plan=${encodeURIComponent(plan)}${
+          parsed ? `&interval=${parsed}` : ''
+        }`
       : '/dashboard'
     redirect(resume)
   }
-  const errorMessage = error ? (ERROR_MESSAGES[error] ?? ERROR_MESSAGES.Default) : null
+  const errorMessage = error
+    ? ERROR_MESSAGES[error] ?? ERROR_MESSAGES.Default
+    : null
 
   // Sign-up is the default because that is who arrives here cold. Google is the
   // only provider, so both modes run the identical OAuth flow — Google creates
@@ -101,21 +106,33 @@ export default async function LoginPage({ searchParams }: Props) {
           <LoginForm signingIn={signingIn} />
 
           <p className="mt-5 text-center text-sm text-ink-500">
-            {signingIn ? "Don't have an account? " : 'Already have an account? '}
-            <Link href={toggleHref} className="font-medium text-brand-600 underline-offset-2 hover:underline">
+            {signingIn
+              ? "Don't have an account? "
+              : 'Already have an account? '}
+            <Link
+              href={toggleHref}
+              className="font-medium text-brand-600 underline-offset-2 hover:underline"
+            >
               {signingIn ? 'Create one' : 'Sign in'}
             </Link>
           </p>
 
           <p className="mt-6 text-center text-xs text-ink-400">
             By continuing, you agree to our{' '}
-            <Link href="/terms" className="underline underline-offset-2 hover:text-ink-600">
+            <Link
+              href="/terms"
+              className="underline underline-offset-2 hover:text-ink-600"
+            >
               Terms of Service
             </Link>{' '}
             and acknowledge our{' '}
-            <Link href="/privacy" className="underline underline-offset-2 hover:text-ink-600">
+            <Link
+              href="/privacy"
+              className="underline underline-offset-2 hover:text-ink-600"
+            >
               Privacy Policy
-            </Link>.
+            </Link>
+            .
           </p>
         </div>
       </div>

@@ -1,10 +1,71 @@
 import type { Metadata } from 'next'
 import { ProofPage } from '@/components/marketing/proof-page'
 import { resolveNavState } from '@/lib/marketing/nav-state'
+import { AnimatedChat } from '@/components/animated-chat'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = { title: 'AnswerLoops Support Example — Question to Knowledge Base', description: 'See a concrete AnswerLoops support example: a developer question becomes a ticket, a grounded answer, a human-reviewed resolution, and reusable knowledge.', alternates: { canonical: '/support-example' } }
+export const metadata: Metadata = {
+  title: 'Inspect a question, source, draft, and review | AnswerLoops',
+  description:
+    'This illustrative example follows a workspace invitation question. Select each step to see the information used to prepare the reply.',
+  alternates: { canonical: '/support-example' },
+}
 
 export default async function SupportExamplePage() {
-  return <ProofPage navState={await resolveNavState()} eyebrow="Concrete support example" title="One developer question, four useful outcomes" intro="Imagine a user asks in Discord: “How do I configure the GitHub repository sync?” AnswerLoops turns that single question into a traceable support interaction and, once resolved, a reusable answer for the next person." sections={[{ title: 'The question becomes a ticket', body: 'The incoming Discord message is captured with its source, organization context, category, and priority. The support team can see the original wording instead of a summary detached from the conversation.', details: ['The source channel remains attached to the ticket', 'Triage makes the request visible in the shared queue', 'The question can be followed through resolution'] }, { title: 'The answer is grounded', body: 'The agent searches the connected documentation and repository knowledge for the setup steps, then drafts an answer that points the user toward the relevant configuration path.', details: ['The draft uses available workspace knowledge', 'The response can include the correct documentation link', 'The workflow avoids treating generic model knowledge as the source of truth'] }, { title: 'Confidence decides the response path', body: 'If the evidence and draft meet the workspace threshold, the answer can be posted back to Discord. If not, the draft waits for a maintainer to edit or answer it.', details: ['Repeatable setup questions can resolve without a manual response', 'Ambiguous or sensitive questions remain human-controlled', 'The team keeps the context needed to make the decision'] }, { title: 'The resolution becomes knowledge', body: 'After the team confirms the answer, the explanation can be promoted into the knowledge base. A future user asking the same question gets a faster, more consistent response.', details: ['The approved explanation is reusable across supported channels', 'The team reduces repeated research for the same issue', 'The support loop compounds instead of resetting with every question'] }]} docs={[{ label: 'Read the support workflow', href: '/support-workflow' }, { label: 'Product introduction', href: '/docs/introduction' }, { label: 'GitHub integration docs', href: '/docs/integrations/github' }]} schema={{ name: 'AnswerLoops support example', description: 'A concrete AnswerLoops example from a developer question to reusable knowledge.', path: '/support-example', breadcrumbs: [{ name: 'Proof', path: '/agentic-support' }] }} />
+  return (
+    <ProofPage
+      navState={await resolveNavState()}
+      eyebrow="Support example"
+      title="Inspect a question, source, draft, and review"
+      intro="This illustrative example follows a workspace invitation question. Select each step to see the information used to prepare the reply."
+      sections={[
+        {
+          title: 'What the draft uses',
+          body: 'The source describes who can invite a teammate and where to send the invitation.',
+          details: [
+            'The answer names the Settings → Team screen.',
+            'It includes the email and role fields.',
+            'It links to the team documentation.',
+          ],
+        },
+        {
+          title: 'What decides whether it posts',
+          body: 'A separate AI review checks the draft. The channel’s reply settings determine the next action.',
+          details: [
+            'Automatic replies are off by default.',
+            'Enabled channels require a score above the configured threshold.',
+            'Your team can review and edit drafts in the ticket queue.',
+          ],
+        },
+      ]}
+      docs={[
+        {
+          label: 'Team guide',
+          href: '/docs/product/team',
+        },
+        {
+          label: 'Reply settings',
+          href: '/docs/product/ai-deflection',
+        },
+        {
+          label: 'Full workflow',
+          href: '/support-workflow',
+        },
+      ]}
+      schema={{
+        name: 'Inspect a question, source, draft, and review',
+        description:
+          'This illustrative example follows a workspace invitation question. Select each step to see the information used to prepare the reply.',
+        path: '/support-example',
+      }}
+    >
+      <section className="marketing-section marketing-soft">
+        <div className="marketing-container">
+          <div className="mx-auto max-w-2xl">
+            <AnimatedChat />
+          </div>
+        </div>
+      </section>
+    </ProofPage>
+  )
 }

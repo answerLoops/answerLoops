@@ -1,33 +1,26 @@
 import type { Metadata } from 'next'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { ORDERED_PLANS, TRIAL_DAYS } from '@/lib/billing/plans'
-import { Nav, Footer } from '@/components/marketing/chrome'
 import { PricingToggle } from '@/components/marketing/pricing-toggle'
 import { PricingComparisonTable } from '@/components/marketing/pricing-comparison-table'
-import { resolveNavState } from '@/lib/marketing/nav-state'
-import { GITHUB_URL } from '@/lib/site'
-import { ORGANIZATION_ID } from '@/lib/site-identity'
+import {
+  MarketingPage,
+  PageHero,
+  TrialCta,
+} from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
+import { resolveNavState } from '@/lib/marketing/nav-state'
+import { PRICING_FAQ } from '@/lib/marketing/pricing'
+import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
-import Link from 'next/link'
-
 export const dynamic = 'force-dynamic'
-
 export const metadata: Metadata = {
   title: 'Pricing — AnswerLoops',
-  description: 'AnswerLoops pricing for AI support that lives in your community. Self-host the open-source platform for free, or choose a hosted plan with a 14-day trial and MCP/API access.',
+  description:
+    'Compare Standard, Pro, and Enterprise plans. See exact monthly and annual prices, automated-answer allowances, model costs, and trial terms.',
   alternates: { canonical: '/pricing' },
-  openGraph: {
-    title: 'Pricing — AnswerLoops',
-    description: 'Self-host AnswerLoops for free or choose a hosted plan for community-native support across Discord, Slack, forums, GitHub, email, and web chat.',
-    url: '/pricing',
-  },
-  twitter: {
-    title: 'Pricing — AnswerLoops',
-    description: 'Self-host AnswerLoops for free or choose a hosted plan for support that lives in every community channel.',
-  },
 }
-
 function PricingStructuredData() {
   const softwareJsonLd = {
     '@context': 'https://schema.org',
@@ -37,7 +30,8 @@ function PricingStructuredData() {
     operatingSystem: 'Web',
     url: 'https://answerloops.com/pricing',
     provider: { '@id': ORGANIZATION_ID },
-    description: 'AI support that lives in your community across Discord, Slack, Discourse and Circle forums, GitHub, Telegram, email, and website chat.',
+    description:
+      'Hosted support plans with included automated answers and a 14-day trial.',
     offers: [
       {
         '@type': 'Offer',
@@ -59,9 +53,10 @@ function PricingStructuredData() {
           priceCurrency: 'USD',
           billingDuration: 'P1M',
         },
-        description: plan.deflectionsPerMonth === null
-          ? 'Unlimited deflections per month with a 14-day hosted trial.'
-          : `${plan.deflectionsPerMonth.toLocaleString()} deflections per month with a 14-day hosted trial.`,
+        description:
+          plan.deflectionsPerMonth === null
+            ? 'Unlimited deflections per month with a 14-day hosted trial.'
+            : `${plan.deflectionsPerMonth.toLocaleString()} deflections per month with a 14-day hosted trial.`,
       })),
     ],
   }
@@ -83,204 +78,133 @@ function PricingStructuredData() {
     <>
       {/* nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml */}
       {/* softwareJsonLd/faqJsonLd are built from server-controlled strings (plan names, FAQ copy), never user input; jsonLdHtml escapes `<` so the payload can't break out of the script tag. */}
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(softwareJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(faqJsonLd) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdHtml(softwareJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdHtml(faqJsonLd) }}
+      />
     </>
   )
 }
-
-const PRICING_FAQ = [
-  {
-    q: 'What counts as a deflection?',
-    a: 'A deflection is one question the AI answered automatically with high enough confidence that no human needed to step in. Questions routed to a human for review — even if the AI drafted a suggested reply — don\'t count.',
-  },
-  {
-    q: 'Can I switch plans?',
-    a: 'Yes, any time from Settings → Billing. Upgrades apply immediately; downgrades take effect at the end of your current billing period so you keep what you already paid for.',
-  },
-  {
-    q: 'What happens if I go over my deflection limit?',
-    a: 'You\'ll see a warning banner in the dashboard once you cross 80% of your monthly limit. On Standard the limit is a hard cap: AI auto-answering pauses and new questions route to your human queue instead — nothing breaks, and no surprise charges hit your card. On Pro the limit is a soft cap: answers keep going out past your included deflections and the overage is billed at $5 per 100. Enterprise is unlimited.',
-  },
-  {
-    q: 'Do you offer a free trial?',
-    a: 'Every hosted plan starts with a 14-day free trial, card required at signup. Cancel any time before the trial ends and you won\'t be charged.',
-  },
-  {
-    q: 'Is there a free, self-hosted option?',
-    a: 'Yes. The core platform is open source — clone the repo and run docker compose up on your own infrastructure, with your data never leaving your servers. License details are on GitHub.',
-  },
-  {
-    q: 'Do I need to provide my own AI provider key?',
-    a: 'Yes, on every hosted plan. You bring your own key for OpenAI, Anthropic, Google Gemini, Groq, Mistral, or any OpenAI-compatible endpoint (including local models via Ollama). There\'s no platform AI markup — you pay your provider directly, and switching providers never means switching plans.',
-  },
-] as const
 
 export default async function PricingPage({
   searchParams,
 }: {
   searchParams: Promise<{ resume?: string; checkout?: string }>
 }) {
-  // Two ways to arrive here mid-flow, and landing on a plain pricing page with
-  // no explanation in either case reads as the product losing your progress.
   const { resume, checkout } = await searchParams
   const navState = await resolveNavState()
-
-  // Kept as a guard, not as the main path. getCallbackUrl() chooses the
-  // post-OAuth destination before authentication has happened, so it has no
-  // way to tell a subscriber from a new visitor and once sent both here.
-  // /pricing is in PUBLIC_PATHS, so `authorized()` returns before the access
-  // gate runs and nothing forwarded the subscriber onward — they sat on the
-  // pricing page being told to buy what they already had.
-  //
-  // Sign-in now goes to /checkout instead, which sends a subscriber straight
-  // to the dashboard. But ?resume=1 outlives that change: it survives in
-  // bookmarks, shared links, and anywhere else the old URL was captured, and
-  // this page still cannot rely on the gate to rescue it.
   if (resume === '1' && navState === 'active') redirect('/dashboard')
-
   return (
-    <div className="landing-monochrome brand-system min-h-screen bg-[#f5f5f3]">
-      <PageSchema name="AnswerLoops pricing" description="AnswerLoops pricing for AI support that lives in your community." path="/pricing" breadcrumbs={[{ name: 'Product', path: '/agentic-support' }]} />
+    <MarketingPage navState={navState}>
+      <PageSchema
+        name="AnswerLoops pricing"
+        description={metadata.description!}
+        path="/pricing"
+      />
       <PricingStructuredData />
-      <Nav state={navState} />
-
-      <section className="relative isolate overflow-hidden bg-white pb-48 pt-0 sm:pb-56 sm:pt-0">
-        <div className="landing-grid pointer-events-none absolute inset-0 opacity-55" />
-        <div className="pointer-events-none absolute left-1/2 top-[-22rem] h-[48rem] w-[76rem] -translate-x-1/2 rounded-[50%] bg-slate-100/80 blur-[140px]" />
-        <div className="pointer-events-none absolute -right-52 top-20 h-96 w-96 rounded-full bg-blue-50/70 blur-[120px]" />
-        <div className="relative mx-auto max-w-4xl px-5 text-center sm:px-8">
-          <div className="mt-10 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-[0.6875rem] font-medium text-slate-600">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-            Pricing without the seat tax
-          </div>
-          <h1 className="mt-7 text-balance text-[2.8rem] font-semibold leading-[0.98] tracking-[-0.055em] text-slate-950 sm:text-6xl md:text-[4.7rem]">
-            Pay for resolved questions.
-            <span className="mt-2 block bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">
-              Not occupied seats.
-            </span>
-          </h1>
-          <p className="mx-auto mt-7 max-w-2xl text-pretty text-base leading-relaxed text-slate-600 sm:text-lg">
-            Every hosted plan includes the complete support loop. Choose the answer volume you need, bring your own model provider, and upgrade only when automation is already creating value. Built agent-first — every plan ships with an MCP server and REST API so Claude, Cursor, or your own agents can search your KB and open tickets directly, not just human staff.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm font-medium text-slate-500">
-            {['14-day hosted trial', 'No per-seat fees', 'No AI usage markup', 'MCP + Agent API included'].map((item) => (
-              <span key={item} className="flex items-center gap-2">
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-blue-50 text-[0.5625rem] text-blue-600">✓</span>
-                {item}
-              </span>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Anchor target for the header CTA (PLANS_HREF). scroll-mt clears the
-          sticky header so the cards are not hidden underneath it. */}
-      <section id="plans" className="relative scroll-mt-20 pb-24 sm:pb-32">
-        <div className="relative mx-auto -mt-32 max-w-7xl px-5 sm:-mt-40 sm:px-8">
+      <PageHero
+        eyebrow="Pricing"
+        title="Choose a plan for your support volume."
+      >
+        <p>
+          A subscription includes a monthly allowance of automated answers. Add
+          teammates without per-seat fees. Choose monthly billing or save 20%
+          with an annual subscription.
+        </p>
+      </PageHero>
+      <section id="plans" className="marketing-section scroll-mt-24">
+        <div className="marketing-container">
           {checkout === 'failed' && (
-            <div className="mx-auto mb-6 max-w-2xl rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-center">
-              <p className="text-sm font-medium text-red-900">We couldn&apos;t start checkout.</p>
-              <p className="mt-1 text-xs text-red-700">
-                Nothing was charged. Try again below — if it keeps failing, email us and we&apos;ll sort it out.
+            <div
+              role="alert"
+              className="mb-6 rounded-lg border border-red-200 bg-red-50 p-5"
+            >
+              <p className="font-medium">We couldn’t start checkout.</p>
+              <p className="mt-1 text-sm">
+                Nothing was charged. Try again below, or{' '}
+                <a className="underline" href="mailto:hello@answerloops.com">
+                  contact us
+                </a>{' '}
+                for help.
               </p>
             </div>
           )}
-
-          {/* Also gated on having no plan, not just on the resume flag. The
-              redirect above catches the sign-in path, but any other route to
-              ?resume=1 with an active subscription would otherwise render
-              "pick a plan" directly beneath a header offering the dashboard —
-              two contradictory answers to the same question. */}
-          {resume === '1' && checkout !== 'failed' && navState === 'no-plan' && (
-            <div className="mx-auto mb-6 max-w-2xl rounded-2xl border border-blue-200 bg-blue-50 px-5 py-4 text-center">
-              <p className="text-sm font-medium text-blue-900">You&apos;re signed in — pick a plan to finish setting up.</p>
-              <p className="mt-1 text-xs text-blue-700">
-                Your workspace is ready and waiting. Starting a trial takes a card, but nothing is charged for {TRIAL_DAYS} days.
-              </p>
-            </div>
-          )}
-
-          <div className="rounded-[2.25rem] border border-slate-200/80 bg-white/95 p-4 shadow-[0_30px_100px_rgba(15,23,42,0.16)] backdrop-blur-xl sm:p-7">
-            <PricingToggle plans={ORDERED_PLANS} />
+          {resume === '1' &&
+            checkout !== 'failed' &&
+            navState === 'no-plan' && (
+              <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-5">
+                <p className="font-medium">
+                  You’re signed in — pick a plan to finish setting up.
+                </p>
+                <p className="mt-1 text-sm">
+                  A card is required to start your {TRIAL_DAYS}-day trial.
+                  Nothing is charged today.
+                </p>
+              </div>
+            )}
+          <PricingToggle plans={ORDERED_PLANS} />
+          <div className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6">
+            <h3>Plan your total cost</h3>
+            <p className="mt-2 text-slate-600">
+              New hosted workspaces include five AI-processed tickets without a
+              provider key. After that, connect your provider and pay its model
+              usage directly. This one-time allowance is separate from your
+              14-day plan trial and monthly answer allowance.
+            </p>
+            <Link
+              className="marketing-text-link mt-4"
+              href="/docs/product/ai-config"
+            >
+              Provider and model requirements →
+            </Link>
           </div>
-
-          <p className="mx-auto mt-7 max-w-3xl text-center text-xs leading-relaxed text-slate-500">
-            Hosted plans include Discord, Slack, Discourse, Circle, GitHub, Telegram, email ingest (Google Chat too), the AI agent, knowledge base, analytics, and the embeddable widget. Card required at signup; cancel before the trial ends and you won&apos;t be charged.
+        </div>
+      </section>
+      <section
+        id="comparison"
+        className="marketing-section marketing-soft scroll-mt-24"
+      >
+        <div className="marketing-container">
+          <h2>Compare features and limits</h2>
+          <p className="marketing-lead">
+            Every plan includes the knowledge base, support queue, website
+            widget, and MCP and REST API access.
+          </p>
+          <PricingComparisonTable />
+          <p className="marketing-note">
+            For SSO, audit logs, retention, DPA or BAA requirements, and service
+            commitments,{' '}
+            <a href="mailto:hello@answerloops.com" className="underline">
+              contact our team
+            </a>{' '}
+            to define your enterprise agreement.
           </p>
         </div>
       </section>
-
-      <section className="border-y border-slate-200/80 bg-white py-24 sm:py-32">
-        <div className="mx-auto max-w-6xl px-5 sm:px-8">
-          <div className="mb-12 grid gap-5 lg:grid-cols-[0.8fr_1.2fr] lg:items-end">
-            <div>
-              <div className="mb-5 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-blue-600">
-                <span className="h-px w-6 bg-blue-500" />
-                Full comparison
-              </div>
-              <h2 className="text-4xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-5xl">Choose for the next stage—not the next hire.</h2>
-            </div>
-            <p className="max-w-xl text-sm leading-relaxed text-slate-600 lg:justify-self-end">
-              Every tier includes the complete answer pipeline. Higher plans increase automation volume and add the operational insight your team needs as support scales.
-            </p>
-          </div>
-          <PricingComparisonTable />
-        </div>
-      </section>
-
-      <section className="relative overflow-hidden bg-[#f4f7fb] py-24 sm:py-32">
-        <div className="pointer-events-none absolute -left-52 top-0 h-[32rem] w-[32rem] rounded-full bg-blue-200/45 blur-[130px]" />
-        <div className="relative mx-auto max-w-6xl px-5 sm:px-8">
-          <div className="mb-12 max-w-2xl">
-            <div className="mb-5 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-blue-600">
-              <span className="h-px w-6 bg-blue-500" />
-              Pricing questions
-            </div>
-            <h2 className="text-4xl font-semibold tracking-[-0.045em] text-slate-950 sm:text-5xl">No surprise math.</h2>
-            <p className="mt-4 text-sm leading-relaxed text-slate-600">The details that matter before you put a support workflow into production.</p>
-          </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {PRICING_FAQ.map((item, index) => (
-              <article key={item.q} className="rounded-2xl border border-slate-200/90 bg-white/85 p-6 shadow-[0_12px_35px_rgba(30,64,175,0.045)] backdrop-blur-sm">
-                <div className="mb-5 flex items-center justify-between">
-                  <span className="font-mono text-[0.625rem] font-semibold text-blue-500/75">0{index + 1}</span>
-                  <span className="h-1.5 w-1.5 rounded-full bg-blue-500/50" />
-                </div>
-                <h3 className="text-base font-semibold tracking-[-0.02em] text-slate-950">{item.q}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-600">{item.a}</p>
-              </article>
+      <section className="marketing-section">
+        <div className="marketing-container marketing-reading">
+          <h2>Billing and trial questions</h2>
+          <div className="marketing-faq">
+            {PRICING_FAQ.map((item) => (
+              <details key={item.q}>
+                <summary>{item.q}</summary>
+                <p>{item.a}</p>
+              </details>
             ))}
           </div>
+          <p className="marketing-note">
+            Prefer to operate the software yourself?{' '}
+            <Link href="/self-hosted-ai-support" className="underline">
+              Read about self-hosting.
+            </Link>
+          </p>
         </div>
       </section>
-
-      {/* Checkout works from the plan cards above, so this closing section
-          offers the same live actions rather than an email signup — a
-          "waitlist" CTA here would be asking someone who could already
-          start a trial to wait for one instead. */}
-      <section className="relative overflow-hidden bg-[#030611]">
-        <div className="landing-grid pointer-events-none absolute inset-0 opacity-35" />
-        <div className="pointer-events-none absolute left-1/2 top-0 h-[28rem] w-[52rem] -translate-x-1/2 rounded-[50%] bg-blue-600/25 blur-[120px]" />
-        <div className="relative mx-auto max-w-5xl px-5 py-24 text-center sm:px-8 sm:py-32">
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.07] text-lg text-cyan-300">↗</div>
-          <h2 className="mt-7 text-balance text-4xl font-semibold leading-[1.02] tracking-[-0.05em] text-white sm:text-6xl">Start with the questions you already answer twice.</h2>
-          <p className="mx-auto mt-5 max-w-xl text-sm leading-relaxed text-slate-200/70 sm:text-base">Start a hosted trial in a couple of minutes, or take the source and run AnswerLoops on your own infrastructure. Both are the same product.</p>
-          <div className="mx-auto mt-9 max-w-xl">
-            <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link href="#plans" className="w-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-6 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:brightness-110 sm:w-auto">
-                Start your 14-day trial
-              </Link>
-              <Link href={GITHUB_URL} target="_blank" rel="noopener noreferrer" className="w-full rounded-full border border-white/15 px-6 py-3 text-center text-sm font-semibold text-white/80 transition hover:border-white/30 hover:text-white sm:w-auto">
-                Self-host it free
-              </Link>
-            </div>
-            <p className="mt-3 text-[0.625rem] text-white/25">A card is required to start the trial. Nothing is charged for 14 days.</p>
-          </div>
-        </div>
-      </section>
-
-      <Footer />
-    </div>
+      <TrialCta title="Start with your own support questions." />
+    </MarketingPage>
   )
 }

@@ -1,69 +1,47 @@
 ---
-title: AI Deflection
-description: How AnswerLoops automatically answers questions using your knowledge base.
+title: Automatic replies
+description: Configure answer review and automatic replies for connected channels.
 ---
 
-## How it works
+An automated answer is called a **deflection** in the dashboard. It uses two AI steps: a draft based on retrieved knowledge, followed by a separate review against the available evidence.
 
-1. A user posts a question in a connected Discord channel or Slack channel
-2. AnswerLoops embeds the question as a vector using your configured embedding model
-3. It searches the knowledge base for articles with high cosine similarity
-4. If the best match exceeds the **confidence threshold**, it generates an answer and posts it in the thread
-5. If confidence is below the threshold, it triggers [human escalation](/docs/product/escalation)
+## How an answer is prepared
 
-<Info>
-  Connecting a GitHub repository is optional. With repos connected, the AI can
-  also search your source code while drafting answers. Without repos, it
-  answers from the knowledge base and prior resolved tickets alone — and is
-  instructed never to invent project-specific details it can't find there.
-</Info>
+1. A question arrives through a connected channel.
+2. AnswerLoops retrieves relevant knowledge.
+3. The drafting step prepares a reply from that material.
+4. A separate review assesses the draft and assigns a confidence score.
+5. Channel settings determine whether a qualifying answer posts automatically or waits for your team.
+
+Connected repositories can provide additional source material. Useful resolutions can also be promoted into the knowledge base. The website widget uses published knowledge.
 
 ## Confidence threshold
 
-Default: **0.8** (range 0–1)
+The default threshold is **0.8** on a scale from 0 to 1. Configure it in the relevant integration's settings.
 
-- Higher threshold → AI answers less, escalates more → higher accuracy, more human work
-- Lower threshold → AI answers more, escalates less → more coverage, higher risk of wrong answers
-
-Configure per-integration in **Settings → Discord** or **Settings → Slack**.
+A higher threshold makes automatic replies more selective; a lower threshold lets more drafts qualify. Neither setting guarantees that the answer is correct. Inspect the draft and its sources when deciding whether to change the threshold.
 
 ## Automatic Deflections
 
-Clearing the confidence threshold decides whether an answer is *good enough* to send — the **Automatic Deflections** toggle decides whether it's allowed to send **without a human looking at it first**. They're independent controls: a high-confidence answer with the toggle off still doesn't reach the customer unsupervised.
+**Automatic Deflections** is off by default for newly connected channels and GitHub repositories. A high-confidence draft still requires approval when this setting is off.
 
-<Info>
-  This is a separate setting from the confidence threshold above. Confidence
-  decides "is this answer good?" — Automatic Deflections decides "can the AI
-  post good answers on its own, or does a human need to approve first?"
-</Info>
+- **Off:** your team reviews the draft and approves it before the answer is sent.
+- **On:** a draft that meets the configured requirements can post automatically.
 
-**Default: off**, on every platform and every connected GitHub repo. A newly connected integration never auto-posts until someone deliberately turns it on.
+Other drafts remain in the ticket queue. [Human escalation routing](/docs/product/escalation) adds notifications on eligible plans.
 
-- **Off** (default): a high-confidence answer becomes a draft on the dashboard with status "Ready to send," and the customer sees a brief acknowledgment in-channel instead of either the answer or silence. A human reviews the draft and clicks **Approve** to actually send it.
-- **On**: identical to how deflection worked before this toggle existed — a high-confidence answer posts to the customer immediately, no human step.
+## Change the setting
 
-This is deliberately per-platform (and per-GitHub-repo), not a single org-wide switch. A team can run Discord unsupervised while keeping Slack or a customer-facing GitHub repo on manual approval, or vice versa — trust in AI answer quality is often channel-specific, not universal.
+1. Open **Settings** and select the platform or GitHub repository.
+2. Edit the channel's configuration.
+3. Set the confidence threshold and **Automatic Deflections** option.
+4. Save. GitHub repository cards use an inline checkbox.
+5. Send a representative question and verify the ticket and reply behavior.
 
-### Why it defaults off
+Use different settings for channels with different review requirements. Test against current documentation before enabling automatic replies.
 
-A brand-new org has no track record with its own knowledge base yet. Defaulting to off lets a team watch the AI's suggested answers accumulate as drafts, judge their quality for a while, and only then flip the switch once they trust it — rather than the AI talking to their community unsupervised from the very first connected integration.
+## Knowledge search and model configuration
 
-### How to change it
+The search step selects relevant content before drafting. A retrieval similarity score and the answer-review confidence score measure different things; a close text match does not by itself establish that the answer is correct.
 
-1. Go to **Settings** and pick a platform tab (Discord, Slack, Telegram, Email, or Google Chat) — or the **GitHub** tab for a connected repo.
-2. Each card shows the current state as a colored badge (green = on, red = off) at all times, so you never have to open Edit just to check the state.
-3. Click **Edit** on the card, then use the **Automatic Deflections** checkbox inside the form, then **Save**.
-
-The toggle is deliberately behind Edit rather than a one-click switch on the card itself — this is a decision that changes whether AI answers reach customers unsupervised, so it shouldn't be flippable by an accidental click. (GitHub repo cards are the one exception: their checkbox is already inline without an Edit step, since repo settings there follow the same always-editable pattern as the existing Knowledge Base sync toggle.)
-
-## Embedding model
-
-By default: `text-embedding-3-small` (OpenAI). Articles and queries are both embedded with the same model — they must match for similarity scores to be meaningful.
-
-<Warning>
-  If you change the embedding model, existing KB articles have stale embeddings. Re-import all articles to regenerate vectors with the new model.
-</Warning>
-
-## KB match threshold
-
-Articles below a cosine similarity of **0.45** are filtered out entirely before the LLM sees them. This prevents hallucination from low-quality context.
+Configure chat and embedding services in [AI Model](/docs/product/ai-config). If you change the embedding model, re-import knowledge so the stored vectors match it.

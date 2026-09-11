@@ -1,10 +1,87 @@
 import type { Metadata } from 'next'
 import { ProofPage } from '@/components/marketing/proof-page'
 import { resolveNavState } from '@/lib/marketing/nav-state'
+import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = { title: 'AnswerLoops Support Workflow — From Question to Knowledge', description: 'Walk one question from a community channel to a cited answer: the ticket it becomes, the sources the drafting agent pulls, the reviewer agent’s decision, and what your team promotes into knowledge afterward.', alternates: { canonical: '/support-workflow' } }
+export const metadata: Metadata = {
+  title: 'Set the rules for automated replies | AnswerLoops',
+  description:
+    'Start with drafts your team reviews. Enable automatic replies for a channel after testing your knowledge sources and confidence threshold.',
+  alternates: { canonical: '/support-workflow' },
+}
 
 export default async function SupportWorkflowPage() {
-  return <ProofPage navState={await resolveNavState()} eyebrow="Support workflow walkthrough" title="From community question to reusable answer" intro="A question your community already answered shouldn’t need a person to retype it. Here’s each step instead — source, ticket, evidence, the reviewer agent’s call, and what your team keeps — with nothing hidden." sections={[{ title: '1. A question arrives', body: 'A user asks for help in Discord, Slack, a Discourse or Circle forum, GitHub, email, Telegram, Google Chat, or the web widget. AnswerLoops records the request with its source channel and org.', details: ['Incoming messages are normalized into tickets', 'The original channel remains available to the team', 'Classification and priority help sort what needs attention'] }, { title: '2. Evidence is retrieved', body: 'The drafting agent searches the org’s knowledge and pulls the passages most relevant to the question.', details: ['The docs and knowledge articles it draws on are recorded with the draft', 'Repository content and prior resolved tickets feed technical questions', 'Claims without a source in the retrieved context don’t make the draft'] }, { title: '3. The answer is gated', body: 'The reviewer agent checks the draft against the sources it cited and scores its confidence.', details: ['Clears the bar: it posts in the channel the question came from', 'Below the bar: it routes to a teammate with the draft attached', 'Your team edits, answers, or escalates from one queue'] }, { title: '4. The resolution compounds', body: 'A resolved question isn’t just closed. When the answer is broadly useful, your team promotes it into the knowledge base.', details: ['The next draft can retrieve and cite it', 'The same question, asked again, is a one-step answer', 'The knowledge base grows from questions you actually received'] }]} docs={[{ label: 'Product introduction', href: '/docs/introduction' }, { label: 'Widget documentation', href: '/docs/product/widget' }, { label: 'MCP integration', href: '/docs/integrations/mcp' }]} schema={{ name: 'AnswerLoops support workflow', description: 'How AnswerLoops turns community questions into grounded, reviewed, reusable support answers.', path: '/support-workflow', breadcrumbs: [{ name: 'Proof', path: '/agentic-support' }] }} />
+  return (
+    <ProofPage
+      navState={await resolveNavState()}
+      eyebrow="Support workflow"
+      title="Set the rules for automated replies"
+      intro="Start with drafts your team reviews. Enable automatic replies for a channel after testing your knowledge sources and confidence threshold."
+      sections={[
+        {
+          title: '1. Connect a channel',
+          body: 'Select the conversations AnswerLoops should receive.',
+          details: [
+            'Incoming questions appear in the shared ticket queue.',
+            'Each ticket retains its source.',
+            'Use category and priority to organize the work.',
+          ],
+        },
+        {
+          title: '2. Inspect the draft',
+          body: 'Check the proposed answer against the question and the supporting documentation.',
+          details: [
+            'Correct outdated or incomplete source articles.',
+            'Check whether the answer addresses the actual question.',
+            'Edit the draft before sending when necessary.',
+          ],
+        },
+        {
+          title: '3. Enable automatic replies',
+          body: 'Turn on automatic replies for the channels you are ready to automate.',
+          details: [
+            'The separate AI review must meet your confidence threshold.',
+            'A confidence score is a model assessment, not a guarantee of correctness.',
+            'Questions that do not qualify remain in the team queue.',
+          ],
+        },
+        {
+          title: '4. Review resolved tickets',
+          body: 'Save answers that will help with future questions.',
+          details: [
+            'Promote useful resolutions to the knowledge base.',
+            'Keep one-off customer details out of general articles.',
+            'Review answer feedback and update the underlying sources.',
+          ],
+        },
+      ]}
+      docs={[
+        {
+          label: 'AI configuration',
+          href: '/docs/product/ai-deflection',
+        },
+        {
+          label: 'Tickets',
+          href: '/docs/product/tickets',
+        },
+        {
+          label: 'Knowledge base',
+          href: '/docs/product/knowledge-base',
+        },
+      ]}
+      schema={{
+        name: 'Set the rules for automated replies',
+        description:
+          'Start with drafts your team reviews. Enable automatic replies for a channel after testing your knowledge sources and confidence threshold.',
+        path: '/support-workflow',
+      }}
+    >
+      <section className="marketing-section marketing-soft">
+        <div className="marketing-container">
+          <WorkflowDiagram />
+        </div>
+      </section>
+    </ProofPage>
+  )
 }

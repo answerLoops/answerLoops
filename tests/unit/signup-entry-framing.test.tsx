@@ -35,8 +35,8 @@ describe('the marketing header speaks to someone with no account', () => {
     // strings live in nav-shared.ts (START_LABEL / SIGNIN_LABEL) so the header
     // and drawer can't drift; nav-cta.tsx references them by name.
     const shared = read('components/marketing/nav-shared.ts')
-    expect(shared, 'the new visitor needs the trial').toContain('Start free trial')
-    expect(shared, 'the returning visitor needs the way back in').toMatch(/SIGNIN_LABEL = 'Login'/)
+    expect(shared, 'the new visitor needs the trial').toContain('Start trial')
+    expect(shared, 'the returning visitor needs the way back in').toMatch(/SIGNIN_LABEL = 'Sign in'/)
     const src = read('components/marketing/nav-cta.tsx')
     expect(src, 'the trial label is wired into the CTA').toContain('START_LABEL')
     expect(src, 'the sign-in label is wired into the CTA').toContain('SIGNIN_LABEL')

@@ -2,9 +2,7 @@ export const TRIAL_DAYS = 14
 
 export type PlanId = 'standard' | 'pro' | 'enterprise'
 
-// Annual billing discount. Each plan now has a real annual price in Stripe
-// charging twelve times the discounted monthly figure, so this is the rate the
-// customer is actually billed at rather than a display-only number.
+// Minimum annual discount; annualMonthlyPrice also rounds down to whole dollars.
 export const ANNUAL_DISCOUNT_PCT = 20
 
 export type BillingInterval = 'monthly' | 'annual'
@@ -16,7 +14,9 @@ export type BillingInterval = 'monthly' | 'annual'
  * it is caller-supplied by the time checkout sees it. Everything downstream
  * chooses a Stripe price id from it, and that decides what somebody is charged.
  */
-export function parseBillingInterval(value: string | null | undefined): BillingInterval | null {
+export function parseBillingInterval(
+  value: string | null | undefined,
+): BillingInterval | null {
   return value === 'monthly' || value === 'annual' ? value : null
 }
 
@@ -24,7 +24,7 @@ export interface Plan {
   id: PlanId
   name: string
   deflectionsPerMonth: number | null // null = unlimited
-  priceMonthly: number               // USD cents, 0 = free
+  priceMonthly: number // USD cents, 0 = free
   // Cents charged per 100 deflections used beyond deflectionsPerMonth, or null
   // for a hard cap: once the included quota is spent, no further deflections go
   // out until the period resets or the org upgrades. A non-null rate is a soft
@@ -36,16 +36,17 @@ export interface Plan {
   // the charge is a follow-up — until then this field only drives which plans
   // block at the limit and what the UI says.
   overageRatePer100Cents: number | null
-  stripePriceId: string | null       // monthly price; null = not configured
+  stripePriceId: string | null // monthly price; null = not configured
   stripePriceIdAnnual: string | null // annual price; null = not configured
 }
 
-// Effective monthly price if billed annually (priceMonthly minus the annual
-// discount), rounded to the nearest cent. This is the rate the customer is
-// actually billed at — annualTotalPrice below is twelve times it, and the
-// annual Stripe price charges that total.
+// Annual plans apply at least the stated discount and round the monthly
+// equivalent down to a whole dollar. Annual billing charges twelve times it.
 export function annualMonthlyPrice(plan: Plan): number {
-  return Math.round(plan.priceMonthly * (1 - ANNUAL_DISCOUNT_PCT / 100))
+  return (
+    Math.floor((plan.priceMonthly * (1 - ANNUAL_DISCOUNT_PCT / 100)) / 100) *
+    100
+  )
 }
 
 export const PLANS: Record<PlanId, Plan> = {
@@ -95,7 +96,11 @@ export const PLANS: Record<PlanId, Plan> = {
   },
 }
 
-export const ORDERED_PLANS: Plan[] = [PLANS.standard, PLANS.pro, PLANS.enterprise]
+export const ORDERED_PLANS: Plan[] = [
+  PLANS.standard,
+  PLANS.pro,
+  PLANS.enterprise,
+]
 
 /**
  * The plan the product recommends: the "Most popular" pricing card, and what
@@ -121,7 +126,10 @@ export const HIGHLIGHTED_PLAN_ID = 'pro'
  * interval — being charged a different amount than the one displayed is worse
  * than being told checkout is unavailable.
  */
-export function stripePriceFor(plan: Plan, interval: BillingInterval): string | null {
+export function stripePriceFor(
+  plan: Plan,
+  interval: BillingInterval,
+): string | null {
   return interval === 'annual' ? plan.stripePriceIdAnnual : plan.stripePriceId
 }
 
@@ -198,7 +206,9 @@ export function isOverLimit(deflections: number, plan: Plan): boolean {
  * so a soft-cap org is never cut off mid-period.
  */
 export function blocksAtLimit(plan: Plan): boolean {
-  return plan.deflectionsPerMonth !== null && plan.overageRatePer100Cents === null
+  return (
+    plan.deflectionsPerMonth !== null && plan.overageRatePer100Cents === null
+  )
 }
 
 /**

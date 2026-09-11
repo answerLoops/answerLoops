@@ -3,7 +3,7 @@ title: Dashboard
 description: Operate support, knowledge, and AI performance from one workspace.
 ---
 
-The dashboard is the operating center for AnswerLoops. Its grouped navigation keeps monitoring, support work, knowledge improvement, and workspace configuration distinct while preserving quick access to every channel.
+Use the dashboard to review open work, answer outcomes, and response targets. The sidebar links to tickets, knowledge, reporting, and workspace settings.
 
 ## Stat cards
 
@@ -30,46 +30,9 @@ The dashboard surfaces quick links to the most common tasks: adding knowledge, r
 
 ## Live updates
 
-The dashboard updates itself as work comes in — a new ticket from any
-channel, a status change, an AI draft becoming ready, a teammate accepting an
-invite — without a manual refresh and without polling on a timer.
+Tickets, draft availability, and team membership update while the dashboard is open. If the connection is interrupted, the page reconnects and refreshes. Returning to a background tab also refreshes its data.
 
-It holds one Server-Sent Events connection to the app while a dashboard tab
-is open and focused — one per tab, shared by every part of the page that
-listens for changes, including the live team-member list on Settings. A
-database trigger notifies that connection when a ticket changes or a
-notification is raised or cleared for your workspace, and the page re-fetches
-once in response. (Marking a notification read is not pushed to other open
-tabs — their unread count catches up on the next refresh.) When nothing is
-changing, nothing is requested. The connection is dropped while the tab is in
-the background and re-established when you return to it.
-
-If that connection is interrupted (a proxy timeout, a database failover, a
-laptop waking from sleep), the page rebuilds it on its own, and re-fetches as
-soon as it is back, since a change may have landed while it was down. How
-quickly depends on how the connection went: one that drops or is deliberately
-recycled is noticed and replaced at once, while one that dies silently, with
-no error reaching either end, takes up to about 70 seconds to be spotted.
-Either way the page re-fetches on reconnect rather than waiting for the next
-change.
-
-The server also checks its own end of the connection every few minutes and
-rebuilds the stream if that check fails, which is what catches the awkward
-case: a connection that looks perfectly healthy from the browser while the
-database subscription behind it has quietly gone. On top of that, a focused
-tab refreshes itself if it has heard nothing at all for ten minutes — a last
-line of defence rather than a timer, so a dashboard that is receiving updates
-never runs it, and an idle one costs a single refresh rather than one every
-minute. A backgrounded tab has no timer and instead refreshes the moment you
-switch back to it. The connection is also recycled roughly every 15 minutes as
-a matter of course — rebuilt with no visible interruption — so a stale one
-cannot linger.
-
-On a pooled Postgres connection (Neon's `-pooler` endpoint, PgBouncer,
-Supabase's pooled port), set `DIRECT_DATABASE_URL` to the non-pooled
-connection string — the same requirement as bot config hot-reload. Without
-it, live updates stop arriving and the page falls back to the idle refresh
-described above.
+Self-hosted operators using a pooled database connection should configure `DIRECT_DATABASE_URL` for live updates. See [environment variables](/docs/self-hosting/environment-variables).
 
 ## Navigation
 

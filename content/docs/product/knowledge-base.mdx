@@ -3,13 +3,13 @@ title: Knowledge Base
 description: Import, manage, and search your knowledge base so the AI can deflect questions accurately.
 ---
 
-The knowledge base is the source of truth for AI deflection. When a question comes in, AnswerLoops searches the KB semantically to find the closest matching content, then uses that content to draft a reply. The better your KB, the more accurate and confident your AI answers.
+AnswerLoops searches the knowledge base for material relevant to a question and uses it to draft a reply. Keep articles current and review imported content before using it for customer answers.
 
 ## Import methods
 
 There are four ways to add content to the knowledge base.
 
-### 1. URL crawl (Firecrawl)
+### 1. URL import
 
 Import a web page or an entire documentation site.
 
@@ -18,7 +18,7 @@ Import a web page or an entire documentation site.
 3. Choose **Single page** or **Entire site**
    - Single page imports only that URL
    - Entire site crawls linked pages up to a maximum of **25 pages**
-4. Click **Import** — a progress spinner shows while Firecrawl runs (typically 15–60 seconds)
+4. Click **Import** and wait for processing to finish. Larger sites take longer.
 5. Imported pages appear in the Sources list when complete
 
 Each page becomes a separate source entry. The crawler fetches the rendered content, splits it into chunks, embeds each chunk as a vector, and writes everything to the database.
@@ -26,7 +26,7 @@ Each page becomes a separate source entry. The crawler fetches the rendered cont
 **Re-import deduplication:** if you import the same URL a second time, pages that were already ingested are skipped automatically. Only new pages are processed. This means you can safely re-run a site import after adding new docs without creating duplicates.
 
 <Note>
-  URL crawling requires a valid `FIRECRAWL_API_KEY`. Without it, the import button is disabled and an inline warning is shown.
+  Self-hosted operators must configure the URL import service. See [environment variables](/docs/self-hosting/environment-variables#url-ingest--firecrawl-optional).
 </Note>
 
 ### 2. File upload
@@ -57,7 +57,7 @@ The sync respects the repo's file tree. Each markdown file becomes its own sourc
 GitHub and Notion syncs run as background jobs — the Knowledge Base page shows each one as queued, then `Syncing N/M` as it works through the files or pages, then done, and you can navigate away while it runs. Re-triggering a sync for the same source while one is still in progress does nothing; the running job finishes on its own.
 
 <Note>
-  GitHub repo sync requires the GitHub App to be installed and `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, and `GITHUB_WEBHOOK_SECRET` to be configured. See [GitHub App setup](/docs/self-hosting/environment-variables#github) for details.
+  Install the GitHub App for the repositories you want to sync. Self-hosted operators must also configure the app credentials; see [GitHub setup](/docs/integrations/github).
 </Note>
 
 ### 4. Notion workspace

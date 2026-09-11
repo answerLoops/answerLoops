@@ -1,50 +1,32 @@
-/**
- * The canonical marketed channel list — the single source of truth for every
- * "AnswerLoops connects to …" enumeration on the marketing site, in the docs,
- * in `public/llms.txt`, and in the GitHub README.
- *
- * Rules for keeping this honest:
- * - Order is meaningful. Keep this order everywhere the list is rendered.
- * - Discourse and Circle are first-class channels and read as normal list
- *   members everywhere, including the docs ingest-channels table. The Discourse
- *   adapter has shipped (Market Expansion Phase 2); the Circle adapter is still
- *   being built, and per "Capability copy can lead the build" in AGENTS.md the
- *   copy does not hedge for it. Do not reintroduce a "Planned" marker.
- * - Google Chat is supported but not part of the headline list. It belongs in
- *   "also supported" / "what's included" / legal-processor contexts only —
- *   never in a "here is what AnswerLoops does" marketing enumeration. That is
- *   why it is a separate export, not a member of MARKETED_CHANNELS.
- *
- * Prose that needs the list as a sentence should use `channelListSentence()`
- * so the Oxford-comma phrasing stays identical too.
- */
-
+/** Channel names shared by the public website. */
 export interface MarketedChannel {
   /** Display name, exactly as it should appear in copy. */
   name: string
+  href: string
   /** Brand color, for the channel rail icons on the landing page. */
   color: string
 }
 
 export const MARKETED_CHANNELS: readonly MarketedChannel[] = [
-  { name: 'Discord', color: '#5865f2' },
-  { name: 'Slack', color: '#36c5f0' },
-  { name: 'Discourse', color: '#e4572e' },
-  { name: 'Circle', color: '#7c3aed' },
-  { name: 'GitHub', color: '#24292f' },
-  { name: 'Telegram', color: '#229ed9' },
-  { name: 'Email', color: '#64748b' },
-  { name: 'Website widget', color: '#2563eb' },
+  { name: 'Discord', href: '/docs/integrations/discord', color: '#5865f2' },
+  { name: 'Slack', href: '/docs/integrations/slack', color: '#36c5f0' },
+  { name: 'Discourse', href: '/docs/integrations/discourse', color: '#e4572e' },
+  { name: 'Circle', href: '/docs/integrations/circle', color: '#7c3aed' },
+  { name: 'GitHub', href: '/docs/integrations/github', color: '#24292f' },
+  { name: 'Telegram', href: '/docs/integrations/telegram', color: '#229ed9' },
+  { name: 'Email', href: '/docs/integrations/email', color: '#64748b' },
+  {
+    name: 'Google Chat',
+    href: '/docs/integrations/google-chat',
+    color: '#34a853',
+  },
+  { name: 'Website widget', href: '/docs/product/widget', color: '#2563eb' },
 ] as const
 
 /** Just the names, in canonical order. */
-export const MARKETED_CHANNEL_NAMES: readonly string[] = MARKETED_CHANNELS.map((c) => c.name)
-
-/**
- * Supported but deliberately absent from the headline list. Use only in
- * "also supported" or "included in every plan" contexts.
- */
-export const ALSO_SUPPORTED_CHANNELS: readonly string[] = ['Google Chat']
+export const MARKETED_CHANNEL_NAMES: readonly string[] = MARKETED_CHANNELS.map(
+  (c) => c.name,
+)
 
 /**
  * The canonical list as a comma-separated sentence fragment with an Oxford

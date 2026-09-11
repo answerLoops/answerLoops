@@ -1,8 +1,38 @@
 ---
 title: Team
-description: Coming soon.
+description: Invite teammates and manage workspace membership.
 ---
 
-<Info>
-  This page is being written. Check back soon or open an issue on [GitHub](https://github.com/answerLoops/answerLoops).
-</Info>
+Owners and administrators manage invitations in **Settings → Team**.
+
+## Invite a teammate
+
+1. Open **Settings → Team**.
+2. Under **Invite a teammate**, enter the person's email address.
+3. Select **Member** or **Admin**.
+4. Click **Send invite**. You can also copy the invitation link from **Pending Invites**.
+5. Ask the recipient to open the link and sign in with the invited email address.
+
+The person appears in **Members** after accepting. Pending invitations display their role and expiration date. Use **Revoke** to cancel an invitation that should no longer grant access.
+
+## Roles
+
+| Role | Purpose |
+| --- | --- |
+| Owner | Holds workspace ownership and can transfer it to another member. |
+| Admin | Manages workspace settings and membership. |
+| Member | Works with support tickets and workspace content. |
+
+Give administrative access to people who need to manage the workspace. Invitations cannot create another owner; use the ownership-transfer action instead.
+
+## Remove a member
+
+Find the person in **Members** and choose **Remove**. The owner cannot be removed with this action. Transfer ownership first when the current owner is leaving.
+
+## Transfer ownership
+
+The current owner can select **Transfer Ownership** beside another member and complete the confirmation. Check the selected recipient before confirming: ownership controls administration of the workspace.
+
+## If an invitation does not work
+
+Check that the invitation is still listed, has not expired, and matches the email used to sign in. Revoke an incorrect invitation and send a new one with the intended address and role.

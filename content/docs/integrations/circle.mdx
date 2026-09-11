@@ -1,19 +1,13 @@
 ---
 title: Circle
-description: Connect a Circle community to AnswerLoops so new posts and comments become tickets with an AI-drafted answer, ready for a team member to review and paste back into Circle.
+description: Connect Circle posts and comments to your support queue and configure reviewed replies.
 ---
 
 ## Overview
 
-Circle is where many course creators and paid communities run member support. AnswerLoops ingests new posts and comments from the spaces you choose and runs each one through the standard triage → retrieval → confidence-review pipeline, producing a grounded draft answer on a ticket.
+AnswerLoops receives posts and comments from the Circle spaces you select, prepares replies from workspace knowledge, and runs a separate AI review. Configure automatic replies for the questions that qualify, or review drafts with your team.
 
-<Callout type="info">
-  **Circle is ingest-only.** The drafted answer lands in your AnswerLoops inbox — a team member reviews it and pastes it into Circle by hand. Nothing is posted back to Circle automatically. Automatic replies are on the roadmap, pending confirmation of Circle's write API for comments.
-</Callout>
-
-Inbound events arrive through a Circle automation **Workflow** you set up in your community admin — there is no API subscription to register.
-
----
+Inbound events arrive through Circle Workflows configured by your community administrator.
 
 ## Setup
 
@@ -44,7 +38,7 @@ In Circle, go to **Settings → Workflows** and create a workflow:
 
 ### 4. Set an escalation user (optional)
 
-Enter a Circle username in **Escalation user** to have that person noted on the draft when AI confidence is below your threshold.
+Enter the Circle user responsible for follow-up in **Escalation user**. Escalation routing is included on Pro and Enterprise.
 
 ### 5. Set the confidence threshold
 
@@ -67,8 +61,8 @@ Circle is configured entirely per-organization in the Settings UI. There is no c
   <Accordion title="Tickets are created but the content is empty or truncated">
     Circle Workflow webhook payloads vary in how much of the post body they include. AnswerLoops falls back to the Admin API to fetch the full body — make sure the **Admin API token** you saved is a valid **Admin V2** token and hasn't been revoked.
   </Accordion>
-  <Accordion title="Nothing is posted back to Circle">
-    That's expected — Circle is ingest-only. Open the ticket, use **Copy draft** on the AI Draft panel, and paste the answer into Circle's own reply box. Marking the draft **Approved** records your decision on the ticket but sends nothing.
+  <Accordion title="A draft appears but no reply is posted">
+    Check the channel's automatic-reply setting and confidence threshold. Review the draft in the ticket queue if it does not qualify for an automatic reply.
   </Accordion>
 </AccordionGroup>
 
@@ -76,5 +70,5 @@ Circle is configured entirely per-organization in the Settings UI. There is no c
 
 ## Related
 
-- [Discourse integration](/docs/integrations/discourse) — the other forum channel, with automatic replies
-- [Slack integration](/docs/integrations/slack) — the closest existing channel in setup shape
+- [Discourse integration](/docs/integrations/discourse)
+- [Slack integration](/docs/integrations/slack)

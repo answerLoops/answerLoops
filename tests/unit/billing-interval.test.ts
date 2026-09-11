@@ -38,7 +38,18 @@ describe('parseBillingInterval', () => {
   })
 
   it('rejects everything else rather than guessing', () => {
-    for (const bad of [null, undefined, '', 'yearly', 'year', 'Annual', 'MONTHLY', 'annual ', '../annual', 'annual;drop']) {
+    for (const bad of [
+      null,
+      undefined,
+      '',
+      'yearly',
+      'year',
+      'Annual',
+      'MONTHLY',
+      'annual ',
+      '../annual',
+      'annual;drop',
+    ]) {
       expect(parseBillingInterval(bad as string | null | undefined)).toBeNull()
     }
   })
@@ -73,26 +84,43 @@ describe('annual pricing arithmetic', () => {
     }
   })
 
-  it('is cheaper than paying monthly for a year, by the stated discount', () => {
+  it('saves at least the stated discount compared with monthly billing', () => {
     for (const p of ORDERED_PLANS) {
       const monthlyForAYear = p.priceMonthly * 12
       expect(annualTotalPrice(p)).toBeLessThan(monthlyForAYear)
       const savedPct = (1 - annualTotalPrice(p) / monthlyForAYear) * 100
-      expect(Math.round(savedPct)).toBe(ANNUAL_DISCOUNT_PCT)
+      expect(savedPct).toBeGreaterThanOrEqual(ANNUAL_DISCOUNT_PCT)
     }
   })
 
-  it('matches the amounts configured in Stripe', () => {
-    // These are the figures the live annual prices were created with. If a plan
-    // price changes here without the Stripe price changing too, the page and the
-    // charge disagree — which is exactly how this went wrong before.
+  it('matches the approved whole-dollar annual totals', () => {
     const expected: Record<string, number> = {
-      standard: 47040,
-      pro: 143040,
-      enterprise: 479040,
+      standard: 46800,
+      pro: 142800,
+      enterprise: 478800,
     }
     for (const p of ORDERED_PLANS) {
-      expect(annualTotalPrice(p), `annual total for ${p.id}`).toBe(expected[p.id])
+      expect(annualTotalPrice(p), `annual total for ${p.id}`).toBe(
+        expected[p.id],
+      )
+    }
+  })
+
+  it('preserves monthly prices and applies the approved annual monthly equivalents', () => {
+    const expected: Record<string, { monthly: number; annualMonthly: number }> =
+      {
+        standard: { monthly: 4900, annualMonthly: 3900 },
+        pro: { monthly: 14900, annualMonthly: 11900 },
+        enterprise: { monthly: 49900, annualMonthly: 39900 },
+      }
+    for (const p of ORDERED_PLANS) {
+      expect(p.priceMonthly, `monthly price for ${p.id}`).toBe(
+        expected[p.id].monthly,
+      )
+      expect(
+        annualMonthlyPrice(p),
+        `annual monthly equivalent for ${p.id}`,
+      ).toBe(expected[p.id].annualMonthly)
     }
   })
 })

@@ -1,56 +1,55 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Nav, Footer } from '@/components/marketing/chrome'
+import { MarketingPage, PageHero } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { BLOG_POSTS, formatPostDate } from './posts'
-
 export const metadata: Metadata = {
   title: 'AnswerLoops blog',
-  description: 'Notes on running communities and support across Discord, Slack, forums, GitHub, email, and more with AnswerLoops.',
+  description:
+    'Notes from the founders on community support and building AnswerLoops.',
   alternates: { canonical: '/blog' },
 }
-
 export default function BlogIndexPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <MarketingPage>
       <PageSchema
         name="AnswerLoops blog"
-        description="Notes on running communities and support across multiple platforms with AnswerLoops."
+        description="Notes on community support and building AnswerLoops."
         path="/blog"
         type="CollectionPage"
       />
-      <Nav />
-
-      <section className="bg-ink-950 py-20">
-        <div className="mx-auto max-w-3xl px-6 text-center">
-          <span className="inline-block rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/60 mb-6">
-            Blog
-          </span>
-          <h1 className="text-4xl font-bold text-white sm:text-5xl">From the team running it</h1>
-          <p className="mt-5 text-lg text-white/60 max-w-2xl mx-auto">
-            Notes on community support, written by the people who use AnswerLoops to run their own communities.
-          </p>
-        </div>
-      </section>
-
-      <section className="bg-white py-20">
-        <div className="mx-auto max-w-2xl px-6">
-          <div className="divide-y divide-gray-100 border-t border-gray-100">
-            {BLOG_POSTS.map((post) => (
-              <Link key={post.slug} href={`/blog/${post.slug}`} className="group block py-8">
-                <time dateTime={post.datePublished} className="text-xs font-medium uppercase tracking-wide text-gray-400">
+      <PageHero eyebrow="Blog" title="Notes on community support">
+        <p>
+          What we are learning while building AnswerLoops and using it in our
+          communities.
+        </p>
+      </PageHero>
+      <section className="marketing-section">
+        <div className="marketing-container marketing-reading">
+          {BLOG_POSTS.map((post) => (
+            <article className="border-b border-slate-200 pb-8" key={post.slug}>
+              <p className="marketing-meta">
+                <time dateTime={post.datePublished}>
                   {formatPostDate(post.datePublished)}
-                </time>
-                <h2 className="mt-2 text-xl font-semibold text-gray-900 group-hover:text-brand-700">{post.title}</h2>
-                <p className="mt-2 text-sm text-gray-500 leading-relaxed">{post.description}</p>
-                <span className="mt-3 inline-block text-sm font-medium text-brand-600">Read →</span>
+                </time>{' '}
+                · {post.author}
+              </p>
+              <h2>
+                <Link
+                  className="hover:text-blue-700"
+                  href={`/blog/${post.slug}`}
+                >
+                  {post.title}
+                </Link>
+              </h2>
+              <p>{post.description}</p>
+              <Link className="marketing-text-link" href={`/blog/${post.slug}`}>
+                Read the article →
               </Link>
-            ))}
-          </div>
+            </article>
+          ))}
         </div>
       </section>
-
-      <Footer />
-    </div>
+    </MarketingPage>
   )
 }

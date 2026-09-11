@@ -3,8 +3,78 @@ import { ProofPage } from '@/components/marketing/proof-page'
 import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = { title: 'Self-Hosting AnswerLoops — Deployment and Operations', description: 'Understand how to deploy AnswerLoops with Docker Compose, configure its services, connect channels, and operate a self-hosted support platform.', alternates: { canonical: '/self-hosting-proof' } }
+export const metadata: Metadata = {
+  title: 'Plan your AnswerLoops deployment | AnswerLoops',
+  description:
+    'Run the application and channel services on infrastructure you manage. Before launch, configure authentication, storage, model access, backups, and updates.',
+  alternates: { canonical: '/self-hosting-proof' },
+}
 
 export default async function SelfHostingProofPage() {
-  return <ProofPage navState={await resolveNavState()} eyebrow="Self-hosting and deployment" title="Run the support stack where your team operates" intro="Self-hosting AnswerLoops means the application, bot service, database connection, channel configuration, and AI settings live inside an environment you manage. The deployment path is documented so you can evaluate the operational shape before you commit." sections={[{ title: 'Start with the documented stack', body: 'The self-host quickstart walks through prerequisites, environment configuration, OAuth setup, and the first login before you connect a live community.', details: ['Clone the repository and configure a real environment file', 'Run the application and bot services with Docker Compose', 'Use the setup checklist to verify authentication and storage'] }, { title: 'Connect the services you need', body: 'The app handles the dashboard and API while the bot service listens for community events. Integrations are enabled through documented configuration and setup flows.', details: ['Discord and Slack use dedicated listener behavior', 'GitHub, email, Telegram, and web chat have their own integration guides', 'Channel credentials and deployment settings remain explicit'] }, { title: 'Choose your AI and data boundary', body: 'A self-hosted deployment lets your team choose its model provider, database environment, network controls, backups, and observability practices.', details: ['Bring the model provider credentials that fit your requirements', 'Keep tickets and knowledge within the infrastructure boundary you select', 'Review environment variables and production guidance before launch'] }, { title: 'Operate with an upgrade path', body: 'Development, production, and integration behavior are documented separately so a local proof of concept can grow into a maintained deployment.', details: ['Use the production deployment guide for domain and service setup', 'Follow integration-specific troubleshooting when a channel is not receiving events', 'Plan upgrades against the documented compose and migration workflow'] }]} docs={[{ label: 'Self-host quickstart', href: '/docs/quickstart-self-host' }, { label: 'Docker deployment', href: '/docs/self-hosting/docker' }, { label: 'Production guide', href: '/docs/self-hosting/production' }, { label: 'Environment variables', href: '/docs/self-hosting/environment-variables' }]} schema={{ name: 'Self-hosting AnswerLoops', description: 'AnswerLoops self-hosting deployment and operations overview.', path: '/self-hosting-proof', breadcrumbs: [{ name: 'Proof', path: '/agentic-support' }] }} />
+  return (
+    <ProofPage
+      navState={await resolveNavState()}
+      eyebrow="Self hosting proof"
+      title="Plan your AnswerLoops deployment"
+      intro="Run the application and channel services on infrastructure you manage. Before launch, configure authentication, storage, model access, backups, and updates."
+      sections={[
+        {
+          title: 'Prepare the application',
+          body: 'Follow the Docker Compose quickstart and configure the required services.',
+          details: [
+            'Choose a domain and configure authentication.',
+            'Connect the database and storage.',
+            'Verify login and create your workspace.',
+          ],
+        },
+        {
+          title: 'Connect channels',
+          body: 'Configure each platform your community uses.',
+          details: [
+            'Register the required channel apps or bots.',
+            'Select the channels or repositories to monitor.',
+            'Send a test question and confirm the reply destination.',
+          ],
+        },
+        {
+          title: 'Choose model and data services',
+          body: 'Self-hosting controls where the application runs. Your connected services still determine where data is processed.',
+          details: [
+            'External model providers receive content needed to generate answers.',
+            'Channel platforms continue to process messages.',
+            'Review chat and embedding configuration separately.',
+          ],
+        },
+        {
+          title: 'Assign operational ownership',
+          body: 'Your team maintains the deployment.',
+          details: [
+            'Schedule database and storage backups.',
+            'Follow the upgrade and migration instructions.',
+            'Monitor channel delivery and model-provider errors.',
+          ],
+        },
+      ]}
+      docs={[
+        {
+          label: 'Self-host quickstart',
+          href: '/docs/quickstart-self-host',
+        },
+        {
+          label: 'Production guide',
+          href: '/docs/self-hosting/production',
+        },
+        {
+          label: 'Upgrade guide',
+          href: '/docs/self-hosting/upgrading',
+        },
+      ]}
+      schema={{
+        name: 'Plan your AnswerLoops deployment',
+        description:
+          'Run the application and channel services on infrastructure you manage. Before launch, configure authentication, storage, model access, backups, and updates.',
+        path: '/self-hosting-proof',
+      }}
+    ></ProofPage>
+  )
 }

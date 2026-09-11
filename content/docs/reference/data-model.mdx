@@ -1,8 +1,43 @@
 ---
-title: Data Model
-description: Coming soon.
+title: Data model
+description: A map of the workspace, ticket, knowledge, and configuration records.
 ---
 
-<Info>
-  This page is being written. Check back soon or open an issue on [GitHub](https://github.com/answerLoops/answerLoops).
-</Info>
+This reference describes the main records used by AnswerLoops. The schema definitions are in `lib/db/schema.ts`; migrations define changes applied to an existing database.
+
+## Workspace and access
+
+| Records | Purpose |
+| --- | --- |
+| `orgs` | Workspace identity and configuration. |
+| `users`, `memberships` | User accounts and their workspace roles. |
+| `invitations` | Pending team invitations. |
+| `api_keys` | API key metadata and permissions. |
+
+## Support conversations
+
+| Records | Purpose |
+| --- | --- |
+| `tickets` | Question, source, category, priority, status, and AI draft state. |
+| `ticket_replies` | Replies associated with a ticket. |
+| `ticket_events` | Recorded changes in the ticket's history. |
+| `ticket_links` | Relationships between tickets. |
+| `ai_assessments` | Results of AI assessment. |
+| `ticket_feedback` | Positive and negative answer feedback. |
+| `csat_ratings` | Customer satisfaction ratings. |
+
+## Knowledge
+
+| Records | Purpose |
+| --- | --- |
+| `kb_sources` | Imported source metadata. |
+| `kb_articles` | Searchable knowledge articles and their publication state. |
+| `kb_sync_jobs` | Progress of background imports. |
+| `ticket_embeddings` | Search representations associated with tickets. |
+| `faq_snapshots` | Generated FAQ content. |
+
+## Configuration and billing
+
+Integration records store channel configuration. `ai_configs` stores workspace model settings. `sla_configs` stores response and resolution targets. `subscriptions` records hosted-plan state, and `api_generations` records standalone answer generation for usage accounting.
+
+Use application actions and documented APIs for routine changes. For self-hosted upgrades, apply the documented migrations and retain a tested backup. See [Upgrading](/docs/self-hosting/upgrading).

@@ -1,165 +1,126 @@
 'use client'
-
 import { useState } from 'react'
 import Link from 'next/link'
-import { ANNUAL_DISCOUNT_PCT, annualMonthlyPrice, annualTotalPrice, HIGHLIGHTED_PLAN_ID, TRIAL_DAYS, type Plan } from '@/lib/billing/plans'
-
-function CheckIcon({ inverted = false }: { inverted?: boolean }) {
-  return (
-    <svg className={`mt-0.5 h-3.5 w-3.5 shrink-0 ${inverted ? 'text-cyan-300' : 'text-blue-600'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-      <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-
-const PLAN_FEATURES: Record<string, string[]> = {
-  standard: [
-    '500 questions answered automatically every month',
-    'One bot everywhere your community already is — Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, and web chat',
-    'Self-improving knowledge base, trained from your docs, URLs, and GitHub repos',
-    'Built for AI agents too — MCP server and REST API so Claude, Cursor, or your own agents can search your KB and open tickets directly',
-    'Capture leads straight from the widget, no extra tool',
-    'Answers in whatever language your customer asks in',
-    'Your brand only — no "Powered by" footer',
-    'Export every ticket and lead to CSV, any time',
-    'Email support',
-  ],
-  pro: [
-    '3,000 questions answered automatically every month, then $5 per 100',
-    'Everything in Standard',
-    'Know exactly how happy your community is, automatically, after every answer',
-    'Hard questions never sit unseen — auto-routed to the right person on your team',
-    'Test a model or confidence-threshold change against real history before it ever reaches a customer',
-    'See exactly what your docs are missing, ranked by how often people actually ask',
-    'Priority support',
-  ],
-  enterprise: [
-    'Unlimited automated answers',
-    'Everything in Pro',
-    'Run on your own model, including a private fine-tune',
-    'SLA-backed response times with automatic breach alerts, not a promise on a call',
-    'Keep every ticket and conversation forever — no retention window to manage',
-    'We migrate you off Zendesk, Intercom, or Confluence ourselves — white-glove, not self-serve',
-    '6x higher MCP and Agent API rate limits for high-volume agent workloads',
-    'Custom invoicing and a dedicated point of contact',
-  ],
-}
-
-const PLAN_DESCRIPTIONS: Record<string, string> = {
-  standard: 'For small teams ready to remove repeat support from the daily queue.',
-  pro: 'For growing communities that need deeper insight and escalation control.',
-  enterprise: 'For high-volume or regulated teams with custom operational requirements.',
-}
-
+import {
+  ANNUAL_DISCOUNT_PCT,
+  annualMonthlyPrice,
+  HIGHLIGHTED_PLAN_ID,
+  TRIAL_DAYS,
+  type Plan,
+} from '@/lib/billing/plans'
+import { formatPrice, PLAN_COPY } from '@/lib/marketing/pricing'
 export function PricingToggle({ plans }: { plans: Plan[] }) {
-  // Defaults to annual now that annual is a real Stripe price rather than a
-  // display rate, so the page can anchor on the lower figure and the button
-  // beneath it charges exactly that.
   const [annual, setAnnual] = useState(true)
-
   return (
     <>
-      <div className="flex flex-col items-center justify-between gap-5 px-2 pb-5 sm:flex-row sm:px-3">
+      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-blue-600">Hosted plans</div>
-          <p className="mt-1 text-sm font-medium text-slate-900">The complete support loop, managed for you.</p>
+          <h2>Hosted plans</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            No per-seat fees. Model usage is billed separately.
+          </p>
         </div>
-        <div className="flex items-center rounded-full border border-slate-200 bg-slate-100/80 p-1 shadow-[inset_0_1px_rgba(15,23,42,0.03)]">
-          <span className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${!annual ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>Monthly</span>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <span>Monthly</span>
           <button
             type="button"
             role="switch"
             aria-checked={annual}
             aria-label="Use annual billing"
-            onClick={() => setAnnual((v) => !v)}
-            className={`relative mx-1 inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${annual ? 'bg-blue-600' : 'bg-slate-300'}`}
+            onClick={() => setAnnual(!annual)}
+            className={`relative h-7 w-12 rounded-full ${
+              annual ? 'bg-blue-600' : 'bg-slate-400'
+            }`}
           >
-            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${annual ? 'translate-x-6' : 'translate-x-1'}`} />
+            <span
+              className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white transition-transform ${
+                annual ? 'translate-x-5' : 'translate-x-0'
+              }`}
+            />
           </button>
-          <span className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${annual ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500'}`}>
-            Annual
+          <span>Annual</span>
+          <span className="rounded bg-blue-50 px-2 py-1 text-xs font-medium text-blue-800">
+            Save {ANNUAL_DISCOUNT_PCT}%+
           </span>
-          <span className="ml-1 mr-1 rounded-full bg-emerald-100 px-2 py-1 text-[0.5625rem] font-bold uppercase tracking-[0.08em] text-emerald-700">Save {ANNUAL_DISCOUNT_PCT}%</span>
         </div>
       </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-5 lg:grid-cols-3">
         {plans.map((plan) => {
-          const isHighlight = plan.id === HIGHLIGHTED_PLAN_ID
-          const ctaClass = `relative mt-8 block w-full rounded-full py-3 text-center text-xs font-semibold transition ${
-            isHighlight
-              ? 'bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-600/20 hover:brightness-110'
-              : 'border border-slate-200 bg-slate-50 text-slate-800 hover:border-blue-200 hover:bg-blue-50'
-          }`
-          const displayPrice = annual ? annualMonthlyPrice(plan) : plan.priceMonthly
-          const features = PLAN_FEATURES[plan.id] ?? []
+          const highlighted = plan.id === HIGHLIGHTED_PLAN_ID
+          const copy = PLAN_COPY[plan.id]
           return (
             <div
               key={plan.id}
-              className={`relative flex min-h-[540px] flex-col overflow-hidden rounded-[1.75rem] border p-7 transition duration-300 hover:-translate-y-1 ${
-                isHighlight
-                  ? 'border-slate-700 bg-[#252525] text-white shadow-[0_26px_65px_rgba(15,23,42,0.18)]'
-                  : 'border-slate-200/90 bg-white text-slate-950 shadow-[0_16px_45px_rgba(30,64,175,0.055)] hover:shadow-[0_22px_60px_rgba(30,64,175,0.1)]'
+              role="region"
+              aria-label={`${plan.name} plan`}
+              className={`relative flex flex-col rounded-xl border bg-white p-6 ${
+                highlighted
+                  ? 'border-blue-600 ring-1 ring-blue-600'
+                  : 'border-slate-200'
               }`}
             >
-              {isHighlight && (
-                <>
-                  <div className="landing-grid pointer-events-none absolute inset-0 opacity-30" />
-                  <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-blue-400/10 blur-[90px]" />
-                </>
-              )}
-              {isHighlight && (
-                <div className="relative mb-7">
-                  <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-[0.5625rem] font-bold uppercase tracking-[0.13em] text-cyan-200">
-                    Most popular
-                  </span>
-                </div>
-              )}
-              {!isHighlight && <div className="relative mb-7 text-[0.5625rem] font-bold uppercase tracking-[0.13em] text-slate-400">Hosted</div>}
-              <div className={`relative text-lg font-semibold ${isHighlight ? 'text-white' : 'text-slate-950'}`}>{plan.name}</div>
-              <p className={`relative mt-2 min-h-16 text-xs leading-relaxed ${isHighlight ? 'text-slate-200/65' : 'text-slate-500'}`}>
-                {PLAN_DESCRIPTIONS[plan.id]}
-              </p>
-              <div className="relative mt-5 flex items-end gap-1">
-                <span className={`text-5xl font-semibold tracking-[-0.05em] ${isHighlight ? 'text-white' : 'text-slate-950'}`}>${(displayPrice / 100).toFixed(0)}</span>
-                <span className={`mb-1.5 text-sm ${isHighlight ? 'text-white/50' : 'text-slate-500'}`}>/mo</span>
-              </div>
-              {annual && (
-                <div className={`relative mt-1 text-[0.625rem] ${isHighlight ? 'text-white/45' : 'text-slate-400'}`}>billed annually · ${((displayPrice * 12) / 100).toFixed(0)}/yr</div>
-              )}
-              <div className={`relative mt-2 text-xs font-semibold ${isHighlight ? 'text-emerald-300' : 'text-emerald-700'}`}>14-day free trial</div>
-              <div className={`relative mt-4 border-t pt-4 text-xs font-medium ${isHighlight ? 'border-white/10 text-blue-100' : 'border-slate-100 text-blue-700'}`}>
-                {plan.deflectionsPerMonth === null
-                  ? 'Unlimited deflections'
-                  : `${plan.deflectionsPerMonth.toLocaleString()} deflections/mo`}
-                {plan.overageRatePer100Cents !== null && (
-                  <span className={`ml-1 font-normal ${isHighlight ? 'text-slate-200/60' : 'text-slate-500'}`}>
-                    then ${(plan.overageRatePer100Cents / 100).toFixed(0)} per 100
+              <div className="mb-4 min-h-6">
+                {highlighted && (
+                  <span className="rounded bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-800">
+                    Recommended
                   </span>
                 )}
               </div>
-
-              <ul className="relative mt-6 flex-1 space-y-2.5">
-                {features.map((f) => (
-                  <li key={f} className="flex items-start gap-2">
-                    <CheckIcon inverted={isHighlight} />
-                    <span className={`text-xs leading-relaxed ${isHighlight ? 'text-slate-200/75' : 'text-slate-600'}`}>{f}</span>
+              <h3>{plan.name}</h3>
+              <p className="mt-2 min-h-16 text-sm text-slate-600">
+                {copy.description}
+              </p>
+              <div className="mt-5">
+                <span className="text-4xl font-semibold tracking-tight">
+                  {formatPrice(
+                    annual ? annualMonthlyPrice(plan) : plan.priceMonthly,
+                  )}
+                </span>
+                <span className="ml-1 text-sm text-slate-600">/month</span>
+              </div>
+              <p className="mt-2 text-sm text-slate-600">
+                {annual ? 'Billed annually' : 'Billed monthly'}
+              </p>
+              <p className="mt-5 border-t border-slate-200 pt-5 font-semibold">
+                {plan.deflectionsPerMonth === null
+                  ? 'Unlimited automated answers'
+                  : `${plan.deflectionsPerMonth.toLocaleString(
+                      'en-US',
+                    )} automated answers/month`}
+              </p>
+              <p className="mt-1 min-h-12 text-sm text-slate-600">
+                {plan.overageRatePer100Cents !== null
+                  ? `Then ${formatPrice(
+                      plan.overageRatePer100Cents,
+                    )} per additional block of 100.`
+                  : plan.deflectionsPerMonth === null
+                  ? 'No automated-answer overage charges.'
+                  : 'Automatic replies pause at the limit.'}
+              </p>
+              <Link
+                href={`/login?plan=${plan.id}&interval=${
+                  annual ? 'annual' : 'monthly'
+                }`}
+                className={`marketing-button mt-5 ${
+                  highlighted ? '' : 'marketing-button-secondary'
+                }`}
+              >
+                Start {TRIAL_DAYS}-day free trial
+              </Link>
+              <p className="mt-3 text-xs leading-relaxed text-slate-600">
+                Card required, but you&apos;re not charged today. Cancel
+                before the {TRIAL_DAYS}-day trial ends to avoid the charge.
+              </p>
+              <ul className="mt-6 space-y-3 border-t border-slate-200 pt-5 text-sm text-slate-600">
+                {copy.features.map((feature) => (
+                  <li key={feature} className="flex gap-2">
+                    <span aria-hidden="true" className="text-blue-700">
+                      ✓
+                    </span>
+                    {feature}
                   </li>
                 ))}
               </ul>
-
-              {/* Carries both the plan and the billing period through sign-in, so
-                  the choice made here survives the round trip and checkout opens
-                  on exactly what was clicked. Dropping the interval would bill
-                  monthly to somebody looking at annual figures — the two are one
-                  decision, not a plan plus a default. */}
-              <Link href={`/login?plan=${plan.id}&interval=${annual ? 'annual' : 'monthly'}`} className={ctaClass}>
-                Start {TRIAL_DAYS}-day free trial
-              </Link>
-              <p className={`mt-2 text-center text-[0.625rem] ${isHighlight ? 'text-slate-300/60' : 'text-slate-500'}`}>
-                Card required. Not charged for {TRIAL_DAYS} days.
-                {annual ? ` Then $${(annualTotalPrice(plan) / 100).toFixed(2)} for the year.` : ''}
-              </p>
             </div>
           )
         })}

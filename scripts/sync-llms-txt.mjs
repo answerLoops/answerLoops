@@ -20,7 +20,7 @@ const LABELS = {
   '/alternatives': 'Alternatives & comparisons',
   '/about': 'About',
   '/blog': 'Blog',
-  '/blog/managing-every-community-platform-from-one-place': 'Blog: Managing every community platform from one place',
+  '/blog/managing-every-community-platform-from-one-place': 'Blog: Managing support across community platforms',
   '/privacy': 'Privacy policy',
   '/terms': 'Terms of service',
   '/vs/chatbase': 'AnswerLoops vs Chatbase',
@@ -31,7 +31,7 @@ const LABELS = {
 }
 
 // The order llms.txt should present integrations in: first-class community
-// channels first, then the also-supported Google Chat, then the agent surfaces.
+// channels first, then the agent surfaces.
 // The AI-provider pages in content/docs/integrations/meta.json (openai,
 // anthropic, …) and Stripe are intentionally omitted — they are configuration,
 // not channels a crawler would connect.

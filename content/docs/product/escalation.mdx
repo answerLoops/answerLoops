@@ -1,8 +1,27 @@
 ---
-title: Escalation
-description: Coming soon.
+title: Human escalation
+description: Configure who should follow up when a question needs a person.
 ---
 
-<Info>
-  This page is being written. Check back soon or open an issue on [GitHub](https://github.com/answerLoops/answerLoops).
-</Info>
+Drafts that do not qualify for automatic replies remain available for your team. **Human escalation routing**, available on Pro and Enterprise and in the self-hosted edition, adds channel-specific notifications to the people responsible for follow-up.
+
+## Configure a destination
+
+1. Open **Settings** and select the connected channel.
+2. Edit its escalation destination. The field depends on the platform: a Discord role, Slack group, Telegram username, email address, or supported channel user.
+3. Save the configuration.
+4. Test with a question that needs human help. Confirm that the ticket appears and the intended person or group receives the notification.
+
+Use the integration's setup guide for platform-specific identifiers and permissions.
+
+## Automatic replies and confidence
+
+The confidence threshold determines which reviewed answers qualify for automatic replies when that channel has automatic replies enabled. Raising the threshold makes automatic replies more selective. Lowering it allows more drafts to qualify; it does not improve the evidence behind them.
+
+Before changing the threshold, inspect the draft and its sources. Missing or outdated documentation should be corrected in the knowledge base.
+
+## Handle the ticket
+
+Open the ticket to read the question and draft. Edit or replace the draft, send the response, and update the ticket status. Promote a resolution into knowledge only when it is useful beyond this individual request.
+
+See [Tickets](/docs/product/tickets) and [AI Model](/docs/product/ai-config).
