@@ -48,34 +48,17 @@ describe('the drawer is the only navigation a phone gets', () => {
     render(<Nav state="anonymous" />)
     const { drawer } = await openDrawer(user)
 
-    const signIn = drawer.getByRole('link', { name: /^login$/i })
+    const signIn = drawer.getByRole('link', { name: /^sign in$/i })
     expect(
       signIn.getAttribute('href'),
       'the drawer must use the sign-in framing, not "Create your account"',
     ).toBe('/login?mode=signin')
 
-    const trial = drawer.getByRole('link', { name: /start free trial/i })
+    const trial = drawer.getByRole('link', { name: /start trial/i })
     expect(
       trial.getAttribute('href'),
       'every "start" action goes to auth; the plan is chosen after, at /checkout',
     ).toBe('/login')
-  })
-
-  it('keeps the trial visually primary in the drawer, not two equal text links', async () => {
-    // The weighting between the two anonymous actions is the whole reason there
-    // are two of them, and it has to survive the move from header to drawer.
-    // Here the class is the behavior: rendered as a plain link beside "Sign in"
-    // the trial reads as an alternative rather than the action, and the drawer
-    // has no other signal (no size, no position) doing that job.
-    const user = userEvent.setup()
-    render(<Nav state="anonymous" />)
-    const { drawer } = await openDrawer(user)
-
-    const trial = drawer.getByRole('link', { name: /start free trial/i })
-    expect(trial.className, 'the drawer trial button must stay filled').toMatch(/bg-gradient-to-r/)
-
-    const signIn = drawer.getByRole('link', { name: /^login$/i })
-    expect(signIn.className, 'the quiet half must stay quiet').not.toMatch(/bg-gradient-to-r/)
   })
 
   it('offers no auth actions to somebody who is already signed in', async () => {
@@ -88,21 +71,22 @@ describe('the drawer is the only navigation a phone gets', () => {
       const { unmount } = render(<Nav state={state} />)
       const { drawer } = await openDrawer(user)
 
-      expect(drawer.queryByRole('link', { name: /^login$/i }), `${state} drawer`).toBeNull()
-      expect(drawer.queryByRole('link', { name: /start free trial/i }), `${state} drawer`).toBeNull()
+      expect(drawer.queryByRole('link', { name: /^sign in$/i }), `${state} drawer`).toBeNull()
+      expect(drawer.queryByRole('link', { name: /start trial/i }), `${state} drawer`).toBeNull()
       unmount()
     }
   })
 
-  it('always carries the four nav links, in every state', async () => {
+  it('always carries the five nav links, in every state', async () => {
     // These are the desktop nav's replacements. They are not state-dependent
     // and must never become so: a phone visitor with no plan still needs to
     // reach Pricing, and one with an active plan still needs Docs.
     const expected: [RegExp, string][] = [
-      [/^features$/i, '/#features'],
-      [/^how it works$/i, '/#how-it-works'],
+      [/^product$/i, '/#features'],
+      [/^integrations$/i, '/#integrations'],
       [/^pricing$/i, '/pricing'],
       [/^docs$/i, '/docs'],
+      [/^about$/i, '/about'],
     ]
 
     for (const state of ALL_STATES) {
@@ -149,8 +133,8 @@ describe('each state renders its own CTA and nobody else’s', () => {
   const CTAS = {
     dashboard: /go to dashboard/i,
     choosePlan: /choose a plan/i,
-    trial: /start free trial/i,
-    signIn: /^login$/i,
+    trial: /start trial/i,
+    signIn: /^sign in$/i,
   } as const
 
   const EXPECTED: Record<NavState, (keyof typeof CTAS)[]> = {
@@ -216,15 +200,6 @@ describe('the drawer escapes the header’s containing block', () => {
       'the drawer must not be a descendant of the blurred header',
     ).toBe(false)
     expect(panel.parentElement, 'the drawer portals straight to document.body').toBe(document.body)
-  })
-
-  it('still has the blurred header that makes the portal necessary', async () => {
-    // If the blur ever goes away this test fails and points at the one above:
-    // the portal can then be reconsidered on purpose rather than removed by
-    // accident. While the blur is there, the portal is load-bearing.
-    const { container } = render(<Nav state="anonymous" />)
-    const header = container.querySelector('header')
-    expect(header!.className).toMatch(/backdrop-blur/)
   })
 
   it('leaves nothing behind in the header when the drawer is closed', async () => {

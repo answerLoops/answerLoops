@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   MARKETED_CHANNELS,
   MARKETED_CHANNEL_NAMES,
-  ALSO_SUPPORTED_CHANNELS,
   channelListSentence,
 } from '@/lib/marketing/channels'
 
@@ -16,13 +15,9 @@ describe('canonical marketed channel list', () => {
       'GitHub',
       'Telegram',
       'Email',
+      'Google Chat',
       'Website widget',
     ])
-  })
-
-  it('does not put Google Chat in the headline list', () => {
-    expect(MARKETED_CHANNEL_NAMES).not.toContain('Google Chat')
-    expect(ALSO_SUPPORTED_CHANNELS).toContain('Google Chat')
   })
 
   it('gives every rail channel a hex color', () => {
@@ -33,7 +28,7 @@ describe('canonical marketed channel list', () => {
 
   it('renders an Oxford-comma sentence with the overridable last label', () => {
     expect(channelListSentence()).toBe(
-      'Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, and a website widget',
+      'Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, Google Chat, and a website widget',
     )
     expect(channelListSentence('web chat')).toMatch(/, and web chat$/)
   })

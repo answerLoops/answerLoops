@@ -108,7 +108,7 @@ describe('the redirect is scoped to the resume flow, not to /pricing', () => {
     await renderPricing('active')
 
     expect(mocks.redirect).not.toHaveBeenCalled()
-    expect(screen.getByRole('heading', { name: /pay for resolved questions/i })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: /choose a plan for your support volume/i })).toBeTruthy()
   })
 
   it('does not forward on a resume value other than the one the flow sends', async () => {
@@ -124,7 +124,7 @@ describe('a failed checkout is the more urgent message', () => {
     // to do the thing that just failed.
     await renderPricing('no-plan', { resume: '1', checkout: 'failed' })
 
-    expect(screen.getByText(/couldn't start checkout/i)).toBeTruthy()
+    expect(screen.getByText(/couldn[’']t start checkout/i)).toBeTruthy()
     expect(screen.queryByText(RESUME_BANNER)).toBeNull()
   })
 

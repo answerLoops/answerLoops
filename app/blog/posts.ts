@@ -11,9 +11,9 @@ export interface BlogPost {
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'managing-every-community-platform-from-one-place',
-    title: 'Managing every community platform from one place',
+    title: 'Managing support across community platforms',
     description:
-      'Discord, Slack, a forum, GitHub, email, a chat widget — the same questions land in all of them. How AnswerLoops turns that into one pipeline instead of five separate jobs.',
+      'How a shared ticket queue and maintained knowledge base help a team answer questions across its community channels.',
     datePublished: '2026-09-10',
     author: 'Nathan Tarbert',
   },
@@ -31,5 +31,10 @@ export function getBlogPost(slug: string): BlogPost | undefined {
  * BLOG_POSTS, everywhere, regardless of the reader's timezone.
  */
 export function formatPostDate(isoDate: string): string {
-  return new Date(isoDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+  return new Date(isoDate).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
 }

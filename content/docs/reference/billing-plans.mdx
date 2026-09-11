@@ -9,21 +9,23 @@ Pricing is deflection-based, not per-seat. Every hosted plan includes the full A
 
 | Plan | Price (monthly) | Price (annual, per mo) | Deflections/mo | Beyond the limit |
 |---|---|---|---|---|
-| Standard | $49 | $39.20 (20% off) | 500 | Hard cap — auto-answering pauses |
-| Pro | $149 | $119.20 (20% off) | 3,000 | Soft cap — keeps answering, $5 per 100 over |
-| Enterprise | $499 | $399.20 (20% off) | Unlimited | — |
+| Standard | $49 | $39 (20%+ off) | 500 | Hard cap — auto-answering pauses |
+| Pro | $149 | $119 (20%+ off) | 3,000 | Soft cap — keeps answering, $5 per 100 over |
+| Enterprise | $499 | $399 (20%+ off) | Unlimited | — |
 
 There is no free tier. Every plan starts with a 14-day trial — see below.
 
-Annual billing saves 20% off the monthly rate, shown as an Annual/Monthly toggle on the public [pricing page](https://answerloops.com/pricing). Each plan has its own annual price in Stripe (`STRIPE_PRICE_<PLAN>_ANNUAL`), and the interval you pick on the toggle is carried through sign-in into checkout, so the rate you clicked is the rate you're charged. If a plan's annual price env var is unset, checkout for that interval is declined rather than quietly billed at the monthly price — see [environment variables](/docs/reference/environment-variables).
+Annual billing saves at least 20%. The annual charges are **$468 Standard**, **$1,428 Pro**, and **$4,788 Enterprise**, paid once per year. The equivalent monthly amounts in the table are not monthly installments.
 
 ## What counts as a deflection
 
-A deflection is one question the AI answered automatically with high enough confidence that no human needed to step in. Questions routed to a human for review — even if the AI drafted a suggested reply — don't count.
+An automated channel answer counts when it meets the configured confidence threshold without human intervention. High-confidence standalone answers generated through MCP or the Agent API also count. Drafts sent to a human for review do not count.
+
+Allowances reset each **calendar month**, including on annual subscriptions.
 
 ## Trial
 
-Pick a plan at signup and it's fully unlocked for 14 days (card required, `trial_period_days: 14` in Stripe) — every feature and the deflection limit of the tier you chose, not a reduced trial-only allowance. Cancel any time before the trial ends and you won't be charged. If the trial ends without a valid payment method, access stops immediately — there's no free tier to drop back to.
+Pick a plan at signup and it's fully unlocked for 14 days (card required) — every feature and the deflection limit of the tier you chose, not a reduced trial-only allowance. Cancel any time before the trial ends and you won't be charged. If the trial ends without a valid payment method, access stops immediately — there's no free tier to drop back to.
 
 ## Free AI trial
 
@@ -33,7 +35,7 @@ Separate from the 14-day plan trial above: every new org also gets **5 lifetime 
 
 See the comparison table on the [pricing page](https://answerloops.com/pricing) for the full feature breakdown. Summary:
 
-- **Standard** — core channels (Discord, Slack, Discourse, Circle, GitHub, Telegram, Email), website widget, knowledge base, bring-your-own AI provider, CSV export, and the white-label widget (removes "Powered by AnswerLoops"). Hard deflection cap.
+- **Standard** — core channels (Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, Google Chat), website widget, knowledge base, bring-your-own AI provider, CSV export, and the white-label widget (removes "Powered by AnswerLoops"). Hard deflection cap.
 - **Pro** — everything in Standard, plus CSAT scoring, human escalation routing, simulation/dry-run mode, knowledge gap dashboard, and priority support. Soft deflection cap: answers keep going out past 3,000 and the overage is billed at $5 per 100.
 - **Enterprise** — everything in Pro, plus custom AI model configuration, SLA + dedicated support, and custom invoicing.
 
@@ -43,7 +45,7 @@ Once an org crosses 80% of its monthly deflection allowance, an in-app warning b
 
 What happens at the limit depends on the plan's cap:
 
-- **Standard (hard cap)** — AI auto-answering pauses for the rest of the billing period once 500 deflections are used, and new questions route straight to the human queue instead. Nothing breaks, and there is no overage charge.
+- **Standard (hard cap)** — AI auto-answering pauses until the next calendar-month reset once 500 deflections are used, and new questions route straight to the human queue instead. There is no Standard overage charge.
 - **Pro (soft cap)** — answers keep going out past 3,000 deflections. Usage beyond the included amount is billed at $5 per 100 (rounded up to the nearest 100). The Billing page shows how far over the plan the org is.
 - **Enterprise** — unlimited; there is no cap to reach.
 

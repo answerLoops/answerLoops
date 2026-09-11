@@ -1,99 +1,40 @@
 ---
-title: Cloud Quickstart
-description: Connect your community and start deflecting questions in under 5 minutes — no infrastructure or Developer Portal required.
+title: Cloud quickstart
+description: Create a workspace, add knowledge, and test your first channel.
 ---
 
-## 1. Create an account
+## 1. Start the hosted trial
 
-Go to [app.answerloops.com](https://app.answerloops.com) and sign in with **GitHub** or **Google**. No credit card required to start.
+Open [AnswerLoops pricing](https://answerloops.com/pricing), choose a plan and billing interval, and sign in with **Google**. Complete checkout to start the **14-day plan trial**. A card is required; cancel before the trial ends to avoid the first subscription charge.
 
-## 2. Complete the onboarding wizard
+New workspaces also receive a separate, one-time allowance of **five AI-processed tickets** without a model-provider key. Connect your own provider in **Settings → AI Model** to continue after that allowance. Provider usage is billed separately.
 
-On first login, the onboarding wizard launches automatically. It has four steps — you can finish all of them now or skip any step and return to it from Settings later.
+## 2. Connect a channel
 
-| Step | What you do |
-|---|---|
-| **Connect community** | Add Discord, Slack, GitHub, Telegram, Email, or Widget |
-| **Seed KB** | Upload files or paste a URL to crawl |
-| **Configure AI** | Choose your AI provider and tune the confidence threshold |
-| **Go live** | Review your settings and enable the bot |
+Use onboarding or open the channel in **Settings**. Follow the guide for the platform you want to connect:
 
-## 3. Connect your first channel
+- [Discord](/docs/integrations/discord) and [Slack](/docs/integrations/slack)
+- [Discourse](/docs/integrations/discourse) and [Circle](/docs/integrations/circle)
+- [GitHub](/docs/integrations/github)
+- [Telegram](/docs/integrations/telegram), [Email](/docs/integrations/email), and [Google Chat](/docs/integrations/google-chat)
+- [Website widget](/docs/product/widget)
 
-<Tabs items={["Discord (recommended)","Slack","GitHub","Other channels"]}>
-  <Tab>
-    Click **"Add AnswerLoops to Discord"** in the wizard. This opens a standard Discord OAuth screen where you authorize the bot on your server.
+You need permission to install or configure the integration in that platform. Select the channels, spaces, or repositories AnswerLoops should monitor.
 
-    - No Discord Developer Portal access needed
-    - No bot token to copy
-    - After authorization, your server's channels appear in a picker — select the ones where you want the bot to listen
+## 3. Add knowledge
 
-    <Tip>
-      If you manage a forum channel, select it here too. AnswerLoops listens for new forum posts via the ThreadCreate event and ingests replies inside the thread automatically.
-    </Tip>
-  </Tab>
-  <Tab>
-    Click **"Connect Slack"** in the wizard. You'll go through a standard Slack OAuth flow — approve the permission scopes and pick your workspace.
+Open **Knowledge Base** and import a current help article, upload documentation, or connect GitHub or Notion content. Wait for the import to complete, then search for a topic from the source to check that it is available.
 
-    After OAuth, select the channels where the bot should listen. No Slack admin approval or manifest upload required on the cloud plan.
-  </Tab>
-  <Tab>
-    Click **"Connect GitHub"** in the wizard (Settings → GitHub → Connect GitHub). Install the AnswerLoops GitHub App on your organization or repository.
+Notion content is initially unpublished. Review it and publish the intended material before using it for customer answers. See [Knowledge Base](/docs/product/knowledge-base).
 
-    Once installed, Issues, Discussions, and their comments are ingested automatically. AI replies post back as GitHub comments on the same thread.
-  </Tab>
-  <Tab>
-    **Telegram** — Provide your Telegram bot token. AnswerLoops registers a webhook automatically.
+## 4. Inspect a draft
 
-    **Email** — Copy the inbound webhook URL from Settings → Email and configure forwarding in your email provider.
+Ask a question covered by the imported content in your connected channel. Open the ticket and check the draft, including whether it answers the question and matches the source.
 
-    **Website widget** — Copy the `<script>` tag from Settings → Widget and paste it into your site's `<head>`.
-  </Tab>
-</Tabs>
+Automatic replies are off by default. A question appearing in the queue without a posted reply can be expected behavior. If no draft appears, check the model configuration and remaining trial allowance.
 
-## 4. Seed your knowledge base
+## 5. Choose reply settings
 
-Go to **Knowledge Base** (or continue in the wizard's "Seed KB" step) and add your content:
+Enable automatic replies for the channels you are ready to automate. A draft must pass the configured confidence threshold before it qualifies. If the source material is missing or inaccurate, correct it before changing the threshold.
 
-<Tabs items={["Upload files","Crawl a URL","GitHub repo sync"]}>
-  <Tab>
-    Drag and drop one or more files into the upload area. Supported formats: **PDF, DOCX, MD, TXT, CSV**.
-
-    Files are chunked, embedded, and ready to search within about 30 seconds.
-  </Tab>
-  <Tab>
-    Paste a URL into the URL field and click **Import**. AnswerLoops uses Firecrawl to fetch and embed the page (or up to 25 pages for a full site crawl).
-
-    Typical crawl time is 15–60 seconds depending on page count.
-  </Tab>
-  <Tab>
-    In Settings → GitHub, enable **Repo Sync**. AnswerLoops imports all Markdown files from the configured repo. Re-sync manually or enable automatic sync on push.
-  </Tab>
-</Tabs>
-
-## 5. Test a deflection
-
-Post a question in one of your connected channels that you know is covered by the content you just imported. You should see AnswerLoops reply within a few seconds.
-
-<Tip>
-  If the AI doesn't reply, the confidence score may be below your threshold. Check **Tickets** to see the score, and lower the threshold in **Settings → AI Config** if needed.
-</Tip>
-
-If a question comes in that the AI can't answer well, it will appear in **Knowledge Gaps** so you can address the content hole.
-
-## Next steps
-
-<CardGroup>
-  <Card title="AI Configuration" icon="sliders" href="/docs/product/ai-config">
-    Switch AI providers or tune the confidence threshold
-  </Card>
-  <Card title="Knowledge Gaps" icon="circle-question" href="/docs/product/knowledge-gaps">
-    See what questions the AI couldn't answer and close the gaps
-  </Card>
-  <Card title="Escalation" icon="bell" href="/docs/product/escalation">
-    Route low-confidence tickets to a human support role
-  </Card>
-  <Card title="Invite your team" icon="users" href="/docs/product/team">
-    Add teammates to your workspace
-  </Card>
-</CardGroup>
+Invite teammates through [Settings → Team](/docs/product/team), and review [AI Model](/docs/product/ai-config) and [Billing Plans](/docs/reference/billing-plans) before launch.

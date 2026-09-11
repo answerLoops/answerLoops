@@ -261,7 +261,7 @@ describe('the signup entry point carries the chosen plan', () => {
   it('explains itself when it sends someone back to pricing', () => {
     // Landing on a plain pricing page mid-flow reads as lost progress.
     const src = fs.readFileSync(path.join(process.cwd(), 'app/pricing/page.tsx'), 'utf-8')
-    expect(src).toContain("resume === '1'")
-    expect(src).toContain("checkout === 'failed'")
+    expect(src).toMatch(/resume\s*===\s*'1'/)
+    expect(src).toMatch(/checkout\s*===\s*'failed'/)
   })
 })

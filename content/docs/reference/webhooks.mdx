@@ -1,8 +1,28 @@
 ---
 title: Webhooks
-description: Coming soon.
+description: Find the setup guide for incoming channel and billing events.
 ---
 
-<Info>
-  This page is being written. Check back soon or open an issue on [GitHub](https://github.com/answerLoops/answerLoops).
-</Info>
+AnswerLoops receives webhook events from connected platforms. Each integration has its own registration, permissions, and event format; there is no single payload format for all channels.
+
+## Integration guides
+
+| Source | Setup and behavior |
+| --- | --- |
+| GitHub | [GitHub integration](/docs/integrations/github): Issues, Discussions, comments, and repository synchronization. |
+| Discourse | [Discourse integration](/docs/integrations/discourse): activity in watched categories. |
+| Circle | [Circle integration](/docs/integrations/circle): posts and comments in connected spaces. |
+| Telegram | [Telegram integration](/docs/integrations/telegram): messages delivered to the configured bot. |
+| Email | [Email integration](/docs/integrations/email): inbound messages and reply configuration. |
+| Billing | [Stripe integration](/docs/integrations/stripe): subscription events for operators of the hosted service. |
+
+## Verify delivery
+
+1. Complete the integration's setup guide.
+2. Send a test message or create the supported event in the connected platform.
+3. Check that the expected ticket or status change appears in AnswerLoops.
+4. If nothing appears, check the platform's delivery history and the AnswerLoops application logs for that event.
+
+For self-hosted deployments, confirm that the configured callback URL is reachable over HTTPS and points to the intended deployment. Use the exact route and event types in the integration guide.
+
+To build a client that searches knowledge or creates tickets directly, use the [Agent API](/docs/integrations/agent-api) or [MCP](/docs/integrations/mcp).

@@ -4,11 +4,82 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Self-Hosted AI Support Platform — AnswerLoops',
-  description: 'Run AnswerLoops on your own infrastructure with Docker Compose: the app, the bot, the database, and your own model provider. Tickets, connected knowledge, and config stay inside your deployment boundary.',
+  title: 'Run AnswerLoops on your infrastructure | AnswerLoops',
+  description:
+    'Deploy the application and channel services yourself. Choose your model configuration and take responsibility for database operations, backups, and updates.',
   alternates: { canonical: '/self-hosted-ai-support' },
 }
-
-export default async function SelfHostedAiSupportPage() {
-  return <IntentPage navState={await resolveNavState()} eyebrow="Self-hosted AI support" title="What is a self-hosted AI support platform?" intro="A self-hosted AI support platform runs the app, its data, and its automation on servers you control. AnswerLoops self-hosts without giving anything up: the drafting-and-review pipeline, every channel integration, the MCP server, and human escalation all work the same as the managed service — your community’s support data just never leaves your boundary." audience="Engineering-led teams, open-source projects, and organizations that need control over deployment, data location, model credentials, or network access." highlights={[{ title: 'Deploy with Docker Compose', body: 'Bring up the app, bot, and database from the documented Compose file, in an environment you control.' }, { title: 'Bring your own model provider', body: 'Point it at OpenAI, Anthropic, Google, Groq, Mistral, a local Ollama, or any OpenAI-compatible endpoint — your key, your bill.' }, { title: 'Keep support data close', body: 'Tickets, connected knowledge, and configuration stay inside the deployment boundary you choose.' }, { title: 'No hosted lock-in', body: 'Use the managed service, or self-host the open-source project when operational control matters more. The code is the same.' }]} workflow={[{ step: '01', title: 'Prepare', body: 'Clone the repo, set the required services and OAuth credentials, and pick where it runs.' }, { step: '02', title: 'Connect', body: 'Attach Discord, Slack, GitHub, email, or the web widget, then seed the knowledge base from your docs and repositories.' }, { step: '03', title: 'Operate', body: 'The drafting and reviewer agents answer the repeat questions; your team takes the cases the review couldn’t clear.' }]} comparison={[{ question: 'What license is it?', answer: 'AnswerLoops is open source under AGPL-3.0. Review the repository and deployment documentation before operating it.' }, { question: 'What does self-hosting include?', answer: 'The application, bot services, database connection, integrations, and AI configuration run as part of your deployment.' }, { question: 'Where do I start?', answer: 'Follow the self-host quickstart, then use the provider-specific deployment and integration guides.' }]} docs={[{ label: 'Self-host quickstart', href: '/docs/quickstart-self-host' }, { label: 'Docker deployment', href: '/docs/self-hosting/docker' }, { label: 'Environment variables', href: '/docs/self-hosting/environment-variables' }]} schema={{ name: 'What is a self-hosted AI support platform?', description: 'How AnswerLoops supports self-hosted AI support deployments.', path: '/self-hosted-ai-support', breadcrumbs: [{ name: 'Support', path: '/agentic-support' }] }} />
+export default async function Page() {
+  return (
+    <IntentPage
+      navState={await resolveNavState()}
+      eyebrow="Use case"
+      title="Run AnswerLoops on your infrastructure"
+      intro="Deploy the application and channel services yourself. Choose your model configuration and take responsibility for database operations, backups, and updates."
+      audience="Teams that need control over deployment and are prepared to operate the services behind their support workflow."
+      highlights={[
+        {
+          title: 'Deploy with Docker Compose',
+          body: 'Follow the documented application, database, authentication, and channel setup.',
+        },
+        {
+          title: 'Choose model services',
+          body: 'Use a supported provider or configure a compatible endpoint, including a local chat model.',
+        },
+        {
+          title: 'Understand data processing',
+          body: 'External model and channel services still receive the content needed to perform their functions. Check chat and embedding configuration separately.',
+        },
+        {
+          title: 'Keep the source available',
+          body: 'Inspect and modify the AGPL-3.0 code in accordance with its license.',
+        },
+      ]}
+      workflow={[
+        {
+          step: '01',
+          title: 'Prepare the services',
+          body: 'Follow the prerequisites and configure authentication, database access, and storage.',
+        },
+        {
+          step: '02',
+          title: 'Connect knowledge and channels',
+          body: 'Import your support documentation and configure the channel integrations you need.',
+        },
+        {
+          step: '03',
+          title: 'Operate the deployment',
+          body: 'Test replies, configure backups, and follow the production and upgrade guides.',
+        },
+      ]}
+      comparison={[
+        {
+          question: 'Is there a subscription fee?',
+          answer:
+            'The self-hosted edition has no AnswerLoops subscription fee. Infrastructure and model-provider costs are your responsibility.',
+        },
+        {
+          question: 'Does self-hosting keep all data local?',
+          answer:
+            'No. The application runs on your infrastructure, but external channel platforms and configured model services process relevant content. Review your service choices against your requirements.',
+        },
+      ]}
+      docs={[
+        {
+          label: 'Self-host quickstart',
+          href: '/docs/quickstart-self-host',
+        },
+        {
+          label: 'Deployment checklist',
+          href: '/self-hosting-proof',
+        },
+      ]}
+      schema={{
+        name: 'Run AnswerLoops on your infrastructure',
+        description:
+          'Deploy the application and channel services yourself. Choose your model configuration and take responsibility for database operations, backups, and updates.',
+        path: '/self-hosted-ai-support',
+      }}
+    />
+  )
 }

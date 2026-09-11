@@ -1,66 +1,58 @@
 ---
-title: "What is AnswerLoops?"
-description: "AI support that lives in your community: AnswerLoops answers repeat questions right in the channel — Discord, Slack, forums, GitHub, Telegram, email, and website chat — and only when it's confident enough to be right. Open source and self-hostable."
+title: What is AnswerLoops?
+description: Prepare and review answers from your documentation across connected support channels.
 ---
 
-Every growing community hits the same wall: the same ten questions, asked by different people, forever. It doesn't matter whether you're a dev-tool company, an open-source project, a course creator with a paid community, or a game studio with a player Discord — if your users ask for help in a community instead of a support ticket, the pattern is the same. AnswerLoops watches the channels where your users actually ask — Discord, Slack, GitHub, Telegram, email, your website — and answers the ones it can from your knowledge base, so your team spends time on the questions that actually need a human.
-
-It's not a chatbot bolted onto your support inbox. The confidence-gated pipeline below is the whole product: every answer gets graded before it goes out, so it either posts with real confidence or it doesn't post at all.
+AnswerLoops collects support questions from connected channels, drafts answers from workspace knowledge, and runs a separate AI review. Your team controls which channels can send qualifying replies automatically.
 
 ## How it works
 
-1. **Ingest** — a question lands in Discord, Slack, a Discourse or Circle forum, a GitHub Issue or Discussion, Telegram, email, or your website widget
-2. **Search** — AnswerLoops runs a semantic search for the closest match. On your connected channels that covers your knowledge base and past resolved tickets; the website widget searches published knowledge-base articles only, since its visitors are anonymous and resolved tickets can contain details specific to whoever raised them
-3. **Deflect** — if the AI's confidence clears your threshold (0.8 by default), it posts the answer directly, no human involved
-4. **Escalate** — if confidence is too low, it pings your support role with a drafted answer attached, so staff aren't starting from a blank page
-5. **Learn** — resolved tickets can be promoted into the knowledge base, so the same question is easier to answer next time
+1. **Receive the question.** A message in a connected channel becomes a ticket with its source attached.
+2. **Retrieve knowledge.** AnswerLoops searches relevant sources for material to answer the question. The public widget uses published knowledge.
+3. **Draft and review.** One AI step prepares the answer; another checks it against the available evidence.
+4. **Send or review manually.** Automatic replies must be enabled and meet the configured confidence threshold. Other drafts remain available to your team.
+5. **Maintain knowledge.** Promote useful resolved answers and update articles as your product changes.
 
-## What's actually in the box
+A confidence score is an AI assessment, not a guarantee that an answer is correct. Test representative questions before enabling automatic replies.
+
+## Capabilities
 
 | Feature | What it does |
 | --- | --- |
-| AI deflection | Answers questions from your docs automatically, gated by a configurable confidence threshold |
-| Multi-channel ingest | Discord (text + forum channels), Slack, Discourse and Circle forums, GitHub Issues & Discussions, Telegram, Email, website widget, and Google Chat |
-| Knowledge base | Build it from a docs-site crawl, file upload (PDF/DOCX/MD/TXT/CSV), a GitHub repo sync, a Notion workspace, or resolved tickets |
-| Knowledge gaps | Surfaces the questions the AI couldn't answer, so you know exactly what content to add next |
-| Human escalation | Pings a support role when confidence is too low — never a silent failure |
-| CSAT scoring | A quick rating prompt after every auto-deflected answer, sent through the same channel |
-| Simulation mode | Replay past tickets through the pipeline with zero writes, before you trust it with live traffic |
-| Ticket list | One inbox for every channel, with a source badge so you know where each question came from |
-| Multi-provider AI | OpenAI, Anthropic, Google Gemini, Groq, Mistral, or any OpenAI-compatible endpoint — bring your own key |
-| Website widget | An embeddable script tag with lead capture, for support outside your community platform |
-| Billing | Deflection-based hosted plans, or self-host for free — see [Billing Plans](/docs/reference/billing-plans) |
+| AI deflection | Sends qualifying answers automatically when enabled for a channel. |
+| Multi-channel ingest | Collects questions from Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and a website widget. |
+| Knowledge base | Imports URLs, files, GitHub content, Notion pages, and promoted resolutions. |
+| Knowledge gaps | Identifies questions that may need better documentation; Pro and Enterprise. |
+| Human escalation | Routes follow-up notifications to configured recipients; Pro and Enterprise. |
+| CSAT scoring | Records customer ratings on supported channels; Pro and Enterprise. |
+| Simulation mode | Tests the answer workflow without sending live replies; Pro and Enterprise. |
+| Ticket list | Collects requests, drafts, replies, and status in one queue. |
+| Multi-provider AI | Uses your supported provider account; custom endpoints require Enterprise or self-hosting. |
+| Website widget | Adds support chat and lead capture to your site. |
+| Billing | Hosted plans with monthly answer allowances, or a self-hosted edition without subscription fees. |
 
 ## Ingest channels
 
 | Channel | How it connects | What it ingests |
 | --- | --- | --- |
-| Discord | 1-click OAuth (cloud) or bot token (self-host) | Text channel messages, forum thread posts, and replies |
-| Slack | 1-click OAuth or polling mode | Channel messages |
+| Discord | OAuth installation (cloud) or bot token (self-host) | Text channel messages, forum thread posts, and replies |
+| Slack | OAuth installation or polling mode | Channel messages |
 | Discourse | REST API + webhook | Topics and posts in watched categories |
 | Circle | API token | Space posts and comments |
 | GitHub | GitHub App webhook | Issues, issue comments, Discussions, discussion comments |
 | Telegram | Webhook via bot token | Messages in configured chats |
 | Email | Provider-agnostic inbound webhook | Any inbound email forwarded to the webhook URL |
 | Website widget | Embeddable `<script>` tag | Widget chat sessions |
-| Google Chat | Connect-code space pairing (also supported) | Messages in the paired space |
+| Google Chat | Connect-code space pairing | Messages in the paired space |
 
-## Two ways to run it
+## Choose a deployment
 
-**Cloud** — sign up, connect a channel, and AnswerLoops starts ingesting immediately. No servers, no bot hosting, no Developer Portal fumbling for Discord.
+**Cloud:** choose a plan, sign in with Google, and complete checkout for a 14-day trial. A card is required. Model-provider costs are separate after the five-ticket introductory allowance.
 
-**Self-host** — clone the repo, set your environment variables, and run it on your own infrastructure with Docker Compose. Full data ownership, your own AI provider keys, every feature included — it just takes a few more setup steps than the cloud path, since you're the one standing up the servers.
+**Self-hosted:** operate the application and channel services on your infrastructure under AGPL-3.0. Your team manages setup, backups, updates, and the services you connect. External model and channel providers still process relevant content.
 
-<CardGroup>
-  <Card title="Cloud Quickstart" icon="rocket" href="/docs/quickstart-cloud">
-    Sign up and connect your first channel in a few minutes
-  </Card>
+- [Cloud quickstart](/docs/quickstart-cloud)
+- [Self-host quickstart](/docs/quickstart-self-host)
+- [Billing plans](/docs/reference/billing-plans)
 
-  <Card title="Self-Host Quickstart" icon="server" href="/docs/quickstart-self-host">
-    Docker Compose setup, full data ownership, ~15-20 minutes end to end
-  </Card>
-</CardGroup>
-
-<Note>
-  A machine-readable summary of AnswerLoops for AI agents and LLM crawlers is published at [`/llms.txt`](/llms.txt), following the [llms.txt convention](https://llmstxt.org/) — separate from `robots.txt`, which controls crawler *access*, not content summarization. The full documentation, inlined into a single plain-text file so an agent can load it in one request, is at [`/llms-full.txt`](/llms-full.txt).
-</Note>
+For a machine-readable overview, use [/llms.txt](/llms.txt). The full documentation is available at [/llms-full.txt](/llms-full.txt).

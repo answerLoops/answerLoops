@@ -4,11 +4,82 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'AI Support for Discord and GitHub — AnswerLoops',
-  description: 'One agent drafts answers from your docs and repo, a second checks them, and they post in the Discord thread or GitHub issue where the question was asked. Weak answers go to a maintainer with the draft ready.',
+  title: 'Answer support questions in Discord and GitHub | AnswerLoops',
+  description:
+    'Receive Discord conversations and GitHub Issues or Discussions in one ticket queue. Draft replies from the documentation and knowledge your team maintains.',
   alternates: { canonical: '/discord-github-support' },
 }
-
-export default async function DiscordGithubSupportPage() {
-  return <IntentPage navState={await resolveNavState()} eyebrow="Discord and GitHub support" title="AI support for Discord and GitHub" intro="The same question shows up in Discord this week and a GitHub issue next month — and gets answered from scratch both times. AnswerLoops connects the two places communities ask the most: real-time Discord conversations and durable GitHub Issues or Discussions, with one support pipeline keeping the answer consistent across both." audience="Open-source projects, dev tools, and other communities whose support workload is split between community chat, issue trackers, and documentation." highlights={[{ title: 'One knowledge source', body: 'The drafting agent pulls from your docs, repository content, FAQs, and resolved tickets. One knowledge base for both channels — no separate Discord bot to train.' }, { title: 'Channel-aware replies', body: 'The answer posts in the Discord thread or GitHub issue it came from. Your team sees the ticket with its source and the full thread.' }, { title: 'Triage before noise', body: 'Every incoming question is classified and prioritised, so a bug report doesn’t sit in the same undifferentiated pile as a repeat how-to.' }, { title: 'Human escalation', body: 'When the reviewer agent isn’t satisfied, or the question needs maintainer judgment, the draft waits in the queue instead of posting.' }]} workflow={[{ step: '01', title: 'Ingest', body: 'Discord messages, forum posts, GitHub issues, comments, and discussions all become tickets in one workflow, scoped to your org.' }, { step: '02', title: 'Answer', body: 'The drafting agent writes an answer from your sources; the reviewer agent checks it against them and decides whether it posts.' }, { step: '03', title: 'Learn', body: 'Promote a resolved answer into the knowledge base and the next draft — in either channel — can cite it.' }]} comparison={[{ question: 'Does it support both channels?', answer: 'Yes. Discord and GitHub Issues/Discussions are first-class sources in the same support workflow.' }, { question: 'Can it answer automatically?', answer: 'High-confidence answers can post automatically; low-confidence answers are routed to a human with the draft attached.' }, { question: 'Can I add more channels later?', answer: 'Yes. Slack, Discourse and Circle forums, Google Chat, Telegram, email, and an embeddable web widget all use the same underlying support pipeline.' }]} docs={[{ label: 'Discord setup', href: '/docs/self-hosting/discord-bot' }, { label: 'Read the introduction', href: '/docs/introduction' }, { label: 'See agentic support', href: '/agentic-support' }]} schema={{ name: 'AI support for Discord and GitHub', description: 'AnswerLoops support workflow for Discord and GitHub communities.', path: '/discord-github-support', breadcrumbs: [{ name: 'Support', path: '/agentic-support' }] }} />
+export default async function Page() {
+  return (
+    <IntentPage
+      navState={await resolveNavState()}
+      eyebrow="Use case"
+      title="Answer support questions in Discord and GitHub"
+      intro="Receive Discord conversations and GitHub Issues or Discussions in one ticket queue. Draft replies from the documentation and knowledge your team maintains."
+      audience="Maintainers and developer-support teams that handle questions in both community chat and GitHub."
+      highlights={[
+        {
+          title: 'Share the same sources',
+          body: 'Connect your documentation and repository knowledge so both channels draw from the same material.',
+        },
+        {
+          title: 'Reply where the question started',
+          body: 'Send the answer to the original Discord conversation or GitHub thread.',
+        },
+        {
+          title: 'Review uncertain answers',
+          body: 'Check and edit drafts that do not qualify for automatic replies.',
+        },
+        {
+          title: 'Reuse reviewed resolutions',
+          body: 'Promote useful ticket answers into the knowledge base for future questions.',
+        },
+      ]}
+      workflow={[
+        {
+          step: '01',
+          title: 'Connect both channels',
+          body: 'Configure Discord and GitHub, then choose the conversations and repositories to monitor.',
+        },
+        {
+          step: '02',
+          title: 'Test the answers',
+          body: 'Ask representative questions and review the drafts against your documentation.',
+        },
+        {
+          step: '03',
+          title: 'Choose reply settings',
+          body: 'Enable automatic replies where appropriate. Other drafts stay in the team queue.',
+        },
+      ]}
+      comparison={[
+        {
+          question: 'Can I use automatic replies?',
+          answer:
+            'Yes. Enable them per channel and configure the confidence threshold in the channel settings. They are off by default.',
+        },
+        {
+          question: 'Can I add other channels?',
+          answer:
+            'Yes. Slack, Discourse, Circle, Telegram, email, Google Chat, and the website widget use the same workspace knowledge.',
+        },
+      ]}
+      docs={[
+        {
+          label: 'Discord setup',
+          href: '/docs/integrations/discord',
+        },
+        {
+          label: 'GitHub setup',
+          href: '/docs/integrations/github',
+        },
+      ]}
+      schema={{
+        name: 'Answer support questions in Discord and GitHub',
+        description:
+          'Receive Discord conversations and GitHub Issues or Discussions in one ticket queue. Draft replies from the documentation and knowledge your team maintains.',
+        path: '/discord-github-support',
+      }}
+    />
+  )
 }

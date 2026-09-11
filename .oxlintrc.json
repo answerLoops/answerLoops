@@ -1,38 +1,4 @@
 {
-  // Replaced ESLint + eslint-config-next (see fix/clear-high-audit-advisories).
-  // ESLint was the sole path to minimatch@3 > brace-expansion, whose advisory
-  // has no fix for the 1.x line minimatch@3 requires. oxlint ships as a single
-  // Rust binary with no JS dependencies, so it can't reintroduce that class of
-  // problem.
-  //
-  // KNOWN COVERAGE GAP — react-hooks/rules-of-hooks is NOT implemented by
-  // oxlint as of 1.74.0. Verified directly: a component calling useState inside
-  // an `if` block produces no diagnostic, where eslint-plugin-react-hooks would
-  // have errored. Conditional/early-return hook calls are therefore not caught
-  // statically. React itself throws a loud runtime error on hook-order
-  // violations, so these surface in dev rather than shipping silently, which is
-  // why this was accepted rather than blocking the swap.
-  //
-  // react-hooks/exhaustive-deps IS implemented and enabled at error severity —
-  // that's the rule catching *silent* bugs (stale closures, missing deps), so
-  // the more valuable half of the plugin is intact.
-  //
-  // RE-CHECK DONE 2026-09-06 — rules-of-hooks HAS landed upstream. Probed it:
-  // the conditional-useState case above is silent on the pinned 1.74.0 but
-  // errors on 1.81.0 under `oxlint -D react-hooks/rules-of-hooks` (1.81.0 also
-  // flags it via a new react(hooks) rule at warn severity by default).
-  //
-  // Enabling it means bumping 1.74.0 -> 1.81.0, and that bump is not free. The
-  // react(*) rules added since 1.74.0 report 23 error-severity findings in
-  // existing code: 17 react(set-state-in-effect), 4 react(static-components),
-  // 1 react(purity), 1 react(immutability) — concentrated in
-  // app/(dashboard)/settings/page.tsx (8), app/onboarding/wizard.tsx (5) and
-  // app/(dashboard)/kb/page.tsx (4). Those look like genuine cascading-render
-  // and component-identity smells rather than false positives, so the bump
-  // needs its own PR with room to fix them, not a drive-by version change.
-  //
-  // Note the codebase has zero actual hook-order violations today — turning
-  // rules-of-hooks on fixes nothing retroactively, it only guards new code.
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["typescript", "react", "jsx-a11y", "nextjs", "import"],
   "categories": {

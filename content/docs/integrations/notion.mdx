@@ -39,7 +39,7 @@ Go to the **Knowledge Base** page. The Notion panel there has a **Sync now** but
 
 Clicking **Sync now** queues a background job — the panel shows it as queued, then `Syncing N/M` as it works through the pages, then done, and it's safe to leave the page. The sync no longer runs inside the button's request, which used to time out on any sizeable workspace. A second **Sync now** while one is still running is a no-op.
 
-Sync is manual. Notion has no content-change webhooks, so there is no automatic re-sync yet.
+Use **Sync now** to refresh imported content after editing your Notion pages.
 
 A re-sync fetches the whole workspace and builds the replacement before it swaps it in, so an interrupted sync — a Notion outage, a revoked token, a network drop — leaves the previously synced content in place and searchable. The swap only happens once the new import has been built successfully.
 

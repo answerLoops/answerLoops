@@ -1,30 +1,32 @@
 # AnswerLoops
 
-> AnswerLoops is AI support that lives in your community. It turns a stream of community support questions (Discord, Slack, forums, GitHub, Telegram, email, website chat) into a self-improving knowledge base that answers repeat questions automatically — and only when it's confident enough to be right — escalating the long tail to a human.
+> AnswerLoops prepares support answers from workspace documentation and reviews them before sending. Teams can use the hosted service or operate the AGPL-3.0 application themselves.
 
 ## What it does
 
-A community member asks a question. AnswerLoops classifies it, searches the org's knowledge base and past resolved tickets for a matching answer, drafts a grounded response, and grades that response's confidence. High-confidence answers post automatically. Low-confidence answers route to a human support queue with an AI-drafted reply ready to edit. Every resolved answer feeds back into the knowledge base, so the same question gets cheaper and faster to answer next time.
+Questions from connected channels become tickets. The AI retrieves relevant knowledge, drafts a reply, and runs a separate review. Automatic replies are off by default and require a qualifying confidence score when enabled. Other drafts remain in the team queue. Useful resolved answers can be promoted into the knowledge base.
 
-## Who it's for
+## Who it is for
 
-Teams whose users ask for help in a chat community instead of a support ticket: software and dev-tool companies, open-source projects, online-course creators running a paid community, game studios with a player Discord, and crypto/DAO projects. They get the same repeat questions across Discord, Slack, a forum, GitHub Issues/Discussions, Telegram, email, or their own website — and want an AI layer that answers correctly instead of hallucinating, with humans only touching the questions the AI isn't sure about.
-
-It's not for teams running a traditional help desk like Zendesk, online stores doing email-based order support, or large enterprises buying an autonomous-agent platform.
+Community and developer-support teams managing questions across chat, forums, issue trackers, email, and a website. Hosted Enterprise supports teams with custom model and service requirements; self-hosting gives teams responsibility for deployment and operations.
 
 ## Core capabilities
 
-- **Confidence-gated auto-answer** — a second AI pass grades every drafted answer before it goes out; only answers that clear the bar post automatically, everything else queues for human review
-- **Multi-channel ingest** — Discord, Slack, Discourse and Circle forums, GitHub Issues/Discussions, Telegram, email, and an embeddable website chat widget, all through one pipeline (Google Chat also supported)
-- **Self-improving knowledge base** — resolved tickets promote into a searchable KB; content also imports from a docs-site crawl, file upload, a GitHub repo sync, or a Notion workspace; community 👍/👎 feedback prunes bad answers over time
-- **Bring your own LLM** — OpenAI, Anthropic, Google Gemini, Groq, Mistral, or any OpenAI-compatible endpoint (including local models via Ollama); each org configures its own key and cost
-- **Agent-first API access** — an MCP server (`POST /api/mcp`, JSON-RPC 2.0) lets AI agents (Claude, Cursor, custom bots) call `search_kb`, `get_faq`, `get_tickets`, `create_ticket`, and `generate_answer` directly against an org's data, authenticated with a per-org API key
-- **Self-hostable** — AGPL-3.0 licensed; `docker compose up` runs the full stack on your own infrastructure with no data leaving your servers
-- **Analytics** — deflection rate, hours saved, per-category accuracy, SLA attainment, all computed from real ticket data
+- **Connected channels:** Discord, Slack, Discourse, Circle, GitHub Issues and Discussions, Telegram, email, Google Chat, and a website widget.
+- **Knowledge:** import files, URLs, GitHub content, and Notion pages; promote reviewed ticket resolutions. Notion content is initially unpublished.
+- **Answer review:** a separate AI assessment and configurable automatic-reply settings. Confidence scores do not guarantee correctness.
+- **Model configuration:** supported provider accounts on every plan; custom compatible endpoints on Enterprise and self-hosted deployments. Chat and embeddings can require separate credentials.
+- **Agent access:** MCP at `POST /api/mcp` and a REST API. Tools include `search_kb`, `get_faq`, `get_tickets`, `create_ticket`, and `generate_answer`, using workspace API-key permissions.
+- **Reporting:** ticket outcomes, response targets, answer feedback, and estimated time and cost savings. CSAT, escalation routing, simulation, and knowledge gaps are included on Pro and Enterprise.
+- **Self-hosting:** no AnswerLoops subscription fee under AGPL-3.0. Operators pay infrastructure and model costs. External channel and model providers still process relevant content.
 
 ## Pricing
 
-Self-hosted: free forever (AGPL-3.0). Hosted (managed SaaS), billed monthly: Standard $49/mo (500 deflections, hard cap), Pro $149/mo (3,000 deflections, then $5 per 100 over), Enterprise $499/mo (unlimited) — all with a 14-day free trial, tiered by monthly deflection volume. Billed annually, each tier is 20% cheaper per month (Standard $39/mo, Pro $119/mo, Enterprise $399/mo), charged as one annual total. The pricing page defaults to the annual toggle, so $39/mo is what a first-time visitor sees for Standard; $49/mo is the same plan billed monthly.
+Monthly subscriptions: Standard $49 with 500 automated answers and a hard cap; Pro $149 with 3,000, then $5 per additional block of 100, rounded up; Enterprise $499 with unlimited automated answers.
+
+Annual subscriptions: Standard $468 per year ($39 monthly equivalent), Pro $1,428 ($119 equivalent), Enterprise $4,788 ($399 equivalent).
+
+All hosted plans have a 14-day trial with a card required. A separate one-time allowance covers five AI-processed tickets without a provider key. Connect a provider to continue after that allowance; model usage is billed separately. Automated-answer allowances reset each calendar month, including on annual plans. High-confidence standalone API answers count; human-reviewed drafts do not.
 
 ## Integrations
 
@@ -48,7 +50,7 @@ Self-hosted: free forever (AGPL-3.0). Hosted (managed SaaS), billed monthly: Sta
 - About: https://answerloops.com/about
 - Agentic support overview: https://answerloops.com/agentic-support
 - Blog: https://answerloops.com/blog
-- Blog: Managing every community platform from one place: https://answerloops.com/blog/managing-every-community-platform-from-one-place
+- Blog: Managing support across community platforms: https://answerloops.com/blog/managing-every-community-platform-from-one-place
 - /architecture: https://answerloops.com/architecture
 - /discord-github-support: https://answerloops.com/discord-github-support
 - /mcp-support-agents: https://answerloops.com/mcp-support-agents

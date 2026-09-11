@@ -4,11 +4,87 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'MCP Support Agents for Customer Support — AnswerLoops',
-  description: 'Point Claude Code, Cursor, or your own agent at AnswerLoops over MCP. It searches your support knowledge, reads FAQs, opens tickets, and gets grounded answers — the same pipeline and knowledge your Discord, Slack, and forum channels run on.',
+  title: 'Give your agents access to support knowledge | AnswerLoops',
+  description:
+    'Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets.',
   alternates: { canonical: '/mcp-support-agents' },
 }
-
-export default async function McpSupportAgentsPage() {
-  return <IntentPage navState={await resolveNavState()} eyebrow="MCP support agents" title="MCP support agents for customer support" intro="Your coding agent shouldn’t have to guess at a support answer your team already wrote down. AnswerLoops gives MCP-compatible agents a controlled way to search support knowledge, read FAQs, create tickets, and generate grounded answers — the same support context your team uses, not a second, disconnected knowledge system." audience="Teams building internal copilots, support automations, coding agents, or custom bots that need reliable customer-support context and an explicit write boundary." highlights={[{ title: 'The same knowledge your channels use', body: 'MCP calls hit the same knowledge base, ticket context, and drafting-plus-review pipeline that Discord, Slack, email, and the web widget run on. No second knowledge system to keep in sync.' }, { title: 'Grounded answers on demand', body: 'An agent can search the knowledge base and ask for an answer that cites the workspace sources it was built from.' }, { title: 'A narrow write surface', body: 'An agent can open a ticket when a person needs to take over. It cannot touch billing, settings, or the knowledge base — and a key can be scoped to read-only.' }, { title: 'Works with agent tooling', body: 'Claude Code, Cursor, and any MCP client connect to the documented endpoint with a scoped API key.' }]} workflow={[{ step: '01', title: 'Connect', body: 'Create an API key, check only the permissions the agent needs, and point your MCP client at the AnswerLoops endpoint.' }, { step: '02', title: 'Retrieve', body: 'Call search_kb, get_faq, get_tickets, or generate_answer — each returns structured JSON, each requires its own scope.' }, { step: '03', title: 'Escalate', body: 'When the agent can’t safely resolve the request, it opens a ticket and the support team picks it up with the full exchange attached.' }]} comparison={[{ question: 'What can an agent do?', answer: 'Search knowledge, retrieve FAQs, list tickets, create tickets, and generate grounded answers through the documented MCP tools.' }, { question: 'Is MCP separate from channel support?', answer: 'No. MCP uses the same support pipeline and workspace knowledge as the channel integrations.' }, { question: 'Where is the endpoint?', answer: 'The MCP endpoint is documented at `/api/mcp`, with setup and tool details in the MCP integration guide.' }]} docs={[{ label: 'Read the MCP guide', href: '/docs/integrations/mcp' }, { label: 'Agent API reference', href: '/docs/integrations/agent-api' }, { label: 'See the support loop', href: '/agentic-support' }]} schema={{ name: 'MCP support agents for customer support', description: 'AnswerLoops MCP support agent capabilities and workflow.', path: '/mcp-support-agents', breadcrumbs: [{ name: 'Support', path: '/agentic-support' }] }} />
+export default async function Page() {
+  return (
+    <IntentPage
+      navState={await resolveNavState()}
+      eyebrow="Use case"
+      title="Give your agents access to support knowledge"
+      intro="Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets."
+      audience="Teams connecting coding assistants, internal tools, or support automations to their existing documentation and ticket queue."
+      highlights={[
+        {
+          title: 'Search existing knowledge',
+          body: 'Retrieve relevant knowledge-base articles and FAQs without maintaining a separate index.',
+        },
+        {
+          title: 'Generate a reviewed answer',
+          body: 'Use the same drafting and AI-review steps as channel support.',
+        },
+        {
+          title: 'Create a ticket',
+          body: 'Give the support team a request to follow up when the agent needs human help.',
+        },
+        {
+          title: 'Choose permissions',
+          body: 'Select the scopes each API key needs when you create it.',
+        },
+      ]}
+      workflow={[
+        {
+          step: '01',
+          title: 'Create a key',
+          body: 'Open API Keys in Settings and select the required permissions.',
+        },
+        {
+          step: '02',
+          title: 'Connect your client',
+          body: 'Follow the MCP guide or the REST API reference for authentication and requests.',
+        },
+        {
+          step: '03',
+          title: 'Test the workflow',
+          body: 'Verify that the agent can retrieve the intended sources and create a ticket with enough context for your team.',
+        },
+      ]}
+      comparison={[
+        {
+          question: 'Which tools are available?',
+          answer:
+            'The MCP guide documents search_kb, get_faq, get_tickets, create_ticket, and generate_answer.',
+        },
+        {
+          question: 'Does this use separate knowledge?',
+          answer:
+            'No. Agent requests use the knowledge in the workspace associated with the API key.',
+        },
+        {
+          question: 'Do generated answers count toward usage?',
+          answer:
+            'High-confidence standalone answers count toward the monthly automated-answer allowance. See the billing reference for the counting rules.',
+        },
+      ]}
+      docs={[
+        {
+          label: 'MCP guide',
+          href: '/docs/integrations/mcp',
+        },
+        {
+          label: 'Agent API reference',
+          href: '/docs/integrations/agent-api',
+        },
+      ]}
+      schema={{
+        name: 'Give your agents access to support knowledge',
+        description:
+          'Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets.',
+        path: '/mcp-support-agents',
+      }}
+    />
+  )
 }

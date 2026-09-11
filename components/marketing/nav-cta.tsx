@@ -45,7 +45,13 @@ export function NavCta({
     fetch('/api/nav-state', { credentials: 'include' })
       .then((res) => (res.ok ? res.json() : null))
       .then((data: { state?: NavState } | null) => {
-        if (alive && data && (data.state === 'anonymous' || data.state === 'no-plan' || data.state === 'active')) {
+        if (
+          alive &&
+          data &&
+          (data.state === 'anonymous' ||
+            data.state === 'no-plan' ||
+            data.state === 'active')
+        ) {
           setState(data.state)
         }
       })
@@ -63,8 +69,20 @@ export function NavCta({
     if (state !== 'anonymous') return null
     return (
       <>
-        <Link href={SIGNIN_HREF} className="rounded-lg px-3 py-3 text-[0.91875rem] font-medium text-ink-600 hover:bg-gray-100">{SIGNIN_LABEL}</Link>
-        <Link href={START_HREF} className="mt-1 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 px-3 py-3 text-center text-[0.91875rem] font-semibold !text-white shadow-sm"><span style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>{START_LABEL}</span></Link>
+        <Link
+          href={SIGNIN_HREF}
+          className="rounded-lg px-3 py-3 text-[0.91875rem] font-medium text-ink-600 hover:bg-gray-100"
+        >
+          {SIGNIN_LABEL}
+        </Link>
+        <Link
+          href={START_HREF}
+          className="mt-1 rounded-lg bg-blue-600 px-3 py-3 text-center text-[0.91875rem] font-semibold !text-white shadow-sm"
+        >
+          <span style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>
+            {START_LABEL}
+          </span>
+        </Link>
       </>
     )
   }
@@ -72,7 +90,12 @@ export function NavCta({
   if (state === 'active') {
     return (
       <Link href={DASHBOARD_HREF} className={CTA_CLASS}>
-        <span className="!text-white" style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>Go to dashboard →</span>
+        <span
+          className="!text-white"
+          style={{ color: '#fff', WebkitTextFillColor: '#fff' }}
+        >
+          Go to dashboard →
+        </span>
       </Link>
     )
   }
@@ -80,7 +103,12 @@ export function NavCta({
   if (state === 'no-plan') {
     return (
       <Link href={CHECKOUT_HREF} className={CTA_CLASS}>
-        <span className="!text-white" style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>Choose a plan →</span>
+        <span
+          className="!text-white"
+          style={{ color: '#fff', WebkitTextFillColor: '#fff' }}
+        >
+          Choose a plan →
+        </span>
       </Link>
     )
   }
@@ -91,7 +119,12 @@ export function NavCta({
         {SIGNIN_LABEL}
       </Link>
       <Link href={START_HREF} className={CTA_CLASS}>
-        <span className="!text-white" style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>{START_LABEL}</span>
+        <span
+          className="!text-white"
+          style={{ color: '#fff', WebkitTextFillColor: '#fff' }}
+        >
+          {START_LABEL}
+        </span>
       </Link>
     </>
   )

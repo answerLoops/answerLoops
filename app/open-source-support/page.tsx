@@ -4,11 +4,82 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Open-Source Community Support — AnswerLoops',
-  description: 'A question already answered in your docs or three threads back in Discord gets asked again. AnswerLoops drafts the answer from your docs, repo, and resolved issues, a second agent checks it, and it posts in the same Discord, GitHub, or Slack thread. Maintainers only see what the check couldn’t clear.',
+  title: 'Support your project across community channels | AnswerLoops',
+  description:
+    'Collect questions from Discord, GitHub, forums, and other connected channels. Prepare answers from your project documentation and keep requests that need maintainer judgment in the ticket queue.',
   alternates: { canonical: '/open-source-support' },
 }
-
-export default async function OpenSourceSupportPage() {
-  return <IntentPage navState={await resolveNavState()} eyebrow="Open-source community support" title="Open-source community support, answered in your community channel" intro="Someone opens a GitHub issue asking something already answered in the docs, or three threads back in Discord. AnswerLoops finds that answer and posts it back in the same Discord, GitHub, or Slack thread it came from, so a repeat question stops being another interruption for the core team." audience="Open-source maintainers, developer-relations teams, and community operators whose users ask for help in public channels instead of a traditional support inbox." highlights={[{ title: 'Meet users where they ask', body: 'Discord, GitHub Issues and Discussions, Slack, Telegram, email, and the web widget all feed one ticket-and-answer workflow with one knowledge base.' }, { title: 'Keep answers grounded', body: 'The drafting agent searches your docs, connected repositories, and approved knowledge first — and cites what it used.' }, { title: 'Protect maintainer time', body: 'The reviewer agent clears repeat answers to post on their own; anything it can’t clear stays in the queue with the draft attached.' }, { title: 'Let the community teach the system', body: 'Promote a resolved answer into the knowledge base and the next time that question comes up, the draft can cite it.' }]} workflow={[{ step: '01', title: 'Collect', body: 'A question lands in the channel your community already uses and becomes a ticket with its source attached.' }, { step: '02', title: 'Ground', body: 'The drafting agent writes an answer from your docs and knowledge; the reviewer agent checks it against those sources before it posts.' }, { step: '03', title: 'Improve', body: 'Your team handles what the reviewer couldn’t clear and promotes the good answers into the knowledge base.' }]} comparison={[{ question: 'Is it open source?', answer: 'Yes. The project is available under AGPL-3.0 and can be run on your own infrastructure.' }, { question: 'Who is it for?', answer: 'Open-source projects and the communities around them, especially where Discord, a forum, and GitHub are the primary support surfaces.' }, { question: 'Does it replace maintainers?', answer: 'No. It answers the repeatable questions and routes uncertain or sensitive ones to a person, draft in hand.' }]} docs={[{ label: 'Read the introduction', href: '/docs/introduction' }, { label: 'Self-host it', href: '/docs/quickstart-self-host' }, { label: 'See pricing', href: '/pricing' }]} schema={{ name: 'Open-source community support', description: 'AnswerLoops support workflow for open-source maintainers and the communities around their projects.', path: '/open-source-support', breadcrumbs: [{ name: 'Support', path: '/agentic-support' }] }} />
+export default async function Page() {
+  return (
+    <IntentPage
+      navState={await resolveNavState()}
+      eyebrow="Use case"
+      title="Support your project across community channels"
+      intro="Collect questions from Discord, GitHub, forums, and other connected channels. Prepare answers from your project documentation and keep requests that need maintainer judgment in the ticket queue."
+      audience="Open-source maintainers and developer-relations teams managing documentation, community questions, and issue triage."
+      highlights={[
+        {
+          title: 'Use your project documentation',
+          body: 'Import URLs, files, repository content, and Notion pages into the knowledge base.',
+        },
+        {
+          title: 'Keep the original context',
+          body: 'Tickets identify the source channel so the team can follow the conversation.',
+        },
+        {
+          title: 'Choose what to automate',
+          body: 'Enable automatic replies per channel after reviewing representative drafts.',
+        },
+        {
+          title: 'Run the source yourself',
+          body: 'AnswerLoops is available under AGPL-3.0, with a documented self-hosting setup.',
+        },
+      ]}
+      workflow={[
+        {
+          step: '01',
+          title: 'Add your sources',
+          body: 'Start with current setup guides, troubleshooting articles, and FAQs.',
+        },
+        {
+          step: '02',
+          title: 'Connect the community',
+          body: 'Choose the channels and repositories where you want AnswerLoops to receive questions.',
+        },
+        {
+          step: '03',
+          title: 'Maintain the answers',
+          body: 'Review unresolved tickets and promote reusable resolutions into knowledge.',
+        },
+      ]}
+      comparison={[
+        {
+          question: 'Is self-hosting free?',
+          answer:
+            'There is no AnswerLoops subscription fee for the AGPL-3.0 self-hosted edition. You pay for infrastructure and any model services you use.',
+        },
+        {
+          question: 'What stays with maintainers?',
+          answer:
+            'Your team reviews drafts that do not qualify for automatic replies and handles decisions that require project-specific judgment.',
+        },
+      ]}
+      docs={[
+        {
+          label: 'Self-host quickstart',
+          href: '/docs/quickstart-self-host',
+        },
+        {
+          label: 'Hosted plans',
+          href: '/pricing',
+        },
+      ]}
+      schema={{
+        name: 'Support your project across community channels',
+        description:
+          'Collect questions from Discord, GitHub, forums, and other connected channels. Prepare answers from your project documentation and keep requests that need maintainer judgment in the ticket queue.',
+        path: '/open-source-support',
+      }}
+    />
+  )
 }
