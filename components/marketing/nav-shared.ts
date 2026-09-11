@@ -19,8 +19,8 @@ export const SIGNIN_HREF = '/login?mode=signin'
 export const START_HREF = '/login'
 
 // Keep the trial and sign-in labels consistent across desktop and mobile.
-export const START_LABEL = 'Start trial'
-export const SIGNIN_LABEL = 'Sign in'
+export const START_LABEL = 'Start for $0'
+export const SIGNIN_LABEL = 'Log in'
 
 // A signed-in visitor with no plan is already past auth, so their journey
 // resumes one step further along: straight to the combined plan-and-card page.

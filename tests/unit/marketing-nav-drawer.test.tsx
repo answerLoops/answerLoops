@@ -7,7 +7,7 @@ import { Nav, type NavState } from '@/components/marketing/chrome'
 /**
  * The marketing header has two navigation surfaces, and only one of them is
  * visible on a phone. Below `md` the desktop nav is hidden and below `sm` the
- * "Sign in" button is hidden too, so on a 375px screen the hamburger drawer is
+ * "Log in" button is hidden too, so on a 375px screen the hamburger drawer is
  * not a convenience — it is the entire navigation.
  *
  * That asymmetry is what makes the drawer worth its own test file. A regression
@@ -28,7 +28,7 @@ const ALL_STATES: NavState[] = ['anonymous', 'no-plan', 'active']
  * The drawer renders nothing until it is opened, and it portals into
  * document.body — so `screen` sees the header and the drawer at once. Almost
  * every assertion here needs one or the other in isolation (both surfaces carry
- * a "Sign in" link when anonymous), hence the scoped queries rather than bare
+ * a "Log in" link when anonymous), hence the scoped queries rather than bare
  * `screen` lookups.
  */
 async function openDrawer(user: ReturnType<typeof userEvent.setup>) {
@@ -40,7 +40,7 @@ async function openDrawer(user: ReturnType<typeof userEvent.setup>) {
 
 describe('the drawer is the only navigation a phone gets', () => {
   it('carries both halves of the anonymous pair, since the header hides one below sm', async () => {
-    // "Sign in" is `hidden … sm:flex` in the header. At 375px it is gone, so
+    // "Log in" is `hidden … sm:flex` in the header. At 375px it is gone, so
     // the drawer copy is the only sign-in affordance on the whole page for a
     // returning visitor whose session expired. Losing it does not break any
     // layout and does not remove anything a desktop reviewer would notice.
@@ -48,13 +48,13 @@ describe('the drawer is the only navigation a phone gets', () => {
     render(<Nav state="anonymous" />)
     const { drawer } = await openDrawer(user)
 
-    const signIn = drawer.getByRole('link', { name: /^sign in$/i })
+    const signIn = drawer.getByRole('link', { name: /^log in$/i })
     expect(
       signIn.getAttribute('href'),
       'the drawer must use the sign-in framing, not "Create your account"',
     ).toBe('/login?mode=signin')
 
-    const trial = drawer.getByRole('link', { name: /start trial/i })
+    const trial = drawer.getByRole('link', { name: /start for \$0/i })
     expect(
       trial.getAttribute('href'),
       'every "start" action goes to auth; the plan is chosen after, at /checkout',
@@ -63,7 +63,7 @@ describe('the drawer is the only navigation a phone gets', () => {
 
   it('offers no auth actions to somebody who is already signed in', async () => {
     // Both drawer auth links are gated on `state === 'anonymous'`. If that gate
-    // is dropped, a signed-in visitor is invited to sign in again — and on a
+    // is dropped, a signed-in visitor is invited to log in again — and on a
     // phone the drawer is the only place they would see it, so the confusion
     // lands exactly where it is hardest to notice in review.
     for (const state of ['no-plan', 'active'] as const) {
@@ -71,8 +71,8 @@ describe('the drawer is the only navigation a phone gets', () => {
       const { unmount } = render(<Nav state={state} />)
       const { drawer } = await openDrawer(user)
 
-      expect(drawer.queryByRole('link', { name: /^sign in$/i }), `${state} drawer`).toBeNull()
-      expect(drawer.queryByRole('link', { name: /start trial/i }), `${state} drawer`).toBeNull()
+      expect(drawer.queryByRole('link', { name: /^log in$/i }), `${state} drawer`).toBeNull()
+      expect(drawer.queryByRole('link', { name: /start for \$0/i }), `${state} drawer`).toBeNull()
       unmount()
     }
   })
@@ -133,8 +133,8 @@ describe('each state renders its own CTA and nobody else’s', () => {
   const CTAS = {
     dashboard: /go to dashboard/i,
     choosePlan: /choose a plan/i,
-    trial: /start trial/i,
-    signIn: /^sign in$/i,
+    trial: /start for \$0/i,
+    signIn: /^log in$/i,
   } as const
 
   const EXPECTED: Record<NavState, (keyof typeof CTAS)[]> = {
