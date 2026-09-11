@@ -4,7 +4,7 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Answer support questions in Discord and GitHub | AnswerLoops',
+  title: 'Answer support questions in Discord and GitHub | answerLoops',
   description:
     'Receive Discord conversations and GitHub Issues or Discussions in one ticket queue. Draft replies from the documentation and knowledge your team maintains.',
   alternates: { canonical: '/discord-github-support' },

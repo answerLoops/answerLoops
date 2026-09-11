@@ -30,7 +30,7 @@ const prices = [
 ]
 
 describe('PricingToggle', () => {
-  it('defaults to exact annual prices and carries each plan and annual interval to checkout', () => {
+  it('shows the monthly equivalent and full annual charge for each plan by default', () => {
     render(<PricingToggle plans={ORDERED_PLANS} />)
     expect(
       screen.getByRole('switch', { name: 'Use annual billing' }),
@@ -41,8 +41,10 @@ describe('PricingToggle', () => {
       })
       const card = within(cardElement)
       expect(card.getByText(price.annualMonthly)).toBeInTheDocument()
-      expect(card.getByText('Billed annually')).toBeInTheDocument()
-      for (const otherPrice of prices) {
+      expect(
+        card.getByText(`${price.annualTotal} billed annually`),
+      ).toBeInTheDocument()
+      for (const otherPrice of prices.filter(({ id }) => id !== price.id)) {
         expect(cardElement).not.toHaveTextContent(otherPrice.annualTotal)
       }
       expect(cardElement).not.toHaveTextContent(/\$[\d,]+\.\d{2}/)
@@ -68,6 +70,11 @@ describe('PricingToggle', () => {
       expect(card.getByText(price.monthly)).toBeInTheDocument()
       expect(card.getByText('Billed monthly')).toBeInTheDocument()
       expect(card.queryByText(/billed annually/i)).not.toBeInTheDocument()
+      for (const annualPrice of prices) {
+        expect(
+          card.queryByText(annualPrice.annualTotal, { exact: false }),
+        ).not.toBeInTheDocument()
+      }
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
       ).toHaveAttribute('href', `/login?plan=${price.id}&interval=monthly`)
@@ -83,8 +90,10 @@ describe('PricingToggle', () => {
       })
       const card = within(cardElement)
       expect(card.getByText(price.annualMonthly)).toBeInTheDocument()
-      expect(card.getByText('Billed annually')).toBeInTheDocument()
-      for (const otherPrice of prices) {
+      expect(
+        card.getByText(`${price.annualTotal} billed annually`),
+      ).toBeInTheDocument()
+      for (const otherPrice of prices.filter(({ id }) => id !== price.id)) {
         expect(cardElement).not.toHaveTextContent(otherPrice.annualTotal)
       }
       expect(

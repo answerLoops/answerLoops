@@ -209,7 +209,7 @@ export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatPro
               </button>
             </form>
             {showBranding && (
-              <p className="text-center text-[0.625rem] text-gray-300 mt-2">Powered by AnswerLoops</p>
+              <p className="text-center text-[0.625rem] text-gray-300 mt-2">Powered by answerLoops</p>
             )}
           </div>
         </>

@@ -16,7 +16,7 @@ import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Pricing — AnswerLoops',
+  title: 'Pricing — answerLoops',
   description:
     'Compare Standard, Pro, and Enterprise plans. See exact monthly and annual prices, automated-answer allowances, model costs, and trial terms.',
   alternates: { canonical: '/pricing' },
@@ -25,7 +25,7 @@ function PricingStructuredData() {
   const softwareJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
-    name: 'AnswerLoops',
+    name: 'answerLoops',
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     url: 'https://answerloops.com/pricing',
@@ -101,7 +101,7 @@ export default async function PricingPage({
   return (
     <MarketingPage navState={navState}>
       <PageSchema
-        name="AnswerLoops pricing"
+        name="answerLoops pricing"
         description={metadata.description!}
         path="/pricing"
       />

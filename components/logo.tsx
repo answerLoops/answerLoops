@@ -32,7 +32,7 @@ export function Logo({ width = 130, className = '' }: LogoProps) {
   return (
     <Image
       src="/logo.png"
-      alt="AnswerLoops"
+      alt="answerLoops"
       width={width}
       height={width}
       className={`object-contain ${className}`}

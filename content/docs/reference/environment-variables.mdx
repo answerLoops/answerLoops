@@ -1,12 +1,12 @@
 ---
 title: Environment Variables
-description: Complete reference for every environment variable recognised by AnswerLoops.
+description: Complete reference for every environment variable recognised by answerLoops.
 ---
 
 All variables are set in your `.env` file (local) or in your hosting provider's environment configuration (production). Variables marked **Required** must be present or the app will refuse to start.
 
 <Note>
-  AnswerLoops uses **Auth.js v5**. The correct variable names are `AUTH_SECRET` and `AUTH_URL` — **not** `NEXTAUTH_SECRET` / `NEXTAUTH_URL`. If you are migrating from an older deployment, rename them.
+  answerLoops uses **Auth.js v5**. The correct variable names are `AUTH_SECRET` and `AUTH_URL` — **not** `NEXTAUTH_SECRET` / `NEXTAUTH_URL`. If you are migrating from an older deployment, rename them.
 </Note>
 
 ## Core (required)
@@ -35,7 +35,7 @@ All variables are set in your `.env` file (local) or in your hosting provider's 
 
 ## OAuth provider
 
-Google is the only sign-in provider AnswerLoops configures. Both variables are required.
+Google is the only sign-in provider answerLoops configures. Both variables are required.
 
 | Variable | Description |
 |---|---|
@@ -160,7 +160,7 @@ npx web-push generate-vapid-keys
 
 | Variable | Description |
 |---|---|
-| `DEPLOYMENT_MODE` | Set to `cloud` **only** on AnswerLoops' own managed SaaS deployment. Determines whether plan-tier feature gating (Discord/Slack integrations, CSAT scoring, simulation, knowledge gap dashboard, custom AI model config) applies at all. Any other value, or unset, means self-hosted: unmetered, every feature unlocked, no Stripe required |
+| `DEPLOYMENT_MODE` | Set to `cloud` **only** on answerLoops' own managed SaaS deployment. Determines whether plan-tier feature gating (Discord/Slack integrations, CSAT scoring, simulation, knowledge gap dashboard, custom AI model config) applies at all. Any other value, or unset, means self-hosted: unmetered, every feature unlocked, no Stripe required |
 | `STRIPE_SECRET_KEY` | Stripe secret API key. Required when `DEPLOYMENT_MODE=cloud` — its absence there is treated as a misconfiguration (billing shows an error state) rather than falling back to self-hosted/unlimited |
 | `STRIPE_WEBHOOK_SECRET` | Signing secret for the Stripe webhook endpoint (`/api/billing/webhook`), used to verify subscription lifecycle events |
 | `STRIPE_PUBLISHABLE_KEY` | Publishable key (`pk_...`) for the embedded checkout form on `/checkout`. Read at request time — deliberately not `NEXT_PUBLIC_`-prefixed, since that prefix is substituted at build time and could never be set by someone running a prebuilt image. Safe to expose in client code by design — it can only create payment attempts, never read or move money. Without it that page shows a disabled state instead of a card form |

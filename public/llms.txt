@@ -1,6 +1,6 @@
-# AnswerLoops
+# answerLoops
 
-> AnswerLoops prepares support answers from workspace documentation and reviews them before sending. Teams can use the hosted service or operate the AGPL-3.0 application themselves.
+> answerLoops prepares support answers from workspace documentation and reviews them before sending. Teams can use the hosted service or operate the AGPL-3.0 application themselves.
 
 ## What it does
 
@@ -18,7 +18,7 @@ Community and developer-support teams managing questions across chat, forums, is
 - **Model configuration:** supported provider accounts on every plan; custom compatible endpoints on Enterprise and self-hosted deployments. Chat and embeddings can require separate credentials.
 - **Agent access:** MCP at `POST /api/mcp` and a REST API. Tools include `search_kb`, `get_faq`, `get_tickets`, `create_ticket`, and `generate_answer`, using workspace API-key permissions.
 - **Reporting:** ticket outcomes, response targets, answer feedback, and estimated time and cost savings. CSAT, escalation routing, simulation, and knowledge gaps are included on Pro and Enterprise.
-- **Self-hosting:** no AnswerLoops subscription fee under AGPL-3.0. Operators pay infrastructure and model costs. External channel and model providers still process relevant content.
+- **Self-hosting:** no answerLoops subscription fee under AGPL-3.0. Operators pay infrastructure and model costs. External channel and model providers still process relevant content.
 
 ## Pricing
 
@@ -63,11 +63,11 @@ All hosted plans have a 14-day trial with a card required. A separate one-time a
 - /support-example: https://answerloops.com/support-example
 - /support-workflow: https://answerloops.com/support-workflow
 - Terms of service: https://answerloops.com/terms
-- AnswerLoops vs Chatbase: https://answerloops.com/vs/chatbase
-- AnswerLoops vs Intercom: https://answerloops.com/vs/intercom
-- AnswerLoops vs Plain: https://answerloops.com/vs/plain
-- AnswerLoops vs Pylon: https://answerloops.com/vs/pylon
-- AnswerLoops vs Zendesk AI: https://answerloops.com/vs/zendesk-ai
+- answerLoops vs Chatbase: https://answerloops.com/vs/chatbase
+- answerLoops vs Intercom: https://answerloops.com/vs/intercom
+- answerLoops vs Plain: https://answerloops.com/vs/plain
+- answerLoops vs Pylon: https://answerloops.com/vs/pylon
+- answerLoops vs Zendesk AI: https://answerloops.com/vs/zendesk-ai
 <!-- END GENERATED PUBLIC LINKS -->
 - Documentation: https://answerloops.com/docs
 - Source code (self-hosted): https://github.com/answerLoops/answerLoops

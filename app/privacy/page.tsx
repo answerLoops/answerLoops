@@ -3,9 +3,9 @@ import type { ReactNode } from 'react'
 import { MarketingPage, PageHero } from '@/components/marketing/layout'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — AnswerLoops',
+  title: 'Privacy Policy — answerLoops',
   description:
-    'How AnswerLoops collects, uses, stores, and protects data for connected support channels, AI processing, and billing.',
+    'How answerLoops collects, uses, stores, and protects data for connected support channels, AI processing, and billing.',
 }
 
 const EFFECTIVE_DATE = 'August 12, 2026'
@@ -44,12 +44,12 @@ export default function PrivacyPolicyPage() {
       <section className="marketing-section">
         <div className="mx-auto max-w-3xl px-5 sm:px-8">
           <p className="text-sm leading-relaxed text-slate-600">
-            This policy covers the AnswerLoops hosted service
-            (&ldquo;AnswerLoops&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;). For
-            your account, billing, and team information, AnswerLoops is the{' '}
+            This policy covers the answerLoops hosted service
+            (&ldquo;answerLoops&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;). For
+            your account, billing, and team information, answerLoops is the{' '}
             <strong>data controller</strong>. For the questions, replies, and
             other content your organization ingests through a connected channel,
-            AnswerLoops acts as a <strong>data processor</strong> on your
+            answerLoops acts as a <strong>data processor</strong> on your
             organization&apos;s behalf &mdash; your organization determines what
             gets connected and controls that content. If you run the
             open-source, self-hosted edition instead, you are the data
@@ -158,14 +158,14 @@ export default function PrivacyPolicyPage() {
 
           <Section id="ai-processing" title="AI processing">
             <p>
-              AnswerLoops uses model services to draft and review replies and to
+              answerLoops uses model services to draft and review replies and to
               create embeddings for knowledge search. Your organization
               configures its chat and embedding providers. These may be
               different services.
             </p>
             <p>
               New hosted workspaces receive a one-time allowance of five
-              AI-processed tickets using AnswerLoops-provided model access.
+              AI-processed tickets using answerLoops-provided model access.
               After that allowance, your organization must configure its own
               provider credentials to continue AI processing.
             </p>
@@ -197,7 +197,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <p>
               We disclose data if legally required to, or to protect the
-              security or rights of AnswerLoops or our users. We otherwise do
+              security or rights of answerLoops or our users. We otherwise do
               not share personal data with third parties.
             </p>
           </Section>
@@ -267,7 +267,7 @@ export default function PrivacyPolicyPage() {
           >
             <p>
               Our systems are hosted in the United States. If you or your
-              organization access AnswerLoops from outside the United States,
+              organization access answerLoops from outside the United States,
               your data will be transferred to and processed in the United
               States.
             </p>
@@ -275,7 +275,7 @@ export default function PrivacyPolicyPage() {
 
           <Section id="childrens-privacy" title="Children's privacy">
             <p>
-              AnswerLoops is a business tool and is not directed at children. We
+              answerLoops is a business tool and is not directed at children. We
               do not knowingly collect data from anyone under 16.
             </p>
           </Section>

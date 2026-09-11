@@ -3,7 +3,7 @@ title: AI Model
 description: Configure chat and embedding providers, test connections, and manage the introductory AI allowance.
 ---
 
-AnswerLoops uses a language model to draft answers and an embedding model to
+answerLoops uses a language model to draft answers and an embedding model to
 search your knowledge base. **Settings → AI Model** controls which provider and
 models an org uses.
 
@@ -11,7 +11,7 @@ models an org uses.
 
 | State | What's used |
 |---|---|
-| A new cloud org, no key configured | AnswerLoops' key, metered as a **free trial** — 5 AI‑answered tickets, lifetime, per org |
+| A new cloud org, no key configured | answerLoops' key, metered as a **free trial** — 5 AI‑answered tickets, lifetime, per org |
 | Trial used up, still no key | AI drafting stops; connect a provider to resume |
 | Self‑hosted | The `OPENAI_API_KEY` in your environment |
 | A workspace with saved model settings | Its configured chat and embedding services |
@@ -34,7 +34,7 @@ proxy) is part of **Custom AI model configuration**, which is included on Enterp
 | Mistral | ✓ | — separate OpenAI key |
 | OpenAI‑compatible endpoint | ✓ (Enterprise) | ✓ (Enterprise) |
 
-In AnswerLoops, OpenAI is the named provider option for embeddings. If your chat provider is anything else,
+In answerLoops, OpenAI is the named provider option for embeddings. If your chat provider is anything else,
 enter an **OpenAI API key under Embeddings** — otherwise knowledge‑base search
 and every ingest fails after you save. The form asks for it automatically and
 the save is rejected with a clear message if it's missing.

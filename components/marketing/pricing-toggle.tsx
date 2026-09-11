@@ -4,6 +4,7 @@ import Link from 'next/link'
 import {
   ANNUAL_DISCOUNT_PCT,
   annualMonthlyPrice,
+  annualTotalPrice,
   HIGHLIGHTED_PLAN_ID,
   TRIAL_DAYS,
   type Plan,
@@ -79,7 +80,9 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
                 <span className="ml-1 text-sm text-slate-600">/month</span>
               </div>
               <p className="mt-2 text-sm text-slate-600">
-                {annual ? 'Billed annually' : 'Billed monthly'}
+                {annual
+                  ? `${formatPrice(annualTotalPrice(plan))} billed annually`
+                  : 'Billed monthly'}
               </p>
               <p className="mt-5 border-t border-slate-200 pt-5 font-semibold">
                 {plan.deflectionsPerMonth === null

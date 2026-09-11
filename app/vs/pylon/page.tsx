@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 import { ComparisonPage } from '@/components/marketing/comparison-page'
 export const metadata: Metadata = {
-  title: 'AnswerLoops vs Pylon',
+  title: 'answerLoops vs Pylon',
   description:
-    'Pylon supports Discord, Telegram, and MCP as well as Slack and Teams. Compare the customer context and operational controls your team needs with AnswerLoops’ documentation-based workflow and self-hosting option.',
+    'Pylon supports Discord, Telegram, and MCP as well as Slack and Teams. Compare the customer context and operational controls your team needs with answerLoops’ documentation-based workflow and self-hosting option.',
   alternates: { canonical: '/vs/pylon' },
 }
 export default function Page() {
@@ -13,7 +13,7 @@ export default function Page() {
       slug="pylon"
       source="https://www.usepylon.com/"
       competitorSummary="Pylon combines B2B support with customer context, AI agents, and account and product intelligence."
-      intro="Pylon supports Discord, Telegram, and MCP as well as Slack and Teams. Compare the customer context and operational controls your team needs with AnswerLoops’ documentation-based workflow and self-hosting option."
+      intro="Pylon supports Discord, Telegram, and MCP as well as Slack and Teams. Compare the customer context and operational controls your team needs with answerLoops’ documentation-based workflow and self-hosting option."
       rows={[
         {
           feature: 'Channels',

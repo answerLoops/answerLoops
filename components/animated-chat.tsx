@@ -10,7 +10,7 @@ export function AnimatedChat() {
   return (
     <div className="marketing-example" aria-label="Example support workflow">
       <div className="marketing-example-header">
-        <strong>AnswerLoops / Support</strong>
+        <strong>answerLoops / Support</strong>
         <span>Illustrative example</span>
       </div>
       <div
@@ -40,7 +40,7 @@ export function AnimatedChat() {
             <p className="marketing-eyebrow">Discord / #support</p>
             <h3>A member asks for help</h3>
             <blockquote>
-              How do I add a teammate to our AnswerLoops workspace?
+              How do I add a teammate to our answerLoops workspace?
             </blockquote>
             <p>
               The question appears in your support queue with a link to the

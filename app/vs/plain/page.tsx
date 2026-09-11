@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { ComparisonPage } from '@/components/marketing/comparison-page'
 export const metadata: Metadata = {
-  title: 'AnswerLoops vs Plain',
+  title: 'answerLoops vs Plain',
   description:
     'Both products support community channels and AI-assisted support. Evaluate the workflow and deployment requirements rather than assuming Plain is limited to Slack or human-written replies.',
   alternates: { canonical: '/vs/plain' },

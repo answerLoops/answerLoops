@@ -147,7 +147,7 @@ OPENAI_API_KEY=             # or configure per-org in Settings → AI Model
 - [ ] Go to `/leads` dashboard → email appears in list
 - [ ] Send a message in widget → AI responds
 - [ ] Response cites a KB article: `📚 Source: [article title]` visible at bottom (T1-3)
-- [ ] **White-label test:** upgrade org to Pro in Stripe → reload widget → "Powered by AnswerLoops" footer gone (T1-2)
+- [ ] **White-label test:** upgrade org to Pro in Stripe → reload widget → "Powered by answerLoops" footer gone (T1-2)
 - [ ] **Multi-language test:** send a message in Spanish → AI replies in Spanish (T1-1)
 
 ---
@@ -230,7 +230,7 @@ OPENAI_API_KEY=             # or configure per-org in Settings → AI Model
 - [ ] Click **Upgrade** → Stripe checkout opens
 - [ ] Use Stripe test card `4242 4242 4242 4242` → complete checkout
 - [ ] Return to app → plan updated to Pro/Scale/Enterprise
-- [ ] Widget white-label: "Powered by AnswerLoops" footer gone on widget page
+- [ ] Widget white-label: "Powered by answerLoops" footer gone on widget page
 - [ ] Click **Manage billing** → Stripe customer portal opens
 
 ---

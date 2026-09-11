@@ -11,7 +11,7 @@ describe('public site identity graph', () => {
 
     expect(organization).toMatchObject({
       '@id': ORGANIZATION_ID,
-      name: 'AnswerLoops',
+      name: 'answerLoops',
       url: 'https://answerloops.com',
       sameAs: [GITHUB_URL],
     })

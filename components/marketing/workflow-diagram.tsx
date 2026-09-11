@@ -1,6 +1,6 @@
 export function WorkflowDiagram() {
   return (
-    <figure aria-label="How AnswerLoops drafts and reviews a support reply">
+    <figure aria-label="How answerLoops drafts and reviews a support reply">
       <ol className="marketing-workflow">
         {[
           [
@@ -11,7 +11,7 @@ export function WorkflowDiagram() {
           [
             '02 / Draft',
             'Use your documentation',
-            'AnswerLoops retrieves relevant knowledge and drafts a reply with its sources.',
+            'answerLoops retrieves relevant knowledge and drafts a reply with its sources.',
           ],
           [
             '03 / Review',

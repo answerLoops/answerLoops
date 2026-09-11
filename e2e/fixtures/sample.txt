@@ -1,4 +1,4 @@
-AnswerLoops Test Document
+answerLoops Test Document
 
 Configure the client by setting DATABASE_URL.
 Authentication requires AUTH_SECRET.

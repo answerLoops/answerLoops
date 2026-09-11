@@ -7,7 +7,7 @@ description: Ingest GitHub Issues and Discussions as tickets, and sync repo mark
 
 The GitHub integration does three things:
 
-1. **Ticket ingest** — new Issues and Discussions become tickets in AnswerLoops. AI drafts a reply and posts it back as a GitHub comment automatically when confidence is high enough **and Automatic Deflections is turned on for that repo** (off by default — see [per-repo settings](#5-configure-per-repo-settings)). Issues, comments, and discussions authored by anyone with write access to the repo — owners, org members, and collaborators (GitHub's `author_association` field) — are skipped, so maintainers filing their own work-tracking issues never turn into support tickets or count against your deflection rate.
+1. **Ticket ingest** — new Issues and Discussions become tickets in answerLoops. AI drafts a reply and posts it back as a GitHub comment automatically when confidence is high enough **and Automatic Deflections is turned on for that repo** (off by default — see [per-repo settings](#5-configure-per-repo-settings)). Issues, comments, and discussions authored by anyone with write access to the repo — owners, org members, and collaborators (GitHub's `author_association` field) — are skipped, so maintainers filing their own work-tracking issues never turn into support tickets or count against your deflection rate.
 2. **Markdown KB sync** — markdown files in a repo are embedded into the Knowledge Base. Syncs automatically on every push to the default branch (when enabled) or manually via **Sync now**. Both queue a background job rather than blocking the request.
 3. **Discussions KB sync** — answered GitHub Discussions become first-class KB articles: the discussion title is the question, the accepted answer is the answer, attributed to the answering user. A discussion syncs the moment it's marked answered, and un-marking an answer removes the article. **Sync now** also backfills every already-answered discussion in the repo.
 
@@ -22,7 +22,7 @@ Go to **github.com → Settings → Developer settings → GitHub Apps → New G
 
 | Field | Value |
 |---|---|
-| GitHub App name | Your app name (e.g. `AnswerLoops`) |
+| GitHub App name | Your app name (e.g. `answerLoops`) |
 | Homepage URL | `https://yourdomain.com` |
 | Callback URL | `https://yourdomain.com/api/auth/callback/github` |
 | Setup URL (Post installation) | `https://yourdomain.com/api/github/callback` |
@@ -73,7 +73,7 @@ GITHUB_WEBHOOK_SECRET=<your-webhook-secret>
 
 ## 4. Install the app
 
-In your AnswerLoops dashboard, go to **Settings → GitHub → Connect GitHub**. This opens the GitHub App install page for your account or org. After authorizing, GitHub redirects back and your repos are auto-discovered.
+In your answerLoops dashboard, go to **Settings → GitHub → Connect GitHub**. This opens the GitHub App install page for your account or org. After authorizing, GitHub redirects back and your repos are auto-discovered.
 
 ## 5. Configure per-repo settings
 
@@ -107,7 +107,7 @@ Markdown/discussion syncs run in the background rather than inside the webhook o
   </Accordion>
 
   <Accordion title="Discussions not appearing as tickets, even though Monitored events includes Discussions">
-    Almost always a missing app permission, not a config problem in AnswerLoops. In the GitHub App's **Permissions & events** page:
+    Almost always a missing app permission, not a config problem in answerLoops. In the GitHub App's **Permissions & events** page:
     1. Check **Repository permissions → Discussions** is actually set (Read-only or Read & write) — if it's blank, the **Discussion** / **Discussion comment** checkboxes under Subscribe to events don't render at all, so it's easy to think you already subscribed when the app never had the option to.
     2. If you just added the Discussions permission, click **Save changes**, accept the org re-authorization prompt, then scroll back down — the event checkboxes only appear after that save round-trip.
     3. Confirm **Discussion** and **Discussion comment** are checked under Subscribe to events and saved.

@@ -4,7 +4,7 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Give your agents access to support knowledge | AnswerLoops',
+  title: 'Give your agents access to support knowledge | answerLoops',
   description:
     'Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets.',
   alternates: { canonical: '/mcp-support-agents' },

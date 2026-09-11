@@ -219,7 +219,7 @@ function DiscordIntegrationCard() {
     } else if (error) {
       showToast(
         error === 'guild_already_connected'
-          ? 'That Discord server is already connected to another AnswerLoops account.'
+          ? 'That Discord server is already connected to another answerLoops account.'
           : `Discord connection failed: ${error}`
       )
       const url = new URL(window.location.href)
@@ -278,10 +278,10 @@ function DiscordIntegrationCard() {
           <p className="text-sm text-gray-700">
             {guilds.length > 0
               ? 'Connect another Discord server with one click.'
-              : 'Add AnswerLoops to your Discord server with one click — no bot token or Developer Portal required.'}
+              : 'Add answerLoops to your Discord server with one click — no bot token or Developer Portal required.'}
           </p>
           <Button type="button" size="sm" disabled={inviting} onClick={handleAddToDiscord}>
-            {inviting ? 'Redirecting…' : 'Add AnswerLoops to Discord'}
+            {inviting ? 'Redirecting…' : 'Add answerLoops to Discord'}
           </Button>
         </div>
 
@@ -1848,7 +1848,7 @@ function EmailDomainSection({ onVerified }: { onVerified: () => void }) {
             </p>
           </div>
           <p className="text-xs text-gray-500 max-w-lg">
-            Removing it deletes the domain from your email provider, not just from AnswerLoops, and
+            Removing it deletes the domain from your email provider, not just from answerLoops, and
             cannot be undone — re-adding means verifying from scratch with new DNS records.
           </p>
           <Button
@@ -2031,7 +2031,7 @@ function DnsRecordRow({
 type DeliveryMethod = 'domain' | 'mailbox'
 
 /**
- * How inbound mail reaches AnswerLoops — asked once, as a choice.
+ * How inbound mail reaches answerLoops — asked once, as a choice.
  *
  * Only one delivery method is needed, but the choices used to be rendered as
  * stacked panels with no default and no indication of that. The tradeoff copy
@@ -2059,7 +2059,7 @@ function EmailDeliverySection({
     return (
       <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 space-y-3">
         <div>
-          <p className="text-xs font-medium text-gray-600">How should mail reach AnswerLoops?</p>
+          <p className="text-xs font-medium text-gray-600">How should mail reach answerLoops?</p>
           <p className="text-xs text-gray-500 mt-1">Pick one — you can change it later.</p>
         </div>
         <div className="grid gap-2 sm:grid-cols-3">
@@ -2515,7 +2515,7 @@ export function GoogleChatIntegrationCard() {
         {!connected && !pendingCode && (
           <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 space-y-3">
             <p className="text-sm text-blue-900">
-              Generate a connect code, add the AnswerLoops app to a Google Chat space, then post the code
+              Generate a connect code, add the answerLoops app to a Google Chat space, then post the code
               there to pair it with this workspace.
             </p>
             <form action={connectAction}>
@@ -2550,7 +2550,7 @@ export function GoogleChatIntegrationCard() {
               </Button>
             </div>
             <ol className="text-xs text-gray-500 list-decimal list-inside space-y-1">
-              <li>Add the AnswerLoops app to a Google Chat space (see the self-hosting guide for the app link)</li>
+              <li>Add the answerLoops app to a Google Chat space (see the self-hosting guide for the app link)</li>
               <li>Post <code className="font-mono">/connect {pendingCode}</code> in that space</li>
               <li>Keep this page open — it checks for the pairing automatically and switches to &quot;Connected&quot; on its own</li>
             </ol>
@@ -3022,7 +3022,7 @@ export function AIModelSection() {
                 : trialStatus
                   ? trialStatus.exhausted
                     ? 'Free AI trial used up — add a key to keep AI features running'
-                    : `Using AnswerLoops' key — ${trialStatus.remaining} of ${trialStatus.limit} free AI-answered tickets left`
+                    : `Using answerLoops' key — ${trialStatus.remaining} of ${trialStatus.limit} free AI-answered tickets left`
                   : 'Using platform default (OPENAI_API_KEY from environment)'}
             </p>
           </div>
@@ -3404,7 +3404,7 @@ function WidgetSection() {
               <p className="text-[0.6875rem] text-gray-500">
                 The embed token is visible in your page source, so anyone can copy it. List the domains
                 you embed on — the widget will not load anywhere else. Subdomains are included. Your
-                AnswerLoops domain is always allowed, so the preview link works without setup.
+                answerLoops domain is always allowed, so the preview link works without setup.
               </p>
             </div>
             {canManage ? (
@@ -3530,7 +3530,7 @@ export function ApiKeysSection() {
     <div className="space-y-4">
       <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
         <p className="text-xs text-gray-600">
-          API keys let AI agents (Claude Code, Cursor, or any MCP-compatible client) call AnswerLoops directly —
+          API keys let AI agents (Claude Code, Cursor, or any MCP-compatible client) call answerLoops directly —
           searching your knowledge base, checking tickets, and answering questions using your community&apos;s data,
           scoped to this org. See <a href="/docs/integrations/mcp" target="_blank" rel="noopener noreferrer" className="text-brand-600 hover:underline">the MCP docs</a> for setup.
         </p>
@@ -3792,7 +3792,7 @@ export function NotionIntegrationCard() {
                 className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
               />
               <p className="text-xs text-gray-400 mt-1">
-                In Notion: <span className="font-medium">Settings → Connections → Develop or manage integrations</span> → create an internal integration → copy its <span className="font-medium">Internal Integration Secret</span>. Then open each page or database you want synced, <span className="font-medium">•••  → Connections</span>, and add the integration. AnswerLoops syncs everything the integration can see.
+                In Notion: <span className="font-medium">Settings → Connections → Develop or manage integrations</span> → create an internal integration → copy its <span className="font-medium">Internal Integration Secret</span>. Then open each page or database you want synced, <span className="font-medium">•••  → Connections</span>, and add the integration. answerLoops syncs everything the integration can see.
               </p>
             </div>
             {(saveState as { error?: string } | null)?.error && (
@@ -4071,7 +4071,7 @@ function RemoveDomainModal({
           <h2 id="remove-domain-title" className="min-w-0 break-all text-base font-semibold text-gray-900">Remove {domain}</h2>
         </div>
         <p className="mt-3 break-all text-sm text-gray-600">
-          This deletes the domain from your email provider, not just from AnswerLoops. Its DKIM and
+          This deletes the domain from your email provider, not just from answerLoops. Its DKIM and
           return-path records stop being recognised, and replies immediately fall back to the
           platform-hosted sending address instead of <code className="font-mono">noreply@{domain}</code>.
         </p>

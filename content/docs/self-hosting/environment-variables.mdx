@@ -1,12 +1,12 @@
 ---
 title: Environment Variables
-description: Every environment variable AnswerLoops uses, with defaults and requirements.
+description: Every environment variable answerLoops uses, with defaults and requirements.
 ---
 
 Copy `.env.example` to `.env` and fill in the values below.
 
 <Note>
-  AnswerLoops uses **Auth.js v5**. The required env vars are `AUTH_URL` and `AUTH_SECRET`. If you see `NEXTAUTH_URL` or `NEXTAUTH_SECRET` in older docs or guides, those are the v4 names — they will not work here.
+  answerLoops uses **Auth.js v5**. The required env vars are `AUTH_URL` and `AUTH_SECRET`. If you see `NEXTAUTH_URL` or `NEXTAUTH_SECRET` in older docs or guides, those are the v4 names — they will not work here.
 </Note>
 
 ## Core (required)
@@ -25,7 +25,7 @@ Copy `.env.example` to `.env` and fill in the values below.
 |---|---|---|
 | `TRUST_PROXY_HOPS` | How many proxies sit between the public internet and the app. Defaults to `1` | `1` |
 
-Rate limiting needs the real client IP, and it reads that from `x-forwarded-for`. That header is a list each proxy appends to, so its *leftmost* entry is whatever the caller claimed — trusting it lets anyone mint a fresh rate-limit bucket per request just by rotating a header value. AnswerLoops instead counts in from the right by `TRUST_PROXY_HOPS`, reading the entry your own infrastructure appended.
+Rate limiting needs the real client IP, and it reads that from `x-forwarded-for`. That header is a list each proxy appends to, so its *leftmost* entry is whatever the caller claimed — trusting it lets anyone mint a fresh rate-limit bucket per request just by rotating a header value. answerLoops instead counts in from the right by `TRUST_PROXY_HOPS`, reading the entry your own infrastructure appended.
 
 ## Multi-domain (optional)
 
@@ -199,14 +199,14 @@ pnpm dlx web-push generate-vapid-keys
 
 | Variable | Description | Example |
 |---|---|---|
-| `DEPLOYMENT_MODE` | Set to `cloud` only on AnswerLoops' own managed SaaS. Leave unset (or anything other than `cloud`) on a self-hosted deployment. | `cloud` |
+| `DEPLOYMENT_MODE` | Set to `cloud` only on answerLoops' own managed SaaS. Leave unset (or anything other than `cloud`) on a self-hosted deployment. | `cloud` |
 | `STRIPE_SECRET_KEY` | Only relevant when `DEPLOYMENT_MODE=cloud`. Not needed for self-hosting. | — |
 | `STRIPE_WEBHOOK_SECRET` | Only relevant when `DEPLOYMENT_MODE=cloud`. Signing secret for `/api/billing/webhook`. | — |
 | `STRIPE_PUBLISHABLE_KEY` | Only relevant when `DEPLOYMENT_MODE=cloud`. Publishable key for the embedded checkout form, read at request time. Not `NEXT_PUBLIC_`-prefixed on purpose: that prefix is baked in at build time. Safe in client code — it can only create payment attempts. | `pk_live_...` |
 | `STRIPE_PRICE_STANDARD` / `STRIPE_PRICE_PRO` / `STRIPE_PRICE_ENTERPRISE` | Only relevant when `DEPLOYMENT_MODE=cloud`. Monthly Stripe Price ID per plan — must match the plan it names, since the displayed price and the charged price come from different places. | — |
 | `STRIPE_PRICE_STANDARD_ANNUAL` / `STRIPE_PRICE_PRO_ANNUAL` / `STRIPE_PRICE_ENTERPRISE_ANNUAL` | Only relevant when `DEPLOYMENT_MODE=cloud`. Annual Stripe Price ID per plan. A plan missing its annual price declines annual checkout rather than billing the monthly rate. | — |
 
-Self-hosted deployments (the default — `DEPLOYMENT_MODE` unset) are never metered and every plan-gated feature (Discord/Slack integrations, CSAT scoring, simulation/dry-run mode, knowledge gap dashboard, custom AI model config, etc.) is unlocked unconditionally. You're already bringing your own AI provider, database, and hosting — there's no usage of yours for AnswerLoops to meter or restrict.
+Self-hosted deployments (the default — `DEPLOYMENT_MODE` unset) are never metered and every plan-gated feature (Discord/Slack integrations, CSAT scoring, simulation/dry-run mode, knowledge gap dashboard, custom AI model config, etc.) is unlocked unconditionally. You're already bringing your own AI provider, database, and hosting — there's no usage of yours for answerLoops to meter or restrict.
 
 <Warning>
   Don't set `DEPLOYMENT_MODE=cloud` on a self-hosted instance — it opts the deployment into plan-tier gating with no Stripe subscription behind it, which locks every gated feature instead of unlocking them.

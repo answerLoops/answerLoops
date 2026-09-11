@@ -16,7 +16,7 @@ import { getDeploymentMode } from '@/lib/billing/plans'
  * and degrade gracefully (skip drafting, surface a "connect an AI provider"
  * state) rather than let it bubble up as a generic 500. Only the sandbox
  * path (simulation) and self-hosted deployments (where the "platform key"
- * is the self-hoster's own .env, not AnswerLoops') may fall through to the
+ * is the self-hoster's own .env, not answerLoops') may fall through to the
  * platform key — see the `purpose` param below.
  */
 export class NoAIProviderConfiguredError extends Error {
@@ -31,7 +31,7 @@ export class NoAIProviderConfiguredError extends Error {
  * on self-hosted deployments (where it's the self-hoster's own key). On
  * managed cloud, an org with no configured provider gets
  * NoAIProviderConfiguredError instead of silently running production
- * traffic on AnswerLoops' own bill.
+ * traffic on answerLoops' own bill.
  * 'sandbox': always falls through to the platform key regardless of
  * deployment mode — reserved for explicitly-a-test surfaces (simulation)
  * where running against the platform key is the intended, safe behavior.

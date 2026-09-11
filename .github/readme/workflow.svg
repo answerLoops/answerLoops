@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
-  <title id="title">AnswerLoops support loop</title>
+  <title id="title">answerLoops support loop</title>
   <desc id="desc">Community questions enter through multiple channels, pass through one ticket model and a grounded confidence review, then are automatically answered or escalated to a human before useful resolutions improve the knowledge base.</desc>
   <defs>
     <linearGradient id="blue" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#06b6d4"/></linearGradient>

@@ -1,11 +1,11 @@
 ---
 title: Email Channel Setup
-description: Route inbound support emails through the AnswerLoops AI pipeline.
+description: Route inbound support emails through the answerLoops AI pipeline.
 ---
 
 ## How it works
 
-Email doesn't poll an inbox. In the hosted flow, AnswerLoops verifies a customer-owned domain with Resend receiving; Resend posts signed `email.received` events to the webhook, AnswerLoops retrieves the full message, and the AI pipeline triages, embeds, and answers it. Replies go directly to the sender via Resend with proper RFC 5322 threading (`Message-ID` / `In-Reply-To` / `References`).
+Email doesn't poll an inbox. In the hosted flow, answerLoops verifies a customer-owned domain with Resend receiving; Resend posts signed `email.received` events to the webhook, answerLoops retrieves the full message, and the AI pipeline triages, embeds, and answers it. Replies go directly to the sender via Resend with proper RFC 5322 threading (`Message-ID` / `In-Reply-To` / `References`).
 
 For self-hosted deployments, you can use the same Resend receiving flow or keep an existing provider that can POST inbound messages to the webhook with the per-organization legacy secret.
 
@@ -16,7 +16,7 @@ For self-hosted deployments, you can use the same Resend receiving flow or keep 
 - `RESEND_API_KEY` and `RESEND_FROM` must be set (used for outbound replies)
 - A Resend domain configured with sending and receiving capabilities, or a supported inbound provider for the legacy path
 
-### 2. Configure in AnswerLoops Settings
+### 2. Configure in answerLoops Settings
 
 Under **Settings → Email**, enter:
 
@@ -95,7 +95,7 @@ The Microsoft equivalent of the Gmail flow above — same `email_oauth_connectio
 
 **Manual setup required**: register an app in Microsoft Entra ID, add a client secret, configure the delegated `Mail.Send` and `offline_access` API permissions, and add the app's `/api/email/outlook/callback` URL as a redirect URI under the app's Authentication settings. **Microsoft additionally requires Partner Center publisher verification** before real external users (not just your own tenant) can consent without hitting a step-up-consent block — this is a separate, slower, account-level process from just registering the app. Start it early if you plan to offer this to real customers; internal testing against your own tenant works without it.
 
-Unlike Gmail's send path (which mints its own RFC `Message-ID` and sets `In-Reply-To`/`References` directly), Microsoft Graph's sending API doesn't support setting standard headers on outbound mail the same way — `lib/email/outlook.ts` creates a draft, sends it, then reads back the real `Message-ID` Graph assigned for AnswerLoops's own threading records. `In-Reply-To` is set best-effort via a MAPI extended property; `References` has no equivalent and is not sent. This is a deliberate, documented per-provider difference, not a bug.
+Unlike Gmail's send path (which mints its own RFC `Message-ID` and sets `In-Reply-To`/`References` directly), Microsoft Graph's sending API doesn't support setting standard headers on outbound mail the same way — `lib/email/outlook.ts` creates a draft, sends it, then reads back the real `Message-ID` Graph assigned for answerLoops's own threading records. `In-Reply-To` is set best-effort via a MAPI extended property; `References` has no equivalent and is not sent. This is a deliberate, documented per-provider difference, not a bug.
 
 ## Environment variables
 

@@ -1,11 +1,11 @@
 ---
 title: Discord
-description: Connect Discord text channels and forum channels to AnswerLoops for automatic AI deflection and ticket tracking.
+description: Connect Discord text channels and forum channels to answerLoops for automatic AI deflection and ticket tracking.
 ---
 
 ## Overview
 
-AnswerLoops integrates with Discord at two levels:
+answerLoops integrates with Discord at two levels:
 
 - **Text channels** — every message in a watched channel is ingested as a ticket. The bot replies in-thread when AI confidence is above your threshold **and Automatic Deflections is turned on**.
 - **Forum channels** — new forum posts create tickets via the `ThreadCreate` event. The initial post is ingested as the ticket body. Replies inside the forum thread also ingest via `MessageCreate` and are attached to the same ticket.
@@ -20,12 +20,12 @@ Both channel types appear in the unified ticket list with a Discord source badge
 
 ## Cloud setup (recommended)
 
-No Discord Developer Portal access required. AnswerLoops manages the bot and OAuth app on your behalf.
+No Discord Developer Portal access required. answerLoops manages the bot and OAuth app on your behalf.
 
-1. In the onboarding wizard (or **Settings → Channels → Discord**), click **"Add AnswerLoops to Discord"**
+1. In the onboarding wizard (or **Settings → Channels → Discord**), click **"Add answerLoops to Discord"**
 2. Select the server you want to connect in the Discord authorization screen
 3. Approve the requested permissions and click **Authorize**
-4. Back in AnswerLoops, a channel picker appears showing all text channels and forum channels on your server
+4. Back in answerLoops, a channel picker appears showing all text channels and forum channels on your server
 5. Select the channels where the bot should listen and click **Save**
 
 The bot joins your server immediately. No token to copy, no manifest to upload.
@@ -38,7 +38,7 @@ The bot joins your server immediately. No token to copy, no manifest to upload.
 
 ## Connecting multiple servers
 
-You're not limited to one Discord server. Click **"Add AnswerLoops to Discord"** again from **Settings → Channels → Discord** to connect another — each server gets its own card with its own channel picker and its own escalation role, and can be removed independently without affecting the others. A server can only be connected to one AnswerLoops account at a time; if you try to connect a server that's already linked elsewhere, you'll see an error instead of it silently switching ownership.
+You're not limited to one Discord server. Click **"Add answerLoops to Discord"** again from **Settings → Channels → Discord** to connect another — each server gets its own card with its own channel picker and its own escalation role, and can be removed independently without affecting the others. A server can only be connected to one answerLoops account at a time; if you try to connect a server that's already linked elsewhere, you'll see an error instead of it silently switching ownership.
 
 ---
 
@@ -85,23 +85,23 @@ Make sure `AUTH_URL` is set to your public app URL (e.g. `https://support.yourco
 Forum channels work without any extra configuration beyond selecting the channel in the channel picker.
 
 When a user creates a new post in a forum channel:
-- AnswerLoops receives a `ThreadCreate` event
+- answerLoops receives a `ThreadCreate` event
 - The post's initial message is ingested as a new ticket
 - The bot replies in the thread if AI confidence is above threshold
 
 When anyone replies inside that forum thread:
-- AnswerLoops receives `MessageCreate` events for each reply
+- answerLoops receives `MessageCreate` events for each reply
 - Replies are attached to the original ticket for full context
 
 <Note>
-  Forum channel replies by AnswerLoops appear inside the thread, not as top-level posts — keeping conversations organized for your community members.
+  Forum channel replies by answerLoops appear inside the thread, not as top-level posts — keeping conversations organized for your community members.
 </Note>
 
 ---
 
 ## Slash commands
 
-AnswerLoops supports two slash commands in connected servers:
+answerLoops supports two slash commands in connected servers:
 
 | Command | What it does |
 |---|---|
@@ -141,7 +141,7 @@ pnpm run discord:register-commands
     `DISCORD_TOKEN` and `DISCORD_CLIENT_ID` must belong to the same Discord application. If you regenerated the bot token after setting `DISCORD_CLIENT_ID`, make sure you updated `DISCORD_TOKEN` to the new value.
   </Accordion>
   <Accordion title="Forum channel posts aren't creating tickets">
-    Confirm the forum channel is selected in **Settings → Channels → Discord → Channel picker**. AnswerLoops only listens on explicitly selected channels. Also verify the bot has **Read Messages** and **View Channels** permission in that forum.
+    Confirm the forum channel is selected in **Settings → Channels → Discord → Channel picker**. answerLoops only listens on explicitly selected channels. Also verify the bot has **Read Messages** and **View Channels** permission in that forum.
   </Accordion>
   <Accordion title="Slash commands aren't showing up in Discord">
     Run `pnpm run discord:register-commands` and confirm `DISCORD_APPLICATION_ID` is set. Discord can take up to an hour to propagate global slash commands — guild-scoped registration is instant if you specify a `DISCORD_GUILD_ID`.

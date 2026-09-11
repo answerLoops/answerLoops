@@ -64,7 +64,7 @@ export const PRICING_FAQ = [
   },
   {
     q: 'Are AI model costs included?',
-    a: 'After the five-ticket allowance, connect your AI provider account. Your provider bills model usage directly, including the calls used for drafting, review, and knowledge search. AnswerLoops does not add a markup. Supported provider accounts work on every plan; custom model endpoints require Enterprise or self-hosting.',
+    a: 'After the five-ticket allowance, connect your AI provider account. Your provider bills model usage directly, including the calls used for drafting, review, and knowledge search. answerLoops does not add a markup. Supported provider accounts work on every plan; custom model endpoints require Enterprise or self-hosting.',
   },
   {
     q: 'Can I change or cancel my plan?',

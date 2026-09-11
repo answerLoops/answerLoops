@@ -1,4 +1,4 @@
-# AnswerLoops — Architecture
+# answerLoops — Architecture
 
 > How every piece connects: from a community message to a deflected answer and a self-improving knowledge base.
 

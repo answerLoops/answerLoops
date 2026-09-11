@@ -3,7 +3,7 @@ title: Anthropic
 description: Use Anthropic's Claude models for answer generation, with an OpenAI key for embeddings.
 ---
 
-Anthropic's Claude models generate the answers AnswerLoops drafts. Claude
+Anthropic's Claude models generate the answers answerLoops drafts. Claude
 handles **chat only** — Anthropic has no embeddings API — so knowledge-base
 search still needs an OpenAI key for embeddings alongside it.
 
@@ -14,7 +14,7 @@ Available on every plan. Usage bills to your Anthropic account.
 In the [Anthropic Console](https://console.anthropic.com/settings/keys),
 create a key. Make sure the workspace has credit or billing configured.
 
-## 2. Configure in AnswerLoops
+## 2. Configure in answerLoops
 
 1. **Settings → AI Model → Edit** (owner or admin).
 2. **Chat provider:** Anthropic.
@@ -25,7 +25,7 @@ create a key. Make sure the workspace has credit or billing configured.
 4. **API key:** paste your Anthropic key.
 5. **Embeddings:** leave the provider on OpenAI and enter an **OpenAI API key**
    in the embedding key field. This is required — without it, every
-   knowledge-base search and every KB import fails after you save. AnswerLoops
+   knowledge-base search and every KB import fails after you save. answerLoops
    tells you if it's missing.
 6. Click **Test connection** — it checks the Claude key and the OpenAI
    embedding key separately — then **Save**.
