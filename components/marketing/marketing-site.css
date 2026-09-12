@@ -1353,6 +1353,7 @@
 }
 .marketing-home-grid > .support-demo {
   grid-area: demo;
+  min-height: 0;
 }
 .marketing-home-grid > .channel-band {
   grid-area: channels;
