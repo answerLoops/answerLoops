@@ -1626,3 +1626,30 @@
     font-size: 0.9rem;
   }
 }
+
+/* Keep the animated hero contained, including reduced-motion mode. */
+.marketing-home-grid > .support-demo.support-demo-hero {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: min(32rem, calc(100svh - 10rem));
+  min-height: 28rem;
+  max-height: 32rem;
+  min-width: 0;
+}
+
+.marketing-home-grid
+  > .support-demo.support-demo-hero
+  > .support-demo-thread {
+  height: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+@media (max-width: 767px) {
+  .marketing-home-grid > .support-demo.support-demo-hero {
+    height: 32rem;
+    min-height: 0;
+    max-height: none;
+  }
+}
