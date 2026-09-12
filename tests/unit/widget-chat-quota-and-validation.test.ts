@@ -34,8 +34,8 @@ const VALID_TOKEN = 'a'.repeat(48) // crypto.randomBytes(24).toString('hex') sha
 
 const h = vi.hoisted(() => ({
   reserveGeneration: vi.fn(),
-  releaseGeneration: vi.fn(),
-  commitDeflection: vi.fn(),
+  releaseGeneration: vi.fn(async () => {}),
+  commitDeflection: vi.fn(async () => {}),
   rateLimitShared: vi.fn(),
   getOrgByWidgetToken: vi.fn(),
   chatModel: vi.fn(),
@@ -68,8 +68,13 @@ vi.mock('@/lib/ai/related', () => ({ findRelated: () => [] }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
 vi.mock('@mastra/core/agent', () => ({
   Agent: class {
-    async stream(query: string) {
+    async stream(query: string, options?: { onFinish?: () => void | Promise<void> }) {
       h.streamCalls.push({ query })
+      // Real Mastra invokes onFinish once the stream naturally completes;
+      // replicated here so tests can assert billing actually fires off a
+      // real (mocked) run, not just that reserveGeneration/stream were
+      // called with no way to tell whether the completion side ever ran.
+      await options?.onFinish?.()
       return { fullStream: new ReadableStream({ start: (c) => c.close() }) }
     }
   },
@@ -156,6 +161,49 @@ describe('widget chat: no rejected request may consume quota', () => {
     expect(h.reserveGeneration).toHaveBeenCalledOnce()
     expect(h.streamCalls).toHaveLength(1)
     expect(h.releaseGeneration).not.toHaveBeenCalled()
+    // commitDeflection is mocked but was never actually checked here — a
+    // typo'd argument, or onFinish never firing, would slip past every other
+    // assertion in this file, since drain() only proves the stream completed,
+    // not that billing ran off the back of it.
+    expect(h.commitDeflection).toHaveBeenCalledWith(42, 7)
+  })
+})
+
+describe('widget chat: a request shaped as anything other than agent/run is still throttled', () => {
+  it('rate-limits a non-run envelope before it ever reaches widgetToken validation', async () => {
+    // A single-route runtime accepts other methods (info, threads/list, ...);
+    // none of those carry a widgetToken, so they skip every widgetToken-keyed
+    // check below in validateAndPrepare. The global per-IP limiter is the
+    // only thing standing between this shape and an unthrottled path into the
+    // CopilotKit runtime, so it has to trip on its own, with no token in play.
+    h.rateLimitShared.mockImplementation(async (key: string) =>
+      key.startsWith('widget-any:') ? { ok: false } : { ok: true }
+    )
+    const req = new Request('https://app.test/api/widget/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ method: 'info', params: {} }),
+    })
+    const { POST } = await import('@/app/api/widget/chat/route')
+    const res = await POST(req)
+    expect(res.status).toBe(429)
+    expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
+  })
+
+  it('still passes a non-run envelope through once the global limit allows it', async () => {
+    const req = new Request('https://app.test/api/widget/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ method: 'info', params: {} }),
+    })
+    const { POST } = await import('@/app/api/widget/chat/route')
+    const res = await POST(req)
+    // Not a 429 and not one of this route's own validation rejections —
+    // whatever status comes back is CopilotKit's own handling of `info`,
+    // which this test isn't asserting on; the point is only that it wasn't
+    // blocked by the throttle added ahead of the method branch.
+    expect(res.status).not.toBe(429)
+    expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
   })
 })
 
@@ -190,7 +238,11 @@ describe('widget chat: the token is validated before it becomes rate-limiter key
     // token's format is checked before it ever gets there.
     const res = await callRoute({ widgetToken: 'z'.repeat(5000), visitorId: 'v', messages: [userMsg('hi')] })
     expect(res.status).toBe(400)
-    expect(h.rateLimitShared).not.toHaveBeenCalled()
+    // The global per-IP limiter (keyed on IP alone) still runs for every
+    // request regardless of token shape — it's the token-keyed limiters that
+    // must never see this malformed value.
+    expect(h.rateLimitShared).not.toHaveBeenCalledWith(expect.stringContaining('widget-token:'), expect.anything(), expect.anything())
+    expect(h.rateLimitShared).not.toHaveBeenCalledWith(expect.stringContaining('widget-ip:'), expect.anything(), expect.anything())
     expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
   })
 
@@ -225,5 +277,46 @@ describe('widget chat: quota exhaustion is still enforced', () => {
     const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages: [userMsg('hi')] })
     expect(res.status).toBe(402)
     expect(h.streamCalls).toHaveLength(0)
+  })
+})
+
+describe('widget chat: a reservation whose run never gets dispatched still gets released', () => {
+  // Tested directly against stashPendingRun/takePendingRun/PENDING_RUN_TTL_MS
+  // rather than through the full POST handler: driving this via fake timers
+  // through CopilotKit's real RxJS-based dispatch stalls on internal
+  // scheduling that has nothing to do with what's under test here. This is
+  // the actual unit that owns the release-on-expiry guarantee.
+  it('releases the reservation once PENDING_RUN_TTL_MS elapses with no dispatch', async () => {
+    vi.useFakeTimers()
+    try {
+      const { stashPendingRun, PENDING_RUN_TTL_MS } = await import('@/app/api/widget/chat/route')
+      stashPendingRun({ org: { id: 42, name: 'Acme' }, model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
+
+      expect(h.releaseGeneration).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(PENDING_RUN_TTL_MS)
+      expect(h.releaseGeneration).toHaveBeenCalledWith(7)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not double-release when takePendingRun already consumed the entry', async () => {
+    vi.useFakeTimers()
+    try {
+      const { stashPendingRun, takePendingRun, PENDING_RUN_TTL_MS } = await import('@/app/api/widget/chat/route')
+      const requestId = stashPendingRun({ org: { id: 42, name: 'Acme' }, model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
+
+      const run = takePendingRun(requestId)
+      expect(run?.reservationId).toBe(7)
+
+      await vi.advanceTimersByTimeAsync(PENDING_RUN_TTL_MS)
+
+      // Already consumed by takePendingRun above (the normal case — the
+      // factory ran and either billed or is still in flight); the expiry
+      // timeout must find nothing left in the map and release nothing.
+      expect(h.releaseGeneration).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

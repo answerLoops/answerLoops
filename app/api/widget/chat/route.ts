@@ -27,6 +27,17 @@ const IP_TOKEN_WINDOW_MS = 60_000
 const TOKEN_MAX = 100
 const TOKEN_WINDOW_MS = 60_000
 
+// Applies to every request regardless of envelope method or shape — the
+// per-token limits below only run once a request is known to be a
+// well-formed agent/run call with a real widgetToken, so without this a
+// request shaped any other way (missing `method`, a non-"agent/run" method,
+// or simply malformed) would reach the CopilotKit runtime completely
+// unthrottled. Generous relative to IP_TOKEN_MAX since it also has to admit
+// this widget's own legitimate non-run traffic (e.g. the runtime's info
+// handshake).
+const GLOBAL_IP_MAX = 60
+const GLOBAL_IP_WINDOW_MS = 60_000
+
 // Each message is capped well above normal chat length; the whole array is
 // capped so a caller can't send thousands of messages to inflate model cost.
 const MAX_MESSAGE_CHARS = 4_000
@@ -56,7 +67,7 @@ const WIDGET_TOKEN_PATTERN = /^[0-9a-f]{48}$/
 // whole-message cap.
 const MAX_QUERY_CHARS = MAX_MESSAGE_CHARS
 
-interface PendingRun {
+export interface PendingRun {
   org: { id: number; name: string }
   model: Awaited<ReturnType<typeof chatModel>>
   query: string
@@ -71,16 +82,38 @@ interface PendingRun {
 // reaches the factory (client disconnect, runtime error before dispatch)
 // can't leak.
 const pendingRuns = new Map<string, PendingRun>()
-const PENDING_RUN_TTL_MS = 30_000
+export const PENDING_RUN_TTL_MS = 30_000
 
-function stashPendingRun(run: PendingRun): string {
+// Exported for direct unit testing of the stash/expiry/release logic in
+// isolation — driving it through the full POST handler under fake timers
+// gets tangled in CopilotKit's own RxJS-based event scheduling, which faked
+// timers stall in ways unrelated to what's actually being tested here.
+export function stashPendingRun(run: PendingRun): string {
   const requestId = crypto.randomUUID()
   pendingRuns.set(requestId, run)
-  setTimeout(() => pendingRuns.delete(requestId), PENDING_RUN_TTL_MS)
+  // The reservation is only recoverable here, at the moment expiry is known
+  // to mean "never consumed" — takePendingRun's own miss branch has nothing
+  // left to release by then, since the whole point of a miss is that the
+  // entry (and the reservationId inside it) is already gone. Checking `has`
+  // before deleting guards the ordinary case where the run completed just
+  // under the wire: takePendingRun already deleted the entry, so this timeout
+  // finds nothing and does not double-release a reservation that onFinish
+  // (or the NoAIProviderConfiguredError branch) already resolved.
+  setTimeout(() => {
+    if (!pendingRuns.has(requestId)) return
+    pendingRuns.delete(requestId)
+    releaseGeneration(run.reservationId).catch((e) => {
+      logger.error('widget chat: releasing an expired, never-dispatched reservation failed', {
+        module: MOD,
+        orgId: run.org.id,
+        error: e,
+      })
+    })
+  }, PENDING_RUN_TTL_MS)
   return requestId
 }
 
-function takePendingRun(requestId: unknown): PendingRun | undefined {
+export function takePendingRun(requestId: unknown): PendingRun | undefined {
   if (typeof requestId !== 'string') return undefined
   const run = pendingRuns.get(requestId)
   pendingRuns.delete(requestId)
@@ -127,6 +160,17 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   const raw = await readBodyCapped(request, MAX_BODY_BYTES)
   if (raw === null) return new Response('Request body too large', { status: 413 })
 
+  // Every request pays this toll before anything about its shape is trusted
+  // — including malformed JSON and non-"agent/run" methods, both of which
+  // skip the widgetToken-keyed limits below. Without this, any request that
+  // simply doesn't look like a chat run reaches the CopilotKit runtime with
+  // no rate limiting at all.
+  const ip = clientIp(request)
+  const globalIpLimit = await rateLimitShared(`widget-any:${ip}`, GLOBAL_IP_MAX, GLOBAL_IP_WINDOW_MS)
+  if (!globalIpLimit.ok) {
+    return new Response('Too many requests', { status: 429 })
+  }
+
   let envelope: SingleRouteEnvelope
   try {
     envelope = JSON.parse(raw || '{}')
@@ -138,6 +182,7 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   // through as-is — this widget's client only ever issues agent/run. The
   // original request's body is already consumed above, so this still has to
   // be a fresh Request built from the text just read, not `request` itself.
+  // The global IP limit above still applies to it.
   if (envelope.method !== 'agent/run') return rebuildRequest(request, raw)
 
   const body = envelope.body
@@ -171,8 +216,6 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   if (oversized) {
     return new Response('Message too long', { status: 400 })
   }
-
-  const ip = clientIp(request)
 
   const tokenLimit = await rateLimitShared(`widget-token:${widgetToken}`, TOKEN_MAX, TOKEN_WINDOW_MS)
   if (!tokenLimit.ok) {

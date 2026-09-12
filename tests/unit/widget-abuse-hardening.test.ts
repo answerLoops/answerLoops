@@ -40,10 +40,19 @@ describe('widget chat route reuses the shared rate limiter', () => {
     expect(src).toMatch(/rateLimitShared\(`widget-ip:\$\{widgetToken\}:\$\{ip\}`, IP_TOKEN_MAX, IP_TOKEN_WINDOW_MS\)/)
   })
 
-  it('rejects with 429 when either limiter trips', () => {
+  it('also rate-limits by IP alone, ahead of the widgetToken-keyed checks', () => {
+    // Requests shaped as anything other than an agent/run call (or malformed
+    // ones) skip the token-keyed limiters entirely, since neither can key on
+    // a token that was never validated — this is the only throttle standing
+    // between that shape and an unmetered path into the runtime.
+    const src = read('app/api/widget/chat/route.ts')
+    expect(src).toMatch(/rateLimitShared\(`widget-any:\$\{ip\}`, GLOBAL_IP_MAX, GLOBAL_IP_WINDOW_MS\)/)
+  })
+
+  it('rejects with 429 when any limiter trips', () => {
     const src = read('app/api/widget/chat/route.ts')
     const matches = src.match(/status: 429/g) ?? []
-    expect(matches.length).toBe(2)
+    expect(matches.length).toBe(3)
   })
 })
 

@@ -90,6 +90,12 @@ Per-org AI keys set in **Settings → AI Model** override these env vars for tha
 | `GROQ_API_KEY` | Groq platform default |
 | `MISTRAL_API_KEY` | Mistral platform default |
 
+## Widget chat runtime (optional)
+
+| Variable | Description |
+|---|---|
+| `COPILOTKIT_TELEMETRY_DISABLED` | Opts the widget chat's CopilotKit runtime out of its telemetry ping. Defaults to `true` (set in `instrumentation.ts` before any route loads) — set it to `false` yourself if you want that telemetry on. |
+
 ## Discord (optional)
 
 | Variable | Description |
