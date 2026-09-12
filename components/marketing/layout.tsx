@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Nav, Footer, type NavState } from './chrome'
-import './marketing.css'
+import './marketing-site.css'
 
 export function MarketingPage({
   children,
@@ -43,8 +43,8 @@ export function PageHero({
 }
 
 export function TrialCta({
-  title = 'Put your documentation to work.',
-  description = 'Connect a support channel, add your knowledge, and review your first answers.',
+  title = 'Give your knowledge an answer loop.',
+  description = 'Connect your docs. Add a channel or an MCP client. Review what your agents can answer.',
 }: {
   title?: string
   description?: string
