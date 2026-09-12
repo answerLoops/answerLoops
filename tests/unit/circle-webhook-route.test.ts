@@ -73,6 +73,46 @@ describe('Circle inbound webhook route', () => {
     expect(src).not.toMatch(/import[^\n]*from '@\/lib\/circle\/send'/)
     expect(src).not.toMatch(/sendToCircle|postToCircle|createCirclePost|postCircle/)
   })
+
+  it('reads an explicit ?kind= param and treats it as authoritative over guessing', () => {
+    expect(src).toMatch(/searchParams\.get\(['"]kind['"]\)/)
+    expect(src).toContain('explicitKind')
+    // pickRecord must accept it as a second argument, not just the body.
+    expect(src).toMatch(/pickRecord\(\s*body\s*,\s*explicitKind\s*\)/)
+  })
+
+  it('does not classify a generic record as a post just because post_id is absent', () => {
+    // Known Issue #117: a comment payload nested under record/data with none
+    // of the comment-only keys used to fall through to 'post'. The fix must
+    // check more than a single hardcoded 'post_id' key.
+    expect(src).toContain('COMMENT_ONLY_KEYS')
+    const keysMatch = src.match(/COMMENT_ONLY_KEYS\s*=\s*\[([^\]]+)\]/)
+    expect(keysMatch).not.toBeNull()
+    const keys = keysMatch![1]
+    expect(keys).toMatch(/post_id/)
+    expect(keys).toMatch(/parent_id|parentId|parent_post_id/)
+  })
+
+  it('trusts body.comment / body.post directly without running them through the guess heuristic', () => {
+    const commentIdx = src.indexOf("if (body.comment) return { raw: body.comment, kind: 'comment' }")
+    const postIdx = src.indexOf("if (body.post) return { raw: body.post, kind: 'post' }")
+    const guessIdx = src.indexOf('looksLikeComment(generic, eventStr)')
+    expect(commentIdx).toBeGreaterThan(-1)
+    expect(postIdx).toBeGreaterThan(-1)
+    expect(guessIdx).toBeGreaterThan(-1)
+    expect(commentIdx).toBeLessThan(guessIdx)
+    expect(postIdx).toBeLessThan(guessIdx)
+  })
+
+  it('logs (without the secret value) when auth falls back to the query-string token', () => {
+    expect(src).toContain('headerSecret')
+    const logIdx = src.indexOf('authenticated via ?token=')
+    expect(logIdx).toBeGreaterThan(-1)
+    // The log call must never interpolate the resolved secret itself.
+    const logCallEnd = src.indexOf('})', logIdx)
+    const logCall = src.slice(logIdx - 40, logCallEnd)
+    expect(logCall).not.toMatch(/\bsecret\b(?!Secret)/)
+  })
 })
 
 describe('lib/circle/client.ts has no write path', () => {

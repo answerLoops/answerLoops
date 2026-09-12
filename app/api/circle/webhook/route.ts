@@ -20,22 +20,48 @@ interface CircleWebhookBody {
   data?: Record<string, unknown>
 }
 
-function pickRecord(body: CircleWebhookBody): { raw: Record<string, unknown>; kind: 'post' | 'comment' } | null {
-  const eventStr = `${body.event ?? ''} ${body.type ?? ''} ${body.trigger ?? ''}`.toLowerCase()
+/** Keys that only ever appear on a comment record, never on a post. */
+const COMMENT_ONLY_KEYS = ['post_id', 'postId', 'parent_id', 'parentId', 'parent_post_id']
+
+function looksLikeComment(record: Record<string, unknown>, eventStr: string): boolean {
+  if (eventStr.includes('comment')) return true
+  if (eventStr.includes('post')) return false
+  return COMMENT_ONLY_KEYS.some((key) => key in record)
+}
+
+/**
+ * Determine which record this payload carries and whether it's a post or a
+ * comment. `explicitKind` — set from the `kind` query param on the webhook
+ * URL — is authoritative when present: each Circle Workflow trigger (New
+ * post / New comment) is 1:1 with one webhook URL, so the customer's setup
+ * pins the kind structurally instead of us guessing it from payload shape.
+ * Guessing is kept only as a fallback for URLs configured before that param
+ * existed, and is inherently unreliable because the payload shape is not
+ * contractual (see comment above) — a comment nested without any of the
+ * COMMENT_ONLY_KEYS looks identical to a post.
+ */
+function pickRecord(
+  body: CircleWebhookBody,
+  explicitKind: 'post' | 'comment' | null
+): { raw: Record<string, unknown>; kind: 'post' | 'comment' } | null {
+  // body.comment / body.post are unambiguous on their own — no guessing needed.
   if (body.comment) return { raw: body.comment, kind: 'comment' }
   if (body.post) return { raw: body.post, kind: 'post' }
   const generic = body.record ?? body.data
-  if (generic) {
-    const kind = eventStr.includes('comment') || 'post_id' in generic ? 'comment' : 'post'
-    return { raw: generic, kind }
-  }
-  return null
+  if (!generic) return null
+  const eventStr = `${body.event ?? ''} ${body.type ?? ''} ${body.trigger ?? ''}`.toLowerCase()
+  const kind = explicitKind ?? (looksLikeComment(generic, eventStr) ? 'comment' : 'post')
+  return { raw: generic, kind }
 }
 
 export async function POST(req: NextRequest) {
-  // 1. Resolve the org from the per-org secret (header, or ?token= fallback for
-  //    Workflow actions that can't set custom headers).
-  const secret = req.headers.get('x-answerloops-token') ?? req.nextUrl.searchParams.get('token') ?? ''
+  // 1. Resolve the org from the per-org secret. The header is the documented,
+  //    preferred transport; ?token= only exists for Workflow actions that
+  //    can't set custom headers, and is logged (never the secret value
+  //    itself) every time it's the one actually used, so an org relying on it
+  //    is visible in its own logs rather than silently accepted.
+  const headerSecret = req.headers.get('x-answerloops-token')
+  const secret = headerSecret ?? req.nextUrl.searchParams.get('token') ?? ''
   if (!secret) {
     logger.warn('Circle webhook without token', { module: MOD })
     return new Response('Unauthorized', { status: 401 })
@@ -46,6 +72,18 @@ export async function POST(req: NextRequest) {
     logger.warn('Circle webhook token did not match a connected org', { module: MOD })
     return new Response('Unauthorized', { status: 401 })
   }
+  if (!headerSecret) {
+    logger.info('Circle webhook authenticated via ?token= query param, not the header', {
+      module: MOD,
+      orgId: integration.org_id,
+    })
+  }
+
+  // The `kind` query param pins post vs. comment per-URL — each Circle
+  // Workflow trigger (New post / New comment) is configured to post to its
+  // own URL, so this is authoritative when present. See pickRecord().
+  const kindParam = req.nextUrl.searchParams.get('kind')
+  const explicitKind = kindParam === 'post' || kindParam === 'comment' ? kindParam : null
 
   let body: CircleWebhookBody
   try {
@@ -54,7 +92,7 @@ export async function POST(req: NextRequest) {
     return new Response('Bad Request', { status: 400 })
   }
 
-  const picked = pickRecord(body)
+  const picked = pickRecord(body, explicitKind)
   if (!picked) {
     logger.info('Circle webhook with no recognizable record', { module: MOD, orgId: integration.org_id })
     return Response.json({ ok: true })

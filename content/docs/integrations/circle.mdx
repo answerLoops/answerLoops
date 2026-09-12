@@ -31,10 +31,12 @@ Click **Connect**. The card then shows a **Webhook URL** and a secret token.
 
 In Circle, go to **Settings → Workflows** and create a workflow:
 
-- **Trigger:** *New post* (create a second workflow for *New comment* the same way)
+- **Trigger:** *New post*
 - **Action:** *Send webhook*
-  - **URL:** the Webhook URL from step 2
-  - **Header:** `X-AnswerLoops-Token` = the secret from step 2 (if your Workflow action can't set headers, append `?token=<secret>` to the URL instead)
+  - **URL:** the Webhook URL from step 2, with `?kind=post` appended
+  - **Header:** `X-AnswerLoops-Token` = the secret from step 2 (use the header whenever the Workflow action supports it — if it can't set headers, append `&token=<secret>` to the URL instead)
+
+Create a second workflow the same way for **Trigger:** *New comment*, using `?kind=comment` on its URL instead. Circle's webhook payload shape isn't contractual, so `kind` tells answerLoops which one it's looking at instead of guessing from the payload.
 
 ### 4. Set an escalation user (optional)
 
@@ -56,7 +58,7 @@ Circle is configured entirely per-organization in the Settings UI. There is no c
 
 <AccordionGroup>
   <Accordion title="Posts aren't creating tickets">
-    Check the Circle Workflow is **active** and its recent runs show the webhook action succeeded. Confirm the URL matches exactly and the `X-AnswerLoops-Token` header (or `?token=` query) carries the secret shown on the Circle card. If you set **Watched space IDs**, a post in any other space is ignored on purpose — clear the field to watch everything. Posts shorter than 10 characters are skipped.
+    Check the Circle Workflow is **active** and its recent runs show the webhook action succeeded. Confirm the URL matches exactly, includes the right `?kind=post` or `?kind=comment`, and the `X-AnswerLoops-Token` header (or `token=` query param) carries the secret shown on the Circle card. If you set **Watched space IDs**, a post in any other space is ignored on purpose — clear the field to watch everything. Posts shorter than 10 characters are skipped.
   </Accordion>
   <Accordion title="Tickets are created but the content is empty or truncated">
     Circle Workflow webhook payloads vary in how much of the post body they include. answerLoops falls back to the Admin API to fetch the full body — make sure the **Admin API token** you saved is a valid **Admin V2** token and hasn't been revoked.

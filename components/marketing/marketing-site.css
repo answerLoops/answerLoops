@@ -1382,19 +1382,12 @@
   margin-top: 1.3rem;
 }
 .support-demo-thread {
-  height: auto;
+  height: 390px;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: #d4d4d4 transparent;
-}
-.support-demo-hero {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  height: min(32rem, calc(100svh - 10rem));
-  min-height: 28rem;
-  max-height: 32rem;
 }
 .support-demo-header {
   padding: 0.8rem 1rem;
@@ -1468,13 +1461,8 @@
     height: 28px;
   }
   .support-demo-thread {
-    height: auto;
+    height: 430px;
     min-height: 0;
-  }
-  .support-demo-hero {
-    height: 32rem;
-    min-height: 0;
-    max-height: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
