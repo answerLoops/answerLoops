@@ -57,7 +57,7 @@ describe('widget chat route caps input size before calling the model', () => {
   it('rejects oversized message arrays and oversized message text before the model call', () => {
     const src = read('app/api/widget/chat/route.ts')
     const capIdx = src.indexOf('messages.length > MAX_MESSAGES')
-    const oversizedIdx = src.indexOf('oversized')
+    const oversizedIdx = src.indexOf('const oversized =')
     const streamIdx = src.indexOf('widgetAgent.stream(')
     expect(capIdx).toBeGreaterThan(-1)
     expect(oversizedIdx).toBeGreaterThan(-1)

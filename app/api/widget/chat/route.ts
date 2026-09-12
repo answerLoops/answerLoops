@@ -1,5 +1,9 @@
-import { createTextStreamResponse } from 'ai'
-import type { UIMessage } from 'ai'
+import { CopilotRuntime, BuiltInAgent, createCopilotRuntimeHandler } from '@copilotkit/runtime/v2'
+import type { BuiltInAgentAISDKFactoryConfig } from '@copilotkit/runtime/v2'
+
+// Not separately exported by the package — pulled out of the one factory
+// config type that does export it, rather than duplicating its shape here.
+type AgentFactoryContext = Parameters<BuiltInAgentAISDKFactoryConfig['factory']>[0]
 import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
 import { chatModel, DEFAULT_FAST_MODEL, NoAIProviderConfiguredError } from '@/lib/ai/models'
@@ -9,8 +13,8 @@ import { getOrgByWidgetToken } from '@/lib/db/queries/widgets'
 import { getWidgetChatMemory } from '@/lib/ai/memory'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { clientIp } from '@/lib/http/client-ip'
-import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
+import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { reserveGeneration, commitDeflection, releaseGeneration } from '@/lib/billing/usage'
 import { logger } from '@/lib/logger'
 
@@ -28,14 +32,14 @@ const TOKEN_WINDOW_MS = 60_000
 const MAX_MESSAGE_CHARS = 4_000
 const MAX_MESSAGES = 50
 
+// A client-generated UUID (36 chars) is the expected shape; capped generously
+// above that so a malformed value can't be used to inflate the memory key.
+const MAX_VISITOR_ID_LEN = 100
+
 // 50 messages x 4000 chars is the largest legitimate payload; 512KB leaves room
 // for the JSON envelope. Enforced while the body streams in rather than after,
 // so the cap holds regardless of what the request claims about its length.
 const MAX_BODY_BYTES = 512 * 1024
-
-// A client-generated UUID (36 chars) is the expected shape; capped generously
-// above that so a malformed value can't be used to inflate the memory key.
-const MAX_VISITOR_ID_LEN = 100
 
 // How many knowledge-base articles are put in front of the model per answer.
 const MAX_CONTEXT_ARTICLES = 5
@@ -46,34 +50,101 @@ const MAX_CONTEXT_ARTICLES = 5
 // what it is given.
 const WIDGET_TOKEN_PATTERN = /^[0-9a-f]{48}$/
 
-// The per-part cap alone bounds nothing: every text part of the newest user
-// message is concatenated before it reaches the model, so N parts just under
-// the per-part limit multiply straight through. Both are enforced.
+// The per-part cap alone bounds nothing in principle — concatenated parts
+// could multiply straight through it — but AG-UI messages carry a single
+// `content` string, not the AI SDK's multi-part shape, so this is also the
+// whole-message cap.
 const MAX_QUERY_CHARS = MAX_MESSAGE_CHARS
 
-export async function POST(request: Request) {
+interface PendingRun {
+  org: { id: number; name: string }
+  model: Awaited<ReturnType<typeof chatModel>>
+  query: string
+  visitorId: string
+  reservationId: number
+}
+
+// Validated request context, handed from the `onRequest` hook to the AI SDK
+// factory below by reference (org rows and resolved model objects aren't
+// JSON-serializable, so they can't ride in `forwardedProps` itself — only this
+// map's key does). Entries are one-shot and self-expire so a run that never
+// reaches the factory (client disconnect, runtime error before dispatch)
+// can't leak.
+const pendingRuns = new Map<string, PendingRun>()
+const PENDING_RUN_TTL_MS = 30_000
+
+function stashPendingRun(run: PendingRun): string {
+  const requestId = crypto.randomUUID()
+  pendingRuns.set(requestId, run)
+  setTimeout(() => pendingRuns.delete(requestId), PENDING_RUN_TTL_MS)
+  return requestId
+}
+
+function takePendingRun(requestId: unknown): PendingRun | undefined {
+  if (typeof requestId !== 'string') return undefined
+  const run = pendingRuns.get(requestId)
+  pendingRuns.delete(requestId)
+  return run
+}
+
+interface RunAgentInputLike {
+  threadId?: string
+  messages?: { role?: string; content?: string }[]
+  forwardedProps?: { widgetToken?: string; visitorId?: string; requestId?: string }
+}
+
+interface SingleRouteEnvelope {
+  method?: string
+  params?: Record<string, unknown>
+  body?: RunAgentInputLike
+}
+
+function rebuildRequest(request: Request, bodyText: string): Request {
+  const headers = new Headers(request.headers)
+  headers.set('content-type', 'application/json')
+  headers.delete('content-length')
+  return new Request(request.url, {
+    method: request.method,
+    headers,
+    body: bodyText,
+    signal: request.signal,
+  })
+}
+
+async function validateAndPrepare(request: Request): Promise<Response | Request> {
   // Rejects requests that bypassed our edge proxy, before clientIp() below
   // trusts the proxy-supplied client-IP header — see lib/http/origin-guard.ts.
   // No-op until ORIGIN_VERIFY_SECRET is set.
   const originRejection = verifyOriginProxy(request)
   if (originRejection) return originRejection
 
-  // Resolved through the trusted-proxy chain rather than read from the raw
-  // header — the leftmost x-forwarded-for entry is caller-supplied, so keying
-  // the limiter on it let anyone mint a fresh bucket per request.
-  const ip = clientIp(request)
-
+  // Read (and cap) the body directly rather than via request.clone(): Node's
+  // fetch implements clone() by tee()-ing the stream, and canceling one
+  // branch — which readBodyCapped does once the cap trips — blocks forever
+  // waiting on the other, unread branch. Reading the original once and
+  // rebuilding the outgoing Request from that text avoids the tee() entirely
+  // and is also simply the request body, so nothing downstream needs it.
   const raw = await readBodyCapped(request, MAX_BODY_BYTES)
   if (raw === null) return new Response('Request body too large', { status: 413 })
 
-  let body: { messages?: unknown[]; widgetToken?: string; visitorId?: string }
+  let envelope: SingleRouteEnvelope
   try {
-    body = JSON.parse(raw || '{}')
+    envelope = JSON.parse(raw || '{}')
   } catch {
     return new Response('Invalid JSON', { status: 400 })
   }
 
-  const { messages, widgetToken, visitorId } = body
+  // Everything other than a chat run (info, thread listing, etc.) passes
+  // through as-is — this widget's client only ever issues agent/run. The
+  // original request's body is already consumed above, so this still has to
+  // be a fresh Request built from the text just read, not `request` itself.
+  if (envelope.method !== 'agent/run') return rebuildRequest(request, raw)
+
+  const body = envelope.body
+  const widgetToken = body?.forwardedProps?.widgetToken
+  const visitorId = body?.forwardedProps?.visitorId
+  const messages = body?.messages
+
   if (!widgetToken || typeof widgetToken !== 'string' || !WIDGET_TOKEN_PATTERN.test(widgetToken)) {
     return new Response('Missing widgetToken', { status: 400 })
   }
@@ -86,20 +157,22 @@ export async function POST(request: Request) {
   if (messages.length > MAX_MESSAGES) {
     return new Response('Too many messages', { status: 400 })
   }
-  // Elements are shape-checked before anything below reads into them: this is
-  // a public endpoint, so an unexpected shape must be a 400 rather than an
-  // unhandled error.
   const wellFormed = messages.every(
-    (m) =>
-      m !== null &&
-      typeof m === 'object' &&
-      typeof (m as { role?: unknown }).role === 'string' &&
-      ((m as { parts?: unknown }).parts === undefined ||
-        Array.isArray((m as { parts?: unknown }).parts))
+    (m) => m !== null && typeof m === 'object' && typeof m.role === 'string' && typeof m.content === 'string'
   )
   if (!wellFormed) {
     return new Response('Malformed messages', { status: 400 })
   }
+  // Only the newest user message is ever read below, but every message still
+  // counts toward MAX_BODY_BYTES — bounding each one here means a large
+  // earlier message can't eat most of that budget while a tiny final message
+  // sails through the query-length check on its own.
+  const oversized = messages.some((m) => (m.content as string).length > MAX_MESSAGE_CHARS)
+  if (oversized) {
+    return new Response('Message too long', { status: 400 })
+  }
+
+  const ip = clientIp(request)
 
   const tokenLimit = await rateLimitShared(`widget-token:${widgetToken}`, TOKEN_MAX, TOKEN_WINDOW_MS)
   if (!tokenLimit.ok) {
@@ -116,34 +189,16 @@ export async function POST(request: Request) {
   }
 
   // No origin allowlist here by design. This request is made from inside our
-  // own iframe, so it is same-origin to us and its Origin header is our
+  // own iframe, so it is same-origin to us and its Origin header is our own
   // hostname — the embedding page's identity is not present on it. The
   // allowlist is enforced at the iframe navigation instead (see
   // app/widget/[widgetToken]/page.tsx).
 
-  const uiMessages = messages as UIMessage[]
-  const oversized = uiMessages.some((m) =>
-    m.parts?.some((p) => p.type === 'text' && (p as { text: string }).text.length > MAX_MESSAGE_CHARS)
-  )
-  if (oversized) {
-    return new Response('Message too long', { status: 400 })
-  }
-
-  // Conversation history now lives in Mastra memory (keyed by org+visitor,
-  // below), not in the client-resent array — only the newest user message
-  // matters here. The client still sends the full array for its own local
-  // rendering; we just don't need it server-side any more.
-  const lastUserMsg = [...uiMessages].reverse().find((m) => m.role === 'user')
-  const query = lastUserMsg?.parts
-    ?.filter((p) => p.type === 'text')
-    .map((p) => (p as { type: 'text'; text: string }).text)
-    .join('') ?? ''
-
+  const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
+  const query = lastUserMsg?.content ?? ''
   if (!query.trim()) {
     return new Response('No valid messages', { status: 400 })
   }
-  // The per-part check above passes for N parts each just under the per-part
-  // cap; this bounds what actually reaches the model after concatenation.
   if (query.length > MAX_QUERY_CHARS) {
     return new Response('Message too long', { status: 400 })
   }
@@ -152,42 +207,10 @@ export async function POST(request: Request) {
   // generate_answer (MCP/Agent API). The widget's own per-token/per-IP rate
   // limits above throttle abuse rate but never enforced the org's actual
   // monthly deflection allowance, so a plan's cap was unmetered here.
-  //
-  // Deliberately placed *after* every request-validation branch: attempts are
-  // capped at a multiple of the plan's allowance, so a rejected request must
-  // not leave one behind. Everything from here on must release the reservation
-  // on any path that doesn't reach the model.
   const reservation = await reserveGeneration(org.id)
   if (!reservation.granted) {
     return new Response('Monthly usage limit reached', { status: 402 })
   }
-
-  // Published knowledge-base articles only.
-  //
-  // Ticket-derived text (resolution_notes/ai_draft) is written for the one
-  // person who raised the ticket and routinely contains specifics — names,
-  // account and order details, internal reasoning — and the model has no way
-  // to tell which parts were meant to stay internal.
-  //
-  // Promoting a resolved answer into the knowledge base is the human review
-  // step that generalises it and strips the specifics; that promotion is what
-  // makes content publicly answerable. Ticket-derived context belongs to the
-  // internal draft pipeline (lib/ingest/pipeline.ts), which is staff-facing.
-  let allContext: { summary: string; answer: string }[] = []
-
-  try {
-    const vector = await embedText(query, org.id)
-    // Was 4 of 5 slots, with the tail left for a prior answer. With that gone
-    // the KB gets the whole budget rather than the budget shrinking.
-    allContext = await getKBContext(vector, MAX_CONTEXT_ARTICLES, org.id)
-  } catch {
-    // Proceed without context if embedding fails
-  }
-  const contextBlock = allContext.length
-    ? `\n\nKnowledge base context — use this to answer. When your answer draws from one of these, end your response with a "Source:" line citing the article title:\n${allContext
-        .map((c, i) => `${i + 1}. Title: "${c.summary}"\n   Answer: ${c.answer}`)
-        .join('\n')}`
-    : ''
 
   let model: Awaited<ReturnType<typeof chatModel>>
   try {
@@ -205,6 +228,50 @@ export async function POST(request: Request) {
     }
     throw e
   }
+
+  const requestId = stashPendingRun({ org, model, query, visitorId, reservationId: reservation.generationId })
+
+  const rewritten: SingleRouteEnvelope = {
+    ...envelope,
+    body: {
+      ...body,
+      forwardedProps: { ...body?.forwardedProps, requestId },
+    },
+  }
+  return rebuildRequest(request, JSON.stringify(rewritten))
+}
+
+// Published knowledge-base articles only.
+//
+// Ticket-derived text (resolution_notes/ai_draft) is written for the one
+// person who raised the ticket and routinely contains specifics — names,
+// account and order details, internal reasoning — and the model has no way
+// to tell which parts were meant to stay internal.
+//
+// Promoting a resolved answer into the knowledge base is the human review
+// step that generalises it and strips the specifics; that promotion is what
+// makes content publicly answerable. Ticket-derived context belongs to the
+// internal draft pipeline (lib/ingest/pipeline.ts), which is staff-facing.
+async function runWidgetAgent(ctx: AgentFactoryContext) {
+  const requestId = (ctx.input.forwardedProps as { requestId?: string } | undefined)?.requestId
+  const run = takePendingRun(requestId)
+  if (!run) {
+    throw new Error('widget chat: run context expired or missing — retry the request')
+  }
+  const { org, model, query, visitorId, reservationId } = run
+
+  let allContext: { summary: string; answer: string }[] = []
+  try {
+    const vector = await embedText(query, org.id)
+    allContext = await getKBContext(vector, MAX_CONTEXT_ARTICLES, org.id)
+  } catch {
+    // Proceed without context if embedding fails
+  }
+  const contextBlock = allContext.length
+    ? `\n\nKnowledge base context — use this to answer. When your answer draws from one of these, end your response with a "Source:" line citing the article title:\n${allContext
+        .map((c, i) => `${i + 1}. Title: "${c.summary}"\n   Answer: ${c.answer}`)
+        .join('\n')}`
+    : ''
 
   // resourceId scopes memory to this org+visitor; threadId reuses the same
   // id since the widget has no "start a new conversation" affordance — a
@@ -237,15 +304,35 @@ If no article below covers the question, answer from general knowledge and do no
     // no confidence-assessment step like the MCP/ticket pipelines do, so a
     // delivered answer is the bar for what counts as a deflection here.
     onFinish: async () => {
-      await commitDeflection(org.id, reservation.generationId).catch((e) => {
+      await commitDeflection(org.id, reservationId).catch((e) => {
         logger.error('widget chat commitDeflection failed', { module: MOD, orgId: org.id, error: e })
       })
     },
   })
 
-  // Mastra's textStream is typed against Node's `stream/web` ReadableStream,
-  // not the DOM lib global `createTextStreamResponse` expects — same
-  // structurally-identical-but-nominally-distinct type gap as the
-  // MastraModelConfig cast above. Cast at this one boundary.
-  return createTextStreamResponse({ textStream: result.textStream as unknown as ReadableStream<string> })
+  // Mastra's fullStream is typed against Node's `stream/web` ReadableStream,
+  // not the DOM lib global the factory's return type expects — same
+  // structurally-identical-but-nominally-distinct type gap the old route had
+  // at its createTextStreamResponse boundary. Cast at this one boundary.
+  return { fullStream: result.fullStream as unknown as AsyncIterable<unknown> }
 }
+
+const runtime = new CopilotRuntime({
+  agents: {
+    default: new BuiltInAgent({ type: 'aisdk', factory: runWidgetAgent }),
+  },
+})
+
+const handler = createCopilotRuntimeHandler({
+  runtime,
+  mode: 'single-route',
+  hooks: {
+    onRequest: async (ctx) => {
+      const result = await validateAndPrepare(ctx.request)
+      if (result instanceof Response) throw result
+      return result
+    },
+  },
+})
+
+export const POST = handler
