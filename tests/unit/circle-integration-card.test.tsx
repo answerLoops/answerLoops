@@ -95,12 +95,13 @@ describe('CircleIntegrationCard', () => {
     expect(screen.getByPlaceholderText('https://community.example.com')).toBeTruthy()
   })
 
-  it('shows the connected view — community URL, the Circle webhook URL, and the bot_secret as the header token', async () => {
+  it('shows the connected view — community URL, the two kind-scoped Circle webhook URLs, and the bot_secret as the header token', async () => {
     mockFetch.mockResolvedValue(integrationsResponse([circleRow()]))
     render(<CircleIntegrationCard />)
 
     await waitFor(() => expect(screen.getByText('https://community.acme.com')).toBeTruthy())
-    expect(screen.getByText(/\/api\/circle\/webhook$/)).toBeTruthy()
+    expect(screen.getByText(/\/api\/circle\/webhook\?kind=post$/)).toBeTruthy()
+    expect(screen.getByText(/\/api\/circle\/webhook\?kind=comment$/)).toBeTruthy()
     expect(screen.getByText('inbound-secret-abc')).toBeTruthy()
     expect(screen.queryByText('Not connected')).toBeNull()
   })

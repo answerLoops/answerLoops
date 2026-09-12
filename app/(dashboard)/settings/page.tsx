@@ -1497,7 +1497,9 @@ export function CircleIntegrationCard() {
 
   const connected = integration !== null && integration.enabled === 1 && !!integration.team_id
   const showForm = !connected || editing
-  const webhookUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/circle/webhook` : '/api/circle/webhook'
+  const webhookBase = typeof window !== 'undefined' ? `${window.location.origin}/api/circle/webhook` : '/api/circle/webhook'
+  const postWebhookUrl = `${webhookBase}?kind=post`
+  const commentWebhookUrl = `${webhookBase}?kind=comment`
 
   return (
     <>
@@ -1542,13 +1544,17 @@ export function CircleIntegrationCard() {
               <p>
                 Circle is <span className="font-medium">ingest-only</span> — new posts and comments become tickets with an AI draft, but nothing is posted back to Circle automatically. A reviewer copies the answer into Circle by hand.
               </p>
-              <p className="font-medium">In Circle → Settings → Workflows, create a workflow (trigger: <span className="font-mono">New post</span> / <span className="font-mono">New comment</span>, action: <span className="font-mono">Send webhook</span>) with:</p>
+              <p className="font-medium">In Circle → Settings → Workflows, create two workflows (action: <span className="font-mono">Send webhook</span> on both) so answerLoops knows which is which:</p>
               <div>
-                <p className="text-violet-700/70">Webhook URL</p>
-                <p className="font-mono break-all select-all text-violet-900">{webhookUrl}</p>
+                <p className="text-violet-700/70">Trigger <span className="font-mono">New post</span> → Webhook URL</p>
+                <p className="font-mono break-all select-all text-violet-900">{postWebhookUrl}</p>
               </div>
               <div>
-                <p className="text-violet-700/70">Header <span className="font-mono">X-AnswerLoops-Token</span></p>
+                <p className="text-violet-700/70">Trigger <span className="font-mono">New comment</span> → Webhook URL</p>
+                <p className="font-mono break-all select-all text-violet-900">{commentWebhookUrl}</p>
+              </div>
+              <div>
+                <p className="text-violet-700/70">Header (on both) <span className="font-mono">X-AnswerLoops-Token</span></p>
                 <p className="font-mono break-all select-all text-violet-900">{integration.bot_secret ?? '— (re-save to generate)'}</p>
               </div>
             </div>
