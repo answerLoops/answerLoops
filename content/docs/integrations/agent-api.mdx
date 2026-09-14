@@ -22,6 +22,24 @@ Uses the same API key as the MCP server — one key works for both surfaces.
 
 A full machine-readable spec is published at both `/openapi.json` and `/api/agent/openapi.json` (identical) — point any OpenAPI-aware client generator at either. For a per-endpoint parameter reference generated directly from that spec, see the [Agent API Reference](/docs/reference/api/overview).
 
+## Node / TypeScript SDK
+
+For Node and browser callers, [`@answerloops/agent-sdk`](https://www.npmjs.com/package/@answerloops/agent-sdk) is a typed client over these same five endpoints — no need to hand-roll `fetch` calls or generate a client from the OpenAPI spec yourself.
+
+```bash
+npm install @answerloops/agent-sdk
+```
+
+```ts
+import { AgentClient } from "@answerloops/agent-sdk";
+
+const client = new AgentClient({ apiKey: process.env.ANSWERLOOPS_API_KEY! });
+
+const { results } = await client.searchKb({ query: "how do I reset my api key" });
+```
+
+Point `baseUrl` at your own instance for self-hosted deployments. The raw endpoints below still apply for any other language or runtime.
+
 ## Scopes
 
 Every key carries a set of least-privilege scopes. Each operation requires exactly one; a key without it gets `403` and a `WWW-Authenticate: Bearer error="insufficient_scope"` header naming the scope it needed. The MCP server enforces the same scopes on the matching tool.
