@@ -385,6 +385,11 @@ describe('checkout webhook: events that are not a first subscription send nothin
   it('does not welcome on subscription lifecycle events', async () => {
     getOrgOwner.mockResolvedValue({ email: 'ada@example.com', name: 'Ada' })
 
+    // current_period_start/end deliberately live under items.data[0], not at
+    // the top level — matching real Stripe payloads. A fixture with those
+    // fields at the top level (the old shape here) would mask the bug this
+    // exact shape once caused: see 'reads current_period_start/end from the
+    // subscription item' below.
     await post({
       id: 'evt_sub_updated',
       type: 'customer.subscription.updated',
@@ -396,10 +401,14 @@ describe('checkout webhook: events that are not a first subscription send nothin
           status: 'active',
           customer: 'cus_test',
           cancel_at_period_end: false,
-          current_period_start: 1_700_000_000,
-          current_period_end: 1_702_000_000,
           trial_end: null,
-          items: { data: [{ price: { id: 'price_unmapped' } }] },
+          items: {
+            data: [{
+              price: { id: 'price_unmapped' },
+              current_period_start: 1_700_000_000,
+              current_period_end: 1_702_000_000,
+            }],
+          },
         },
       },
     })
