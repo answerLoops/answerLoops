@@ -14,12 +14,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  */
 
 const createSession = vi.fn()
-const getOrCreateCustomer = vi.fn(async () => 'cus_test')
 const getSubscription = vi.fn(async () => null)
 
 vi.mock('@/lib/billing/stripe', () => ({
   getStripe: () => ({ checkout: { sessions: { create: createSession } } }),
-  getOrCreateCustomer,
 }))
 vi.mock('@/lib/db/queries/billing', () => ({ getSubscription }))
 vi.mock('@/lib/logger', () => ({
