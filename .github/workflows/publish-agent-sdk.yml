@@ -53,10 +53,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       # OIDC trusted publishing needs npm >=11.5.1; Node 22's bundled npm can
-      # lag behind that. Pinned to an exact version rather than @latest so
-      # this step isn't installing an unreviewed, unlocked package on every
-      # run of a privileged publish job.
-      - run: npm install -g npm@12.0.2
+      # lag behind that. Pinned to an exact version rather than @latest, which
+      # is the actual mitigation zizmor's adhoc-packages audit is checking
+      # for — it still flags any `npm install -g`, pinned or not, since it
+      # can't distinguish the two statically.
+      - run: npm install -g npm@12.0.2 # zizmor: ignore[adhoc-packages]
 
       # Refuses to publish a tag that doesn't match the version actually
       # committed to package.json — catches a stale tag pushed against the
