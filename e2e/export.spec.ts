@@ -44,8 +44,11 @@ test.describe('export: leads CSV', () => {
 
     const text = await res.text()
     const headers = text.split('\n')[0]
+    // Leads only ever capture an email + widget token — there's no name field.
+    expect(headers).toContain('id')
     expect(headers).toContain('email')
-    expect(headers).toContain('name')
+    expect(headers).toContain('widget_token')
+    expect(headers).toContain('created_at')
   })
 
   test('requires authentication', async () => {

@@ -7,7 +7,7 @@ import { waitFor } from './helpers'
 
 test.describe('team: invite flow', () => {
   test('owner can invite a new member via settings', async ({ page }) => {
-    await page.goto('/settings')
+    await page.goto('/settings?tab=team')
 
     // Find the invite form — scoped to the Team section
     const inviteEmail = page.locator('input[name="email"][type="email"]').first()
@@ -16,16 +16,16 @@ test.describe('team: invite flow', () => {
     await page.getByRole('button', { name: /send invite/i }).click()
 
     // Invite URL is shown after submission (email not sent in test env)
-    await expect(page.getByText(/invite|invited/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/copied to clipboard/i)).toBeVisible({ timeout: 10_000 })
   })
 
   test('invite appears in pending list', async ({ page, request }) => {
-    await page.goto('/settings')
+    await page.goto('/settings?tab=team')
 
     const inviteEmail = page.locator('input[name="email"][type="email"]').first()
     await inviteEmail.fill('pending@example.com')
     await page.getByRole('button', { name: /send invite/i }).click()
-    await expect(page.getByText(/invite|invited/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/copied to clipboard/i)).toBeVisible({ timeout: 10_000 })
 
     // Verify via API that the invite was created
     const invites = (await request.get('/api/team/invites').then((r) => r.json())) as Array<{
@@ -37,11 +37,11 @@ test.describe('team: invite flow', () => {
   test('invite page shows accept UI for valid token', async ({ page, request }) => {
     // Seed invite via API (direct DB seed via global-setup left the invitation table clean,
     // so create one here through the settings action)
-    await page.goto('/settings')
+    await page.goto('/settings?tab=team')
     const inviteEmail = page.locator('input[name="email"][type="email"]').first()
     await inviteEmail.fill('acceptme@example.com')
     await page.getByRole('button', { name: /send invite/i }).click()
-    await expect(page.getByText(/invite|invited/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/copied to clipboard/i)).toBeVisible({ timeout: 10_000 })
 
     // Fetch the token from API
     const invites = (await request.get('/api/team/invites').then((r) => r.json())) as Array<{
@@ -63,11 +63,11 @@ test.describe('team: invite flow', () => {
   })
 
   test('owner can revoke a pending invite', async ({ page, request }) => {
-    await page.goto('/settings')
+    await page.goto('/settings?tab=team')
     const inviteEmail = page.locator('input[name="email"][type="email"]').first()
     await inviteEmail.fill('torevoke@example.com')
     await page.getByRole('button', { name: /send invite/i }).click()
-    await expect(page.getByText(/invite|invited/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(/copied to clipboard/i)).toBeVisible({ timeout: 10_000 })
 
     // Find and click revoke
     await page.reload()
@@ -88,7 +88,7 @@ test.describe('team: invite flow', () => {
 
 test.describe('team: members list', () => {
   test('settings page shows seeded owner', async ({ page }) => {
-    await page.goto('/settings')
+    await page.goto('/settings?tab=team')
     await expect(page.getByText('Test Staff')).toBeVisible()
     await expect(page.getByText(/owner/i).first()).toBeVisible()
   })

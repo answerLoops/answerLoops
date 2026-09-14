@@ -9,15 +9,10 @@ test.describe('settings: AI config', () => {
   })
 
   test('can update chat model and it persists', async ({ page, request }) => {
-    await page.goto('/settings')
+    await page.goto('/settings?tab=ai')
 
     // Find the chat model field
     const modelInput = page.locator('input[name="chatModel"], select[name="chatModel"]').first()
-    if (!(await modelInput.isVisible())) {
-      // AI config section may need expanding or scrolling
-      const aiSection = page.getByText(/AI (configuration|config)/i).first()
-      await aiSection.scrollIntoViewIfNeeded()
-    }
 
     if (await modelInput.isVisible()) {
       await modelInput.fill('gpt-4o-mini')
@@ -66,7 +61,7 @@ test.describe('settings: SLA config', () => {
 
 test.describe('settings: GitHub repos', () => {
   test('shows seeded repo', async ({ page }) => {
-    await page.goto('/settings')
+    await page.goto('/settings?tab=github')
     await expect(page.getByText('acme/demo')).toBeVisible()
   })
 })

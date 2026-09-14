@@ -16,10 +16,16 @@ const baseSecurityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   // Don't send full referrer to third-party origins
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  // Disable browser features this app never uses
+  // Disable browser features this app never uses. `payment` is the
+  // exception: Stripe's embedded Checkout iframe (js.stripe.com) needs the
+  // Payment Request API to initialize its own UI, even for plain card entry
+  // — with payment=() disabled outright, the iframe mounts but silently
+  // renders nothing, no error surfaced anywhere, on both the account's test
+  // and live Stripe keys. Allowing self + Stripe's origin here is what lets
+  // that delegation reach the iframe at all.
   {
     key: 'Permissions-Policy',
-    value: 'camera=(), microphone=(), geolocation=(), payment=()',
+    value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")',
   },
   // Force HTTPS for 2 years once visited over HTTPS (prod only — ignored over HTTP)
   {

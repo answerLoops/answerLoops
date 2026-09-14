@@ -57,8 +57,11 @@ test.describe('knowledge gaps page', () => {
     await expect(page.getByText('✓ In knowledge base')).toBeVisible()
 
     await page.goto('/knowledge-gaps')
-    // The promoted ticket should no longer appear
-    const gapLinks = page.getByRole('link', { name: /configure the client/i })
-    await expect(gapLinks).toHaveCount(0)
+    // The promoted ticket should no longer appear. Scoped to this ticket's
+    // own link rather than matching on content text: other tests in this
+    // suite ingest the same wording and leave their tickets resolved-but-
+    // unpromoted, so a text match alone can still find gap links left over
+    // from them.
+    await expect(page.locator(`a[href="/tickets/${ticketId}"]`)).toHaveCount(0)
   })
 })

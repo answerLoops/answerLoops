@@ -31,19 +31,3 @@ export async function cancelSubscriptionImmediately(stripeSubscriptionId: string
     throw err
   }
 }
-
-export async function getOrCreateCustomer(orgId: number, email: string, name: string): Promise<string> {
-  const stripe = getStripe()
-  const existing = await stripe.customers.search({
-    query: `metadata['org_id']:'${orgId}'`,
-    limit: 1,
-  })
-  if (existing.data.length > 0) return existing.data[0].id
-
-  const customer = await stripe.customers.create({
-    email,
-    name,
-    metadata: { org_id: String(orgId) },
-  })
-  return customer.id
-}

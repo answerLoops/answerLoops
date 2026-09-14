@@ -2,11 +2,9 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 
 const createSession = vi.fn()
 const getSubscription = vi.fn()
-const getOrCreateCustomer = vi.fn()
 
 vi.mock('@/lib/billing/stripe', () => ({
   getStripe: () => ({ checkout: { sessions: { create: createSession } } }),
-  getOrCreateCustomer,
 }))
 vi.mock('@/lib/db/queries/billing', () => ({ getSubscription }))
 vi.mock('@/lib/logger', () => ({
@@ -24,7 +22,6 @@ beforeEach(() => {
   createSession.mockReset()
   createSession.mockResolvedValue({ url: 'https://checkout.stripe.test/session' })
   getSubscription.mockResolvedValue(null)
-  getOrCreateCustomer.mockReset()
   process.env.STRIPE_PRICE_STANDARD = 'price_standard_test'
 })
 
@@ -34,7 +31,6 @@ describe('new checkout customer lifecycle', () => {
 
     await createCheckoutSession(42, 'standard', 'owner@example.com', 'Owner')
 
-    expect(getOrCreateCustomer).not.toHaveBeenCalled()
     expect(createSession).toHaveBeenCalledWith(
       expect.objectContaining({ customer_email: 'owner@example.com' }),
       { idempotencyKey: 'checkout:42:standard:monthly' },
@@ -48,7 +44,6 @@ describe('new checkout customer lifecycle', () => {
 
     await createCheckoutSession(42, 'standard', 'owner@example.com', 'Owner')
 
-    expect(getOrCreateCustomer).not.toHaveBeenCalled()
     expect(createSession).toHaveBeenCalledWith(
       expect.objectContaining({ customer: 'cus_existing' }),
       { idempotencyKey: 'checkout:42:standard:monthly' },
@@ -62,7 +57,6 @@ describe('new checkout customer lifecycle', () => {
     createSession.mockResolvedValue({ client_secret: 'cs_test_secret' })
     await createEmbeddedCheckoutSession(42, 'standard', 'owner@example.com', 'Owner')
 
-    expect(getOrCreateCustomer).not.toHaveBeenCalled()
     expect(createSession).toHaveBeenCalledWith(
       expect.objectContaining({ customer_email: 'owner@example.com' }),
       { idempotencyKey: 'checkout:42:standard:monthly' },

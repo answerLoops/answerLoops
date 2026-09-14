@@ -74,9 +74,12 @@ test.describe('widget: /api/widget/chat', () => {
   })
 
   test('returns 404 for invalid widget token', async ({ request }) => {
+    // Well-formed (48 hex chars, matches WIDGET_TOKEN_PATTERN) but not one
+    // any org has — a malformed token is rejected as 400 before the DB
+    // lookup that would return 404 ever runs.
     const res = await request.post('/api/widget/chat', {
       data: chatEnvelope({
-        widgetToken: 'not-a-real-token',
+        widgetToken: 'f'.repeat(48),
         visitorId: 'e2e-visitor-invalid-token',
         messages: [chatMsg('hello')],
       }),
@@ -171,8 +174,10 @@ test.describe('widget: /api/widget/lead', () => {
   })
 
   test('returns 404 for invalid widget token', async ({ request }) => {
+    // Same reasoning as the /chat variant above: needs to pass the
+    // well-formed-token check to reach the DB lookup that 404s.
     const res = await request.post('/api/widget/lead', {
-      data: { widgetToken: 'fake-token', email: 'user@example.com' },
+      data: { widgetToken: 'f'.repeat(48), email: 'user@example.com' },
     })
     expect(res.status()).toBe(404)
   })

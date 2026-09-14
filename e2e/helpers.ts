@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import path from 'path'
-import type { APIRequestContext, Page, Route } from '@playwright/test'
+import type { APIRequestContext } from '@playwright/test'
 
 export const FIXTURES_DIR = path.join(__dirname, 'fixtures')
 
@@ -112,24 +112,16 @@ export async function waitForTicketField(
 // Discord API mock helpers
 // ---------------------------------------------------------------------------
 
+// Mirrors the MOCK_EXTERNALS mock in app/api/discord/guilds/route.ts. Kept in
+// sync manually rather than imported from there — these constants describe
+// what the test expects to see, that route describes what it returns, and a
+// shared import would hide a drift between the two behind a green test
+// instead of surfacing it as a mismatch.
 export const MOCK_GUILD = { id: 'guild-1', name: 'Test Server' }
 export const MOCK_CHANNELS = [
   { id: 'ch-general', name: 'general', type: 0 },
   { id: 'ch-support', name: 'support', type: 0 },
 ]
-
-/**
- * Intercepts outbound Discord API calls made server-side from /api/discord/guilds.
- * Must be called before the page/request action that triggers the route.
- */
-export async function mockDiscordApi(page: Page): Promise<void> {
-  await page.route('https://discord.com/api/v10/users/@me/guilds', (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([MOCK_GUILD]) })
-  )
-  await page.route(`https://discord.com/api/v10/guilds/${MOCK_GUILD.id}/channels`, (route: Route) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(MOCK_CHANNELS) })
-  )
-}
 
 // ---------------------------------------------------------------------------
 // KB source helpers

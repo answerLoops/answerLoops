@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test'
 import { ingest, waitForPipeline } from './helpers'
 
-interface SimulationResult {
+interface SimDoneEvent {
+  type: 'done'
   config: { count: number; model: string; threshold: number }
   results: Array<{ id: number; match: boolean; simConfidence: number }>
-  summary: { total: number; deflected: number; accuracy: number }
+  summary: { total: number; matchRate: number }
 }
 
 // Simulation: run against seeded tickets, verify result structure.
@@ -12,7 +13,7 @@ interface SimulationResult {
 test.describe('simulation', () => {
   test('simulation page renders', async ({ page }) => {
     await page.goto('/simulation')
-    await expect(page.getByRole('heading', { name: /simulation/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Simulation Mode' })).toBeVisible()
   })
 
   test('POST /api/simulation/run returns results for seeded tickets', async ({ request }) => {
@@ -26,13 +27,20 @@ test.describe('simulation', () => {
     })
     expect(res.ok()).toBeTruthy()
 
-    const body = (await res.json()) as SimulationResult
+    // The route streams newline-delimited JSON progress events, not a single
+    // JSON body — the result this test cares about is the final 'done' event.
+    const text = await res.text()
+    const events = text.trim().split('\n').map((line) => JSON.parse(line) as { type: string })
+    const done = events.find((e) => e.type === 'done') as SimDoneEvent | undefined
+    expect(done).toBeDefined()
+    const body = done!
+
     expect(body.config.count).toBe(2)
     expect(Array.isArray(body.results)).toBe(true)
     expect(typeof body.summary.total).toBe('number')
-    expect(typeof body.summary.accuracy).toBe('number')
-    expect(body.summary.accuracy).toBeGreaterThanOrEqual(0)
-    expect(body.summary.accuracy).toBeLessThanOrEqual(1)
+    expect(typeof body.summary.matchRate).toBe('number')
+    expect(body.summary.matchRate).toBeGreaterThanOrEqual(0)
+    expect(body.summary.matchRate).toBeLessThanOrEqual(1)
   })
 
   test('rejects count out of range', async ({ request }) => {
