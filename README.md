@@ -90,6 +90,28 @@ The pipeline lives in [`lib/ingest/pipeline.ts`](./lib/ingest/pipeline.ts). Each
 
 ## Run it locally
 
+### Run the published image
+
+No clone and no local build — the container is published to GHCR on every tagged release, and one image serves both the app and the channel listener:
+
+```bash
+curl -O https://raw.githubusercontent.com/answerLoops/answerLoops/main/docker-compose.ghcr.yml
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+Needs a `.env` alongside it with, at minimum, a `DATABASE_URL` pointing at a Postgres instance — see [self-hosting](https://answerloops.com/docs/quickstart-self-host) for the full list. Images are built natively for `amd64` and `arm64`, so Apple Silicon and ARM servers don't run under emulation.
+
+`latest` tracks the most recent tagged release. To pin an exact version instead:
+
+```bash
+ANSWERLOOPS_IMAGE=ghcr.io/answerloops/answerloops:0.5.0 \
+  docker compose -f docker-compose.ghcr.yml up -d
+```
+
+Building from source instead is the path below, and the one to take if you intend to modify the code.
+
+### Build from source
+
 Docker Compose is the quickest way to get everything up. It starts the Next.js app, the channel listener, and PostgreSQL, and runs the Drizzle migrations for you.
 
 ### Prerequisites
