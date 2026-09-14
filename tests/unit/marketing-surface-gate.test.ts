@@ -29,11 +29,11 @@ vi.mock('@/lib/docs/source', () => ({
 
 const ORIGINAL_MODE = process.env.DEPLOYMENT_MODE
 
-async function fresh<T>(mode: string | undefined, load: () => Promise<T>): Promise<T> {
+async function fresh<T>(mode: string | undefined, load: () => Promise<{ default: T }>): Promise<T> {
   if (mode === undefined) delete process.env.DEPLOYMENT_MODE
   else process.env.DEPLOYMENT_MODE = mode
-  const { default: mod } = (await load()) as { default: unknown }
-  return mod as T
+  const { default: mod } = await load()
+  return mod
 }
 
 beforeEach(() => {
@@ -75,11 +75,8 @@ describe('marketingSiteEnabled is off unless this is the managed deployment', ()
 
 describe('robots.txt does not invite crawlers onto a self-hosted install', () => {
   it('disallows the whole origin and offers no sitemap when not cloud', async () => {
-    const robots = await fresh<() => { rules: unknown; sitemap?: string }>(
-      undefined,
-      () => import('@/app/robots'),
-    )
-    const out = robots()
+    const robots = await fresh<() => unknown>(undefined, () => import('@/app/robots'))
+    const out = robots() as { rules: unknown; sitemap?: unknown }
 
     expect(out.rules).toEqual({ userAgent: '*', disallow: '/' })
     expect(
@@ -89,11 +86,8 @@ describe('robots.txt does not invite crawlers onto a self-hosted install', () =>
   })
 
   it('allows crawling and points at our sitemap on the managed deployment', async () => {
-    const robots = await fresh<() => { rules: { allow?: string; disallow?: string[] }; sitemap?: string }>(
-      'cloud',
-      () => import('@/app/robots'),
-    )
-    const out = robots()
+    const robots = await fresh<() => unknown>('cloud', () => import('@/app/robots'))
+    const out = robots() as { rules: { allow?: unknown; disallow?: unknown }; sitemap?: unknown }
 
     expect(out.rules.allow).toBe('/')
     expect(out.sitemap).toBe('https://answerloops.com/sitemap.xml')
@@ -130,10 +124,50 @@ describe('the marketing pages themselves are gated', () => {
     expect(src).toContain("if (!marketingSiteEnabled()) redirect('/dashboard')")
   })
 
-  it('404s the pricing and comparison pages when not cloud', async () => {
-    for (const file of ['app/pricing/page.tsx', 'app/vs/chatbase/page.tsx', 'app/vs/intercom/page.tsx']) {
+  it('404s every marketing page when not cloud', async () => {
+    // Every page under STATIC_ROUTES in app/sitemap.ts except the root
+    // redirect above — the sitemap list is the source of truth for what
+    // counts as a marketing page, so a new one added there and left ungated
+    // would otherwise slip through unnoticed.
+    const files = [
+      'app/pricing/page.tsx',
+      'app/about/page.tsx',
+      'app/agentic-support/page.tsx',
+      'app/blog/page.tsx',
+      'app/blog/managing-every-community-platform-from-one-place/page.tsx',
+      'app/architecture/page.tsx',
+      'app/discord-github-support/page.tsx',
+      'app/mcp-support-agents/page.tsx',
+      'app/open-source-support/page.tsx',
+      'app/alternatives/page.tsx',
+      'app/self-hosted-ai-support/page.tsx',
+      'app/self-hosting-proof/page.tsx',
+      'app/support-example/page.tsx',
+      'app/support-workflow/page.tsx',
+      'app/vs/chatbase/page.tsx',
+      'app/vs/intercom/page.tsx',
+      'app/vs/plain/page.tsx',
+      'app/vs/pylon/page.tsx',
+      'app/vs/zendesk-ai/page.tsx',
+    ]
+    for (const file of files) {
       const src = await read(file)
       expect(src, `${file} must be gated`).toContain('if (!marketingSiteEnabled()) notFound()')
+    }
+  })
+
+  it('every STATIC_ROUTES entry in the sitemap (other than the root and legal pages) has a matching gated page file', async () => {
+    // Catches the actual failure mode this test exists to prevent: a new
+    // marketing page added to the sitemap without ever being wired into this
+    // list above.
+    const sitemapSrc = await read('app/sitemap.ts')
+    const pathMatches = [...sitemapSrc.matchAll(/path:\s*'([^']*)'/g)].map((m) => m[1])
+    const exempt = new Set(['', '/privacy', '/terms']) // root redirects rather than 404s; legal pages stay reachable everywhere
+    const marketingPaths = pathMatches.filter((p) => !exempt.has(p))
+    for (const path of marketingPaths) {
+      const file = `app${path}/page.tsx`
+      const src = await read(file)
+      expect(src, `${file} (sitemap path ${path}) must be gated`).toContain('if (!marketingSiteEnabled()) notFound()')
     }
   })
 

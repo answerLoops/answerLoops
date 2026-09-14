@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { ProofPage } from '@/components/marketing/proof-page'
 import { resolveNavState } from '@/lib/marketing/nav-state'
 import { AnimatedChat } from '@/components/animated-chat'
+import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
@@ -12,6 +14,10 @@ export const metadata: Metadata = {
 }
 
 export default async function SupportExamplePage() {
+  // Not served by a self-hosted install: there is no hosted plan to sell there,
+  // and the page would be advertising our pricing from somebody else's domain.
+  if (!marketingSiteEnabled()) notFound()
+
   return (
     <ProofPage
       navState={await resolveNavState()}
