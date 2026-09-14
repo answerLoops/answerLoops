@@ -47,4 +47,4 @@ try {
 
 ## License
 
-MIT
+[AGPL-3.0](./LICENSE)

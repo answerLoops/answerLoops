@@ -1,8 +1,8 @@
 {
   "name": "@answerloops/agent-sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Typed client for the answerLoops Agent API (knowledge base search, FAQ, tickets, grounded answers).",
-  "license": "MIT",
+  "license": "AGPL-3.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -15,7 +15,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
   "sideEffects": false,
   "publishConfig": {
