@@ -42,6 +42,14 @@ function resolveTestDatabaseUrl(): string {
 
 export const TEST_ENV = {
   DATABASE_URL: resolveTestDatabaseUrl(),
+  // Pinned for the same reason AUTH_SECRET/BOT_SECRET are pinned below: Next
+  // only fills a var from .env when it's not already in the spawned process's
+  // env, so leaving this unset lets a developer's real .env (DEPLOYMENT_MODE=
+  // cloud, a live Stripe key) leak into the webServer process. That flips
+  // auth.ts's product-access gate on for every non-exempt route, and since
+  // global-setup.ts seeds no `subscriptions` row, the whole suite gets
+  // redirected to /checkout/start-trial instead of testing the app.
+  DEPLOYMENT_MODE: 'self-hosted',
   MOCK_EXTERNALS: '1',
   BOT_SECRET: 'test-bot-secret',
   AUTH_SECRET: 'test-auth-secret',

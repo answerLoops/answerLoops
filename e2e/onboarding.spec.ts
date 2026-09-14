@@ -6,11 +6,12 @@ import { test, expect } from '@playwright/test'
 test.describe('onboarding wizard', () => {
   test('renders step 1: workspace name', async ({ page }) => {
     await page.goto('/onboarding')
-    // Progress bar shows 4 steps
-    await expect(page.getByText('Workspace')).toBeVisible()
-    await expect(page.getByText('Connect')).toBeVisible()
-    await expect(page.getByText('Seed KB')).toBeVisible()
-    await expect(page.getByText('Go live')).toBeVisible()
+    // Progress bar shows 4 steps. Exact match: "Workspace" is also a
+    // substring of the step-1 heading, intro paragraph, and field label.
+    await expect(page.getByText('Workspace', { exact: true })).toBeVisible()
+    await expect(page.getByText('Connect', { exact: true })).toBeVisible()
+    await expect(page.getByText('Seed KB', { exact: true })).toBeVisible()
+    await expect(page.getByText('Go live', { exact: true })).toBeVisible()
     // Step 1 name input
     await expect(page.locator('input[name="name"]')).toBeVisible()
   })
@@ -29,7 +30,12 @@ test.describe('onboarding wizard', () => {
     const nameInput = page.locator('input[name="name"]')
     await nameInput.clear()
     await page.getByRole('button', { name: /continue|next|save/i }).first().click()
-    await expect(page.getByText(/required|enter a name|name is/i)).toBeVisible()
+    // The name field is a native `required` input — the browser blocks
+    // submission itself (no custom error text is rendered), so the
+    // observable effect is that the field fails constraint validation and
+    // the form never advances past step 1.
+    await expect(nameInput).toHaveJSProperty('validity.valueMissing', true)
+    await expect(nameInput).toBeVisible()
   })
 
   test('step 2: shows platform options (Discord + Slack)', async ({ page }) => {
@@ -77,22 +83,24 @@ test.describe('onboarding wizard', () => {
     // Step 1
     await page.locator('input[name="name"]').fill('Test Workspace')
     await page.getByRole('button', { name: /continue|next|save/i }).first().click()
-    // Step 2 — skip
+    // Step 2 — skip. `expect().toBeVisible()` retries until the button
+    // actually renders; a plain `isVisible()` snapshot check here raced the
+    // step transition and was intermittently false right after navigation.
     await expect(page.getByText(/discord|slack|connect/i).first()).toBeVisible({ timeout: 8_000 })
-    let skipBtn = page.getByRole('button', { name: /skip/i })
-    if (await skipBtn.isVisible()) {
-      await skipBtn.click()
-    }
+    const skipStep2 = page.getByRole('button', { name: /skip/i })
+    await expect(skipStep2).toBeVisible({ timeout: 8_000 })
+    await skipStep2.click()
+
     // Step 3 — skip
     await expect(page.getByText(/seed|knowledge|upload|import/i).first()).toBeVisible({ timeout: 8_000 })
-    skipBtn = page.getByRole('button', { name: /skip/i })
-    if (await skipBtn.isVisible()) {
-      await skipBtn.click()
-      // Done step
-      await expect(
-        page.getByText(/all set|you.?re live|go to dashboard|what.?s next/i).first()
-      ).toBeVisible({ timeout: 8_000 })
-    }
+    const skipStep3 = page.getByRole('button', { name: /skip/i })
+    await expect(skipStep3).toBeVisible({ timeout: 8_000 })
+    await skipStep3.click()
+
+    // Done step
+    await expect(
+      page.getByText(/all set|you.?re live|go to dashboard|what.?s next/i).first()
+    ).toBeVisible({ timeout: 8_000 })
   })
 
   test('done step has go to dashboard link', async ({ page }) => {

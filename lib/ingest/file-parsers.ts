@@ -1,6 +1,19 @@
+import path from 'path'
 import { PDFParse } from 'pdf-parse'
 import mammoth from 'mammoth'
 import { parse as csvParse } from 'csv-parse/sync'
+
+// pdf-parse (via pdfjs-dist) parses on a worker thread it loads with a plain
+// dynamic `import()` of GlobalWorkerOptions.workerSrc. Left unset, that
+// defaults to a bare "./pdf.worker.mjs" relative to wherever pdfjs's own
+// bundled chunk ends up — which Turbopack's server build does not carry the
+// actual worker file to, so the import 404s at request time with "Setting up
+// fake worker failed". Pointing it at the real file's on-disk path (computed
+// at runtime, not a literal Turbopack could try to bundle-resolve itself)
+// fixes it for both `next dev` and the standalone server build.
+PDFParse.setWorker(
+  path.join(process.cwd(), 'node_modules/pdf-parse/dist/worker/pdf.worker.mjs')
+)
 
 export type SupportedFileType = 'pdf' | 'docx' | 'md' | 'txt' | 'csv'
 
