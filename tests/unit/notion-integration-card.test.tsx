@@ -76,17 +76,29 @@ function connection(overrides: Record<string, unknown> = {}) {
   }
 }
 
-// sync-kb also starts with "/api/notion", so match it first.
+// sync-kb also starts with "/api/notion", so match it first. Sync is a
+// queue-and-poll flow: POST /api/notion/sync-kb enqueues, then
+// /api/kb/sync-jobs?kind=notion is polled until it reports a terminal
+// status — the mock's job status resolves to "succeeded" immediately so
+// tests don't have to wait through the real 2.5s poll interval.
 function routeFetch({
   conn = null,
-  sync = { synced: 0 },
+  enqueueError,
+  job = { status: 'succeeded', detail: 'Synced 0 chunks from Notion', syncedCount: 0, progress: 0, total: 0 },
 }: {
   conn?: unknown
-  sync?: { synced?: number; truncated?: boolean; error?: string }
+  enqueueError?: string
+  job?: { status: string; detail: string | null; syncedCount?: number; progress?: number; total?: number }
 } = {}) {
   return vi.fn((url: string) => {
     if (url.startsWith('/api/notion/sync-kb')) {
-      return Promise.resolve({ ok: true, json: async () => sync })
+      if (enqueueError) {
+        return Promise.resolve({ ok: false, json: async () => ({ error: enqueueError }) })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({ jobId: 1, status: 'queued', alreadyQueued: false }) })
+    }
+    if (url.startsWith('/api/kb/sync-jobs')) {
+      return Promise.resolve({ ok: true, json: async () => job })
     }
     if (url.startsWith('/api/notion')) {
       return Promise.resolve({ ok: true, json: async () => ({ connection: conn }) })
@@ -134,8 +146,10 @@ describe('NotionIntegrationCard', () => {
     await waitFor(() => expect(saveNotionConnectionAction).toHaveBeenCalled())
   })
 
-  it('"Sync now" hits /api/notion/sync-kb and toasts the chunk count', async () => {
-    mockFetch.mockImplementation(routeFetch({ conn: connection(), sync: { synced: 5 } }))
+  it('"Sync now" enqueues via POST, polls the job, and toasts its detail message', async () => {
+    mockFetch.mockImplementation(
+      routeFetch({ conn: connection(), job: { status: 'succeeded', detail: 'Synced 5 chunks from Notion', syncedCount: 5 } }),
+    )
 
     const user = userEvent.setup()
     render(<NotionIntegrationCard />)
@@ -143,12 +157,21 @@ describe('NotionIntegrationCard', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: /sync now/i })).toBeTruthy())
     await user.click(screen.getByRole('button', { name: /sync now/i }))
 
-    await waitFor(() => expect(screen.getByText('Synced 5 chunks')).toBeTruthy())
-    expect(mockFetch).toHaveBeenCalledWith('/api/notion/sync-kb')
+    await waitFor(() => expect(screen.getByText('Synced 5 chunks from Notion')).toBeTruthy())
+    expect(mockFetch).toHaveBeenCalledWith('/api/notion/sync-kb', { method: 'POST' })
   })
 
-  it('"Sync now" with truncated: true adds the "knowledge base is full" note to the toast', async () => {
-    mockFetch.mockImplementation(routeFetch({ conn: connection(), sync: { synced: 2, truncated: true } }))
+  it('"Sync now" surfaces a truncated job\'s detail message as-is in the toast', async () => {
+    mockFetch.mockImplementation(
+      routeFetch({
+        conn: connection(),
+        job: {
+          status: 'succeeded',
+          detail: 'Synced 2 chunks from Notion — the knowledge-base article cap was hit, some content was skipped',
+          syncedCount: 2,
+        },
+      }),
+    )
 
     const user = userEvent.setup()
     render(<NotionIntegrationCard />)
@@ -158,9 +181,21 @@ describe('NotionIntegrationCard', () => {
 
     await waitFor(() =>
       expect(
-        screen.getByText('Synced 2 chunks — knowledge base is full, some content was skipped'),
+        screen.getByText('Synced 2 chunks from Notion — the knowledge-base article cap was hit, some content was skipped'),
       ).toBeTruthy(),
     )
+  })
+
+  it('"Sync now" toasts the enqueue error when the job fails to queue', async () => {
+    mockFetch.mockImplementation(routeFetch({ conn: connection(), enqueueError: 'Could not queue the sync' }))
+
+    const user = userEvent.setup()
+    render(<NotionIntegrationCard />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /sync now/i })).toBeTruthy())
+    await user.click(screen.getByRole('button', { name: /sync now/i }))
+
+    await waitFor(() => expect(screen.getByText('Could not queue the sync')).toBeTruthy())
   })
 
   it('"Disconnect" calls deleteNotionConnectionAction', async () => {

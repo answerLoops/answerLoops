@@ -19,6 +19,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import type { SLAConfig, GitHubRepo, NotionConnection } from '@/types'
 import { saveNotionConnectionAction, deleteNotionConnectionAction } from '@/app/actions/notion'
 import { subscribeLiveEvents } from '@/lib/live-events'
+import { runKbSync } from '@/lib/kb/sync-client'
 
 interface Member {
   membership_id: number
@@ -3667,6 +3668,7 @@ export function NotionIntegrationCard() {
   const [connection, setConnection] = useState<NotionConnection | null | undefined>(undefined)
   const [editing, setEditing] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [syncLabel, setSyncLabel] = useState('Sync now')
   const { toastMessage, showToast } = useToast()
   const [, startDeleteTransition] = useTransition()
   const router = useRouter()
@@ -3705,21 +3707,14 @@ export function NotionIntegrationCard() {
 
   async function handleSync() {
     setSyncing(true)
+    setSyncLabel('Queued…')
     try {
-      const res = await fetch('/api/notion/sync-kb')
-      const data = await res.json() as { synced?: number; truncated?: boolean; error?: string }
-      if (data.error) {
-        showToast(data.error)
-      } else {
-        showToast(
-          `Synced ${data.synced ?? 0} chunk${data.synced === 1 ? '' : 's'}${data.truncated ? ' — knowledge base is full, some content was skipped' : ''}`
-        )
-        await reload()
-      }
-    } catch {
-      showToast('Sync failed')
+      const result = await runKbSync('/api/notion/sync-kb', '/api/kb/sync-jobs?kind=notion', setSyncLabel)
+      showToast(result.detail)
+      if (result.ok) await reload()
     } finally {
       setSyncing(false)
+      setSyncLabel('Sync now')
     }
   }
 
@@ -3770,7 +3765,7 @@ export function NotionIntegrationCard() {
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" size="sm" variant="secondary" disabled={syncing} onClick={handleSync}>
-                  {syncing ? 'Syncing…' : 'Sync now'}
+                  {syncLabel}
                 </Button>
                 <Button
                   type="button"
