@@ -41,6 +41,19 @@ describe('app/api/kb/sync-jobs/run/route.ts', () => {
     expect(src).toContain('progress(filesTotal + d, filesTotal + t)')
   })
 
+  it('threads the item title from throttleProgress through to updateKbSyncJobProgress', () => {
+    // throttleProgress's sink is (done, total, item) — the 3rd positional
+    // arg must reach updateKbSyncJobProgress's 4th param unchanged, or a
+    // Notion sync's onProgress(d, docs.length, doc.title) call would report
+    // progress counts but silently drop which page is being embedded, even
+    // though syncNotionToKB is already passing the title.
+    const throttleIdx = src.indexOf('throttleProgress(')
+    const closeIdx = src.indexOf('})', throttleIdx)
+    const sinkBody = src.slice(throttleIdx, closeIdx + 2)
+    expect(sinkBody).toMatch(/\(done,\s*total,\s*item\)\s*=>/)
+    expect(sinkBody).toContain('updateKbSyncJobProgress(jobId, done, total, item)')
+  })
+
   it('surfaces the Notion page/database caps in the job detail', () => {
     expect(src).toContain('res.pagesCapped')
     expect(src).toContain('res.databasesCapped')
@@ -68,5 +81,12 @@ describe('app/api/kb/sync-jobs/route.ts — status poll', () => {
 
   it('returns the latest job for the caller org only', () => {
     expect(src).toContain('getLatestKbSyncJob(access.orgId')
+  })
+
+  it('includes currentItem, mapped from the row\'s current_item, in the poll response', () => {
+    // Without this the KB page has no way to render "Syncing: <title>" even
+    // though the job row now carries it — the field would be silently
+    // dropped between the DB and the client.
+    expect(src).toContain('currentItem: job.current_item')
   })
 })

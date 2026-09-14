@@ -18,7 +18,7 @@ describe('throttleProgress', () => {
     const report = throttleProgress(sink, 100)
     report(0, 3)
     report(3, 3)
-    expect(sink).toHaveBeenCalledWith(3, 3)
+    expect(sink).toHaveBeenCalledWith(3, 3, undefined)
   })
 
   it('fires when the counter jumps backwards (new phase / offset reset)', () => {
@@ -27,6 +27,13 @@ describe('throttleProgress', () => {
     report(10, 20)
     sink.mockClear()
     report(2, 8) // discussions phase after repo phase — lower number
-    expect(sink).toHaveBeenCalledWith(2, 8)
+    expect(sink).toHaveBeenCalledWith(2, 8, undefined)
+  })
+
+  it('passes the item title through to the sink when the caller provides one', () => {
+    const sink = vi.fn()
+    const report = throttleProgress(sink, 100)
+    report(0, 2, 'Onboarding Guide')
+    expect(sink).toHaveBeenCalledWith(0, 2, 'Onboarding Guide')
   })
 })

@@ -14,6 +14,7 @@ export interface KbSyncJob {
   synced_count: number
   progress: number
   total: number
+  current_item: string | null
   attempts: number
   created_at: string
   started_at: string | null
@@ -107,9 +108,14 @@ export async function getKbSyncJob(id: number): Promise<KbSyncJob | null> {
  * lags by a beat. Scoped to `status = 'running'` so a late write can't
  * resurrect a reclaimed or finished job.
  */
-export async function updateKbSyncJobProgress(id: number, progress: number, total: number): Promise<void> {
+export async function updateKbSyncJobProgress(
+  id: number,
+  progress: number,
+  total: number,
+  currentItem?: string | null,
+): Promise<void> {
   await getDb().execute(sql`
-    UPDATE kb_sync_jobs SET progress = ${progress}, total = ${total}
+    UPDATE kb_sync_jobs SET progress = ${progress}, total = ${total}, current_item = ${currentItem ?? null}
     WHERE id = ${id} AND status = 'running'
   `)
 }

@@ -150,7 +150,7 @@ export async function syncNotionToKB(
   try {
     for (let d = 0; d < docs.length; d++) {
       const doc = docs[d]
-      opts.onProgress?.(d, docs.length)
+      opts.onProgress?.(d, docs.length, doc.title)
       if (created >= budget) break
       for (const chunk of chunkMarkdown(doc.markdown, doc.title)) {
         if (created >= budget) break

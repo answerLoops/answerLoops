@@ -81,15 +81,21 @@ function connection(overrides: Record<string, unknown> = {}) {
 // /api/kb/sync-jobs?kind=notion is polled until it reports a terminal
 // status — the mock's job status resolves to "succeeded" immediately so
 // tests don't have to wait through the real 2.5s poll interval.
+type JobStatus = { status: string; detail: string | null; syncedCount?: number; progress?: number; total?: number; currentItem?: string | null }
+
 function routeFetch({
   conn = null,
   enqueueError,
   job = { status: 'succeeded', detail: 'Synced 0 chunks from Notion', syncedCount: 0, progress: 0, total: 0 },
+  jobSequence,
 }: {
   conn?: unknown
   enqueueError?: string
-  job?: { status: string; detail: string | null; syncedCount?: number; progress?: number; total?: number }
+  job?: JobStatus
+  /** Successive responses for /api/kb/sync-jobs calls, e.g. to simulate an in-flight job resolving on a later poll. */
+  jobSequence?: JobStatus[]
 } = {}) {
+  let jobCall = 0
   return vi.fn((url: string) => {
     if (url.startsWith('/api/notion/sync-kb')) {
       if (enqueueError) {
@@ -98,6 +104,21 @@ function routeFetch({
       return Promise.resolve({ ok: true, json: async () => ({ jobId: 1, status: 'queued', alreadyQueued: false }) })
     }
     if (url.startsWith('/api/kb/sync-jobs')) {
+      if (jobSequence) {
+        const idx = jobCall
+        jobCall++
+        const next = jobSequence[Math.min(idx, jobSequence.length - 1)]
+        // Real backend calls have a network gap between polls; a same-tick
+        // mock resolution here lets React batch straight past the
+        // intermediate "syncing" render, so every call after the first
+        // resolves on a macrotask instead of immediately.
+        if (idx > 0) {
+          return new Promise((resolve) => {
+            setTimeout(() => resolve({ ok: true, json: async () => next }), 10)
+          })
+        }
+        return Promise.resolve({ ok: true, json: async () => next })
+      }
       return Promise.resolve({ ok: true, json: async () => job })
     }
     if (url.startsWith('/api/notion')) {
@@ -198,6 +219,28 @@ describe('NotionIntegrationCard', () => {
     await waitFor(() => expect(screen.getByText('Could not queue the sync')).toBeTruthy())
   })
 
+  it('resumes and reflects an in-flight sync job on mount, without a click', async () => {
+    mockFetch.mockImplementation(
+      routeFetch({
+        conn: connection(),
+        jobSequence: [
+          { status: 'running', detail: null, progress: 3, total: 10, currentItem: 'Runbook' },
+          { status: 'succeeded', detail: 'Synced 10 chunks from Notion', syncedCount: 10 },
+        ],
+      }),
+    )
+
+    render(<NotionIntegrationCard />)
+
+    // The card discovers the in-flight job on its own — no click needed —
+    // and disables the button while it's happening.
+    await waitFor(() => expect(screen.getByRole('button', { name: /syncing/i })).toBeTruthy())
+    expect(screen.getByRole('button', { name: /syncing/i }).hasAttribute('disabled')).toBe(true)
+
+    await waitFor(() => expect(screen.getByText('Synced 10 chunks from Notion')).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('button', { name: /sync now/i })).toBeTruthy())
+  })
+
   it('"Disconnect" calls deleteNotionConnectionAction', async () => {
     mockFetch.mockImplementation(routeFetch({ conn: connection() }))
     vi.mocked(deleteNotionConnectionAction).mockResolvedValue(null)
@@ -210,4 +253,40 @@ describe('NotionIntegrationCard', () => {
 
     await waitFor(() => expect(deleteNotionConnectionAction).toHaveBeenCalled())
   })
+
+  // Regression: disconnecting while a sync the card had discovered on mount
+  // was still running left it polling /api/kb/sync-jobs forever in the
+  // background — the card showed "Not connected" but kept hitting the
+  // network every 2.5s until the page was reloaded, because nothing told
+  // the in-flight poll loop to stop.
+  it('stops polling for job status once Disconnect succeeds mid-sync', async () => {
+    // Job never reaches a terminal status on its own — only Disconnect
+    // should be able to stop the polling. Real timers deliberately: fake
+    // timers fight with RTL's waitFor + useActionState's transitions here,
+    // and this test needs to observe actual 2.5s poll gaps to be a faithful
+    // regression check, so it accepts a few real seconds of runtime.
+    mockFetch.mockImplementation(
+      routeFetch({ conn: connection(), job: { status: 'running', detail: null, progress: 1, total: 100 } }),
+    )
+    vi.mocked(deleteNotionConnectionAction).mockResolvedValue(null)
+
+    const user = userEvent.setup()
+    render(<NotionIntegrationCard />)
+
+    // The mount-resume effect discovers the in-flight job on its own.
+    await waitFor(() => expect(screen.getByRole('button', { name: /syncing/i })).toBeTruthy())
+
+    const syncJobCallsBefore = mockFetch.mock.calls.filter((c) => String(c[0]).startsWith('/api/kb/sync-jobs')).length
+    expect(syncJobCallsBefore).toBeGreaterThan(0)
+
+    await user.click(screen.getByRole('button', { name: /disconnect/i }))
+    await waitFor(() => expect(deleteNotionConnectionAction).toHaveBeenCalled())
+    await waitFor(() => expect(screen.getByText('Not connected')).toBeTruthy())
+
+    // Wait past a couple of real poll intervals — the count must not grow,
+    // proving the loop actually stopped rather than just going unobserved.
+    await new Promise((resolve) => setTimeout(resolve, 6000))
+    const syncJobCallsAfter = mockFetch.mock.calls.filter((c) => String(c[0]).startsWith('/api/kb/sync-jobs')).length
+    expect(syncJobCallsAfter).toBe(syncJobCallsBefore)
+  }, 15_000)
 })

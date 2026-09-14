@@ -19,7 +19,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import type { SLAConfig, GitHubRepo, NotionConnection } from '@/types'
 import { saveNotionConnectionAction, deleteNotionConnectionAction } from '@/app/actions/notion'
 import { subscribeLiveEvents } from '@/lib/live-events'
-import { runKbSync } from '@/lib/kb/sync-client'
+import { runKbSync, pollKbSyncJob, type KbSyncJobStatus } from '@/lib/kb/sync-client'
 
 interface Member {
   membership_id: number
@@ -3669,9 +3669,26 @@ export function NotionIntegrationCard() {
   const [editing, setEditing] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncLabel, setSyncLabel] = useState('Sync now')
+  const [syncElapsed, setSyncElapsed] = useState(0)
   const { toastMessage, showToast } = useToast()
+  const showToastRef = useRef(showToast)
+  showToastRef.current = showToast
+  // Stops any in-flight sync poll — set on unmount and on a successful
+  // Disconnect, checked by pollKbSyncJob before every request. Without this,
+  // disconnecting mid-sync left the poll loop running forever in the
+  // background (same component instance, so unmount alone never fired):
+  // the card would show "Not connected" while still hammering
+  // /api/kb/sync-jobs every 2.5s until the page was reloaded.
+  const stoppedRef = useRef(false)
+  useEffect(() => () => { stoppedRef.current = true }, [])
   const [, startDeleteTransition] = useTransition()
   const router = useRouter()
+
+  useEffect(() => {
+    if (!syncing) { setSyncElapsed(0); return }
+    const t = setInterval(() => setSyncElapsed((s) => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [syncing])
 
   const reload = useCallback(async () => {
     const data = await fetch('/api/notion').then((r) => r.json()).catch(() => ({ connection: null }))
@@ -3680,6 +3697,32 @@ export function NotionIntegrationCard() {
 
   useEffect(() => {
     reload()
+  }, [reload])
+
+  // Resume the progress display if a sync is already in flight — e.g. the
+  // user started it from the Knowledge Base page, or is just revisiting this
+  // tab while one runs in the background. Without this, this card has no
+  // way to know a sync is happening until it finishes, even though the
+  // Knowledge Base page (which polls independently) shows it live.
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/kb/sync-jobs?kind=notion')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((job: KbSyncJobStatus | null) => {
+        if (cancelled || !job || (job.status !== 'queued' && job.status !== 'running')) return
+        stoppedRef.current = false
+        setSyncing(true)
+        setSyncLabel(job.status === 'running' ? 'Syncing…' : 'Queued…')
+        pollKbSyncJob('/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current).then((result) => {
+          if (cancelled) return
+          showToastRef.current(result.detail)
+          if (result.ok) reload()
+          setSyncing(false)
+          setSyncLabel('Sync now')
+        })
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
   }, [reload])
 
   const [saveState, saveAction, savePending] = useActionState(
@@ -3699,17 +3742,18 @@ export function NotionIntegrationCard() {
   const [deleteState, deleteAction, deletePending] = useActionState(
     async (prev: unknown, fd: FormData) => {
       const result = await deleteNotionConnectionAction(prev, fd)
-      if (!result?.error) { setConnection(null); setEditing(false) }
+      if (!result?.error) { stoppedRef.current = true; setConnection(null); setEditing(false); setSyncing(false) }
       return result
     },
     null
   )
 
   async function handleSync() {
+    stoppedRef.current = false
     setSyncing(true)
     setSyncLabel('Queued…')
     try {
-      const result = await runKbSync('/api/notion/sync-kb', '/api/kb/sync-jobs?kind=notion', setSyncLabel)
+      const result = await runKbSync('/api/notion/sync-kb', '/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current)
       showToast(result.detail)
       if (result.ok) await reload()
     } finally {
@@ -3763,9 +3807,25 @@ export function NotionIntegrationCard() {
               <p className="text-xs text-neutral-600">
                 Share the Notion pages and databases you want synced with your connection, then run a sync. Imported content stays unpublished until you publish it on the Knowledge Base page.
               </p>
+              {syncing && (
+                <div className="flex items-center gap-2.5 rounded-md border border-brand-100 bg-brand-50 px-3 py-2">
+                  <svg className="h-3.5 w-3.5 animate-spin text-brand-500 shrink-0" viewBox="0 0 24 24" fill="none">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                  </svg>
+                  <span className="text-xs text-brand-700 truncate min-w-0">{syncLabel}</span>
+                  <span className="text-xs text-brand-400 tabular-nums ml-auto shrink-0">{syncElapsed}s</span>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant="secondary" disabled={syncing} onClick={handleSync}>
-                  {syncLabel}
+                <Button type="button" size="sm" variant="secondary" disabled={syncing} onClick={handleSync} className="flex items-center gap-1.5">
+                  {syncing && (
+                    <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                    </svg>
+                  )}
+                  {syncing ? 'Syncing…' : 'Sync now'}
                 </Button>
                 <Button
                   type="button"

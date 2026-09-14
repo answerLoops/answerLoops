@@ -161,13 +161,18 @@ function GitHubKBSection({ onSynced }: { onSynced: () => void }) {
 
   useEffect(() => { loadRepos() }, [loadRepos])
 
+  const stoppedRef = useRef(false)
+  useEffect(() => () => { stoppedRef.current = true }, [])
+
   const sync = async (repo: GitHubRepo) => {
+    stoppedRef.current = false
     setSyncingId(repo.id)
     setSyncLabel('Queued…')
     const result = await runKbSync(
       `/api/github/sync-kb?repo_id=${repo.id}`,
       `/api/kb/sync-jobs?kind=github_repo&repo_id=${repo.id}`,
       setSyncLabel,
+      () => stoppedRef.current,
     )
     if (result.ok) {
       setToast(`${repo.owner}/${repo.repo}: ${result.detail}`)
@@ -230,9 +235,16 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   const [chunkCount, setChunkCount] = useState(0)
   const [syncing, setSyncing] = useState(false)
   const [syncLabel, setSyncLabel] = useState<string>('Syncing…')
+  const [syncElapsed, setSyncElapsed] = useState(0)
   const [togglingPublish, setTogglingPublish] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [truncated, setTruncated] = useState(false)
+
+  useEffect(() => {
+    if (!syncing) { setSyncElapsed(0); return }
+    const t = setInterval(() => setSyncElapsed((s) => s + 1), 1000)
+    return () => clearInterval(t)
+  }, [syncing])
 
   const loadState = useCallback(async () => {
     const [conn, sources] = await Promise.all([
@@ -251,6 +263,13 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   const onSyncedRef = useRef(onSynced)
   onSyncedRef.current = onSynced
 
+  // Stops an in-flight poll on unmount — checked by pollKbSyncJob before
+  // every request. The `cancelled` flag below only gated the state updates
+  // after a poll resolved, not the poll loop itself, so navigating away
+  // mid-sync left it running in the background indefinitely.
+  const stoppedRef = useRef(false)
+  useEffect(() => () => { stoppedRef.current = true }, [])
+
   // Resume the progress display if a sync is already in flight (e.g. the user
   // navigated away and came back, or the GitHub push webhook queued one).
   // Mount-only — the refs keep the latest callbacks without re-running.
@@ -260,9 +279,10 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
       .then((r) => (r.ok ? r.json() : null))
       .then((job: KbSyncJobStatus | null) => {
         if (cancelled || !job || (job.status !== 'queued' && job.status !== 'running')) return
+        stoppedRef.current = false
         setSyncing(true)
         setSyncLabel(job.status === 'running' ? 'Syncing…' : 'Queued…')
-        pollKbSyncJob('/api/kb/sync-jobs?kind=notion', setSyncLabel).then((result) => {
+        pollKbSyncJob('/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current).then((result) => {
           if (cancelled) return
           setToast(result.detail)
           if (result.ok) { loadState(); onSyncedRef.current() }
@@ -275,10 +295,11 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   }, [loadState])
 
   const sync = async () => {
+    stoppedRef.current = false
     setSyncing(true)
     setTruncated(false)
     setSyncLabel('Queued…')
-    const result = await runKbSync('/api/notion/sync-kb', '/api/kb/sync-jobs?kind=notion', setSyncLabel)
+    const result = await runKbSync('/api/notion/sync-kb', '/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current)
     if (result.ok) {
       setToast(result.detail)
       setTruncated(/cap was hit|wasn.t imported/i.test(result.detail))
@@ -341,6 +362,16 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
       {truncated && (
         <p className="text-xs text-amber-600">Knowledge base is full — some Notion content wasn&apos;t imported.</p>
       )}
+      {syncing && (
+        <div className="flex items-center gap-2.5 rounded-md border border-brand-100 bg-brand-50 px-3 py-2">
+          <svg className="h-3.5 w-3.5 animate-spin text-brand-500 shrink-0" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+          </svg>
+          <span className="text-xs text-brand-700 truncate min-w-0">{syncLabel}</span>
+          <span className="text-xs text-brand-400 tabular-nums ml-auto shrink-0">{syncElapsed}s</span>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-gray-200 bg-white px-3 py-2.5">
         <div className="min-w-0">
@@ -356,8 +387,14 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="secondary" onClick={sync} disabled={syncing}>
-            {syncing ? syncLabel : 'Sync now'}
+          <Button size="sm" variant="secondary" onClick={sync} disabled={syncing} className="flex items-center gap-1.5">
+            {syncing && (
+              <svg className="h-3.5 w-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            )}
+            {syncing ? 'Syncing…' : 'Sync now'}
           </Button>
           <Button
             size="sm"
