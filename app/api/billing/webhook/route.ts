@@ -188,14 +188,35 @@ export async function POST(req: Request) {
         }
         const planId = plan?.id ?? existingSub!.planId
 
-        const subAny = sub as unknown as {
+        // current_period_start/current_period_end live on the subscription
+        // ITEM, not on the Subscription object itself — confirmed against
+        // real production event payloads (neither field appears at the top
+        // level) and against the Stripe Node SDK's own types (SubscriptionItem
+        // declares them; Subscription does not). Reading them off `sub`
+        // directly, as this used to, meant `subAny.current_period_start` was
+        // always undefined, `new Date(undefined * 1000)` is an Invalid Date,
+        // and `.toISOString()` on an Invalid Date throws — turning every
+        // customer.subscription.updated delivery into a 500, silently, for
+        // every org. Confirmed live: a real event's webhook delivery log
+        // showed exactly this 500 on every retry. We only ever have one
+        // subscription item per org (see priceId above, same assumption).
+        const item = sub.items.data[0] as unknown as {
           current_period_start: number
           current_period_end: number
-          trial_end: number | null
-        }
+        } | undefined
+        const subAny = sub as unknown as { trial_end: number | null }
         const trialEndsAt = subAny.trial_end
           ? new Date(subAny.trial_end * 1000).toISOString()
           : null
+
+        if (!item) {
+          logger.error('subscription.updated with no subscription item — skipping', {
+            module: MOD,
+            orgId,
+            subscriptionId: sub.id,
+          })
+          break
+        }
 
         await upsertSubscription({
           orgId,
@@ -204,8 +225,8 @@ export async function POST(req: Request) {
           stripeCustomerId: sub.customer as string,
           stripeSubscriptionId: sub.id,
           stripePriceId: priceId,
-          currentPeriodStart: new Date(subAny.current_period_start * 1000).toISOString(),
-          currentPeriodEnd: new Date(subAny.current_period_end * 1000).toISOString(),
+          currentPeriodStart: new Date(item.current_period_start * 1000).toISOString(),
+          currentPeriodEnd: new Date(item.current_period_end * 1000).toISOString(),
           cancelAtPeriodEnd: sub.cancel_at_period_end,
           trialEndsAt,
           lastEventCreated: event.created,
