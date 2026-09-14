@@ -43,9 +43,9 @@ test.describe('knowledge base', () => {
     expect(listed.question).toContain('configure')
 
     // And semantic search surfaces it for a related query.
-    const results = (await request
+    const { results } = (await request
       .get(`/api/kb/search?q=${encodeURIComponent('how do I configure the client')}`)
-      .then((r) => r.json())) as KBArticle[]
+      .then((r) => r.json())) as { results: KBArticle[]; degraded: boolean }
     expect(results.some((a) => a.source_ticket_id === ticketId)).toBe(true)
   })
 

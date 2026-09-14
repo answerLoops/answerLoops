@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test'
-import { mockDiscordApi, MOCK_GUILD, MOCK_CHANNELS } from './helpers'
+import { MOCK_GUILD, MOCK_CHANNELS } from './helpers'
 
 // Discord connect: credential entry → mock Discord API → guild+channel picker → save.
-// Playwright intercepts outbound Discord API calls made by /api/discord/guilds server action.
+// The mock lives server-side in app/api/discord/guilds/route.ts, gated on
+// MOCK_EXTERNALS (set for the whole e2e run) — not a Playwright route
+// intercept, since the Discord API calls happen in the Next.js server
+// process the browser never touches.
 
 test.describe('discord connect: /api/discord/guilds', () => {
   test('rejects missing bot token', async ({ request }) => {
@@ -11,9 +14,7 @@ test.describe('discord connect: /api/discord/guilds', () => {
     expect((await res.json()).error).toMatch(/token/i)
   })
 
-  test('returns mock guilds and channels', async ({ page, request }) => {
-    await mockDiscordApi(page)
-
+  test('returns mock guilds and channels', async ({ request }) => {
     const res = await request.post('/api/discord/guilds', {
       data: { token: 'mock-bot-token' },
     })
@@ -44,11 +45,12 @@ test.describe('discord connect: settings UI flow', () => {
   })
 
   test('can enter bot token and fetch guilds', async ({ page }) => {
-    await mockDiscordApi(page)
+    await page.goto('/settings?tab=discord')
 
-    await page.goto('/settings')
-
-    // Find Discord section and bot token input
+    // Discord connect is OAuth-first now; the manual bot-token form (legacy,
+    // self-hosted path) is behind an Edit action on an already-connected
+    // integration, so it isn't always reachable here without that extra
+    // step — guarded rather than required.
     const tokenInput = page.locator('input[name="botToken"], input[placeholder*="token" i]').first()
     if (await tokenInput.isVisible()) {
       await tokenInput.fill('mock-bot-token-12345')
