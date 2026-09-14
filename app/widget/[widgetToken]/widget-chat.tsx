@@ -1,8 +1,8 @@
 'use client'
 
-import { useChat } from '@ai-sdk/react'
-import { TextStreamChatTransport } from 'ai'
-import type { UIMessage } from 'ai'
+import { CopilotKitProvider } from '@copilotkit/react-core/v2'
+import { useAgent } from '@copilotkit/react-core/v2/headless'
+import type { Message } from '@ag-ui/client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 interface WidgetChatProps {
@@ -32,6 +32,28 @@ function getOrCreateVisitorId(): string {
 }
 
 export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatProps) {
+  const visitorId = useMemo(() => getOrCreateVisitorId(), [])
+
+  return (
+    <CopilotKitProvider
+      runtimeUrl="/api/widget/chat"
+      useSingleEndpoint
+      properties={{ widgetToken, visitorId }}
+    >
+      <WidgetChatBody widgetToken={widgetToken} orgName={orgName} showBranding={showBranding} />
+    </CopilotKitProvider>
+  )
+}
+
+function WidgetChatBody({
+  widgetToken,
+  orgName,
+  showBranding,
+}: {
+  widgetToken: string
+  orgName: string
+  showBranding: boolean
+}) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [input, setInput] = useState('')
   const [email, setEmail] = useState('')
@@ -39,16 +61,27 @@ export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatPro
   const [emailPending, setEmailPending] = useState(false)
   const [emailError, setEmailError] = useState('')
 
-  const visitorId = useMemo(() => getOrCreateVisitorId(), [])
+  const { agent } = useAgent()
+  const [messages, setMessages] = useState<Message[]>(agent.messages)
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(false)
 
-  const { messages, sendMessage, status, error } = useChat({
-    transport: new TextStreamChatTransport({
-      api: '/api/widget/chat',
-      body: { widgetToken, visitorId },
-    }),
-  })
-
-  const isLoading = status === 'submitted' || status === 'streaming'
+  useEffect(() => {
+    setMessages([...agent.messages])
+    const { unsubscribe } = agent.subscribe({
+      onEvent: ({ messages: current }) => setMessages([...current]),
+      onRunInitialized: () => {
+        setError(false)
+        setIsLoading(true)
+      },
+      onRunFinalized: () => setIsLoading(false),
+      onRunFailed: () => {
+        setIsLoading(false)
+        setError(true)
+      },
+    })
+    return unsubscribe
+  }, [agent])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -56,9 +89,11 @@ export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatPro
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!input.trim() || isLoading) return
-    sendMessage({ text: input })
+    const text = input.trim()
+    if (!text || isLoading) return
     setInput('')
+    agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: text })
+    void agent.runAgent()
   }
 
   async function handleEmailSubmit(e: React.FormEvent) {
@@ -141,7 +176,7 @@ export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatPro
               </div>
             )}
 
-            {messages.map((m: UIMessage) => (
+            {messages.map((m) => (
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {m.role === 'assistant' && (
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 mr-2 mt-0.5">
@@ -155,11 +190,7 @@ export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatPro
                     ? 'bg-brand-600 text-white rounded-br-sm'
                     : 'bg-gray-100 text-gray-800 rounded-bl-sm'
                 }`}>
-                  {m.parts
-                    .filter((p) => p.type === 'text')
-                    .map((p, i) => (
-                      <span key={i}>{(p as { type: 'text'; text: string }).text}</span>
-                    ))}
+                  {typeof m.content === 'string' ? m.content : ''}
                 </div>
               </div>
             ))}

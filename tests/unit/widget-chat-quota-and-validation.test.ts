@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { widgetChatRequest, drain, userMsg, assistantMsg } from './support/widget-chat-envelope'
 
 /**
  * Behavioural coverage for app/api/widget/chat/route.ts.
@@ -17,14 +18,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  * well-formed, since attempts are capped at a multiple of the plan's monthly
  * allowance and a reservation left behind by a rejected request consumes quota
  * the org never used.
+ *
+ * The route is a CopilotKit single-route runtime endpoint: every request is a
+ * POST carrying `{ method: "agent/run", body: { messages, forwardedProps } }`
+ * (see CopilotKitProvider's `useSingleEndpoint`), with the widget token and
+ * visitor id riding in `forwardedProps` rather than at the envelope's top
+ * level, and AG-UI messages shaped as `{ role, content }` rather than the AI
+ * SDK's `{ role, parts }`. All of this route's own validation runs inside the
+ * `onRequest` hook, before the CopilotKit runtime ever dispatches to the agent
+ * factory — so a rejection here is a real HTTP status, not an AG-UI error
+ * event.
  */
 
 const VALID_TOKEN = 'a'.repeat(48) // crypto.randomBytes(24).toString('hex') shape
 
 const h = vi.hoisted(() => ({
   reserveGeneration: vi.fn(),
-  releaseGeneration: vi.fn(),
-  commitDeflection: vi.fn(),
+  releaseGeneration: vi.fn(async () => {}),
+  commitDeflection: vi.fn(async () => {}),
   rateLimitShared: vi.fn(),
   getOrgByWidgetToken: vi.fn(),
   chatModel: vi.fn(),
@@ -57,26 +68,21 @@ vi.mock('@/lib/ai/related', () => ({ findRelated: () => [] }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
 vi.mock('@mastra/core/agent', () => ({
   Agent: class {
-    async stream(query: string) {
+    async stream(query: string, options?: { onFinish?: () => void | Promise<void> }) {
       h.streamCalls.push({ query })
-      return { textStream: new ReadableStream<string>({ start: (c) => c.close() }) }
+      // Real Mastra invokes onFinish once the stream naturally completes;
+      // replicated here so tests can assert billing actually fires off a
+      // real (mocked) run, not just that reserveGeneration/stream were
+      // called with no way to tell whether the completion side ever ran.
+      await options?.onFinish?.()
+      return { fullStream: new ReadableStream({ start: (c) => c.close() }) }
     }
   },
 }))
 
-function post(body: unknown): Request {
-  return new Request('https://app.test/api/widget/chat', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-}
-
-const userMsg = (text: string) => ({ role: 'user', parts: [{ type: 'text', text }] })
-
-async function callRoute(body: unknown) {
+async function callRoute(body: { widgetToken?: unknown; visitorId?: unknown; messages?: unknown }) {
   const { POST } = await import('@/app/api/widget/chat/route')
-  return POST(post(body))
+  return POST(widgetChatRequest(body))
 }
 
 beforeEach(() => {
@@ -94,26 +100,49 @@ beforeEach(() => {
   h.chatModel.mockResolvedValue({ id: 'fake-model' })
 })
 
+describe('widget chat: the request body is capped before it is parsed', () => {
+  it('returns 413 for an oversized body without reserving quota, before JSON is even parsed', async () => {
+    // A single ~600KB message content string, past MAX_BODY_BYTES (512KB) —
+    // large enough that if the cap were dropped, JSON.parse would still
+    // succeed and the per-message MAX_MESSAGE_CHARS check would have to catch
+    // it instead. The point here is that it never gets that far.
+    const oversizedContent = 'x'.repeat(600 * 1024)
+    const req = new Request('https://app.test/api/widget/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        method: 'agent/run',
+        params: { agentId: 'default' },
+        body: {
+          threadId: 'thread-1',
+          runId: 'run-1',
+          tools: [],
+          context: [],
+          messages: [userMsg(oversizedContent)],
+          forwardedProps: { widgetToken: VALID_TOKEN, visitorId: 'v' },
+        },
+      }),
+    })
+    const { POST } = await import('@/app/api/widget/chat/route')
+    const res = await POST(req)
+    expect(res.status).toBe(413)
+    expect(h.reserveGeneration).not.toHaveBeenCalled()
+    expect(h.streamCalls).toHaveLength(0)
+  })
+})
+
 describe('widget chat: no rejected request may consume quota', () => {
   // Each case is a request the route rejects. None may reserve, because a
   // reservation it never releases is a permanent attempt against the org.
-  const rejected: [string, unknown][] = [
+  const rejected: [string, { widgetToken?: unknown; visitorId?: unknown; messages?: unknown }][] = [
     ['malformed token shape', { widgetToken: 'not-hex', visitorId: 'v', messages: [userMsg('hi')] }],
     ['missing token', { visitorId: 'v', messages: [userMsg('hi')] }],
     ['missing visitorId', { widgetToken: VALID_TOKEN, messages: [userMsg('hi')] }],
     ['empty messages', { widgetToken: VALID_TOKEN, visitorId: 'v', messages: [] }],
     ['null message element', { widgetToken: VALID_TOKEN, visitorId: 'v', messages: [null] }],
-    ['non-array parts', { widgetToken: VALID_TOKEN, visitorId: 'v', messages: [{ role: 'user', parts: 'x' }] }],
-    ['oversized single part', { widgetToken: VALID_TOKEN, visitorId: 'v', messages: [userMsg('x'.repeat(4001))] }],
+    ['non-string content', { widgetToken: VALID_TOKEN, visitorId: 'v', messages: [{ role: 'user', content: 42 }] }],
+    ['oversized message', { widgetToken: VALID_TOKEN, visitorId: 'v', messages: [userMsg('x'.repeat(4001))] }],
     ['whitespace-only query', { widgetToken: VALID_TOKEN, visitorId: 'v', messages: [userMsg('   ')] }],
-    [
-      'multi-part concatenation over the cap',
-      {
-        widgetToken: VALID_TOKEN,
-        visitorId: 'v',
-        messages: [{ role: 'user', parts: Array.from({ length: 20 }, () => ({ type: 'text', text: 'y'.repeat(3999) })) }],
-      },
-    ],
   ]
 
   it.each(rejected)('%s is rejected without reserving quota', async (_label, body) => {
@@ -128,31 +157,66 @@ describe('widget chat: no rejected request may consume quota', () => {
     // everything, every case above would pass and this one would fail.
     const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages: [userMsg('how do I install?')] })
     expect(res.status).toBe(200)
+    await drain(res)
     expect(h.reserveGeneration).toHaveBeenCalledOnce()
     expect(h.streamCalls).toHaveLength(1)
     expect(h.releaseGeneration).not.toHaveBeenCalled()
+    // commitDeflection is mocked but was never actually checked here — a
+    // typo'd argument, or onFinish never firing, would slip past every other
+    // assertion in this file, since drain() only proves the stream completed,
+    // not that billing ran off the back of it.
+    expect(h.commitDeflection).toHaveBeenCalledWith(42, 7)
   })
 })
 
-describe('widget chat: multi-part messages cannot bypass the length cap', () => {
-  it('rejects when concatenated parts exceed the cap even though each part is under it', async () => {
-    // The per-part check passes here: every part is 3,999 chars against a
-    // 4,000 cap. Concatenated they are ~80,000 chars — the whole point.
-    const parts = Array.from({ length: 20 }, () => ({ type: 'text', text: 'y'.repeat(3999) }))
-    const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages: [{ role: 'user', parts }] })
-    expect(res.status).toBe(400)
-    expect(await res.text()).toBe('Message too long')
+describe('widget chat: a request shaped as anything other than agent/run is still throttled', () => {
+  it('rate-limits a non-run envelope before it ever reaches widgetToken validation', async () => {
+    // A single-route runtime accepts other methods (info, threads/list, ...);
+    // none of those carry a widgetToken, so they skip every widgetToken-keyed
+    // check below in validateAndPrepare. The global per-IP limiter is the
+    // only thing standing between this shape and an unthrottled path into the
+    // CopilotKit runtime, so it has to trip on its own, with no token in play.
+    h.rateLimitShared.mockImplementation(async (key: string) =>
+      key.startsWith('widget-any:') ? { ok: false } : { ok: true }
+    )
+    const req = new Request('https://app.test/api/widget/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ method: 'info', params: {} }),
+    })
+    const { POST } = await import('@/app/api/widget/chat/route')
+    const res = await POST(req)
+    expect(res.status).toBe(429)
+    expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
   })
 
-  it('allows a multi-part message whose concatenation is within the cap', async () => {
-    const parts = [
-      { type: 'text', text: 'how do I ' },
-      { type: 'text', text: 'install this?' },
-    ]
-    const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages: [{ role: 'user', parts }] })
+  it('still passes a non-run envelope through once the global limit allows it', async () => {
+    const req = new Request('https://app.test/api/widget/chat', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ method: 'info', params: {} }),
+    })
+    const { POST } = await import('@/app/api/widget/chat/route')
+    const res = await POST(req)
+    // Not a 429 and not one of this route's own validation rejections —
+    // whatever status comes back is CopilotKit's own handling of `info`,
+    // which this test isn't asserting on; the point is only that it wasn't
+    // blocked by the throttle added ahead of the method branch.
+    expect(res.status).not.toBe(429)
+    expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
+  })
+})
+
+describe('widget chat: the last user message is what reaches the model', () => {
+  it('picks the most recent user message when several are present', async () => {
+    const res = await callRoute({
+      widgetToken: VALID_TOKEN,
+      visitorId: 'v',
+      messages: [userMsg('first question'), assistantMsg('reply'), userMsg('second question')],
+    })
     expect(res.status).toBe(200)
-    // Parts are concatenated, so the model must see the joined question.
-    expect(h.streamCalls[0].query).toBe('how do I install this?')
+    await drain(res)
+    expect(h.streamCalls[0].query).toBe('second question')
   })
 })
 
@@ -160,8 +224,8 @@ describe('widget chat: malformed input is a 400, never an unhandled 500', () => 
   it.each([
     ['null element', [null]],
     ['string element', ['nope']],
-    ['non-array parts', [{ role: 'user', parts: 'x' }]],
-    ['missing role', [{ parts: [{ type: 'text', text: 'hi' }] }]],
+    ['non-string content', [{ role: 'user', content: 42 }]],
+    ['missing role', [{ content: 'hi' }]],
   ])('%s returns 400', async (_label, messages) => {
     const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages })
     expect(res.status).toBe(400)
@@ -174,12 +238,17 @@ describe('widget chat: the token is validated before it becomes rate-limiter key
     // token's format is checked before it ever gets there.
     const res = await callRoute({ widgetToken: 'z'.repeat(5000), visitorId: 'v', messages: [userMsg('hi')] })
     expect(res.status).toBe(400)
-    expect(h.rateLimitShared).not.toHaveBeenCalled()
+    // The global per-IP limiter (keyed on IP alone) still runs for every
+    // request regardless of token shape — it's the token-keyed limiters that
+    // must never see this malformed value.
+    expect(h.rateLimitShared).not.toHaveBeenCalledWith(expect.stringContaining('widget-token:'), expect.anything(), expect.anything())
+    expect(h.rateLimitShared).not.toHaveBeenCalledWith(expect.stringContaining('widget-ip:'), expect.anything(), expect.anything())
     expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
   })
 
   it('accepts a correctly shaped token', async () => {
-    await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages: [userMsg('hi')] })
+    const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages: [userMsg('hi')] })
+    expect(res.status).toBe(200)
     expect(h.rateLimitShared).toHaveBeenCalled()
   })
 })
@@ -197,6 +266,7 @@ describe('widget chat: a reservation that never reaches the model is released', 
   it('does not release once the model has actually been reached', async () => {
     const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages: [userMsg('hi')] })
     expect(res.status).toBe(200)
+    await drain(res)
     expect(h.releaseGeneration).not.toHaveBeenCalled()
   })
 })
@@ -207,5 +277,46 @@ describe('widget chat: quota exhaustion is still enforced', () => {
     const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages: [userMsg('hi')] })
     expect(res.status).toBe(402)
     expect(h.streamCalls).toHaveLength(0)
+  })
+})
+
+describe('widget chat: a reservation whose run never gets dispatched still gets released', () => {
+  // Tested directly against stashPendingRun/takePendingRun/PENDING_RUN_TTL_MS
+  // rather than through the full POST handler: driving this via fake timers
+  // through CopilotKit's real RxJS-based dispatch stalls on internal
+  // scheduling that has nothing to do with what's under test here. This is
+  // the actual unit that owns the release-on-expiry guarantee.
+  it('releases the reservation once PENDING_RUN_TTL_MS elapses with no dispatch', async () => {
+    vi.useFakeTimers()
+    try {
+      const { stashPendingRun, PENDING_RUN_TTL_MS } = await import('@/app/api/widget/chat/route')
+      stashPendingRun({ org: { id: 42, name: 'Acme' }, model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
+
+      expect(h.releaseGeneration).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(PENDING_RUN_TTL_MS)
+      expect(h.releaseGeneration).toHaveBeenCalledWith(7)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not double-release when takePendingRun already consumed the entry', async () => {
+    vi.useFakeTimers()
+    try {
+      const { stashPendingRun, takePendingRun, PENDING_RUN_TTL_MS } = await import('@/app/api/widget/chat/route')
+      const requestId = stashPendingRun({ org: { id: 42, name: 'Acme' }, model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
+
+      const run = takePendingRun(requestId)
+      expect(run?.reservationId).toBe(7)
+
+      await vi.advanceTimersByTimeAsync(PENDING_RUN_TTL_MS)
+
+      // Already consumed by takePendingRun above (the normal case — the
+      // factory ran and either billed or is still in flight); the expiry
+      // timeout must find nothing left in the map and release nothing.
+      expect(h.releaseGeneration).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

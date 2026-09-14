@@ -9,14 +9,13 @@ test.describe('billing: status endpoint', () => {
     const res = await request.get('/api/billing/status')
     expect(res.ok()).toBeTruthy()
     const body = (await res.json()) as {
-      plan_id: string
+      planId: string | null
       status: string
-      deflections_used: number
-      deflection_limit: number
+      used: number
+      limit: number | null
     }
-    expect(typeof body.plan_id).toBe('string')
     expect(typeof body.status).toBe('string')
-    expect(typeof body.deflections_used).toBe('number')
+    expect(typeof body.used).toBe('number')
   })
 
   test('requires authentication', async () => {

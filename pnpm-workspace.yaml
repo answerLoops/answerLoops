@@ -11,6 +11,7 @@ onlyBuiltDependencies:
   - sharp
   - unrs-resolver
 allowBuilds:
+  '@scarf/scarf': false # telemetry-only postinstall script, no functional need
   better-sqlite3: true
   esbuild: true
   sharp: true

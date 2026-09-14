@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
+import { widgetChatRequest, drain, userMsg } from './support/widget-chat-envelope'
 
 /**
  * What the widget is allowed to put in front of an anonymous visitor.
@@ -61,7 +62,7 @@ vi.mock('@mastra/core/agent', () => ({
     }
     async stream() {
       h.streamCalls.push({ instructions: this.instructions })
-      return { textStream: new ReadableStream<string>({ start: (c) => c.close() }) }
+      return { fullStream: new ReadableStream({ start: (c) => c.close() }) }
     }
   },
 }))
@@ -70,17 +71,15 @@ const VALID_TOKEN = 'b'.repeat(48)
 
 async function ask(question = 'how do I install this?') {
   const { POST } = await import('@/app/api/widget/chat/route')
-  return POST(
-    new Request('https://app.test/api/widget/chat', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        widgetToken: VALID_TOKEN,
-        visitorId: 'v1',
-        messages: [{ role: 'user', parts: [{ type: 'text', text: question }] }],
-      }),
+  const res = await POST(
+    widgetChatRequest({
+      widgetToken: VALID_TOKEN,
+      visitorId: 'v1',
+      messages: [userMsg(question)],
     })
   )
+  await drain(res)
+  return res
 }
 
 beforeEach(() => {

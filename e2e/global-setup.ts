@@ -97,11 +97,15 @@ export default async function globalSetup() {
   const widgetInfo = await ensureWidgetToken(DEFAULT_ORG_ID)
   fs.writeFileSync(WIDGET_TOKEN_FILE, JSON.stringify({ token: widgetInfo.token }))
 
-  // Seed a Discord integration for the default org
+  // Seed a Discord integration for the default org. auto_deflect_enabled is
+  // explicit rather than left at its default-off: several specs (analytics,
+  // smoke) assert on high-confidence answers actually auto-posting, and the
+  // safety default of holding every answer as a draft would otherwise zero
+  // out deflection stats for the whole suite.
   const botSecret = process.env.BOT_SECRET ?? 'test-bot-secret'
   await db.execute(sql`
-    INSERT INTO integrations (org_id, platform, bot_secret, channel_ids, enabled)
-    VALUES (${DEFAULT_ORG_ID}, 'discord', ${botSecret}, '[]', 1)
+    INSERT INTO integrations (org_id, platform, bot_secret, channel_ids, enabled, auto_deflect_enabled)
+    VALUES (${DEFAULT_ORG_ID}, 'discord', ${botSecret}, '[]', 1, 1)
     ON CONFLICT DO NOTHING
   `)
 

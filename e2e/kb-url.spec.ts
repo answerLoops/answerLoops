@@ -50,19 +50,29 @@ test.describe('KB URL ingest', () => {
     }
 
     await page.getByRole('button', { name: /import/i }).click()
-    await expect(page.getByText(/imported|article/i)).toBeVisible({ timeout: 15_000 })
+    // Not a broad /article/i match: the mock content preview paragraph for
+    // an already-imported page can itself contain the word "articles" in its
+    // body text, so a loose match can hit two elements at once.
+    await expect(page.getByText(/\d+ articles?( added| from \d+ pages)?/i).first()).toBeVisible({ timeout: 15_000 })
   })
 
   test('shows validation error for empty URL', async ({ page }) => {
     await page.goto('/kb')
-    await page.getByRole('button', { name: /import/i }).click()
-    await expect(page.getByText(/valid url|required|enter a url/i)).toBeVisible()
+    await page.getByRole('button', { name: /import/i }).first().click()
+    // The URL field is a native `required` input — the browser blocks
+    // submission itself (no custom error text is rendered), so this checks
+    // the field failed constraint validation rather than page text.
+    const urlInput = page.getByPlaceholder(/https:\/\//)
+    await expect(urlInput).toHaveJSProperty('validity.valueMissing', true)
   })
 
   test('shows validation error for non-URL string', async ({ page }) => {
     await page.goto('/kb')
-    await page.getByPlaceholder(/https:\/\//).fill('not-a-url')
-    await page.getByRole('button', { name: /import/i }).click()
-    await expect(page.getByText(/valid url/i)).toBeVisible()
+    const urlInput = page.getByPlaceholder(/https:\/\//)
+    await urlInput.fill('not-a-url')
+    await page.getByRole('button', { name: /import/i }).first().click()
+    // Same native constraint validation — type="url" rejects a non-URL
+    // string before the form ever submits.
+    await expect(urlInput).toHaveJSProperty('validity.typeMismatch', true)
   })
 })

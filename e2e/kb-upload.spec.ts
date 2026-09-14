@@ -85,6 +85,9 @@ test.describe('KB file upload', () => {
     await uploadFile(request, 'sample.md', 'text/markdown', buffer)
 
     await page.goto('/kb')
-    await expect(page.getByText('sample.md')).toBeVisible()
+    // .first(): sample.md was already uploaded by an earlier test in this
+    // file (state persists for the whole suite run, no per-test isolation),
+    // so more than one row with this filename is expected here.
+    await expect(page.getByText('sample.md').first()).toBeVisible()
   })
 })

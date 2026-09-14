@@ -62,7 +62,11 @@ describe('app/api/widget/chat/route.ts — deflection quota', () => {
     const finishIdx = s.indexOf('onFinish:', streamIdx)
     expect(finishIdx).toBeGreaterThan(streamIdx)
     const finishBlock = s.slice(finishIdx, finishIdx + 200)
-    expect(finishBlock).toContain('commitDeflection(org.id, reservation.generationId)')
+    // reservationId is the id captured off the reservation made in the
+    // onRequest hook (see PendingRun) — the factory never re-derives it from
+    // a local `reservation` object, since reservation happens before the
+    // agent factory runs at all.
+    expect(finishBlock).toContain('commitDeflection(org.id, reservationId)')
   })
 })
 

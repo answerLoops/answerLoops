@@ -26,6 +26,7 @@ const NODE24_FLOOR: Record<string, number> = {
   'actions/setup-node': 5,
   'actions/upload-artifact': 6,
   'actions/download-artifact': 7,
+  'actions/cache': 5,
   'pnpm/action-setup': 5,
   'docker/setup-buildx-action': 4,
   'docker/login-action': 4,
