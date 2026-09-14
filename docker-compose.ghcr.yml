@@ -11,7 +11,7 @@ name: answerloops
 # Pin a version rather than tracking latest for anything you care about staying
 # up:
 #
-#   ANSWERLOOPS_IMAGE=ghcr.io/answerloops/answerloops:1.4.0 \
+#   ANSWERLOOPS_IMAGE=ghcr.io/answerloops/answerloops:0.5.0 \
 #     docker compose -f docker-compose.ghcr.yml up -d
 #
 # One image serves both services. app and bot run the same build and differ only
