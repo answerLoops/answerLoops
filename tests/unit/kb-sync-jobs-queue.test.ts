@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 
@@ -10,6 +10,19 @@ import path from 'path'
 
 const ROOT = process.cwd()
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf-8')
+
+// updateKbSyncJobProgress builds its UPDATE with drizzle's sql`` tagged
+// template, which is safe to import for real (no DB access) — only getDb
+// itself needs mocking. This lets the tests below inspect the actual bound
+// parameters a call produces, not just the source text.
+const { getDb } = vi.hoisted(() => ({ getDb: vi.fn() }))
+vi.mock('@/lib/db/drizzle', () => ({ getDb }))
+
+// A drizzle sql`` template's queryChunks alternate StringChunk (literal SQL)
+// and bound-parameter values — pull out just the params.
+function boundParams(query: { queryChunks: unknown[] }): unknown[] {
+  return query.queryChunks.filter((c) => !(c && typeof c === 'object' && 'value' in (c as object)))
+}
 
 describe('lib/db/queries/kb-sync-jobs.ts', () => {
   const src = read('lib/db/queries/kb-sync-jobs.ts')
@@ -70,5 +83,58 @@ describe('bot worker wiring', () => {
     expect(src).toContain('/api/kb/sync-jobs/run')
     expect(src).toContain('Authorization: `Bearer ${botSecret}`')
     expect(src).toMatch(/if \(!botSecret\) return/)
+  })
+})
+
+describe('updateKbSyncJobProgress — current_item threading', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('binds the given title as current_item', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined)
+    getDb.mockReturnValue({ execute })
+
+    const { updateKbSyncJobProgress } = await import('@/lib/db/queries/kb-sync-jobs')
+    await updateKbSyncJobProgress(42, 3, 10, 'Some Title')
+
+    expect(execute).toHaveBeenCalledTimes(1)
+    const query = execute.mock.calls[0][0] as { queryChunks: unknown[] }
+    expect(boundParams(query)).toEqual([3, 10, 'Some Title', 42])
+  })
+
+  // Real regression this guards against: existing GitHub sync call sites
+  // (syncRepoToKB / syncDiscussionsToKB) call this with only 3 args. Without
+  // the `?? null` coalesce, a bare `${currentItem}` would bind `undefined`,
+  // and postgres/pg would either reject the query or silently write nothing
+  // for that column depending on the driver — either way the row's
+  // current_item would NOT be cleared back to null on a job that previously
+  // had a title (e.g. reused across kinds), leaving a stale title on screen.
+  it('defaults current_item to null (not undefined/omitted) when no title is passed', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined)
+    getDb.mockReturnValue({ execute })
+
+    const { updateKbSyncJobProgress } = await import('@/lib/db/queries/kb-sync-jobs')
+    await updateKbSyncJobProgress(42, 3, 10)
+
+    const query = execute.mock.calls[0][0] as { queryChunks: unknown[] }
+    const params = boundParams(query)
+    expect(params).toEqual([3, 10, null, 42])
+    expect(params[2]).not.toBeUndefined()
+  })
+
+  it('scopes the write to status = running, so a reclaimed or finished job cannot be resurrected', async () => {
+    const execute = vi.fn().mockResolvedValue(undefined)
+    getDb.mockReturnValue({ execute })
+
+    const { updateKbSyncJobProgress } = await import('@/lib/db/queries/kb-sync-jobs')
+    await updateKbSyncJobProgress(7, 1, 5, 'X')
+
+    const query = execute.mock.calls[0][0] as { queryChunks: { value?: string[] }[] }
+    const literalText = query.queryChunks
+      .filter((c) => c && typeof c === 'object' && 'value' in c)
+      .map((c) => (c.value ?? []).join(''))
+      .join('')
+    expect(literalText).toContain("AND status = 'running'")
   })
 })

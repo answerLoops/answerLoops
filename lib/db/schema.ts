@@ -326,6 +326,7 @@ export const kbSyncJobs = pgTable(
     syncedCount: integer('synced_count').notNull().default(0),
     progress: integer('progress').notNull().default(0),
     total: integer('total').notNull().default(0),
+    currentItem: text('current_item'), // title of the doc/page currently being embedded, if known
     attempts: integer('attempts').notNull().default(0),
     createdAt: text('created_at').notNull().default(now),
     startedAt: text('started_at'),

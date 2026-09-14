@@ -5,8 +5,13 @@
  * caller passes nothing.
  */
 export interface KbSyncProgressOpts {
-  /** Called as documents are processed. `done` and `total` are item counts. */
-  onProgress?: (done: number, total: number) => void
+  /**
+   * Called as documents are processed. `done` and `total` are item counts;
+   * `item` is the title of the doc/page currently being embedded, when the
+   * caller has one available (Notion does, from its sync loop; GitHub syncs
+   * don't pass one).
+   */
+  onProgress?: (done: number, total: number, item?: string) => void
 }
 
 /**
@@ -15,16 +20,16 @@ export interface KbSyncProgressOpts {
  * document on a 2000-page workspace.
  */
 export function throttleProgress(
-  sink: (done: number, total: number) => void,
+  sink: (done: number, total: number, item?: string) => void,
   step = 5,
-): (done: number, total: number) => void {
+): (done: number, total: number, item?: string) => void {
   let last = -1
   let fired = false
-  return (done, total) => {
+  return (done, total, item) => {
     if (!fired || done === total || done - last >= step || done < last) {
       fired = true
       last = done
-      sink(done, total)
+      sink(done, total, item)
     }
   }
 }

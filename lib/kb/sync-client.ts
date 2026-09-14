@@ -13,6 +13,11 @@ export interface KbSyncJobStatus {
   syncedCount: number
   progress: number
   total: number
+  currentItem: string | null
+}
+
+function truncateTitle(title: string, max = 40): string {
+  return title.length > max ? `${title.slice(0, max - 1)}…` : title
 }
 
 export interface KbSyncResult {
@@ -22,11 +27,31 @@ export interface KbSyncResult {
 }
 
 // Poll a queued/running KB sync job to completion. `statusQuery` is the full
-// /api/kb/sync-jobs?... URL for the source. `onLabel` updates the button text.
-export function pollKbSyncJob(statusQuery: string, onLabel: (label: string) => void): Promise<KbSyncResult> {
+// /api/kb/sync-jobs?... URL for the source. `onLabel` updates the button
+// text. `isCancelled`, checked before every fetch and before every scheduled
+// retry, lets a caller stop the loop early — the poll otherwise runs
+// unconditionally until the job reaches a terminal status or the 15-minute
+// timeout, with no way to abort it from outside (an unmounted component, or
+// a source the user just disconnected, would poll forever without this).
+export function pollKbSyncJob(
+  statusQuery: string,
+  onLabel: (label: string) => void,
+  isCancelled?: () => boolean,
+): Promise<KbSyncResult> {
   return new Promise((resolve) => {
     const startedAt = Date.now()
+    const scheduleRetry = () => {
+      if (isCancelled?.()) {
+        resolve({ ok: false, detail: 'Sync polling stopped.', syncedCount: 0 })
+        return
+      }
+      setTimeout(tick, 2500)
+    }
     const tick = async () => {
+      if (isCancelled?.()) {
+        resolve({ ok: false, detail: 'Sync polling stopped.', syncedCount: 0 })
+        return
+      }
       if (Date.now() - startedAt > 15 * 60 * 1000) {
         resolve({ ok: false, detail: 'Sync is taking longer than expected — check back shortly.', syncedCount: 0 })
         return
@@ -35,15 +60,16 @@ export function pollKbSyncJob(statusQuery: string, onLabel: (label: string) => v
       try {
         job = await fetch(statusQuery).then((r) => (r.ok ? r.json() : null))
       } catch {
-        setTimeout(tick, 2500)
+        scheduleRetry()
         return
       }
       if (!job || job.status === 'queued') {
         onLabel('Queued…')
-        setTimeout(tick, 2500)
+        scheduleRetry()
       } else if (job.status === 'running') {
-        onLabel(job.total > 0 ? `Syncing ${Math.min(job.progress, job.total)}/${job.total}` : 'Syncing…')
-        setTimeout(tick, 2500)
+        const count = job.total > 0 ? ` (${Math.min(job.progress, job.total)}/${job.total})` : ''
+        onLabel(job.currentItem ? `Syncing: ${truncateTitle(job.currentItem)}${count}` : `Syncing…${count}`)
+        scheduleRetry()
       } else if (job.status === 'succeeded') {
         resolve({ ok: true, detail: job.detail ?? 'Sync complete', syncedCount: job.syncedCount ?? 0 })
       } else {
@@ -59,6 +85,7 @@ export async function runKbSync(
   enqueueUrl: string,
   statusQuery: string,
   onLabel: (label: string) => void,
+  isCancelled?: () => boolean,
 ): Promise<KbSyncResult> {
   let res: Response
   try {
@@ -71,5 +98,5 @@ export async function runKbSync(
     return { ok: false, detail: body.error ?? 'Could not queue the sync.', syncedCount: 0 }
   }
   onLabel('Queued…')
-  return pollKbSyncJob(statusQuery, onLabel)
+  return pollKbSyncJob(statusQuery, onLabel, isCancelled)
 }
