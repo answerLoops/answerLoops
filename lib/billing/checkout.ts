@@ -25,8 +25,27 @@ const CANCEL_PATH = '/pricing'
 // response. Stripe's idempotency layer makes those requests converge on one
 // session for this org/plan/interval combination instead of creating multiple
 // subscription-mode sessions that can each become a Customer.
+//
+// Bucketed to a short window rather than held constant forever — a fixed key
+// only needs to survive the few seconds a retry burst takes, but a plain
+// `checkout:${orgId}:${planId}:${interval}` string never expires on our side.
+// Stripe just replays the exact stored response to the first request that
+// ever used that key, for as long as Stripe retains it, which meant every
+// later checkout attempt for the same org/plan/interval — a different day, a
+// different browser — silently got handed back that original session instead
+// of a new one. Once that first session reached a terminal state (expired,
+// completed, or abandoned), every subsequent attempt replayed the same dead
+// session and failed the same way, with no way to check out again until the
+// key aged out. Confirmed directly in the Stripe dashboard: a request logged
+// "This is a replay of a previous request" against this exact key format,
+// immediately followed by a 410 on that stale session's own confirm
+// endpoint. The bucket keeps the original retry-collapsing behavior intact
+// (two attempts a few seconds apart still converge) while guaranteeing a
+// attempt outside that window gets a real new session.
+const IDEMPOTENCY_KEY_WINDOW_MS = 5 * 60_000
 function checkoutIdempotencyKey(orgId: number, planId: string, interval: BillingInterval): string {
-  return `checkout:${orgId}:${planId}:${interval}`
+  const bucket = Math.floor(Date.now() / IDEMPOTENCY_KEY_WINDOW_MS)
+  return `checkout:${orgId}:${planId}:${interval}:${bucket}`
 }
 
 export type CheckoutResult =
