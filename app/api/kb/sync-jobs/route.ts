@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
     syncedCount: job.synced_count,
     progress: job.progress,
     total: job.total,
+    currentItem: job.current_item,
     createdAt: job.created_at,
     finishedAt: job.finished_at,
   })

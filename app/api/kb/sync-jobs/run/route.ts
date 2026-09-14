@@ -49,8 +49,8 @@ export async function POST(request: Request) {
   // KB page's number by a beat. `void` the promise so a slow write never
   // stalls the sync loop.
   const jobId = job.id
-  const progress = throttleProgress((done, total) => {
-    void updateKbSyncJobProgress(jobId, done, total)
+  const progress = throttleProgress((done, total, item) => {
+    void updateKbSyncJobProgress(jobId, done, total, item)
   })
 
   try {
