@@ -11,9 +11,21 @@ interface LogFields {
 
 const IS_PROD = process.env.NODE_ENV === 'production'
 
+// Driver errors (postgres.js, etc.) attach the actually-useful fields — code,
+// detail, hint, severity, column, table, cause — as extra own-enumerable
+// properties beyond the standard Error shape. Without capturing those, every
+// database error logs as an unhelpful "Failed query: ..." with the query
+// text but no reason it failed.
 function serializeError(err: unknown): Record<string, unknown> {
   if (err instanceof Error) {
-    return { message: err.message, name: err.name, stack: err.stack }
+    const base: Record<string, unknown> = { message: err.message, name: err.name, stack: err.stack }
+    for (const key of Object.keys(err)) {
+      if (key in base) continue
+      const value = (err as unknown as Record<string, unknown>)[key]
+      if (typeof value === 'function') continue
+      base[key] = value instanceof Error ? serializeError(value) : value
+    }
+    return base
   }
   return { raw: String(err) }
 }
