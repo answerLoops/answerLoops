@@ -109,8 +109,16 @@ jobs:
 
     # Matches docker-compose.yml's postgres service (same image, user, password,
     # admin db name) so playwright.config.ts's default TEST_DATABASE_URL resolves
-    # here unchanged, and e2e/global-setup.ts's ensureTestDatabaseExists() can
-    # create `community_test` on top of it the same way it does for local dev.
+    # here unchanged. Note ensureTestDatabaseExists() in e2e/global-setup.ts
+    # does NOT cover CI: Playwright starts webServer (next start, which runs
+    # migrations from instrumentation.ts the moment it boots) before running
+    # globalSetup — see createGlobalSetupTasks in playwright's own runner,
+    # plugin setup (webServer) always precedes the user's globalSetup file.
+    # On a developer machine community_test already exists from a prior run,
+    # so this never surfaced there; on a fresh CI run it doesn't exist yet and
+    # the server crash-loops on "database community_test does not exist"
+    # until the webServer launch times out. The step below creates it before
+    # `pnpm test:e2e` starts the server, closing that gap.
     services:
       postgres:
         image: postgres:16-alpine
@@ -162,5 +170,14 @@ jobs:
       - name: Install Playwright OS dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
         run: pnpm exec playwright install-deps chromium
+
+      # Must exist before playwright.config.ts's webServer runs `next start` —
+      # instrumentation.ts migrates the moment the server boots, and that
+      # happens before e2e/global-setup.ts gets a chance to create this
+      # database (see the comment on the postgres service above).
+      - name: Create test database
+        env:
+          PGPASSWORD: community
+        run: psql -h localhost -U community -d community -c "CREATE DATABASE community_test"
 
       - run: pnpm test:e2e
