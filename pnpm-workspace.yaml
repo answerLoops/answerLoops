@@ -1,4 +1,5 @@
-packages: []
+packages:
+  - packages/*
 
 # Supply-chain hardening
 blockExoticSubdeps: true       # block deps installed from non-registry sources (git, file, http)
