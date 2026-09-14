@@ -19,6 +19,7 @@ import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import type { SLAConfig, GitHubRepo, NotionConnection } from '@/types'
 import { saveNotionConnectionAction, deleteNotionConnectionAction } from '@/app/actions/notion'
 import { subscribeLiveEvents } from '@/lib/live-events'
+import { runKbSync } from '@/lib/kb/sync-client'
 
 interface Member {
   membership_id: number
@@ -3667,6 +3668,7 @@ export function NotionIntegrationCard() {
   const [connection, setConnection] = useState<NotionConnection | null | undefined>(undefined)
   const [editing, setEditing] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [syncLabel, setSyncLabel] = useState('Sync now')
   const { toastMessage, showToast } = useToast()
   const [, startDeleteTransition] = useTransition()
   const router = useRouter()
@@ -3705,21 +3707,14 @@ export function NotionIntegrationCard() {
 
   async function handleSync() {
     setSyncing(true)
+    setSyncLabel('Queued…')
     try {
-      const res = await fetch('/api/notion/sync-kb')
-      const data = await res.json() as { synced?: number; truncated?: boolean; error?: string }
-      if (data.error) {
-        showToast(data.error)
-      } else {
-        showToast(
-          `Synced ${data.synced ?? 0} chunk${data.synced === 1 ? '' : 's'}${data.truncated ? ' — knowledge base is full, some content was skipped' : ''}`
-        )
-        await reload()
-      }
-    } catch {
-      showToast('Sync failed')
+      const result = await runKbSync('/api/notion/sync-kb', '/api/kb/sync-jobs?kind=notion', setSyncLabel)
+      showToast(result.detail)
+      if (result.ok) await reload()
     } finally {
       setSyncing(false)
+      setSyncLabel('Sync now')
     }
   }
 
@@ -3766,11 +3761,11 @@ export function NotionIntegrationCard() {
             </div>
             <div className="rounded-md bg-neutral-50 border border-neutral-200 p-3 space-y-2">
               <p className="text-xs text-neutral-600">
-                Share the Notion pages and databases you want synced with your integration, then run a sync. Imported content stays unpublished until you publish it on the Knowledge Base page.
+                Share the Notion pages and databases you want synced with your connection, then run a sync. Imported content stays unpublished until you publish it on the Knowledge Base page.
               </p>
               <div className="flex flex-wrap gap-2">
                 <Button type="button" size="sm" variant="secondary" disabled={syncing} onClick={handleSync}>
-                  {syncing ? 'Syncing…' : 'Sync now'}
+                  {syncLabel}
                 </Button>
                 <Button
                   type="button"
@@ -3789,7 +3784,7 @@ export function NotionIntegrationCard() {
         {showForm && (
           <form key={editing ? 'edit' : 'new'} action={saveAction} className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Internal integration token</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Notion access token</label>
               <input
                 name="token"
                 type="password"
@@ -3798,7 +3793,7 @@ export function NotionIntegrationCard() {
                 className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
               />
               <p className="text-xs text-gray-400 mt-1">
-                In Notion: <span className="font-medium">Settings → Connections → Develop or manage integrations</span> → create an internal integration → copy its <span className="font-medium">Internal Integration Secret</span>. Then open each page or database you want synced, <span className="font-medium">•••  → Connections</span>, and add the integration. answerLoops syncs everything the integration can see.
+                In Notion: <span className="font-medium">Settings → Developer → Open developer tools</span> → <span className="font-medium">+ New connection</span> → choose <span className="font-medium">Access token</span> → copy the token it gives you. Then share one parent page with the connection (<span className="font-medium">•••  → Connections</span>, add it) — its subpages sync automatically. answerLoops syncs everything the connection can see.
               </p>
             </div>
             {(saveState as { error?: string } | null)?.error && (

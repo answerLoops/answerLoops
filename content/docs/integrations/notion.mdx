@@ -5,33 +5,45 @@ description: Connect a Notion workspace and sync its pages and databases into th
 
 ## Overview
 
-Notion is a **Knowledge Base source**, not a support channel — it doesn't bring in tickets, it feeds the content the AI answers from. Connect a workspace, and answerLoops pulls every page and database your Notion integration can see into the KB, alongside URL crawls, file uploads, GitHub repo sync, and resolved tickets.
+Notion is a **Knowledge Base source**, not a support channel — it doesn't bring in tickets, it feeds the content the AI answers from. Connect a workspace, and answerLoops pulls every page and database your Notion connection can see into the KB, alongside URL crawls, file uploads, GitHub repo sync, and resolved tickets.
 
 Two things make Notion different from the other KB sources:
 
-- **You control scope by sharing.** There's no page picker in answerLoops. A Notion integration only sees pages that have been explicitly shared with it, so you decide what syncs by sharing (or unsharing) pages in Notion.
+- **You control scope by sharing.** There's no page picker in answerLoops. A Notion connection only sees pages that have been explicitly shared with it, so you decide what syncs by sharing (or unsharing) pages in Notion.
 - **Notion imports unpublished.** Its content is searchable from the dashboard immediately, but it is **not** used to answer customer questions or served to the website widget until you click **Publish to widget** on the Knowledge Base page. Every other source publishes on import; Notion is the exception because workspace docs are often internal drafts. Your publish choice is kept across re-syncs.
 
 ## Prerequisites
 
-- A Notion **internal integration** created in the workspace you want to sync
-- `ENCRYPTION_KEY` set in your environment (the integration token is stored encrypted at rest)
+- A Notion **connection** (access token) created in the workspace you want to sync
+- `ENCRYPTION_KEY` set in your environment (the token is stored encrypted at rest)
 
 There is no environment variable to configure for Notion itself — it is set up per workspace in the Settings UI.
 
-## 1. Create a Notion internal integration
+This is a five-minute setup, not a one-click connect — Notion requires creating a credential and separately sharing content with it. Each step below is one click or field.
 
-In Notion, go to **Settings → Connections → Develop or manage integrations → New integration**. Give it a name (e.g. `answerLoops`), select the workspace, and create it. Copy the **Internal Integration Secret** — it starts with `ntn_` or `secret_`.
+## 1. Create a Notion connection
 
-The integration only needs read access. It does not need any of the "capabilities" checkboxes beyond the default read content permission.
+1. In Notion, open **Settings → Developer**, then click **Open developer tools** (top right) — this opens `notion.so`'s developer portal in a new tab.
+2. Click **+ New connection**.
+3. Enter a name (e.g. `answerLoops`). Leave **Access token** selected as the authentication method — it's the workspace-scoped option; **OAuth** is for multi-workspace public apps and isn't what you want here.
+4. Click **Create connection**.
+5. You land on the new connection's page. Under **Capabilities → Content capabilities**, uncheck **Update content** and **Insert content** — leave only **Read content** checked. answerLoops only reads from Notion.
+6. Under **Capabilities → User capabilities**, select **No user information** — the sync doesn't need Notion user profiles.
+7. Under **Integration token**, click the eye icon to reveal the **Access token**, then copy it (starts with `ntn_` or `secret_`).
 
 ## 2. Share the pages you want synced
 
-For each Notion page or database you want in the KB, open it, click **•••  → Connections**, and add your integration. Sharing a page also shares its subpages. answerLoops syncs everything the integration can see — nothing more.
+Creating the connection above grants it *no* content access by itself — you now have to point it at specific pages, one at a time:
+
+1. In Notion, open the page (or top-level page of a section) you want synced.
+2. Click **•••** in the top-right corner of the page.
+3. Click **Connections**, then select the connection you just created.
+
+Sharing a page also shares everything nested under it, so sharing one top-level parent page is usually enough — you don't need to repeat this for every child page, only for each separate top-level section you want included. answerLoops syncs everything the connection can see this way — nothing more, nothing automatic.
 
 ## 3. Connect in answerLoops
 
-Go to **Settings → Notion**, paste the Internal Integration Secret, and click **Connect**. The card shows the connected workspace name once it validates the token.
+Go to **Settings → Notion**, paste the access token from step 1, and click **Connect**. The card shows the connected workspace name once it validates the token.
 
 ## 4. Sync
 
@@ -51,10 +63,10 @@ Right after a sync, the Notion source shows as **Unpublished** in the Sources li
 
 <AccordionGroup>
   <Accordion title="Connect fails — 'Notion rejected that token'">
-    The token was truncated on copy, or the integration was deleted. In Notion, go back to **Settings → Connections → Develop or manage integrations**, open your integration, and copy the **Internal Integration Secret** in full (it starts with `ntn_` or `secret_`).
+    The token was truncated on copy, or the connection was deleted. In Notion, go back to **Settings → Developer → Open developer tools**, open your connection, and copy the access token in full (it starts with `ntn_` or `secret_`).
   </Accordion>
   <Accordion title="Sync completes but imports 0 chunks">
-    The integration can't see any pages. In Notion, open each page you want synced and add the integration under **•••  → Connections** — being an admin of the workspace is not enough; the integration itself must be added to each page (or a parent of it). Also confirm an AI provider is configured in **Settings → AI Model**, since embedding requires an API key.
+    The connection can't see any pages. In Notion, share at least one page or a parent page under **•••  → Connections** — being an admin of the workspace is not enough; the connection itself must be added to a page (or a parent of it) before it can see anything below it. Also confirm an AI provider is configured in **Settings → AI Model**, since embedding requires an API key.
   </Accordion>
   <Accordion title="Notion content isn't answering customer questions">
     Expected until you publish it. Go to the **Knowledge Base** page → Notion panel → **Publish to widget**. Until then the content only shows in dashboard search.
@@ -63,10 +75,10 @@ Right after a sync, the Notion source shows as **Unpublished** in the Sources li
     The block-to-text conversion is pragmatic, not pixel-perfect: nested numbered lists, multi-column layouts, synced blocks and equations don't render exactly, and images, files, and embeds are dropped (their captions are kept). Very deep pages are truncated. The chunker only needs readable prose, so this is usually fine — but if a page relies on a table or diagram to make sense, add a text summary to it in Notion.
   </Accordion>
   <Accordion title="'Knowledge base is full' after a Notion sync">
-    There's a hard cap of 2000 KB articles per workspace, shared across all sources. A large Notion workspace can consume the remaining budget; the sync reports what it skipped in its result message. Delete unused sources, or narrow what's shared with the Notion integration, and re-sync.
+    There's a hard cap of 2000 KB articles per workspace, shared across all sources. A large Notion workspace can consume the remaining budget; the sync reports what it skipped in its result message. Delete unused sources, or narrow what's shared with the Notion connection, and re-sync.
   </Accordion>
   <Accordion title="Some pages or databases weren't synced">
-    Separately from the article cap, a single sync reads at most 2000 shared pages and 500 shared databases (the two limits are independent — a large set of pages no longer starves databases). If you hit either, the result message says so. Narrow what's shared with the integration so the parts you care about fit.
+    Separately from the article cap, a single sync reads at most 2000 shared pages and 500 shared databases (the two limits are independent — a large set of pages no longer starves databases). If you hit either, the result message says so. Narrow what's shared with the connection so the parts you care about fit.
   </Accordion>
 </AccordionGroup>
 

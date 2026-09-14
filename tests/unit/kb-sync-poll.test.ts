@@ -1,10 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('next/link', () => ({ default: ({ children }: { children: React.ReactNode }) => children }))
-vi.mock('@/app/actions/ingest-url', () => ({ ingestUrlAction: vi.fn() }))
-
-import { runKbSync, pollKbSyncJob } from '@/app/(dashboard)/kb/page'
+import { runKbSync, pollKbSyncJob } from '@/lib/kb/sync-client'
 
 // The KB page enqueues a sync then polls /api/kb/sync-jobs to completion —
 // this replaces the old fire-one-request-and-block flow. These cover the
