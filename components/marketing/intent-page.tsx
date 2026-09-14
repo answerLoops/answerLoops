@@ -50,8 +50,9 @@ export function IntentPage({
             <p>{audience}</p>
           </div>
           <div className="marketing-grid">
-            {highlights.map((h) => (
+            {highlights.map((h, index) => (
               <article className="marketing-card" key={h.title}>
+                <p className="marketing-eyebrow">0{index + 1} / Capability</p>
                 <h3>{h.title}</h3>
                 <p>{h.body}</p>
               </article>

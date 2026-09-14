@@ -197,3 +197,9 @@ To inspect via the database directly:
 docker compose exec postgres psql -U community -d community \
   -c "SELECT id, name, onboarded_at FROM orgs;"
 ```
+
+## Updated content appears without its styles
+
+Let Next.js manage caching for `/_next/static/` assets. Production builds use content-hashed assets that can be cached indefinitely; development assets need to refresh as source files change. Do not apply a custom immutable cache rule to development assets.
+
+If an earlier configuration cached a development stylesheet indefinitely, restart the development server after correcting the configuration and perform a hard reload in the browser to discard the old response.

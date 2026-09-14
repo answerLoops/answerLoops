@@ -5,9 +5,9 @@ import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'AI drafts the answer. Your settings control the reply. | answerLoops',
+  title: 'One agent answers. A second checks its work. | answerLoops',
   description:
-    'answerLoops uses two AI steps: one drafts a response from your knowledge base, and another reviews it. Your team chooses which channels can send qualifying answers automatically.',
+    'The answer agent retrieves your documentation and drafts a reply. The review agent checks that draft against its sources. Your channel settings decide whether a qualifying answer is sent or held for your team.',
   alternates: { canonical: '/agentic-support' },
 }
 
@@ -16,8 +16,8 @@ export default async function AgenticSupportPage() {
     <ProofPage
       navState={await resolveNavState()}
       eyebrow="Agentic support"
-      title="AI drafts the answer. Your settings control the reply."
-      intro="answerLoops uses two AI steps: one drafts a response from your knowledge base, and another reviews it. Your team chooses which channels can send qualifying answers automatically."
+      title="One agent answers. A second checks its work."
+      intro="The answer agent retrieves your documentation and drafts a reply. The review agent checks that draft against its sources. Your channel settings decide whether a qualifying answer is sent or held for your team."
       sections={[
         {
           title: 'Draft from your documentation',
@@ -30,7 +30,7 @@ export default async function AgenticSupportPage() {
         },
         {
           title: 'Check the proposed answer',
-          body: 'A separate review compares the draft with the available evidence.',
+          body: 'The review agent compares the draft with the available evidence.',
           details: [
             'Configure a confidence threshold in the channel settings.',
             'Test representative questions before enabling automation.',
@@ -71,9 +71,9 @@ export default async function AgenticSupportPage() {
         },
       ]}
       schema={{
-        name: 'AI drafts the answer. Your settings control the reply.',
+        name: 'One agent answers. A second checks its work.',
         description:
-          'answerLoops uses two AI steps: one drafts a response from your knowledge base, and another reviews it. Your team chooses which channels can send qualifying answers automatically.',
+          'The answer agent retrieves your documentation and drafts a reply. The review agent checks that draft against its sources. Your channel settings decide whether a qualifying answer is sent or held for your team.',
         path: '/agentic-support',
       }}
     >

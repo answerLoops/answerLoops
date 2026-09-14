@@ -108,12 +108,12 @@ export default async function PricingPage({
       <PricingStructuredData />
       <PageHero
         eyebrow="Pricing"
-        title="Choose a plan for your support volume."
+        title="Agent-powered support. Priced for your volume."
       >
         <p>
-          A subscription includes a monthly allowance of automated answers. Add
-          teammates without per-seat fees. Choose monthly billing or save 20%
-          with an annual subscription.
+          Every hosted plan includes MCP and REST API access, with a monthly
+          allowance of automated answers. Add teammates without per-seat fees.
+          Choose monthly billing or save 20% with an annual subscription.
         </p>
       </PageHero>
       <section id="plans" className="marketing-section scroll-mt-24">
