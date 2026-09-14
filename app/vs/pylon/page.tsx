@@ -22,7 +22,7 @@ export default function Page() {
         },
         {
           feature: 'Answer workflow',
-          us: 'A draft from workspace knowledge, a separate AI review, and automatic replies when enabled and above the configured threshold.',
+          us: 'An answer agent drafts from workspace knowledge, a review agent checks it, and automatic replies go out when enabled and above the configured threshold.',
           them: 'Support agents resolve requests across channels, with people handling questions that need judgment.',
         },
         {

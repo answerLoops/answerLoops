@@ -30,7 +30,7 @@ export default async function SupportExamplePage() {
         },
         {
           title: 'What decides whether it posts',
-          body: 'A separate AI review checks the draft. The channel’s reply settings determine the next action.',
+          body: 'A review agent checks the draft. The channel’s reply settings determine the next action.',
           details: [
             'Automatic replies are off by default.',
             'Enabled channels require a score above the configured threshold.',

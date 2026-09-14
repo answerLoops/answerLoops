@@ -17,7 +17,7 @@ export default function Page() {
       rows={[
         {
           feature: 'Platform',
-          us: 'Community questions and a shared ticket queue, with documentation-based drafts and AI review.',
+          us: 'Community questions and a shared ticket queue, with an answer agent drafting from documentation and a review agent checking each draft.',
           them: 'A customer-service suite with ticketing, AI agents, and additional support-operations products.',
         },
         {

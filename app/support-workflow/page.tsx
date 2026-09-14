@@ -41,7 +41,7 @@ export default async function SupportWorkflowPage() {
           title: '3. Enable automatic replies',
           body: 'Turn on automatic replies for the channels you are ready to automate.',
           details: [
-            'The separate AI review must meet your confidence threshold.',
+            'The review agent’s check must meet your confidence threshold.',
             'A confidence score is a model assessment, not a guarantee of correctness.',
             'Questions that do not qualify remain in the team queue.',
           ],
