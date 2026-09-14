@@ -4,7 +4,7 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
-  title: 'Give your agents access to support knowledge | answerLoops',
+  title: 'An MCP server for your support knowledge | answerLoops',
   description:
     'Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets.',
   alternates: { canonical: '/mcp-support-agents' },
@@ -13,8 +13,8 @@ export default async function Page() {
   return (
     <IntentPage
       navState={await resolveNavState()}
-      eyebrow="Use case"
-      title="Give your agents access to support knowledge"
+      eyebrow="Agent infrastructure / MCP + REST"
+      title="An MCP server for your support knowledge"
       intro="Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets."
       audience="Teams connecting coding assistants, internal tools, or support automations to their existing documentation and ticket queue."
       highlights={[
@@ -80,7 +80,7 @@ export default async function Page() {
         },
       ]}
       schema={{
-        name: 'Give your agents access to support knowledge',
+        name: 'An MCP server for your support knowledge',
         description:
           'Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets.',
         path: '/mcp-support-agents',

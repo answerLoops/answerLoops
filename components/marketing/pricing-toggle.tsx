@@ -54,7 +54,7 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
               key={plan.id}
               role="region"
               aria-label={`${plan.name} plan`}
-              className={`relative flex flex-col rounded-xl border bg-white p-6 ${
+              className={`pricing-plan relative flex flex-col rounded-xl border bg-white p-6 ${
                 highlighted
                   ? 'border-blue-600 ring-1 ring-blue-600'
                   : 'border-slate-200'
@@ -111,8 +111,8 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
                 Start {TRIAL_DAYS}-day free trial
               </Link>
               <p className="mt-3 text-xs leading-relaxed text-slate-600">
-                Card required, but you&apos;re not charged today. Cancel
-                before the {TRIAL_DAYS}-day trial ends to avoid the charge.
+                Card required, but you&apos;re not charged today. Cancel before
+                the {TRIAL_DAYS}-day trial ends to avoid the charge.
               </p>
               <ul className="mt-6 space-y-3 border-t border-slate-200 pt-5 text-sm text-slate-600">
                 {copy.features.map((feature) => (

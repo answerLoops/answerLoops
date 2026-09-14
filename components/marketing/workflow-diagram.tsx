@@ -9,14 +9,14 @@ export function WorkflowDiagram() {
             'A question becomes a ticket with its channel and original message.',
           ],
           [
-            '02 / Draft',
-            'Use your documentation',
+            '02 / Answer agent',
+            'Draft from your docs',
             'answerLoops retrieves relevant knowledge and drafts a reply with its sources.',
           ],
           [
-            '03 / Review',
-            'Check the proposed answer',
-            'A separate AI review assesses the draft. Your channel settings determine the next step.',
+            '03 / Review agent',
+            'A second agent checks the work',
+            'A second agent checks source alignment and confidence. Your channel settings determine the next step.',
           ],
         ].map(([label, title, body]) => (
           <li key={label} className="marketing-workflow-step">

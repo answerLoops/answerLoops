@@ -36,6 +36,7 @@ export function NavWordmark() {
 }
 const NAV = [
   ['Product', '/#features'],
+  ['MCP', '/mcp-support-agents'],
   ['Integrations', '/#integrations'],
   ['Pricing', '/pricing'],
   ['Docs', '/docs'],
@@ -44,7 +45,7 @@ const NAV = [
 export function Nav({ state }: { state?: NavState }) {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-5 py-4 sm:px-8">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-4 sm:gap-3 sm:px-8">
         <Link href="/" aria-label="answerLoops home" className="shrink-0">
           <NavWordmark />
         </Link>
@@ -139,8 +140,8 @@ export function Footer() {
           <div>
             <NavWordmark />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">
-              Support replies from your documentation, with review controls for
-              your team.
+              Agent infrastructure for support. Grounded in your docs. Checked
+              by a second agent.
             </p>
             <p className="mt-3 text-sm text-slate-600">
               Open source. Hosted or self-hosted.

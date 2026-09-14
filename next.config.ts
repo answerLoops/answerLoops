@@ -85,16 +85,8 @@ const nextConfig: NextConfig = {
         source: '/widget/:token',
         headers: baseSecurityHeaders,
       },
-      // Next.js content-hashes every file under _next/static — the filename
-      // changes whenever the content does, so caching it forever is safe.
-      // Without this, Cloudflare has nothing cacheable to work with and
-      // every JS/CSS chunk round-trips to the origin on every request.
-      {
-        source: '/_next/static/(.*)',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
+      // Let Next.js manage asset caching: production hashes are immutable,
+      // while development chunks must refresh as source files change.
       // Static marketing + docs pages. These carry no per-visitor content (the
       // header CTA is a client island that calls /api/nav-state after
       // hydration), and the auth proxy is scoped off them in proxy.ts so no

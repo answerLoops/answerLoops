@@ -38,7 +38,9 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }))
-vi.mock('@/lib/marketing/nav-state', () => ({ resolveNavState: mocks.resolveNavState }))
+vi.mock('@/lib/marketing/nav-state', () => ({
+  resolveNavState: mocks.resolveNavState,
+}))
 
 import PricingPage from '@/app/pricing/page'
 import type { NavState } from '@/components/marketing/chrome'
@@ -66,7 +68,9 @@ beforeEach(() => {
 
 describe('a subscriber sent to pricing by the sign-in flow is forwarded on', () => {
   it('redirects ?resume=1 to the dashboard when the plan is active', async () => {
-    await expect(loadPricing('active', { resume: '1' })).rejects.toThrow(/NEXT_REDIRECT/)
+    await expect(loadPricing('active', { resume: '1' })).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
     expect(mocks.redirect).toHaveBeenCalledWith('/dashboard')
   })
 
@@ -74,7 +78,9 @@ describe('a subscriber sent to pricing by the sign-in flow is forwarded on', () 
     // The redirect must happen before the tree is built. If it were moved below
     // the return, or downgraded to a client-side effect, this page would still
     // be served to someone who has already paid for what it is selling.
-    await expect(loadPricing('active', { resume: '1' })).rejects.toThrow(/NEXT_REDIRECT/)
+    await expect(loadPricing('active', { resume: '1' })).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
     expect(document.body.textContent).toBe('')
   })
 })
@@ -83,7 +89,10 @@ describe('the resume flow itself still works, which is the point of the page', (
   it('keeps a signed-in visitor with no plan here and explains why', async () => {
     await renderPricing('no-plan', { resume: '1' })
 
-    expect(mocks.redirect, 'this visitor has nothing to be forwarded to').not.toHaveBeenCalled()
+    expect(
+      mocks.redirect,
+      'this visitor has nothing to be forwarded to',
+    ).not.toHaveBeenCalled()
     expect(screen.getByText(RESUME_BANNER)).toBeTruthy()
   })
 
@@ -108,7 +117,11 @@ describe('the redirect is scoped to the resume flow, not to /pricing', () => {
     await renderPricing('active')
 
     expect(mocks.redirect).not.toHaveBeenCalled()
-    expect(screen.getByRole('heading', { name: /choose a plan for your support volume/i })).toBeTruthy()
+    expect(
+      screen.getByRole('heading', {
+        name: /agent-powered support. priced for your volume/i,
+      }),
+    ).toBeTruthy()
   })
 
   it('does not forward on a resume value other than the one the flow sends', async () => {
@@ -139,17 +152,25 @@ describe('the page never contradicts the header', () => {
     // The guard, stated once for every way an active subscriber can reach this
     // page. Whichever branch changes later, "buy a plan" and "you have a plan"
     // must not appear together.
-    for (const params of [{}, { resume: '0' }, { checkout: 'failed' }] as Params[]) {
+    for (const params of [
+      {},
+      { resume: '0' },
+      { checkout: 'failed' },
+    ] as Params[]) {
       const { unmount } = await renderPricing('active', params)
       expect(
         screen.queryByText(RESUME_BANNER),
-        `active subscriber told to pick a plan with params ${JSON.stringify(params)}`,
+        `active subscriber told to pick a plan with params ${JSON.stringify(
+          params,
+        )}`,
       ).toBeNull()
       unmount()
     }
 
     // And the one remaining route never renders at all.
-    await expect(loadPricing('active', { resume: '1' })).rejects.toThrow(/NEXT_REDIRECT/)
+    await expect(loadPricing('active', { resume: '1' })).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    )
   })
 
   it('offers the dashboard and nothing else to a subscriber reading the page', async () => {
