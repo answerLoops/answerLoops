@@ -3540,6 +3540,7 @@ export function ApiKeysSection() {
   const [copied, setCopied] = useState(false)
   const [confirmRevoke, setConfirmRevoke] = useState<number | null>(null)
   const [revokeError, setRevokeError] = useState<string | null>(null)
+  const [skillCopied, setSkillCopied] = useState(false)
   const [, startTransition] = useTransition()
 
   const loadKeys = useCallback(async () => {
@@ -3604,8 +3605,35 @@ export function ApiKeysSection() {
   }
 }`
 
+  const operateSkillInstallCommand = `mkdir -p .claude/skills/answerloops-operate
+curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/operate/SKILL.md \\
+  -o .claude/skills/answerloops-operate/SKILL.md`
+
+  function copySkillCommand() {
+    navigator.clipboard.writeText(operateSkillInstallCommand).then(() => {
+      setSkillCopied(true)
+      setTimeout(() => setSkillCopied(false), 2000)
+    })
+  }
+
   return (
     <div className="space-y-4">
+      <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-gray-900">Onboard your agent</p>
+            <p className="text-xs text-gray-600 mt-1">
+              Install the answerLoops skill so Claude Code can search your knowledge base, read tickets,
+              and generate answers against this workspace. Create an API key below first, then drop it
+              into the skill&apos;s MCP config.
+            </p>
+          </div>
+          <Button type="button" size="sm" variant="secondary" onClick={copySkillCommand} className="shrink-0">
+            {skillCopied ? '✓ Copied' : 'Copy command'}
+          </Button>
+        </div>
+      </div>
+
       <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-3">
         <p className="text-xs text-gray-600">
           API keys let AI agents (Claude Code, Cursor, or any MCP-compatible client) call answerLoops directly —

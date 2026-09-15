@@ -1,0 +1,73 @@
+---
+title: Agent Skills
+description: Installable Claude Code skills that set up self-hosted answerLoops and connect an agent to a running workspace.
+---
+
+answerLoops ships two [Claude Code skills](https://docs.claude.com/en/docs/claude-code/skills)
+directly in this repository, under `skills/`. A skill is a `SKILL.md` file
+plus any helper scripts it needs — Claude Code reads it and follows the
+instructions inside, so installing one gives an agent a repeatable, reviewed
+procedure instead of it improvising the setup or API calls from scratch each
+time.
+
+<Tip>
+  Both skills are plain files in a public repo — read them before installing if you want to know exactly what they do. Nothing here runs implicitly; a skill only acts when you ask your agent to use it.
+</Tip>
+
+## `answerloops-setup`
+
+Installs a self-hosted instance: checks prerequisites, scaffolds `.env`,
+runs `docker compose -f docker-compose.ghcr.yml up -d` (the published-image
+path, no build step), and polls `/api/health` until it's actually up rather
+than guessing from a fixed sleep.
+
+It stops and hands back to you for anything external — OAuth app creation,
+AI provider keys. It never invents a credential; every secret either comes
+from a command you ran (`openssl rand -hex 32`) or from you pasting a real
+value from a provider's dashboard.
+
+Install:
+
+```bash
+mkdir -p .claude/skills/answerloops-setup
+curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/setup/SKILL.md \
+  -o .claude/skills/answerloops-setup/SKILL.md
+mkdir -p .claude/skills/answerloops-setup/scripts
+curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/setup/scripts/check-prereqs.sh \
+  -o .claude/skills/answerloops-setup/scripts/check-prereqs.sh
+curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/setup/scripts/wait-for-health.sh \
+  -o .claude/skills/answerloops-setup/scripts/wait-for-health.sh
+chmod +x .claude/skills/answerloops-setup/scripts/*.sh
+```
+
+Then, from a clone of the answerLoops repo, ask Claude Code to set up
+answerLoops.
+
+## `answerloops-operate`
+
+Connects an agent to a running workspace — hosted or self-hosted — via the
+[MCP server](/docs/integrations/mcp): search the knowledge base, read the
+FAQ, list and open tickets, generate grounded answers. Same pipeline every
+other channel uses, same per-key scopes and org isolation.
+
+Install:
+
+```bash
+mkdir -p .claude/skills/answerloops-operate
+curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/operate/SKILL.md \
+  -o .claude/skills/answerloops-operate/SKILL.md
+```
+
+Then mint a scoped API key (**Settings → API Keys** in your workspace) and
+ask your agent to connect it — the skill walks the rest.
+
+## Which one do I need?
+
+| You want to... | Skill |
+|---|---|
+| Stand up your own instance | `answerloops-setup` |
+| Point an agent at an instance that's already running (yours or hosted) | `answerloops-operate` |
+| Both — self-host, then use it | Install both; run setup first |
+
+Both are Claude Code skills today. Support for other agent CLIs/IDEs is
+tracked as a future expansion, not yet available.
