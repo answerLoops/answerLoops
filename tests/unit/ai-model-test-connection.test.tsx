@@ -47,7 +47,10 @@ describe('AIModelSection — Test connection', () => {
     render(<AIModelSection />)
 
     await waitFor(() => expect(screen.getByRole('button', { name: /test connection/i })).toBeTruthy())
-    await user.type(screen.getByPlaceholderText('gpt-5.6-terra'), 'gpt-5.6-terra')
+    // [0] chat provider, [1] Model ID, [2] embedding provider — Model ID is a
+    // real <select> of curated models now, not a free-text field.
+    const modelSelect = screen.getAllByRole('combobox')[1]
+    await user.selectOptions(modelSelect, 'gpt-5.6-terra')
     await user.click(screen.getByRole('button', { name: /test connection/i }))
 
     await waitFor(() => expect(testAIConfigAction).toHaveBeenCalled())
@@ -57,6 +60,28 @@ describe('AIModelSection — Test connection', () => {
 
     await waitFor(() => expect(screen.getByText(/connection OK/i)).toBeTruthy())
     expect(screen.getByText(/rejected \(401\)/)).toBeTruthy()
+  })
+
+  it('switches to a free-text model field via "Custom model ID…" and submits it', async () => {
+    vi.mocked(testAIConfigAction).mockResolvedValue({ result: { chat: { ok: true }, embedding: { ok: true } } })
+    const user = userEvent.setup()
+    render(<AIModelSection />)
+
+    await waitFor(() => expect(screen.getByRole('button', { name: /test connection/i })).toBeTruthy())
+    const modelSelect = screen.getAllByRole('combobox')[1]
+    await user.selectOptions(modelSelect, '__custom__')
+
+    const customInput = await screen.findByPlaceholderText('gpt-5.6-terra')
+    await user.type(customInput, 'gpt-5.6-experimental')
+    await user.click(screen.getByRole('button', { name: /test connection/i }))
+
+    await waitFor(() => expect(testAIConfigAction).toHaveBeenCalled())
+    const fd = vi.mocked(testAIConfigAction).mock.calls[0][1] as FormData
+    expect(fd.get('chat_model')).toBe('gpt-5.6-experimental')
+
+    // Switching back drops the custom value and returns to the dropdown.
+    await user.click(screen.getByRole('button', { name: /choose from list instead/i }))
+    expect(screen.getAllByRole('combobox')[1]).toHaveValue('gpt-5.6-sol')
   })
 
   it('surfaces a validation error from the test action', async () => {

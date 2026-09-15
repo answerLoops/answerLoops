@@ -2934,6 +2934,21 @@ const CHAT_PROVIDERS = [
   },
 ]
 
+/**
+ * Resolve which model to show and whether that provider's field should be a
+ * dropdown or free text, given a preferred model (usually a saved config's
+ * chat_model). A provider with no curated list is always free text. A
+ * preferred model outside the curated list is kept and shown as free text
+ * too, rather than silently swapped for the list's first entry.
+ */
+function resolveChatModel(providerValue: string, preferredModel?: string | null): { model: string; custom: boolean } {
+  const meta = CHAT_PROVIDERS.find((p) => p.value === providerValue) ?? CHAT_PROVIDERS[0]
+  if (meta.models.length === 0) return { model: preferredModel ?? '', custom: true }
+  if (preferredModel && meta.models.includes(preferredModel)) return { model: preferredModel, custom: false }
+  if (preferredModel) return { model: preferredModel, custom: true }
+  return { model: meta.models[0], custom: false }
+}
+
 const EMBEDDING_PROVIDERS = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'openai-compatible', label: 'OpenAI-compatible (Ollama, local)' },
@@ -2954,6 +2969,14 @@ export function AIModelSection() {
   const [config, setConfig] = useState<AIConfig | null | undefined>(undefined)
   const [chatProvider, setChatProvider] = useState('openai')
   const [embeddingProvider, setEmbeddingProvider] = useState('openai')
+  // The Model ID field is a real <select> of curated models per provider, not
+  // a free-text input — but a provider can have a model the curated list
+  // doesn't know about yet (a brand-new release, or one only the org's own
+  // account has access to), and openai-compatible providers (Ollama, LM
+  // Studio, vLLM) have no fixed list at all. customModel switches to a plain
+  // text input for those cases instead of silently overwriting the saved value.
+  const [chatModel, setChatModel] = useState(CHAT_PROVIDERS[0].models[0])
+  const [customModel, setCustomModel] = useState(false)
   const [editing, setEditing] = useState(false)
   const { toastMessage, showToast } = useToast()
   const [, startClearTransition] = useTransition()
@@ -2984,6 +3007,9 @@ export function AIModelSection() {
         if (updated) {
           setChatProvider(updated.chat_provider)
           setEmbeddingProvider(updated.embedding_provider)
+          const resolved = resolveChatModel(updated.chat_provider, updated.chat_model)
+          setChatModel(resolved.model)
+          setCustomModel(resolved.custom)
         }
         setEditing(false)
         showToast('AI model settings updated')
@@ -3014,6 +3040,9 @@ export function AIModelSection() {
         if (data) {
           setChatProvider(data.chat_provider)
           setEmbeddingProvider(data.embedding_provider)
+          const resolved = resolveChatModel(data.chat_provider, data.chat_model)
+          setChatModel(resolved.model)
+          setCustomModel(resolved.custom)
         }
       })
     fetch('/api/ai-config/trial-status')
@@ -3078,7 +3107,16 @@ export function AIModelSection() {
               <select
                 name="chat_provider"
                 value={chatProvider}
-                onChange={(e) => setChatProvider(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value
+                  setChatProvider(value)
+                  // Switching provider invalidates the old model — re-resolve
+                  // against the new provider's list rather than keeping a
+                  // model ID that belongs to a different vendor.
+                  const resolved = resolveChatModel(value)
+                  setChatModel(resolved.model)
+                  setCustomModel(resolved.custom)
+                }}
                 className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm bg-white"
               >
                 {CHAT_PROVIDERS.map((p) => (
@@ -3089,21 +3127,42 @@ export function AIModelSection() {
 
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Model ID</label>
-              <input
-                name="chat_model"
-                type="text"
-                list="chat-model-suggestions"
-                defaultValue={config?.chat_model ?? ''}
-                placeholder={chatMeta.placeholder}
-                className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
-                required
-              />
-              {chatMeta.models.length > 0 && (
-                <datalist id="chat-model-suggestions">
+              {chatMeta.models.length > 0 && !customModel ? (
+                <select
+                  name="chat_model"
+                  value={chatModel}
+                  onChange={(e) => {
+                    if (e.target.value === '__custom__') { setCustomModel(true); setChatModel(''); return }
+                    setChatModel(e.target.value)
+                  }}
+                  className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono bg-white"
+                >
                   {chatMeta.models.map((m) => (
-                    <option key={m} value={m} />
+                    <option key={m} value={m}>{m}</option>
                   ))}
-                </datalist>
+                  <option value="__custom__">Custom model ID…</option>
+                </select>
+              ) : (
+                <>
+                  <input
+                    name="chat_model"
+                    type="text"
+                    value={chatModel}
+                    onChange={(e) => setChatModel(e.target.value)}
+                    placeholder={chatMeta.placeholder}
+                    className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
+                    required
+                  />
+                  {chatMeta.models.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => { setCustomModel(false); setChatModel(chatMeta.models[0]) }}
+                      className="text-xs text-brand-600 hover:underline mt-1"
+                    >
+                      Choose from list instead
+                    </button>
+                  )}
+                </>
               )}
             </div>
 
