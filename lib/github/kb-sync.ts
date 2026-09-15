@@ -2,6 +2,7 @@ import { getInstallationOctokit } from './app'
 import type { KbSyncProgressOpts } from '@/lib/kb-sync/progress'
 import { chunkMarkdown } from '@/lib/ingest/url'
 import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import {
   createArticleFromSource,
   upsertArticleFromSource,
@@ -103,10 +104,12 @@ export async function syncRepoToKB(
           await createArticleFromSource({ question: chunk.question, answer: chunk.answer, embedding, model: EMBEDDING_MODEL, sourceId: source.id }, orgId)
           created++
         } catch (err) {
+          if (err instanceof NoAIProviderConfiguredError) throw err
           logger.warn('chunk embed failed', { module: MOD, path: file.path, error: err })
         }
       }
     } catch (err) {
+      if (err instanceof NoAIProviderConfiguredError) throw err
       logger.warn('file fetch failed', { module: MOD, path: file.path, error: err })
     }
   }
@@ -284,6 +287,7 @@ export async function syncDiscussionsToKB(
       )
       created++
     } catch (err) {
+      if (err instanceof NoAIProviderConfiguredError) throw err
       logger.warn('discussion embed failed', { module: MOD, number: d.number, error: err })
     }
   }
