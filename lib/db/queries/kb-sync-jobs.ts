@@ -146,7 +146,7 @@ export async function reclaimStuckKbSyncJobs(thresholdMs: number, maxAttempts: n
       status = CASE WHEN attempts >= ${maxAttempts} THEN 'failed' ELSE 'queued' END,
       detail = CASE WHEN attempts >= ${maxAttempts}
                     THEN 'Sync did not finish after repeated attempts' ELSE detail END,
-      finished_at = CASE WHEN attempts >= ${maxAttempts} THEN now() ELSE finished_at END
+      finished_at = CASE WHEN attempts >= ${maxAttempts} THEN now()::text ELSE finished_at END
     WHERE status = 'running' AND started_at < ${cutoff}
     RETURNING id
   `)) as unknown as { id: number }[]
