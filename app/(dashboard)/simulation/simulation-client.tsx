@@ -8,7 +8,7 @@ import type { SimulationResult, SimTicketResult, SimStreamEvent } from '@/app/ap
 // for providers not listed here (google/groq/mistral): the dropdown falls
 // back to that single model rather than guessing names we don't maintain.
 const MODELS_BY_PROVIDER: Record<string, string[]> = {
-  openai: ['gpt-4o', 'gpt-4o-mini', 'gpt-3.5-turbo'],
+  openai: ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.4'],
   anthropic: ['claude-sonnet-4-6', 'claude-haiku-4-5-20251001'],
 }
 

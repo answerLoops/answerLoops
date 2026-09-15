@@ -5,6 +5,7 @@ import { MarketingPage, PageHero } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { BLOG_POSTS, formatPostDate } from './posts'
 import { marketingSiteEnabled } from '@/lib/site'
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: 'answerLoops blog',
   description:

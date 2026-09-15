@@ -233,9 +233,15 @@ describe('NotionIntegrationCard', () => {
     render(<NotionIntegrationCard />)
 
     // The card discovers the in-flight job on its own — no click needed —
-    // and disables the button while it's happening.
-    await waitFor(() => expect(screen.getByRole('button', { name: /syncing/i })).toBeTruthy())
-    expect(screen.getByRole('button', { name: /syncing/i }).hasAttribute('disabled')).toBe(true)
+    // and disables the button while it's happening. Both checks live inside
+    // the same waitFor: the mock's second poll resolves on a real macrotask
+    // (see routeFetch above), so a synchronous assertion right after the
+    // first waitFor can lose the race and query a button that already
+    // flipped back to "Sync now".
+    await waitFor(() => {
+      const button = screen.getByRole('button', { name: /syncing/i })
+      expect(button.hasAttribute('disabled')).toBe(true)
+    })
 
     await waitFor(() => expect(screen.getByText('Synced 10 chunks from Notion')).toBeTruthy())
     await waitFor(() => expect(screen.getByRole('button', { name: /sync now/i })).toBeTruthy())

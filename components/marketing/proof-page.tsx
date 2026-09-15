@@ -57,6 +57,8 @@ export function ProofPage({
                 key={d.href}
                 className="marketing-button marketing-button-secondary"
                 href={d.href}
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 {d.label}
               </Link>

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { ComparisonPage } from '@/components/marketing/comparison-page'
 import { marketingSiteEnabled } from '@/lib/site'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: 'answerLoops vs Intercom',
   description:
