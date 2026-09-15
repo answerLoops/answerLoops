@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import SettingsPage from '@/app/(dashboard)/settings/page'
+import IntegrationsPage from '@/app/(dashboard)/integrations/page'
 import { useSearchParams } from 'next/navigation'
 
-// SettingsPage pulls in a large surface of server actions purely to wire up
-// its child cards' forms — none of them run for the default "general" tab,
+// IntegrationsPage pulls in a large surface of server actions purely to wire
+// up its child cards' forms — none of them run for the default "discord" tab,
 // but the module import graph still needs them mocked so the file loads.
 vi.mock('next/navigation', () => ({
   useSearchParams: vi.fn(),
@@ -65,7 +65,7 @@ function mockFetchByUrl(responses: Record<string, unknown>) {
   })
 }
 
-describe('SettingsPage tab bar deflection dots', () => {
+describe("IntegrationsPage tab bar deflection dots", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams() as unknown as ReturnType<typeof useSearchParams>)
@@ -75,12 +75,12 @@ describe('SettingsPage tab bar deflection dots', () => {
     vi.stubGlobal(
       'fetch',
       mockFetchByUrl({
-        '/api/integrations': [{ platform: 'discord', enabled: 1, team_id: null, auto_deflect_enabled: 1 }],
+        '/api/integrations': [{ platform: 'discord', enabled: 1, team_id: null, auto_deflect_enabled: 1, channel_ids: [] }],
         '/api/github/repos': [],
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const dot = screen.getByTitle('Automatic Deflections: On')
@@ -97,7 +97,7 @@ describe('SettingsPage tab bar deflection dots', () => {
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const dot = screen.getByTitle('Automatic Deflections: Off')
@@ -114,7 +114,7 @@ describe('SettingsPage tab bar deflection dots', () => {
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     // Let the fetches resolve and state settle before asserting an absence.
     await waitFor(() => expect(screen.getByText('Discord')).toBeTruthy())
@@ -134,7 +134,7 @@ describe('SettingsPage tab bar deflection dots', () => {
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByText('Google Chat')).toBeTruthy())
     expect(screen.queryByTitle('Automatic Deflections: On')).toBeNull()
@@ -150,7 +150,7 @@ describe('SettingsPage tab bar deflection dots', () => {
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const dots = screen.getAllByTitle('Automatic Deflections: On')
@@ -167,7 +167,7 @@ describe('SettingsPage tab bar deflection dots', () => {
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const dots = screen.getAllByTitle('Automatic Deflections: On')
@@ -187,7 +187,7 @@ describe('SettingsPage tab bar deflection dots', () => {
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByText('Discourse')).toBeTruthy())
     expect(screen.queryByTitle('Automatic Deflections: On')).toBeNull()
@@ -203,7 +203,7 @@ describe('SettingsPage tab bar deflection dots', () => {
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByText('GitHub')).toBeTruthy())
     expect(screen.queryByTitle('Automatic Deflections: On')).toBeNull()
@@ -222,7 +222,7 @@ describe('SettingsPage tab bar deflection dots', () => {
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const dot = screen.getByTitle('Automatic Deflections: On')
@@ -239,7 +239,7 @@ describe('SettingsPage tab bar deflection dots', () => {
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const dot = screen.getByTitle('Automatic Deflections: Off')

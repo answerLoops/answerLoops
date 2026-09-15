@@ -4,16 +4,16 @@ import path from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import SettingsPage from '@/app/(dashboard)/settings/page'
+import IntegrationsPage from '@/app/(dashboard)/integrations/page'
 import { useSearchParams } from 'next/navigation'
 import { updateDiscordAutoDeflectAction } from '@/app/actions/integrations'
 
-// DiscordIntegrationCard isn't separately exported (it's a private function
-// inside app/(dashboard)/settings/page.tsx), so it's driven through the
-// default-exported SettingsPage, same as the existing deflection-badge and
-// tab-dot tests in this directory. That means the whole action surface the
-// page imports needs mocking so the module loads, even though this file
-// only exercises Discord's OAuth-guild auto-deflect toggle.
+// DiscordIntegrationCard now lives in components/settings/discord.tsx and
+// is directly importable, but this file drives it through the full
+// IntegrationsPage, matching the existing deflection-badge and tab-dot
+// tests for that page — the whole action surface the page imports still
+// needs mocking so the module loads, even though this file only exercises
+// Discord's OAuth-guild auto-deflect toggle.
 vi.mock('next/navigation', () => ({
   useSearchParams: vi.fn(),
   useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
@@ -123,7 +123,7 @@ describe('DiscordIntegrationCard — OAuth-connected auto-deflect toggle', () =>
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByText('Not connected')).toBeTruthy())
     expect(screen.queryByText('Automatic Deflections')).toBeNull()
@@ -138,7 +138,7 @@ describe('DiscordIntegrationCard — OAuth-connected auto-deflect toggle', () =>
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByText('Automatic Deflections')).toBeTruthy())
     expect(screen.getByRole('checkbox')).toBeTruthy()
@@ -153,7 +153,7 @@ describe('DiscordIntegrationCard — OAuth-connected auto-deflect toggle', () =>
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByRole('checkbox')).toBeTruthy())
     expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true)
@@ -168,7 +168,7 @@ describe('DiscordIntegrationCard — OAuth-connected auto-deflect toggle', () =>
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByRole('checkbox')).toBeTruthy())
     expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(false)
@@ -185,7 +185,7 @@ describe('DiscordIntegrationCard — OAuth-connected auto-deflect toggle', () =>
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByRole('checkbox')).toBeTruthy())
     await user.click(screen.getByRole('checkbox'))
@@ -212,7 +212,7 @@ describe('DiscordIntegrationCard — OAuth-connected auto-deflect toggle', () =>
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByRole('checkbox')).toBeTruthy())
     await user.click(screen.getByRole('checkbox'))
@@ -236,7 +236,7 @@ describe('DiscordIntegrationCard — OAuth-connected auto-deflect toggle', () =>
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true))
     await user.click(screen.getByRole('checkbox'))
@@ -256,7 +256,7 @@ describe('DiscordIntegrationCard — OAuth-connected auto-deflect toggle', () =>
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect((screen.getByRole('checkbox') as HTMLInputElement).checked).toBe(true))
     await user.click(screen.getByRole('checkbox'))

@@ -119,7 +119,7 @@ describe('server actions + routes: Outlook connect/disconnect flow', () => {
 
 describe('UI: EmailOauthSection is provider-aware', () => {
   it('offers both Connect Gmail and Connect Outlook when no connection exists', () => {
-    const src = readSrc('app/(dashboard)/settings/page.tsx')
+    const src = readSrc('components/settings/email.tsx')
     const fnStart = src.indexOf('function EmailOauthSection')
     const fnBody = src.slice(fnStart, fnStart + 3000)
     expect(fnBody).toContain('/api/email/gmail/install')

@@ -10,7 +10,7 @@ answerLoops connects to Telegram through a bot you create and control — there'
 Because the bot is per-organization, the token you generate with @BotFather is stored encrypted in your answerLoops database — it's never shared with other orgs, and self-hosted deployments don't need a platform-wide credential to make Telegram work.
 
 <Callout type="info">
-  **Automatic Deflections** is off by default, same as every other channel. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss, and the Telegram chat gets no automatic reply. Turn it on in **Settings → Telegram → Edit → Automatic Deflections → Save** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
+  **Automatic Deflections** is off by default, same as every other channel. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss, and the Telegram chat gets no automatic reply. Turn it on in **Integrations → Telegram → Edit → Automatic Deflections → Save** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
 </Callout>
 
 ---
@@ -32,7 +32,7 @@ Telegram bots are created by talking to Telegram's own bot, [@BotFather](https:/
 
 ### 2. Paste the token into answerLoops
 
-1. Go to **Settings → Channels → Telegram**
+1. Go to **Integrations → Telegram**
 2. Paste the token into **Bot Token** and click **Connect**
 
 answerLoops validates the token's format and calls Telegram's `getMe` API to confirm it's real before saving it. If it's rejected, double-check you copied the whole string including the part after the colon.

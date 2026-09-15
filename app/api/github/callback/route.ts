@@ -10,7 +10,7 @@ const MOD = 'api/github/callback'
 export async function GET(req: NextRequest) {
   const baseUrl = process.env.AUTH_URL ?? req.nextUrl.origin
   const errUrl = (code: string) =>
-    NextResponse.redirect(new URL(`/settings?tab=github&github_error=${code}`, baseUrl))
+    NextResponse.redirect(new URL(`/integrations?tab=github&github_error=${code}`, baseUrl))
 
   const access = await requireOrgAccess()
   if (!access.ok) {
@@ -49,5 +49,5 @@ export async function GET(req: NextRequest) {
     return errUrl('installation_failed')
   }
 
-  return NextResponse.redirect(new URL('/settings?tab=github&github_connected=1', baseUrl))
+  return NextResponse.redirect(new URL('/integrations?tab=github&github_connected=1', baseUrl))
 }

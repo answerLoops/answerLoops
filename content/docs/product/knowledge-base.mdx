@@ -66,14 +66,14 @@ Connect a Notion workspace and pull its pages and databases into the KB — usef
 
 1. In Notion, create a connection (**Settings → Developer → Open developer tools → + New connection**, **Access token** auth) and copy its token (starts with `ntn_` or `secret_`).
 2. Share the pages you want synced: open each top-level page, click **•••  → Connections**, and add your connection. Sharing a page also shares its subpages, so sharing one top-level parent page is usually enough rather than adding every page individually. answerLoops syncs everything the connection can see — you control the scope by sharing or unsharing pages in Notion.
-3. In answerLoops, go to **Settings → Notion**, paste the token, and click **Connect**.
+3. In answerLoops, go to **Integrations → Notion**, paste the token, and click **Connect**.
 4. Go to the **Knowledge Base** page and click **Sync now** in the Notion panel. Each Notion page (and each row of a shared database) is converted to text, split into chunks, and embedded like every other source. Re-syncing replaces the previous Notion content.
 
 <Note>
   Notion content imports **unpublished**. It is searchable from the dashboard but is not used to answer customer questions or served to the website widget until you click **Publish to widget** on the Notion panel. Every other source publishes automatically on import; Notion is the exception because workspace docs are often internal drafts. Your publish choice is kept across re-syncs.
 </Note>
 
-The token is stored encrypted (set `ENCRYPTION_KEY` before connecting in any real deployment). There is no environment variable to configure — Notion is set up per workspace in the Settings UI.
+The token is stored encrypted (set `ENCRYPTION_KEY` before connecting in any real deployment). There is no environment variable to configure — Notion is set up per workspace in the Integrations UI.
 
 ## Sources list
 
