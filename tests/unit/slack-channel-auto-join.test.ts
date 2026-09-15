@@ -123,8 +123,8 @@ describe('saveSlackChannelsAction and saveSlackIntegrationAction surface join fa
   })
 })
 
-describe('Settings: Events API endpoint only shown to self-hosted deployments', () => {
-  const src = read('app/(dashboard)/settings/page.tsx')
+describe('Slack settings: Events API endpoint only shown to self-hosted deployments', () => {
+  const src = read('components/settings/slack.tsx')
 
   it('gates the endpoint block on deployment mode instead of showing it to every org', () => {
     expect(src).toContain('getCurrentDeploymentMode()')

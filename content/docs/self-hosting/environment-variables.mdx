@@ -108,7 +108,7 @@ Per-org AI keys set in **Settings → AI Model** override these env vars for tha
 | `BOT_TARGET_URL` | URL of the app service as seen from the bot container. **No trailing slash or period.** Default: `http://localhost:3000` |
 
 <Warning>
-  `DISCORD_TOKEN` must be set on **both** the app service and the bot service. The app service uses it to power the channel picker in Settings → Discord. The bot service uses it to connect to Discord's gateway. If they reference different Discord applications, the bot joins a different server than users authorized.
+  `DISCORD_TOKEN` must be set on **both** the app service and the bot service. The app service uses it to power the channel picker in Integrations → Discord. The bot service uses it to connect to Discord's gateway. If they reference different Discord applications, the bot joins a different server than users authorized.
 </Warning>
 
 ## Slack (optional)
@@ -152,7 +152,7 @@ Subscribe to events: Issues, Issue comments, Discussions, Discussion comments, P
 |---|---|
 | `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather. Fallback when no org token is saved. |
 
-After deploying, register the webhook: `POST {AUTH_URL}/api/telegram/register` (or click **Register webhook** in Settings → Telegram).
+After deploying, register the webhook: `POST {AUTH_URL}/api/telegram/register` (or click **Register webhook** in Integrations → Telegram).
 
 ## Email notifications — Resend (optional)
 
@@ -178,15 +178,15 @@ If absent, email notifications skip silently — nothing breaks. Without `RESEND
 
 ## Discourse
 
-No environment variable. Each org connects its own Discourse forum in **Settings → Discourse** by pasting a bot-scoped API key, which is stored encrypted — make sure `ENCRYPTION_KEY` (above) is set before connecting in any real deployment. See [Discourse](/docs/integrations/discourse) for the full setup.
+No environment variable. Each org connects its own Discourse forum in **Integrations → Discourse** by pasting a bot-scoped API key, which is stored encrypted — make sure `ENCRYPTION_KEY` (above) is set before connecting in any real deployment. See [Discourse](/docs/integrations/discourse) for the full setup.
 
 ## Circle
 
-No environment variable. Each org connects its own Circle community in **Settings → Circle** using a per-org webhook secret — make sure `ENCRYPTION_KEY` (above) is set before connecting in any real deployment. See [Circle](/docs/integrations/circle) for the full setup.
+No environment variable. Each org connects its own Circle community in **Integrations → Circle** using a per-org webhook secret — make sure `ENCRYPTION_KEY` (above) is set before connecting in any real deployment. See [Circle](/docs/integrations/circle) for the full setup.
 
 ## Notion KB source
 
-No environment variable. Each org connects its own Notion workspace in **Settings → Notion** by pasting an internal integration token, which is stored encrypted — make sure `ENCRYPTION_KEY` (above) is set before connecting in any real deployment. See [Notion](/docs/integrations/notion) for the full setup.
+No environment variable. Each org connects its own Notion workspace in **Integrations → Notion** by pasting an internal integration token, which is stored encrypted — make sure `ENCRYPTION_KEY` (above) is set before connecting in any real deployment. See [Notion](/docs/integrations/notion) for the full setup.
 
 ## Web push notifications (optional)
 

@@ -193,7 +193,7 @@ function GitHubKBSection({ onSynced }: { onSynced: () => void }) {
         <h2 className="text-sm font-semibold text-gray-900">GitHub Repositories</h2>
         <p className="text-xs text-gray-500 mt-0.5">
           Markdown files from these repos are synced into the knowledge base.{' '}
-          <Link href="/settings?tab=github" className="text-brand-600 hover:underline">Manage in Settings →</Link>
+          <Link href="/integrations?tab=github" className="text-brand-600 hover:underline">Manage in Integrations →</Link>
         </p>
       </div>
 
@@ -342,7 +342,7 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
         <h2 className="text-sm font-semibold text-gray-900">Notion workspace</h2>
         <p className="text-xs text-gray-500 mt-0.5">
           Keep your support docs in Notion? Connect a workspace and sync its pages and databases into the knowledge base.{' '}
-          <Link href="/settings?tab=notion" className="text-brand-600 hover:underline">Connect Notion →</Link>
+          <Link href="/integrations?tab=notion" className="text-brand-600 hover:underline">Connect Notion →</Link>
         </p>
       </div>
     )
@@ -354,7 +354,7 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
         <h2 className="text-sm font-semibold text-gray-900">Notion workspace</h2>
         <p className="text-xs text-gray-500 mt-0.5 break-words">
           {workspace ? `Connected to ${workspace}. ` : ''}Pages and databases shared with your integration are synced into the knowledge base.{' '}
-          <Link href="/settings?tab=notion" className="text-brand-600 hover:underline">Manage in Settings →</Link>
+          <Link href="/integrations?tab=notion" className="text-brand-600 hover:underline">Manage in Integrations →</Link>
         </p>
       </div>
 

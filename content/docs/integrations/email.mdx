@@ -15,7 +15,7 @@ Two things are independent and configured separately:
 All email tickets appear in the unified ticket list with an Email source badge.
 
 <Callout type="info">
-  **Automatic Deflections** is off by default for every newly connected platform, email included. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — the customer gets a brief acknowledgment reply instead of the real answer. Turn it on in **Settings → Email → Edit sender filters & deflections** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
+  **Automatic Deflections** is off by default for every newly connected platform, email included. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — the customer gets a brief acknowledgment reply instead of the real answer. Turn it on in **Integrations → Email → Edit sender filters & deflections** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
 </Callout>
 
 ---
@@ -28,7 +28,7 @@ The platform email credentials and webhook signing secret must be set on the app
 
 ### 2. Configure in answerLoops
 
-Go to **Settings → Channels → Email** and fill in:
+Go to **Integrations → Email** and fill in:
 
 | Setting | Field | What it does |
 |---|---|---|
@@ -63,7 +63,7 @@ The professional option for outbound sending — replies go out with your own do
 
 Without domain verification, a raw `From:` override is spoofing from the receiving mail server's perspective — Gmail/Outlook will flag or reject mail claiming a domain the sending infrastructure was never authorized (via SPF/DKIM) to send as. Verification proves ownership before answerLoops will send as that domain.
 
-1. Go to **Settings → Channels → Email** and find **Use your own domain**.
+1. Go to **Integrations → Email** and find **Use your own domain**.
 2. Enter the domain you want replies to come from (e.g. `yourcompany.com`) and click **Use your own domain**.
 3. answerLoops registers the domain with the managed email service and shows the required DKIM, return-path/SPF, and inbound MX records — add them at your domain's DNS host.
 4. Click **Check verification status** once the records have propagated (this can take a few minutes to a few hours depending on your DNS host).
@@ -79,7 +79,7 @@ The quick option for outbound sending — connect your own Gmail or Outlook mail
 
 answerLoops only ever requests permission to *send* mail as you — it never reads your inbox.
 
-1. Go to **Settings → Channels → Email** and find **Connect a mailbox**.
+1. Go to **Integrations → Email** and find **Connect a mailbox**.
 2. Click **Connect Gmail** or **Connect Outlook** and approve answerLoops on the provider's consent screen.
 3. Once approved, replies automatically send from your connected mailbox — no separate toggle needed.
 

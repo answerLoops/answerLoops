@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { EmailIntegrationCard } from '@/app/(dashboard)/settings/page'
+import { EmailIntegrationCard } from '@/components/settings/email'
 import { removeEmailDomainAction } from '@/app/actions/integrations'
 
 /**
