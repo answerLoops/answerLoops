@@ -1,5 +1,6 @@
 import { chunkMarkdown } from '@/lib/ingest/url'
 import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { logger } from '@/lib/logger'
 import { decryptToken } from '@/lib/crypto/tokens'
@@ -169,6 +170,11 @@ export async function syncNotionToKB(
           )
           created++
         } catch (err) {
+          // A misconfigured AI provider fails every chunk identically — retrying
+          // the rest just burns through the whole workspace logging the same
+          // warning before finishing "successfully" with 0 chunks. Surface it
+          // as a job failure instead of a swallowed per-chunk warning.
+          if (err instanceof NoAIProviderConfiguredError) throw err
           logger.warn('notion chunk embed failed', { module: MOD, orgId, title: doc.title, error: err })
         }
       }

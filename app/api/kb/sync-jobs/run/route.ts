@@ -8,6 +8,7 @@ import { throttleProgress } from '@/lib/kb-sync/progress'
 import { getRepoById } from '@/lib/db/queries/github'
 import { syncNotionToKB } from '@/lib/notion/kb-sync'
 import { syncRepoToKB, syncDiscussionsToKB } from '@/lib/github/kb-sync'
+import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -91,7 +92,9 @@ export async function POST(request: Request) {
     logger.info('kb sync job done', { module: MOD, jobId: job.id, kind: job.kind, syncedCount })
     return Response.json({ ok: true, ran: true, syncedCount })
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Sync failed'
+    const message = err instanceof NoAIProviderConfiguredError
+      ? 'No AI provider is set up for this workspace — add one in Settings → AI Model, then sync again.'
+      : err instanceof Error ? err.message : 'Sync failed'
     await finishKbSyncJob(job.id, { status: 'failed', detail: message })
     logger.error('kb sync job failed', { module: MOD, jobId: job.id, kind: job.kind, error: err })
     // 200 on purpose — the job is recorded as failed; a 500 would just make
