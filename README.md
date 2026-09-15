@@ -213,6 +213,7 @@ lib/ai/              Retrieval, agents, embeddings, triage, and review
 lib/ingest/          Shared multi-channel support pipeline
 lib/db/              Drizzle schema, migrations, and org-scoped queries
 content/docs/        Fumadocs product, integration, and self-hosting docs
+skills/              Installable Claude Code skills (self-host setup, agent operation)
 drizzle/             Ordered PostgreSQL migrations
 tests/unit/          Vitest regression and component tests
 e2e/                 Playwright end-to-end coverage
@@ -232,6 +233,8 @@ Create an organization API key in **Settings → API Keys**, then use either sur
 | OpenAPI | `GET /api/agent/openapi.json` | Typed clients and API exploration |
 
 Both cover knowledge-base search, FAQ lookup, listing and creating tickets, and generating a grounded answer. See the [MCP guide](https://answerloops.com/docs/integrations/mcp) or the [Agent API reference](https://answerloops.com/docs/integrations/agent-api).
+
+Using Claude Code? [`skills/`](./skills) has an installable skill for self-hosting (`skills/setup`) and one for operating a running workspace over MCP (`skills/operate`) — see the [agent skills guide](https://answerloops.com/docs/integrations/agent-skills).
 
 ## Contributing
 

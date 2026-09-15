@@ -12,6 +12,7 @@
     "notion",
     "mcp",
     "agent-api",
+    "agent-skills",
     "openai",
     "anthropic",
     "google-gemini",
