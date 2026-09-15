@@ -59,9 +59,11 @@ describe('getDirectDatabaseUrl', () => {
 })
 
 describe('LISTEN consumers use the direct connection, not the pooled one', () => {
-  it('bot/index.ts config_changed listener resolves via getDirectDatabaseUrl', () => {
+  it('bot/index.ts LISTEN connection (config_changed, kb_sync_job_queued, ...) resolves via getDirectDatabaseUrl', () => {
     const src = read('bot/index.ts')
-    const idx = src.indexOf('function watchConfigChanges')
+    // Generalized from watchConfigChanges to watchNotifications when the KB
+    // sync worker moved onto this same connection instead of its own 15s poll.
+    const idx = src.indexOf('function watchNotifications')
     const body = src.slice(idx, src.indexOf('\n}', idx))
     expect(body).toContain('getDirectDatabaseUrl()')
     expect(body).not.toContain('process.env.DATABASE_URL')

@@ -90,11 +90,7 @@ Every tenant-data query requires an explicit `org_id` — there is no silent def
 ## 7. Deployment
 
 - Multi-stage `Dockerfile` (deps → build → runner, no build toolchain in the final image), non-root user.
-<<<<<<< Updated upstream
-- Two services: **app** (dashboard + API, `pnpm start`) and **bot** (Discord gateway listener + background sweeps, `pnpm bot:start`). The bot also runs the maintenance sweeps — org purge, stuck-ticket recovery, and the **KB sync worker**, which claims rows from `kb_sync_jobs` and drives each one by calling `POST /api/kb/sync-jobs/run` on the app with `BOT_SECRET`. Notion/GitHub KB syncs are enqueued (by "Sync now" and the GitHub push webhook) rather than run inline in those requests.
-=======
-- Two services: **app** (dashboard + API, `pnpm start`) and **bot** (Discord gateway listener, `pnpm bot:start`).
->>>>>>> Stashed changes
+- Two services: **app** (dashboard + API, `pnpm start`) and **bot** (Discord gateway listener + background sweeps, `pnpm bot:start`). The bot also runs the maintenance sweeps — org purge, stuck-ticket recovery, and the **KB sync worker**, which claims rows from `kb_sync_jobs` and drives each one by calling `POST /api/kb/sync-jobs/run` on the app with `BOT_SECRET`. Notion/GitHub KB syncs are enqueued (by "Sync now" and the GitHub push webhook) rather than run inline in those requests. The worker is NOTIFY-driven, not polling: a `kb_sync_jobs` trigger fires `pg_notify('kb_sync_job_queued', id)` on every enqueue and requeue, delivered over the bot's existing single-connection LISTEN socket (the same one used for `config_changed`/`member_joined`/`data_changed`); a coarse 5-minute sweep remains only as a safety net for a missed notification or a stuck `running` row. An unconditional short-interval poll here previously kept the database compute from ever autosuspending.
 - `docker-compose.prod.yml` (self-hosted, both services from the one image) for production; `docker compose up` (dev target) for local development with a local Postgres.
 - Migrations run automatically on startup — no manual migration step.
 - The `Dockerfile` / compose files above are the self-hosted path. A PaaS deploy builds from the repo instead — Railway reads `railway.toml` / `railway.bot.toml` and builds each service with Nixpacks. See `docs/self-hosting/` for the full self-host guide.

@@ -189,4 +189,35 @@ export async function runMigrations() {
       AFTER INSERT OR DELETE ON notifications
       FOR EACH ROW EXECUTE FUNCTION notify_data_changed();
   `)
+
+  // Idempotent trigger: fires pg_notify('kb_sync_job_queued', id) whenever a
+  // kb_sync_jobs row becomes queued — a fresh enqueue from "Sync now" or the
+  // GitHub push webhook, or the bot's stuck-job sweep requeuing a crashed run.
+  // The bot LISTENs on this channel (same connection as config_changed/
+  // member_joined/data_changed) and claims the job immediately, replacing an
+  // unconditional 15-second poll that ran forever regardless of whether any
+  // job existed — on Neon-style serverless Postgres that kept the database
+  // compute from ever autosuspending. A coarse periodic sweep remains as a
+  // safety net for a missed NOTIFY or a job stuck in `running`.
+  await db.execute(sql`
+    CREATE OR REPLACE FUNCTION notify_kb_sync_job_queued()
+    RETURNS trigger LANGUAGE plpgsql AS $$
+    BEGIN
+      PERFORM pg_notify('kb_sync_job_queued', NEW.id::text);
+      RETURN NEW;
+    END;
+    $$;
+
+    DROP TRIGGER IF EXISTS trg_kb_sync_job_queued_insert ON kb_sync_jobs;
+    CREATE TRIGGER trg_kb_sync_job_queued_insert
+      AFTER INSERT ON kb_sync_jobs
+      FOR EACH ROW WHEN (NEW.status = 'queued')
+      EXECUTE FUNCTION notify_kb_sync_job_queued();
+
+    DROP TRIGGER IF EXISTS trg_kb_sync_job_queued_update ON kb_sync_jobs;
+    CREATE TRIGGER trg_kb_sync_job_queued_update
+      AFTER UPDATE ON kb_sync_jobs
+      FOR EACH ROW WHEN (NEW.status = 'queued' AND OLD.status IS DISTINCT FROM 'queued')
+      EXECUTE FUNCTION notify_kb_sync_job_queued();
+  `)
 }
