@@ -1,6 +1,8 @@
 import type { MetadataRoute } from 'next'
 import { marketingSiteEnabled, MARKETING_URL } from '@/lib/site'
 
+export const dynamic = 'force-dynamic'
+
 // The app routes a crawler can do nothing useful with — every one of them
 // redirects to /login for an anonymous request.
 const APP_ROUTES = [

@@ -14,6 +14,7 @@ import { marketingSiteEnabled } from '@/lib/site'
 
 const post = getBlogPost('managing-every-community-platform-from-one-place')!
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: post.title,
   description: post.description,

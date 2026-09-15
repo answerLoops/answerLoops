@@ -21,6 +21,7 @@ import {
 import { IntegrationIcon } from '@/components/marketing/integration-icon'
 import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: 'answerLoops — Agent infrastructure for support',
   description:
