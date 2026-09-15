@@ -1,64 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="760" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
-  <title id="title">answerLoops support loop</title>
-  <desc id="desc">Community questions enter through multiple channels, pass through one ticket model and a grounded confidence review, then are automatically answered or escalated to a human before useful resolutions improve the knowledge base.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1120" viewBox="0 0 1100 1120" role="img" aria-labelledby="title desc">
+  <title id="title">answerLoops: from first setup to reusable answers</title>
+  <desc id="desc">The setup skill helps launch a workspace. The operation skill connects an agent through MCP. Community tickets enter triage, drafting, and confidence review. Agents can search published knowledge, read FAQs and tickets, generate standalone answers, or create tickets for the shared workflow. Teams promote useful resolutions into published knowledge.</desc>
   <defs>
-    <linearGradient id="blue" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#2563eb"/><stop offset="1" stop-color="#06b6d4"/></linearGradient>
-    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#111827" flood-opacity=".1"/></filter>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#64748b"/></marker>
+    <marker id="blueArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#2563eb"/></marker>
   </defs>
-  <rect width="1400" height="760" rx="28" fill="#f5f5f3"/>
-  <rect x="1" y="1" width="1398" height="758" rx="27" fill="none" stroke="#dedede"/>
+  <rect x="1" y="1" width="1098" height="1118" rx="24" fill="#fff" stroke="#dedede"/>
   <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
-    <text x="64" y="74" fill="#2563eb" font-size="12" font-weight="700" letter-spacing="2">HOW ANSWERLOOPS WORKS</text>
-    <text x="64" y="116" fill="#171717" font-size="28" font-weight="700" letter-spacing="-1">One workflow from question to reusable knowledge.</text>
-
-    <g transform="translate(64 158)" filter="url(#shadow)">
-      <rect width="278" height="286" rx="18" fill="#fff" stroke="#dedede"/>
-      <text x="24" y="39" fill="#686868" font-size="11" font-weight="700" letter-spacing="1.5">01 · INTAKE</text>
-      <text x="24" y="72" fill="#171717" font-size="21" font-weight="700">Questions arrive</text>
-      <text x="24" y="98" fill="#686868" font-size="12">Meet users where they already ask.</text>
-      <g font-size="12" font-weight="600">
-        <rect x="24" y="126" width="107" height="38" rx="9" fill="#f5f5f3" stroke="#dedede"/><circle cx="43" cy="145" r="6" fill="#60a5fa"/><text x="56" y="149" fill="#374151">Discord</text>
-        <rect x="143" y="126" width="107" height="38" rx="9" fill="#f5f5f3" stroke="#dedede"/><circle cx="162" cy="145" r="6" fill="#60a5fa"/><text x="175" y="149" fill="#374151">Slack</text>
-        <rect x="24" y="174" width="107" height="38" rx="9" fill="#f5f5f3" stroke="#dedede"/><circle cx="43" cy="193" r="6" fill="#60a5fa"/><text x="56" y="197" fill="#374151">GitHub</text>
-        <rect x="143" y="174" width="107" height="38" rx="9" fill="#f5f5f3" stroke="#dedede"/><circle cx="162" cy="193" r="6" fill="#60a5fa"/><text x="175" y="197" fill="#374151">Forums</text>
-      </g>
-      <text x="24" y="250" fill="#9ca3af" font-size="11">Email · Telegram · web chat</text>
+    <text x="48" y="53" fill="#2563eb" font-size="13" font-weight="700" letter-spacing="2">HOW ANSWERLOOPS WORKS</text>
+    <text x="48" y="99" fill="#171717" font-size="32" font-weight="700">Your knowledge. Your community. Your agent.</text>
+    <g transform="translate(48 130)">
+      <rect width="1004" height="112" rx="16" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="24" y="33" fill="#1d4ed8" font-size="13" font-weight="700" letter-spacing="1">START WITH AGENT SKILLS</text>
+      <text x="24" y="63" fill="#171717" font-size="19" font-weight="650">Setup skill → launch your instance</text>
+      <text x="24" y="88" fill="#475569" font-size="15">Prerequisites, configuration, Docker, health check</text>
+      <line x1="490" y1="24" x2="490" y2="88" stroke="#bfdbfe"/>
+      <text x="522" y="63" fill="#171717" font-size="19" font-weight="650">Operate skill → connect your agent</text>
+      <text x="522" y="88" fill="#475569" font-size="15">A running workspace, an API key, and MCP</text>
     </g>
-
-    <path d="M366 301H414" stroke="url(#blue)" stroke-width="2"/><path d="m406 294 10 7-10 7" fill="none" stroke="#2563eb" stroke-width="2"/>
-
-    <g transform="translate(438 158)" filter="url(#shadow)">
-      <rect width="278" height="286" rx="18" fill="#252525"/>
-      <text x="24" y="39" fill="#93c5fd" font-size="11" font-weight="700" letter-spacing="1.5">02 · UNDERSTAND</text>
-      <text x="24" y="72" fill="#fff" font-size="21" font-weight="700">One ticket model</text>
-      <text x="24" y="98" fill="#c4c4c4" font-size="12">Normalize every source into context.</text>
-      <rect x="24" y="130" width="230" height="54" rx="11" fill="#fff" fill-opacity=".08" stroke="#fff" stroke-opacity=".12"/><text x="40" y="153" fill="#fff" font-size="12" font-weight="600">How-to · Webhooks</text><text x="40" y="171" fill="#9ca3af" font-size="11">priority · source · organization</text>
-      <rect x="24" y="198" width="106" height="31" rx="15.5" fill="#60a5fa" fill-opacity=".14"/><text x="43" y="218" fill="#bfdbfe" font-size="11" font-weight="600">deduplicated</text>
-      <rect x="140" y="198" width="114" height="31" rx="15.5" fill="#60a5fa" fill-opacity=".14"/><text x="157" y="218" fill="#bfdbfe" font-size="11" font-weight="600">SLA attached</text>
+    <g transform="translate(48 282)">
+      <rect width="474" height="134" rx="16" fill="#171717"/>
+      <text x="24" y="34" fill="#93c5fd" font-size="13" font-weight="700" letter-spacing="1">COMMUNITY CONVERSATIONS</text>
+      <text x="24" y="67" fill="#fff" font-size="23" font-weight="650">Meet users where they ask</text>
+      <text x="24" y="96" fill="#d1d5db" font-size="16">Discord · Slack · GitHub · forums</text>
+      <text x="24" y="119" fill="#d1d5db" font-size="16">Email · Telegram · Google Chat</text>
     </g>
-
-    <path d="M740 301H788" stroke="url(#blue)" stroke-width="2"/><path d="m780 294 10 7-10 7" fill="none" stroke="#2563eb" stroke-width="2"/>
-
-    <g transform="translate(812 158)" filter="url(#shadow)">
-      <rect width="278" height="286" rx="18" fill="#fff" stroke="#bfdbfe"/>
-      <text x="24" y="39" fill="#2563eb" font-size="11" font-weight="700" letter-spacing="1.5">03 · GROUND + REVIEW</text>
-      <text x="24" y="72" fill="#171717" font-size="21" font-weight="700">Confidence gate</text>
-      <text x="24" y="98" fill="#686868" font-size="12">Evidence before automation.</text>
-      <rect x="24" y="128" width="230" height="61" rx="11" fill="#eff6ff" stroke="#dbeafe"/><text x="40" y="153" fill="#1d4ed8" font-size="12" font-weight="650">3 sources matched</text><text x="40" y="173" fill="#64748b" font-size="11">draft checked against evidence</text>
-      <circle cx="211" cy="219" r="25" fill="#eff6ff" stroke="#93c5fd"/><text x="211" y="224" fill="#1d4ed8" font-size="14" font-weight="700" text-anchor="middle">90%</text><text x="24" y="224" fill="#374151" font-size="12" font-weight="600">Auto-post threshold</text>
+    <g transform="translate(578 282)">
+      <rect width="474" height="134" rx="16" fill="#171717"/>
+      <text x="24" y="34" fill="#93c5fd" font-size="13" font-weight="700" letter-spacing="1">YOUR AGENT AND APPLICATIONS</text>
+      <text x="24" y="67" fill="#fff" font-size="23" font-weight="650">Put your agent to work</text>
+      <text x="24" y="96" fill="#d1d5db" font-size="16">MCP server · REST API · TypeScript SDK</text>
+      <text x="24" y="119" fill="#d1d5db" font-size="16">Search · FAQ · tickets · answers</text>
     </g>
-
-    <path d="M1114 301H1162" stroke="url(#blue)" stroke-width="2"/><path d="m1154 294 10 7-10 7" fill="none" stroke="#2563eb" stroke-width="2"/>
-    <g transform="translate(1186 158)" filter="url(#shadow)">
-      <rect width="150" height="286" rx="18" fill="#252525"/>
-      <text x="20" y="39" fill="#93c5fd" font-size="11" font-weight="700" letter-spacing="1.5">04 · RESOLVE</text>
-      <text x="20" y="73" fill="#fff" font-size="19" font-weight="700">Reply</text>
-      <text x="20" y="98" fill="#c4c4c4" font-size="12">where it started.</text>
-      <rect x="20" y="132" width="110" height="45" rx="11" fill="#fff" fill-opacity=".09" stroke="#fff" stroke-opacity=".13"/><text x="36" y="159" fill="#f3f4f6" font-size="12" font-weight="600">Auto-reply</text>
-      <rect x="20" y="188" width="110" height="45" rx="11" fill="#fff" fill-opacity=".09" stroke="#fff" stroke-opacity=".13"/><text x="36" y="215" fill="#f3f4f6" font-size="12" font-weight="600">Human queue</text>
+    <g fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)">
+      <path d="M285 416V472"/>
+      <path d="M815 416V472"/>
     </g>
-
-    <path d="M1260 476C1190 610 930 650 700 650 480 650 250 612 190 480" fill="none" stroke="#2563eb" stroke-opacity=".55" stroke-width="2" stroke-dasharray="6 7"/><path d="m194 470-7 11 12 1" fill="none" stroke="#2563eb" stroke-opacity=".7" stroke-width="2"/>
-    <g transform="translate(422 532)"><rect width="556" height="74" rx="18" fill="#eff6ff" stroke="#bfdbfe"/><circle cx="34" cy="37" r="12" fill="#2563eb" fill-opacity=".13"/><path d="m28 37 5 5 9-11" fill="none" stroke="#2563eb" stroke-width="2"/><text x="60" y="33" fill="#1d4ed8" font-size="12" font-weight="700">RESOLUTION → REUSABLE KNOWLEDGE</text><text x="60" y="52" fill="#64748b" font-size="12">The next answer starts with what the team already learned.</text></g>
+    <g transform="translate(48 478)">
+      <rect width="474" height="182" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="24" y="37" fill="#171717" font-size="22" font-weight="650">Shared ticket workflow</text>
+      <text x="24" y="72" fill="#475569" font-size="16">Triage → retrieve → draft → review</text>
+      <text x="24" y="105" fill="#475569" font-size="16">Eligible channel reply: auto-post when enabled</text>
+      <text x="24" y="131" fill="#475569" font-size="16">Other questions: team review and follow-up</text>
+      <text x="24" y="159" fill="#1d4ed8" font-size="15" font-weight="600">Bug reports and feature requests stay human-led.</text>
+    </g>
+    <g transform="translate(578 478)">
+      <rect width="474" height="182" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
+      <text x="24" y="37" fill="#171717" font-size="22" font-weight="650">Answers on demand</text>
+      <text x="24" y="72" fill="#475569" font-size="16">Search knowledge and read the latest FAQ</text>
+      <text x="24" y="105" fill="#475569" font-size="16">Generate an answer with a confidence score</text>
+      <text x="24" y="131" fill="#475569" font-size="16">Read tickets or create one for team review</text>
+      <text x="24" y="159" fill="#1d4ed8" font-size="15" font-weight="600">Standalone answers do not open a ticket.</text>
+    </g>
+    <path d="M602 660V702H285V668" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+    <rect x="358" y="688" width="164" height="27" rx="8" fill="#fff"/>
+    <text x="440" y="707" fill="#475569" font-size="14" text-anchor="middle">create_ticket</text>
+    <g transform="translate(48 768)">
+      <rect width="1004" height="138" rx="16" fill="#eff6ff" stroke="#bfdbfe"/>
+      <text x="24" y="36" fill="#1d4ed8" font-size="13" font-weight="700" letter-spacing="1">KNOWLEDGE FOR FUTURE ANSWERS</text>
+      <text x="24" y="71" fill="#171717" font-size="23" font-weight="650">Publish what you know. Reuse what you solve.</text>
+      <text x="24" y="102" fill="#475569" font-size="16">Docs · uploaded files · connected sources · articles promoted from resolved tickets</text>
+      <text x="24" y="125" fill="#475569" font-size="15">Published knowledge also powers answers in the website chat widget.</text>
+    </g>
+    <g fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#blueArrow)">
+      <path d="M72 768V668"/>
+      <path d="M1028 768V668"/>
+    </g>
+    <g transform="translate(48 960)">
+      <rect width="1004" height="112" rx="16" fill="#171717"/>
+      <text x="24" y="40" fill="#fff" font-size="22" font-weight="650">Make the next answer easier</text>
+      <text x="24" y="72" fill="#d1d5db" font-size="16">Resolve tickets → promote useful answers → improve published knowledge</text>
+      <text x="24" y="96" fill="#93c5fd" font-size="15">Use knowledge gaps and FAQ digests to decide what to document next.</text>
+    </g>
+    <path d="M550 960V914" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#blueArrow)"/>
   </g>
 </svg>
