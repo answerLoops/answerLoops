@@ -84,19 +84,31 @@ interface GoogleChatIntegration {
 
 function useToast() {
   const [message, setMessage] = useState<string | null>(null)
-  const show = (msg: string) => {
+  const [kind, setKind] = useState<'success' | 'error'>('success')
+  const show = (msg: string, toastKind: 'success' | 'error' = 'success') => {
     setMessage(msg)
-    setTimeout(() => setMessage(null), 3000)
+    setKind(toastKind)
+    // Longer messages (e.g. a failure explaining what to do next) need more
+    // than a flash to read — scale the visible time with length instead of a
+    // flat 3s.
+    const durationMs = Math.max(3000, Math.min(10000, 1500 + msg.length * 60))
+    setTimeout(() => setMessage(null), durationMs)
   }
-  return { toastMessage: message, showToast: show }
+  return { toastMessage: message, toastKind: kind, showToast: show }
 }
 
-function Toast({ message }: { message: string }) {
+function Toast({ message, kind = 'success' }: { message: string; kind?: 'success' | 'error' }) {
   return (
     <div className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm text-white shadow-xl animate-in fade-in slide-in-from-bottom-2">
-      <svg className="h-4 w-4 shrink-0 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-        <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
+      {kind === 'error' ? (
+        <svg className="h-4 w-4 shrink-0 text-red-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <svg className="h-4 w-4 shrink-0 text-green-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
       {message}
     </div>
   )
@@ -3670,7 +3682,7 @@ export function NotionIntegrationCard() {
   const [syncing, setSyncing] = useState(false)
   const [syncLabel, setSyncLabel] = useState('Sync now')
   const [syncElapsed, setSyncElapsed] = useState(0)
-  const { toastMessage, showToast } = useToast()
+  const { toastMessage, toastKind, showToast } = useToast()
   const showToastRef = useRef(showToast)
   showToastRef.current = showToast
   // Stops any in-flight sync poll — set on unmount and on a successful
@@ -3715,7 +3727,7 @@ export function NotionIntegrationCard() {
         setSyncLabel(job.status === 'running' ? 'Syncing…' : 'Queued…')
         pollKbSyncJob('/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current).then((result) => {
           if (cancelled) return
-          showToastRef.current(result.detail)
+          showToastRef.current(result.detail, result.ok ? 'success' : 'error')
           if (result.ok) reload()
           setSyncing(false)
           setSyncLabel('Sync now')
@@ -3754,7 +3766,7 @@ export function NotionIntegrationCard() {
     setSyncLabel('Queued…')
     try {
       const result = await runKbSync('/api/notion/sync-kb', '/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current)
-      showToast(result.detail)
+      showToast(result.detail, result.ok ? 'success' : 'error')
       if (result.ok) await reload()
     } finally {
       setSyncing(false)
@@ -3769,7 +3781,7 @@ export function NotionIntegrationCard() {
 
   return (
     <>
-      {toastMessage && <Toast message={toastMessage} />}
+      {toastMessage && <Toast message={toastMessage} kind={toastKind} />}
       <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0">
