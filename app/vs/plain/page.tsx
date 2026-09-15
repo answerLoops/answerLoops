@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import { ComparisonPage } from '@/components/marketing/comparison-page'
+import { marketingSiteEnabled } from '@/lib/site'
 export const metadata: Metadata = {
   title: 'answerLoops vs Plain',
   description:
@@ -7,6 +9,10 @@ export const metadata: Metadata = {
   alternates: { canonical: '/vs/plain' },
 }
 export default function Page() {
+  // Not served by a self-hosted install: there is no hosted plan to sell there,
+  // and the page would be advertising our pricing from somebody else's domain.
+  if (!marketingSiteEnabled()) notFound()
+
   return (
     <ComparisonPage
       competitor="Plain"

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import {
   MarketingPage,
   PageHero,
@@ -9,6 +10,7 @@ import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/site-identity'
 import { channelListSentence } from '@/lib/marketing/channels'
 import { getBlogPost, formatPostDate } from '../posts'
+import { marketingSiteEnabled } from '@/lib/site'
 
 const post = getBlogPost('managing-every-community-platform-from-one-place')!
 
@@ -19,6 +21,10 @@ export const metadata: Metadata = {
 }
 
 export default function ManagingEveryPlatformPost() {
+  // Not served by a self-hosted install: there is no hosted plan to sell there,
+  // and the page would be advertising our pricing from somebody else's domain.
+  if (!marketingSiteEnabled()) notFound()
+
   const url = `https://answerloops.com/blog/${post.slug}`
 
   const jsonLd = {

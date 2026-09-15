@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { MarketingPage, PageHero } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { BLOG_POSTS, formatPostDate } from './posts'
+import { marketingSiteEnabled } from '@/lib/site'
 export const metadata: Metadata = {
   title: 'answerLoops blog',
   description:
@@ -10,6 +12,10 @@ export const metadata: Metadata = {
   alternates: { canonical: '/blog' },
 }
 export default function BlogIndexPage() {
+  // Not served by a self-hosted install: there is no hosted plan to sell there,
+  // and the page would be advertising our pricing from somebody else's domain.
+  if (!marketingSiteEnabled()) notFound()
+
   return (
     <MarketingPage>
       <PageSchema
