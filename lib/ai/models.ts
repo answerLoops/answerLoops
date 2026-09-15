@@ -48,8 +48,8 @@ export type ModelPurpose = 'production' | 'sandbox' | 'trial'
 // so bumping a default means editing one constant, not hunting through every
 // chatModel()/embeddingModel() call site across lib/ai, lib/agent, and the
 // API routes that use them.
-export const DEFAULT_CHAT_MODEL = 'gpt-4o'
-export const DEFAULT_FAST_MODEL = 'gpt-4o-mini'
+export const DEFAULT_CHAT_MODEL = 'gpt-5.6-terra'
+export const DEFAULT_FAST_MODEL = 'gpt-5.6-luna'
 export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small'
 
 function platformKeyAllowed(purpose: ModelPurpose): boolean {
