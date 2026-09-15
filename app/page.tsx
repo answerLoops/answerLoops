@@ -22,16 +22,29 @@ import { IntegrationIcon } from '@/components/marketing/integration-icon'
 import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 
 export const dynamic = 'force-dynamic'
+const PAGE_TITLE = 'answerLoops — Faster answers. More time to build.'
+const PAGE_DESCRIPTION =
+  'Agent-native AI support for your community. Resolve repeat questions, reuse solved tickets, and onboard your agent with skills and MCP. Hosted or self-hosted.'
 export const metadata: Metadata = {
-  title: 'answerLoops — Agent infrastructure for support',
-  description:
-    'An answer agent drafts from your docs. A second agent reviews it. Connect community channels or give your own agents access through MCP. Open source and self-hostable.',
+  title: PAGE_TITLE,
+  description: PAGE_DESCRIPTION,
   alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: 'answerLoops',
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: PAGE_TITLE,
+    description: PAGE_DESCRIPTION,
+  },
 }
 const FAQ_ITEMS = [
   {
     q: 'What does answerLoops do?',
-    a: 'answerLoops brings community support questions into one queue. It drafts replies from your knowledge base, checks those drafts against their sources, and gives your team control over when answers are sent.',
+    a: 'answerLoops helps your community get answers faster and gives your team more time to build. It drafts replies from your knowledge base, reviews them against their sources, and lets your team control when they are sent. Turn useful ticket resolutions into reusable knowledge, and connect your own agent through MCP or the REST API.',
   },
   {
     q: 'Can I review answers before they are sent?',
@@ -80,7 +93,7 @@ export default function LandingPage() {
   return (
     <MarketingPage>
       <PageSchema
-        name="answerLoops — Agent infrastructure for support"
+        name={PAGE_TITLE}
         description={metadata.description!}
         path="/"
       />
@@ -106,19 +119,17 @@ export default function LandingPage() {
         <div className="marketing-container marketing-home-grid">
           <div className="home-hero-copy">
             <p className="marketing-eyebrow">
-              <span className="eyebrow-dot" /> Agent infrastructure for support
+              <span className="eyebrow-dot" /> Agent-native AI support
             </p>
             <h1>
-              An answer agent.
+              Faster answers.
               <br />
-              A review agent.
-              <br />
-              <em>Your expertise.</em>
+              <em>More time to build.</em>
             </h1>
             <p className="marketing-intro">
-              Turn your documentation into answers your community can use. One
-              agent writes the reply. A second checks the sources and confidence
-              before your settings decide what gets sent.
+              Turn your documentation and resolved questions into answers your
+              community can use. Resolve repeat questions, keep your team in
+              control, and put your own agent to work with skills and MCP.
             </p>
             <div className="marketing-actions">
               <Link
@@ -128,7 +139,7 @@ export default function LandingPage() {
                 Start a Free Trial for $0 <ArrowUpRight size={17} />
               </Link>
               <Link
-                href="/docs/integrations/mcp"
+                href="/docs/integrations/agent-skills"
                 className="marketing-button marketing-button-secondary"
                 target="_blank"
                 rel="noopener noreferrer"
