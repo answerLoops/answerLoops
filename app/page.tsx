@@ -130,8 +130,10 @@ export default function LandingPage() {
               <Link
                 href="/docs/integrations/mcp"
                 className="marketing-button marketing-button-secondary"
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <Terminal size={17} /> Connect your agent
+                <Terminal size={17} /> Onboard your agent
               </Link>
             </div>
             <p className="marketing-note">
@@ -255,8 +257,8 @@ export default function LandingPage() {
               </h2>
             </div>
             <p>
-              Connect what you know. Decide how agents act on it. Keep your team
-              in control of the questions that need a person.
+              Every answer is a loop that allows your team to focus on what
+              matters, your product.
             </p>
           </div>
           <div className="capability-grid">
@@ -307,7 +309,12 @@ export default function LandingPage() {
                   <h3>{title}</h3>
                   <p>{body}</p>
                   <div className="capability-detail">{detail}</div>
-                  <Link href={href} className="marketing-text-link">
+                  <Link
+                    href={href}
+                    className="marketing-text-link"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     {label}
                     <ArrowUpRight size={16} />
                   </Link>
