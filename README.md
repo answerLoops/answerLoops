@@ -13,6 +13,8 @@
 
 [Agent skills](./skills) · [MCP server](https://answerloops.com/docs/integrations/mcp) · [TypeScript SDK](./packages/agent-sdk)
 
+Using Claude Code? [Onboard your setup](./skills/setup) to self-host answerLoops, then [onboard your agent](./skills/operate) to use it.
+
 </div>
 
 # answerLoops — agent-native AI support for your community
@@ -298,6 +300,8 @@ Bring answerLoops knowledge and support into your own application, agent, or aut
 MCP and REST expose the same five operations: knowledge search, FAQ lookup, ticket listing, ticket creation, and answer generation. The SDK wraps the REST API.
 
 [Agent API reference](https://answerloops.com/docs/integrations/agent-api) · [SDK installation and usage](./packages/agent-sdk/README.md)
+
+Using Claude Code? [`skills/`](./skills) has an installable skill for self-hosting (`skills/setup`) and one for operating a running workspace over MCP (`skills/operate`) — see the [agent skills guide](https://answerloops.com/docs/integrations/agent-skills).
 
 ## Contributing
 

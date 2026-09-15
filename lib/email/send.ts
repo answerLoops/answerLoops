@@ -269,7 +269,7 @@ export async function notifyAdminsOauthDisconnected(orgId: number, provider: 'gm
   if (to.length === 0) return
 
   const base = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
-  const settingsUrl = `${base}/settings?tab=email`
+  const settingsUrl = `${base}/integrations?tab=email`
   const providerLabel = provider === 'gmail' ? 'Gmail' : 'Outlook'
 
   await client().emails.send({

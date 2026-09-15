@@ -7,7 +7,7 @@ description: Connect answerLoops to your Discord server — one click on the hos
 
 On the answerLoops cloud platform, no Discord Developer Portal is required.
 
-1. Go to **Settings → Discord**
+1. Go to **Integrations → Discord**
 2. Click **Add answerLoops to Discord**
 3. Pick your server in Discord's authorization screen
 4. Return to Settings — tick the channels you want monitored
@@ -53,7 +53,7 @@ Right-click a channel → **Copy Channel ID**
 
 ### 5. Configure in answerLoops Settings
 
-Go to **Settings → Discord** and enter:
+Go to **Integrations → Discord** and enter:
 - **Bot Token** — same as `DISCORD_TOKEN`
 - **Channel IDs** — channels to listen on (comma-separated)
 - **Escalation Role ID** (optional) — role to @mention when AI confidence is low
@@ -81,7 +81,7 @@ https://your-domain.com/api/discord/callback
 
 The bot uses Postgres `LISTEN/NOTIFY` to pick up config changes instantly — no restart needed.
 
-When you save changes in **Settings → Discord** (channel IDs, bot token, confidence threshold), the database fires a `pg_notify('config_changed')` event. The bot's dedicated listener connection receives it and reloads config within milliseconds.
+When you save changes in **Integrations → Discord** (channel IDs, bot token, confidence threshold), the database fires a `pg_notify('config_changed')` event. The bot's dedicated listener connection receives it and reloads config within milliseconds.
 
 The bot also updates its channel→guild map automatically whenever it joins or leaves a server (`GuildCreate` / `GuildDelete` events) — no manual ID entry required.
 
