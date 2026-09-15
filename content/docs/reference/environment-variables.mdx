@@ -176,9 +176,3 @@ npx web-push generate-vapid-keys
 <Note>
   `DEPLOYMENT_MODE` was introduced to stop deployment type from being inferred from whether `STRIPE_SECRET_KEY` happened to be set — a missing or rotated key on the cloud deployment used to silently degrade every paying org to unmetered/unlimited instead of surfacing as a misconfiguration.
 </Note>
-
-## Access control
-
-| Variable | Description |
-|---|---|
-| `ALLOWED_EMAILS` | Comma-separated list of email addresses permitted to sign in. When set, only these addresses can log in — all others are rejected. Used during waitlist / private-beta mode. Leave unset to allow any authenticated user |
