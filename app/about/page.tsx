@@ -8,6 +8,7 @@ import {
 } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { marketingSiteEnabled } from '@/lib/site'
+export const dynamic = 'force-dynamic'
 export const metadata: Metadata = {
   title: 'About answerLoops',
   description:

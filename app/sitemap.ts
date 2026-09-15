@@ -2,6 +2,8 @@ import type { MetadataRoute } from 'next'
 import { docsSource } from '@/lib/docs/source'
 import { marketingSiteEnabled, MARKETING_URL } from '@/lib/site'
 
+export const dynamic = 'force-dynamic'
+
 const BASE_URL = MARKETING_URL
 
 // Captured once when this module is first loaded — i.e. per deploy, not per

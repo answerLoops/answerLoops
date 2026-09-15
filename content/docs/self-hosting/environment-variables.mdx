@@ -217,9 +217,3 @@ Self-hosted deployments (the default — `DEPLOYMENT_MODE` unset) are never mete
 <Warning>
   Don't set `DEPLOYMENT_MODE=cloud` on a self-hosted instance — it opts the deployment into plan-tier gating with no Stripe subscription behind it, which locks every gated feature instead of unlocking them.
 </Warning>
-
-## Access control (optional)
-
-| Variable | Description |
-|---|---|
-| `ALLOWED_EMAILS` | Comma-separated email addresses allowed to log in. Leave empty for open access. Blocked users see an invite-only error at `/login?error=AccessDenied`. |

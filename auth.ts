@@ -30,16 +30,6 @@ function isPublic(pathname: string): boolean {
 // with next.config.ts's redirects() — that's the other half of the host
 // split, sending a website path hit on the app subdomain back here.
 
-function getAllowedEmails(): string[] {
-  return (process.env.ALLOWED_EMAILS ?? '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean)
-}
-
-function isEmailAllowed(email: string): boolean {
-  const allowed = getAllowedEmails()
-  if (allowed.length === 0) return true
-  return allowed.includes(email.toLowerCase())
-}
-
 async function provisionUser(
   email: string,
   name: string | null,
@@ -249,11 +239,6 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   }),
 
   callbacks: {
-    async signIn({ user }) {
-      const email = user.email ?? ''
-      return isEmailAllowed(email)
-    },
-
     async authorized({ request, auth: session }) {
       const { pathname, search } = request.nextUrl
 
