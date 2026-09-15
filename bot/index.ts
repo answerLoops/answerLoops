@@ -121,54 +121,89 @@ function startStuckTicketSweep(): void {
 // ticket sweep above, and for the same reason: the sync work needs a real app
 // request context (embeddings, KB queries) and must not run in the bot process
 // itself.
-const KB_SYNC_SWEEP_INTERVAL_MS = 15 * 1000
+//
+// Driven by NOTIFY, not by this interval: a kb_sync_jobs trigger fires
+// pg_notify('kb_sync_job_queued', id) on every enqueue and requeue (see
+// lib/db/migrate.ts), delivered over the same LISTEN connection as
+// config_changed/member_joined/data_changed — see watchNotifications below.
+// This interval is only a safety net for a notification that got dropped
+// (network blip on the LISTEN connection between disconnect and reconnect)
+// or a job stuck in `running` from a worker crash. It used to be the only
+// trigger, polling unconditionally every 15 seconds — on Neon-style
+// serverless Postgres that kept the database compute from ever
+// autosuspending, running up compute-hour billing for no work being done.
+const KB_SYNC_SAFETY_SWEEP_INTERVAL_MS = 5 * 60 * 1000
 const KB_SYNC_STUCK_THRESHOLD_MS = 15 * 60 * 1000
 const KB_SYNC_MAX_ATTEMPTS = 3
 const KB_SYNC_JOBS_PER_TICK = 3
 
-function startKbSyncSweep(): void {
+/**
+ * Starts the KB sync worker's safety-net interval and returns a `trigger`
+ * function to run the same sweep immediately (called from the
+ * kb_sync_job_queued NOTIFY handler) plus a `stop` function for shutdown.
+ * A running/pending guard collapses a burst of NOTIFYs (several jobs
+ * enqueued back to back) into a single extra pass rather than overlapping
+ * concurrent sweeps against the same claim query.
+ */
+function startKbSyncSweep(): { trigger: () => void; stop: () => void } {
   const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
   const botSecret = process.env.BOT_SECRET
+  let running = false
+  let pending = false
 
   const sweep = async () => {
     if (!botSecret) return // the run route requires BOT_SECRET; nothing to do without it
+    if (running) { pending = true; return }
+    running = true
 
     try {
-      const reclaimed = await reclaimStuckKbSyncJobs(KB_SYNC_STUCK_THRESHOLD_MS, KB_SYNC_MAX_ATTEMPTS)
-      if (reclaimed > 0) logger.warn('kb sync sweep: reclaimed stuck jobs', { module: MOD, count: reclaimed })
-    } catch (err) {
-      logger.error('kb sync sweep: reclaim failed', { module: MOD, error: err })
-    }
-
-    for (let i = 0; i < KB_SYNC_JOBS_PER_TICK; i++) {
-      let job: Awaited<ReturnType<typeof claimNextKbSyncJob>>
       try {
-        job = await claimNextKbSyncJob()
+        const reclaimed = await reclaimStuckKbSyncJobs(KB_SYNC_STUCK_THRESHOLD_MS, KB_SYNC_MAX_ATTEMPTS)
+        if (reclaimed > 0) logger.warn('kb sync sweep: reclaimed stuck jobs', { module: MOD, count: reclaimed })
       } catch (err) {
-        logger.error('kb sync sweep: claim failed', { module: MOD, error: err })
-        return
+        logger.error('kb sync sweep: reclaim failed', { module: MOD, error: err })
       }
-      if (!job) return
 
-      try {
-        const res = await fetch(`${targetUrl}/api/kb/sync-jobs/run`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${botSecret}` },
-          body: JSON.stringify({ jobId: job.id }),
-        })
-        if (!res.ok) {
-          logger.warn('kb sync sweep: run request failed', { module: MOD, jobId: job.id, status: res.status })
+      for (let i = 0; i < KB_SYNC_JOBS_PER_TICK; i++) {
+        let job: Awaited<ReturnType<typeof claimNextKbSyncJob>>
+        try {
+          job = await claimNextKbSyncJob()
+        } catch (err) {
+          logger.error('kb sync sweep: claim failed', { module: MOD, error: err })
+          return
         }
-      } catch (err) {
-        // A failed forward leaves the job `running`; the reclaim above requeues
-        // it on a later tick. One job failing must not stop the rest.
-        logger.error('kb sync sweep: failed to drive job', { module: MOD, jobId: job.id, error: err })
+        if (!job) return
+
+        try {
+          const res = await fetch(`${targetUrl}/api/kb/sync-jobs/run`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${botSecret}` },
+            body: JSON.stringify({ jobId: job.id }),
+          })
+          if (!res.ok) {
+            logger.warn('kb sync sweep: run request failed', { module: MOD, jobId: job.id, status: res.status })
+          }
+        } catch (err) {
+          // A failed forward leaves the job `running`; the reclaim above requeues
+          // it on a later tick. One job failing must not stop the rest.
+          logger.error('kb sync sweep: failed to drive job', { module: MOD, jobId: job.id, error: err })
+        }
+      }
+    } finally {
+      running = false
+      if (pending) {
+        pending = false
+        sweep().catch(() => {})
       }
     }
   }
 
   sweep().catch(() => {})
-  setInterval(() => { sweep().catch(() => {}) }, KB_SYNC_SWEEP_INTERVAL_MS)
+  const timer = setInterval(() => { sweep().catch(() => {}) }, KB_SYNC_SAFETY_SWEEP_INTERVAL_MS)
+  return {
+    trigger: () => { sweep().catch(() => {}) },
+    stop: () => clearInterval(timer),
+  }
 }
 
 // How often to ping the dedicated LISTEN connection. Two jobs: (1) on Neon
@@ -185,22 +220,27 @@ function startKbSyncSweep(): void {
 const LISTEN_HEARTBEAT_INTERVAL_MS = 4 * 60 * 1000
 
 /**
- * Opens a dedicated single connection for LISTEN/NOTIFY and keeps it alive.
- * Pooled connections cannot be used for LISTEN — the notification arrives on
- * whichever connection Postgres chooses, so we need one stable connection.
- * Manages the raw connection directly (rather than postgres.js's `.listen()`
- * sugar, which opens its own hidden internal connection reconnected only on
- * a clean `close` event) so a heartbeat can run on the exact socket LISTEN
- * uses, and a failed heartbeat triggers an immediate reconnect+re-LISTEN.
- * Returns a cleanup function that stops the heartbeat and closes the
- * connection on shutdown.
+ * Opens a dedicated single connection for LISTEN/NOTIFY and keeps it alive,
+ * dispatching each channel's notifications to its own handler. Pooled
+ * connections cannot be used for LISTEN — the notification arrives on
+ * whichever connection Postgres chooses, so we need one stable connection
+ * shared across every channel the bot cares about (config_changed,
+ * member_joined, data_changed, kb_sync_job_queued) rather than one
+ * connection per channel. Manages the raw connection directly (rather than
+ * postgres.js's `.listen()` sugar, which opens its own hidden internal
+ * connection reconnected only on a clean `close` event) so a heartbeat can
+ * run on the exact socket LISTEN uses, and a failed heartbeat triggers an
+ * immediate reconnect+re-LISTEN (re-subscribing every channel). Returns a
+ * cleanup function that stops the heartbeat and closes the connection on
+ * shutdown.
  */
-function watchConfigChanges(onNotify: () => Promise<void>): () => Promise<void> {
+function watchNotifications(handlers: Record<string, (payload: string) => Promise<void> | void>): () => Promise<void> {
   const url = getDirectDatabaseUrl()
   if (!url) {
-    logger.warn('DATABASE_URL not set — config hot-reload disabled', { module: MOD })
+    logger.warn('DATABASE_URL not set — realtime hot-reload disabled', { module: MOD })
     return () => Promise.resolve()
   }
+  const channels = Object.keys(handlers)
 
   let stopped = false
   let current: ReturnType<typeof postgres> | null = null
@@ -237,11 +277,11 @@ function watchConfigChanges(onNotify: () => Promise<void>): () => Promise<void> 
     const options: postgres.Options<{}> & { onnotify: (channel: string, payload: string) => void } = {
       max: 1,
       max_lifetime: null,
-      onnotify: (channel) => {
-        if (channel !== 'config_changed') return
-        logger.info('config_changed notification — reloading', { module: MOD })
-        onNotify().catch((err) =>
-          logger.warn('config reload failed after notify', { module: MOD, error: err })
+      onnotify: (channel, payload) => {
+        const handler = handlers[channel]
+        if (!handler) return
+        Promise.resolve(handler(payload)).catch((err) =>
+          logger.warn(`${channel} notification handler failed`, { module: MOD, error: err })
         )
       },
       onclose: () => scheduleReconnect(myEpoch, 'connection closed'),
@@ -249,7 +289,7 @@ function watchConfigChanges(onNotify: () => Promise<void>): () => Promise<void> 
     const sql = postgres(url, options)
     current = sql
 
-    sql.unsafe('LISTEN config_changed')
+    sql.unsafe(channels.map((c) => `LISTEN ${c}`).join('; '))
       .then(() => {
         // A newer connect() may have already taken over (its onclose fired
         // and triggered a reconnect) before this LISTEN promise settled.
@@ -257,7 +297,7 @@ function watchConfigChanges(onNotify: () => Promise<void>): () => Promise<void> 
         // scheduleReconnect — this one must be too, or it clobbers the
         // real heartbeat with one polling an already-superseded connection.
         if (myEpoch !== epoch) return
-        logger.info('LISTEN config_changed active', { module: MOD })
+        logger.info('LISTEN active', { module: MOD, channels })
         heartbeat = setInterval(() => {
           sql.unsafe('SELECT 1').catch((err) => scheduleReconnect(myEpoch, 'heartbeat failed', err))
         }, LISTEN_HEARTBEAT_INTERVAL_MS)
@@ -466,23 +506,31 @@ async function main() {
     }
   }
 
-  // Replace polling with Postgres LISTEN/NOTIFY — fires instantly when
-  // the integrations table is written from the settings UI.
-  // Do NOT call refreshGuildMap() here: saveGuildChannelMap() writes to
-  // integrations, which fires config_changed again → infinite loop.
-  // Guild map updates happen only on ClientReady and GuildCreate.
-  const stopListening = watchConfigChanges(async () => {
-    await reloadConfig()
-    // loadSlackOrgIds already returns the mode/flag-aware list — always
-    // safe to reload regardless of deployment mode.
-    const orgIds = await loadSlackOrgIds()
-    reloadSlackPoller(orgIds)
+  const kbSyncSweep = startKbSyncSweep()
+
+  // Replace polling with Postgres LISTEN/NOTIFY — fires instantly when the
+  // integrations table is written from the settings UI, or a kb_sync_jobs
+  // row is enqueued/requeued.
+  // Do NOT call refreshGuildMap() from the config_changed handler:
+  // saveGuildChannelMap() writes to integrations, which fires config_changed
+  // again → infinite loop. Guild map updates happen only on ClientReady and
+  // GuildCreate.
+  const stopListening = watchNotifications({
+    config_changed: async () => {
+      await reloadConfig()
+      // loadSlackOrgIds already returns the mode/flag-aware list — always
+      // safe to reload regardless of deployment mode.
+      const orgIds = await loadSlackOrgIds()
+      reloadSlackPoller(orgIds)
+    },
+    kb_sync_job_queued: () => { kbSyncSweep.trigger() },
   })
 
   // Graceful shutdown
   for (const sig of ['SIGINT', 'SIGTERM']) {
     process.once(sig, async () => {
       stopSlackPoller()
+      kbSyncSweep.stop()
       await stopListening()
       process.exit(0)
     })
@@ -697,10 +745,11 @@ async function main() {
   startSlackPoller(slackOrgIds)
 
   // Independent of both Discord and Slack — runs regardless of which
-  // channels an org has configured.
+  // channels an org has configured. kbSyncSweep was already started above,
+  // before the LISTEN connection, so its `trigger` exists when the
+  // kb_sync_job_queued handler is wired.
   startOrgPurgeSweep()
   startStuckTicketSweep()
-  startKbSyncSweep()
 
   client.login(initial.discordToken)
 }

@@ -107,7 +107,9 @@ describe('bot/index.ts: Slack polling — self-hosted always, cloud only via the
 
   it('startup and config-reload call sites both just call loadSlackOrgIds unconditionally — the mode/flag branching lives in one place, not duplicated at each call site', () => {
     expect(src).toContain('const slackOrgIds = await loadSlackOrgIds()\n  startSlackPoller(slackOrgIds)')
-    const idx = src.indexOf('const stopListening = watchConfigChanges')
+    // Generalized from watchConfigChanges to watchNotifications when the KB
+    // sync worker moved onto this same LISTEN connection.
+    const idx = src.indexOf('const stopListening = watchNotifications')
     const body = src.slice(idx, src.indexOf('\n  })', idx))
     expect(body).toContain('const orgIds = await loadSlackOrgIds()')
     expect(body).toContain('reloadSlackPoller(orgIds)')

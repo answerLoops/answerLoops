@@ -15,7 +15,16 @@ import path from 'node:path'
 // intentional `current?.end()` during a reconnect can't schedule a second,
 // redundant reconnect on top of the one already in flight.
 //
-// `watchConfigChanges` is not exported from bot/index.ts, and the module
+// `watchConfigChanges` was generalized to `watchNotifications` (still not
+// exported) when the KB sync worker moved from a 15-second unconditional
+// poll to a kb_sync_job_queued NOTIFY delivered on this same connection —
+// see kb-sync-notify-driven-sweep.test.ts for coverage of that channel and
+// the sweep it drives. This file's resilience assertions (heartbeat, epoch
+// guard, reconnect) are unchanged in substance; only the function name and
+// the LISTEN/onnotify call shapes moved from a single hardcoded channel to
+// one built from `Object.keys(handlers)`.
+//
+// `watchNotifications` is not exported from bot/index.ts, and the module
 // calls `main()` unconditionally at import time (bot/index.ts:602 —
 // `main().catch(...)` with no `require.main === module` guard), which would
 // log in to Discord, hit the database, and start the Slack poller as a side
@@ -57,9 +66,14 @@ function extractFunction(src: string, signature: string): string {
 }
 
 const src = read('bot/index.ts')
-const fn = extractFunction(src, 'function watchConfigChanges')
+const fn = extractFunction(src, 'function watchNotifications')
+// Every previous `sql.unsafe('LISTEN config_changed')` call site now reads
+// `sql.unsafe(channels.map((c) => \`LISTEN ${c}\`).join('; '))` — channels is
+// built from Object.keys(handlers), so no channel name is hardcoded at the
+// call site any more. Tests below locate that call generically.
+const LISTEN_CALL = "sql.unsafe(channels.map("
 
-describe('watchConfigChanges — heartbeat constant', () => {
+describe('watchNotifications — heartbeat constant', () => {
   it('heartbeat interval is 4 minutes', () => {
     expect(src).toMatch(/const LISTEN_HEARTBEAT_INTERVAL_MS\s*=\s*4\s*\*\s*60\s*\*\s*1000/)
   })
@@ -68,7 +82,7 @@ describe('watchConfigChanges — heartbeat constant', () => {
     // The heartbeat closure and the LISTEN call must both reference the same
     // local `sql` binding created by `postgres(url, options)` in this connect().
     const sqlAssignIdx = fn.indexOf('const sql = postgres(url, options)')
-    const listenIdx = fn.indexOf("sql.unsafe('LISTEN config_changed')")
+    const listenIdx = fn.indexOf(LISTEN_CALL)
     const heartbeatIdx = fn.indexOf("sql.unsafe('SELECT 1')")
     expect(sqlAssignIdx).toBeGreaterThanOrEqual(0)
     expect(listenIdx).toBeGreaterThan(sqlAssignIdx)
@@ -76,9 +90,9 @@ describe('watchConfigChanges — heartbeat constant', () => {
   })
 })
 
-describe('watchConfigChanges — heartbeat is gated on LISTEN success', () => {
+describe('watchNotifications — heartbeat is gated on LISTEN success', () => {
   it('the heartbeat setInterval is created only inside the LISTEN .then(), not unconditionally after connect', () => {
-    const listenCallIdx = fn.indexOf("sql.unsafe('LISTEN config_changed')")
+    const listenCallIdx = fn.indexOf(LISTEN_CALL)
     const thenIdx = fn.indexOf('.then(', listenCallIdx)
     const catchIdx = fn.indexOf('.catch(', thenIdx)
     const heartbeatCreateIdx = fn.indexOf('heartbeat = setInterval(')
@@ -91,7 +105,7 @@ describe('watchConfigChanges — heartbeat is gated on LISTEN success', () => {
   })
 
   it('the LISTEN .then() bails on a stale epoch before touching heartbeat — code review finding: a newer connect() can take over before this promise settles, and unconditionally setting heartbeat here would clobber the real one with an interval polling an already-superseded connection', () => {
-    const listenCallIdx = fn.indexOf("sql.unsafe('LISTEN config_changed')")
+    const listenCallIdx = fn.indexOf(LISTEN_CALL)
     const thenIdx = fn.indexOf('.then(', listenCallIdx)
     const heartbeatCreateIdx = fn.indexOf('heartbeat = setInterval(', thenIdx)
     const guardIdx = fn.indexOf('if (myEpoch !== epoch) return', thenIdx)
@@ -100,7 +114,7 @@ describe('watchConfigChanges — heartbeat is gated on LISTEN success', () => {
   })
 
   it('the LISTEN failure branch reconnects instead of silently giving up', () => {
-    const catchIdx = fn.indexOf('.catch(', fn.indexOf("sql.unsafe('LISTEN config_changed')"))
+    const catchIdx = fn.indexOf('.catch(', fn.indexOf(LISTEN_CALL))
     const catchBody = fn.slice(catchIdx, catchIdx + 300)
     expect(catchBody).toContain('scheduleReconnect(myEpoch')
     expect(catchBody).toContain("'initial LISTEN failed'")
@@ -115,7 +129,7 @@ describe('watchConfigChanges — heartbeat is gated on LISTEN success', () => {
   })
 })
 
-describe('watchConfigChanges — epoch guard captures myEpoch, not the live epoch', () => {
+describe('watchNotifications — epoch guard captures myEpoch, not the live epoch', () => {
   // This is the actual bug the epoch guard exists to prevent: if the onclose
   // or heartbeat-failure closures captured the live, mutable `epoch` variable
   // instead of the `myEpoch` constant frozen at connect()-time, a stray
@@ -144,7 +158,7 @@ describe('watchConfigChanges — epoch guard captures myEpoch, not the live epoc
   })
 
   it('the initial-LISTEN-failure callback calls scheduleReconnect with myEpoch, not epoch', () => {
-    const catchIdx = fn.indexOf('.catch(', fn.indexOf("sql.unsafe('LISTEN config_changed')"))
+    const catchIdx = fn.indexOf('.catch(', fn.indexOf(LISTEN_CALL))
     const catchBody = fn.slice(catchIdx, catchIdx + 300)
     expect(catchBody).toContain('scheduleReconnect(myEpoch')
     expect(catchBody).not.toMatch(/scheduleReconnect\(epoch\b/)
@@ -157,7 +171,7 @@ describe('watchConfigChanges — epoch guard captures myEpoch, not the live epoc
   })
 })
 
-describe('watchConfigChanges — scheduleReconnect guards', () => {
+describe('watchNotifications — scheduleReconnect guards', () => {
   it('checks stopped, epoch match, and an in-flight reconnectTimer before scheduling', () => {
     const idx = fn.indexOf('const scheduleReconnect')
     const guardLine = fn.slice(idx, fn.indexOf('\n', fn.indexOf('return', idx)))
@@ -185,7 +199,7 @@ describe('watchConfigChanges — scheduleReconnect guards', () => {
   })
 })
 
-describe('watchConfigChanges — connect() tears down the previous connection cleanly', () => {
+describe('watchNotifications — connect() tears down the previous connection cleanly', () => {
   it('clears any existing heartbeat before opening a new connection', () => {
     const connectIdx = fn.indexOf('const connect = ()')
     const body = fn.slice(connectIdx, connectIdx + 1200)
@@ -208,16 +222,22 @@ describe('watchConfigChanges — connect() tears down the previous connection cl
   })
 })
 
-describe('watchConfigChanges — connection options', () => {
+describe('watchNotifications — connection options', () => {
   it('uses max: 1 (single dedicated connection, not pooled) and disables max_lifetime cycling', () => {
     expect(fn).toMatch(/max:\s*1,/)
     expect(fn).toMatch(/max_lifetime:\s*null,/)
   })
 
-  it('filters onnotify to the config_changed channel specifically', () => {
+  it('dispatches onnotify to the matching per-channel handler, not a hardcoded single channel', () => {
+    // Generalized for multi-channel support (config_changed, member_joined,
+    // data_changed, kb_sync_job_queued): looks up handlers[channel] and bails
+    // if that channel has no registered handler, instead of hardcoding a
+    // single channel-name comparison.
     const onnotifyIdx = fn.indexOf('onnotify:')
     const body = fn.slice(onnotifyIdx, onnotifyIdx + 300)
-    expect(body).toMatch(/if\s*\(channel !== 'config_changed'\)\s*return/)
+    expect(body).toMatch(/const handler = handlers\[channel\]/)
+    expect(body).toMatch(/if\s*\(!handler\)\s*return/)
+    expect(body).not.toMatch(/channel !== 'config_changed'/)
   })
 
   it('resolves the connection URL via getDirectDatabaseUrl, not the pooled DATABASE_URL', () => {
@@ -226,7 +246,7 @@ describe('watchConfigChanges — connection options', () => {
   })
 })
 
-describe('watchConfigChanges — cleanup function returned to callers', () => {
+describe('watchNotifications — cleanup function returned to callers', () => {
   it('sets stopped so no further reconnects are scheduled after shutdown', () => {
     const returnIdx = fn.lastIndexOf('return async () =>')
     expect(returnIdx).toBeGreaterThan(0)
@@ -255,7 +275,7 @@ describe('watchConfigChanges — cleanup function returned to callers', () => {
   })
 })
 
-describe('watchConfigChanges — graceful no-op when no direct URL is configured', () => {
+describe('watchNotifications — graceful no-op when no direct URL is configured', () => {
   it('returns an inert async no-op cleanup instead of throwing when getDirectDatabaseUrl() is falsy', () => {
     const guardIdx = fn.indexOf('if (!url)')
     expect(guardIdx).toBeGreaterThanOrEqual(0)
