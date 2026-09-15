@@ -60,7 +60,11 @@ export async function testAIProviderConnection(input: AIConnectionInput): Promis
       await generateText({
         model: provider(input.chatModel),
         prompt: 'Reply with the single word: ok',
-        maxOutputTokens: 4,
+        // Newer OpenAI models reject anything below 16 (`max_output_tokens`
+        // must be >= 16) — this used to be 4, which was enough for older
+        // models but now fails the connection test outright before the
+        // prompt is even answered.
+        maxOutputTokens: 16,
       })
       return { ok: true }
     } catch (err) {

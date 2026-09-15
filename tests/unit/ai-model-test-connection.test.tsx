@@ -47,13 +47,13 @@ describe('AIModelSection — Test connection', () => {
     render(<AIModelSection />)
 
     await waitFor(() => expect(screen.getByRole('button', { name: /test connection/i })).toBeTruthy())
-    await user.type(screen.getByPlaceholderText('gpt-4o'), 'gpt-4o')
+    await user.type(screen.getByPlaceholderText('gpt-5.6-terra'), 'gpt-5.6-terra')
     await user.click(screen.getByRole('button', { name: /test connection/i }))
 
     await waitFor(() => expect(testAIConfigAction).toHaveBeenCalled())
     const fd = vi.mocked(testAIConfigAction).mock.calls[0][1] as FormData
     expect(fd.get('chat_provider')).toBe('openai')
-    expect(fd.get('chat_model')).toBe('gpt-4o')
+    expect(fd.get('chat_model')).toBe('gpt-5.6-terra')
 
     await waitFor(() => expect(screen.getByText(/connection OK/i)).toBeTruthy())
     expect(screen.getByText(/rejected \(401\)/)).toBeTruthy()
