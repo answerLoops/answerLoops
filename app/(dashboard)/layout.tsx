@@ -40,7 +40,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     if (status.exhausted) trialStatus = { used: status.used, limit: status.limit }
   }
 
-  // Same "actually connected" check the Settings page's tab-bar dots use —
+  // Same "actually connected" check the Integrations page's tab-bar dots use —
   // a row can exist without the integration being genuinely connected (e.g.
   // a Google Chat pairing started but never completed), so existence alone
   // isn't enough; enabled === 1 (plus team_id for Google Chat) is.

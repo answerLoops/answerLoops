@@ -15,10 +15,10 @@ export function DeflectionStatusBanner({ offPlatforms }: { offPlatforms: string[
         answers wait for your approval before sending: <span className="font-semibold">{offPlatforms.join(', ')}</span>.
       </p>
       <Link
-        href="/settings"
+        href="/integrations"
         className="shrink-0 rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700"
       >
-        Review Settings
+        Review Integrations
       </Link>
     </div>
   )

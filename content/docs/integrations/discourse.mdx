@@ -10,7 +10,7 @@ Discourse is the forum platform many open-source projects, product communities, 
 The connection is per-organization: you create an API key inside your own Discourse admin, scoped to a bot account, and it is stored encrypted in your answerLoops database. There is no shared platform-wide app and no OAuth flow. Inbound events arrive over a Discourse webhook — no polling.
 
 <Callout type="info">
-  **Automatic Deflections** is off by default, same as every other channel. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss, and the topic gets no automatic reply. Turn it on in **Settings → Discourse → Edit → Automatic Deflections → Save** once you've reviewed enough approved drafts to trust answers going out unsupervised.
+  **Automatic Deflections** is off by default, same as every other channel. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss, and the topic gets no automatic reply. Turn it on in **Integrations → Discourse → Edit → Automatic Deflections → Save** once you've reviewed enough approved drafts to trust answers going out unsupervised.
 </Callout>
 
 ---
@@ -32,7 +32,7 @@ Copy the key — Discourse only shows it once.
 
 ### 3. Connect in answerLoops
 
-Go to **Settings → Discourse** and fill in:
+Go to **Integrations → Discourse** and fill in:
 
 | Field | Value |
 | --- | --- |

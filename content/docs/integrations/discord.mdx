@@ -13,7 +13,7 @@ answerLoops integrates with Discord at two levels:
 Both channel types appear in the unified ticket list with a Discord source badge.
 
 <Callout type="info">
-  **Automatic Deflections** is off by default for every newly connected platform. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — Discord gets a brief acknowledgment instead of the real answer, or silence. Turn it on per-platform in **Settings → Discord** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
+  **Automatic Deflections** is off by default for every newly connected platform. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — Discord gets a brief acknowledgment instead of the real answer, or silence. Turn it on per-platform in **Integrations → Discord** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
 </Callout>
 
 ---
@@ -22,7 +22,7 @@ Both channel types appear in the unified ticket list with a Discord source badge
 
 No Discord Developer Portal access required. answerLoops manages the bot and OAuth app on your behalf.
 
-1. In the onboarding wizard (or **Settings → Channels → Discord**), click **"Add answerLoops to Discord"**
+1. In the onboarding wizard (or **Integrations → Discord**), click **"Add answerLoops to Discord"**
 2. Select the server you want to connect in the Discord authorization screen
 3. Approve the requested permissions and click **Authorize**
 4. Back in answerLoops, a channel picker appears showing all text channels and forum channels on your server
@@ -31,14 +31,14 @@ No Discord Developer Portal access required. answerLoops manages the bot and OAu
 The bot joins your server immediately. No token to copy, no manifest to upload.
 
 <Tip>
-  You can return to **Settings → Channels → Discord** at any time to add or remove channels without re-authorizing.
+  You can return to **Integrations → Discord** at any time to add or remove channels without re-authorizing.
 </Tip>
 
 ---
 
 ## Connecting multiple servers
 
-You're not limited to one Discord server. Click **"Add answerLoops to Discord"** again from **Settings → Channels → Discord** to connect another — each server gets its own card with its own channel picker and its own escalation role, and can be removed independently without affecting the others. A server can only be connected to one answerLoops account at a time; if you try to connect a server that's already linked elsewhere, you'll see an error instead of it silently switching ownership.
+You're not limited to one Discord server. Click **"Add answerLoops to Discord"** again from **Integrations → Discord** to connect another — each server gets its own card with its own channel picker and its own escalation role, and can be removed independently without affecting the others. A server can only be connected to one answerLoops account at a time; if you try to connect a server that's already linked elsewhere, you'll see an error instead of it silently switching ownership.
 
 ---
 
@@ -141,7 +141,7 @@ pnpm run discord:register-commands
     `DISCORD_TOKEN` and `DISCORD_CLIENT_ID` must belong to the same Discord application. If you regenerated the bot token after setting `DISCORD_CLIENT_ID`, make sure you updated `DISCORD_TOKEN` to the new value.
   </Accordion>
   <Accordion title="Forum channel posts aren't creating tickets">
-    Confirm the forum channel is selected in **Settings → Channels → Discord → Channel picker**. answerLoops only listens on explicitly selected channels. Also verify the bot has **Read Messages** and **View Channels** permission in that forum.
+    Confirm the forum channel is selected in **Integrations → Discord → Channel picker**. answerLoops only listens on explicitly selected channels. Also verify the bot has **Read Messages** and **View Channels** permission in that forum.
   </Accordion>
   <Accordion title="Slash commands aren't showing up in Discord">
     Run `pnpm run discord:register-commands` and confirm `DISCORD_APPLICATION_ID` is set. Discord can take up to an hour to propagate global slash commands — guild-scoped registration is instant if you specify a `DISCORD_GUILD_ID`.

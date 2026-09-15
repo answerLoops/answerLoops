@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
-import SettingsPage, { GoogleChatIntegrationCard } from '@/app/(dashboard)/settings/page'
+import IntegrationsPage from '@/app/(dashboard)/integrations/page'
+import { GoogleChatIntegrationCard } from '@/components/settings/googlechat'
 import { useSearchParams } from 'next/navigation'
 
 vi.mock('next/navigation', () => ({
@@ -84,7 +85,7 @@ describe('Integration card deflection badges — always visible, no Edit click r
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => expect(screen.getByText('Automatic Deflections: On')).toBeTruthy())
     // No "Edit" click happened — the badge showed up in the default view.
@@ -104,7 +105,7 @@ describe('Integration card deflection badges — always visible, no Edit click r
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const badge = screen.getByText('Automatic Deflections: Off')
@@ -124,7 +125,7 @@ describe('Integration card deflection badges — always visible, no Edit click r
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const badge = screen.getByText('Automatic Deflections: On')
@@ -144,7 +145,7 @@ describe('Integration card deflection badges — always visible, no Edit click r
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const badge = screen.getByText('Automatic Deflections: Off')
@@ -164,7 +165,7 @@ describe('Integration card deflection badges — always visible, no Edit click r
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const badge = screen.getByText('Automatic Deflections: Off')
@@ -186,7 +187,7 @@ describe('Integration card deflection badges — always visible, no Edit click r
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const badge = screen.getByText('Automatic Deflections: On')
@@ -207,7 +208,7 @@ describe('Integration card deflection badges — always visible, no Edit click r
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const badge = screen.getByText('Automatic Deflections: On')
@@ -233,7 +234,7 @@ describe('Integration card deflection badges — always visible, no Edit click r
       })
     )
 
-    render(<SettingsPage />)
+    render(<IntegrationsPage />)
 
     await waitFor(() => {
       const badge = screen.getByText('Automatic Deflections: Off')

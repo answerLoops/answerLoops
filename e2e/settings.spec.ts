@@ -59,9 +59,9 @@ test.describe('settings: SLA config', () => {
   })
 })
 
-test.describe('settings: GitHub repos', () => {
+test.describe('integrations: GitHub repos', () => {
   test('shows seeded repo', async ({ page }) => {
-    await page.goto('/settings?tab=github')
+    await page.goto('/integrations?tab=github')
     await expect(page.getByText('acme/demo')).toBeVisible()
   })
 })

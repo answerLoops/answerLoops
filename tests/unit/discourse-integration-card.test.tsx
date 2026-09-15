@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { DiscourseIntegrationCard } from '@/app/(dashboard)/settings/page'
+import { DiscourseIntegrationCard } from '@/components/settings/discourse'
 import {
   saveDiscourseIntegrationAction,
   deleteDiscourseIntegrationAction,
