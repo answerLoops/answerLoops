@@ -11,6 +11,8 @@
 
 [Website](https://answerloops.com) · [Documentation](https://answerloops.com/docs) · [Hosted app](https://app.answerloops.com) · [Quickstart](#run-it-locally) · [Architecture](#how-the-loop-works)
 
+Using Claude Code? [Onboard your setup](./skills/setup) to self-host answerLoops, then [onboard your agent](./skills/operate) to use it.
+
 </div>
 
 # answerLoops — AI support that lives in your community

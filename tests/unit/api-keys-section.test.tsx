@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ApiKeysSection } from '@/app/(dashboard)/settings/page'
 import { createApiKeyAction, revokeApiKeyAction } from '@/app/actions/api-keys'
@@ -72,6 +72,14 @@ const activeKeys = [
     revoked_at: null,
   },
 ]
+
+// userEvent.setup() installs its own navigator.clipboard stub, so the fake must
+// be planted after setup() to win.
+function withClipboard() {
+  const writeText = vi.fn().mockResolvedValue(undefined)
+  Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
+  return writeText
+}
 
 describe('API keys settings section', () => {
   beforeEach(() => {
@@ -200,5 +208,47 @@ describe('API keys settings section', () => {
     render(<ApiKeysSection />)
     expect(await screen.findByText('Full access')).toBeInTheDocument()
     expect(screen.getByText('kb:read, faq:read')).toBeInTheDocument()
+  })
+
+  it('shows the "Onboard your agent" card and its Copy command button before any key state is known', () => {
+    // fetch is still pending on first paint — the onboarding card must not wait on it.
+    render(<ApiKeysSection />)
+    expect(screen.getByText('Onboard your agent')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copy command' })).toBeInTheDocument()
+  })
+
+  it('copies the skill install command to the clipboard when "Copy command" is clicked', async () => {
+    const user = userEvent.setup()
+    const writeText = withClipboard()
+    render(<ApiKeysSection />)
+
+    await user.click(screen.getByRole('button', { name: 'Copy command' }))
+
+    expect(writeText).toHaveBeenCalledTimes(1)
+    const copiedText = writeText.mock.calls[0][0] as string
+    expect(copiedText).toContain('mkdir -p .claude/skills/answerloops-operate')
+    expect(copiedText).toContain('skills/operate/SKILL.md')
+  })
+
+  it('flips the Copy command label to "✓ Copied" after a click, then reverts it after 2 seconds', async () => {
+    vi.useFakeTimers()
+    withClipboard()
+    render(<ApiKeysSection />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Copy command' }))
+
+    // Flush the microtask queue so the clipboard promise's .then() runs before
+    // we assert — fake timers stop waitFor's own polling from doing this for us.
+    await act(async () => {
+      await Promise.resolve()
+    })
+    expect(screen.getByRole('button', { name: '✓ Copied' })).toBeInTheDocument()
+
+    await act(async () => {
+      vi.advanceTimersByTime(2000)
+    })
+
+    expect(screen.getByRole('button', { name: 'Copy command' })).toBeInTheDocument()
+    vi.useRealTimers()
   })
 })
