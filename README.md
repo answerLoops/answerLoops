@@ -13,13 +13,11 @@
 
 [Agent skills](./skills) · [MCP server](https://answerloops.com/docs/integrations/mcp) · [TypeScript SDK](./packages/agent-sdk)
 
-Using Claude Code? [Onboard your setup](./skills/setup) to self-host answerLoops, then [onboard your agent](./skills/operate) to use it.
-
 </div>
 
 # answerLoops — agent-native AI support for your community
 
-**Help your users get answers faster. Give your team more time to build.**
+**Faster answers. More time to build.**
 
 answerLoops turns your documentation and resolved support questions into answers your community and AI agents can use. Resolve repeat questions in Discord, Slack, GitHub, forums, email, and web chat. Bring your team in when a question needs human judgment, then turn useful resolutions into knowledge for the next person who asks.
 
@@ -27,7 +25,7 @@ answerLoops turns your documentation and resolved support questions into answers
 
 Built for developer tools, open-source projects, and teams supporting an active community. Use the [hosted app](https://app.answerloops.com), or self-host with Docker and choose your AI provider.
 
-[**Get started with your agent →**](#get-started-with-your-agent) · [**Try the hosted app →**](https://app.answerloops.com) · [**Self-host →**](#run-it-locally)
+Start with the [agent quickstart](#get-started-with-your-agent), follow the [self-hosting steps](#run-it-locally), or explore the [documentation](https://answerloops.com/docs).
 
 ## What answerLoops helps you do
 
