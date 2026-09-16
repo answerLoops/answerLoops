@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Nav, Footer, type NavState } from './chrome'
 import './marketing-site.css'
+import './marketing-theme.css'
 
 export function MarketingPage({
   children,

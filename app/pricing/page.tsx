@@ -154,7 +154,7 @@ export default async function PricingPage({
               </div>
             )}
           <PricingToggle plans={ORDERED_PLANS} />
-          <div className="mt-8 rounded-lg border border-slate-200 bg-slate-50 p-6">
+          <div className="pricing-cost-note mt-8 rounded-xl border p-6">
             <h3>Plan your total cost</h3>
             <p className="mt-2 text-slate-600">
               New hosted workspaces include five AI-processed tickets without a

@@ -37,7 +37,7 @@ export default function AboutPage() {
         </p>
       </PageHero>
       <section className="marketing-section">
-        <div className="marketing-container marketing-reading space-y-6">
+        <div className="marketing-container marketing-reading marketing-story space-y-6">
           <h2>Nathan and Faith Tarbert</h2>
           <p>
             We are a husband-and-wife team. Nathan spent 21 years as a

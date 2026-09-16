@@ -9,6 +9,10 @@ function advance(milliseconds: number) {
   act(() => vi.advanceTimersByTime(milliseconds))
 }
 
+function completeCycle() {
+  for (const duration of [1500, 2000, 2000, 2000, 3500]) advance(duration)
+}
+
 function setReducedMotion(matches: boolean) {
   Object.defineProperty(preference, 'matches', {
     value: matches,
@@ -41,7 +45,7 @@ describe('support workflow animation', () => {
     render(<AnimatedChat />)
 
     expect(
-      screen.getByText(/Our webhook retries created duplicate orders/),
+      screen.getByText(/Our co-op game starts rubber-banding/),
     ).toBeVisible()
     expect(screen.getByText('Question received')).toBeVisible()
     expect(
@@ -50,10 +54,10 @@ describe('support workflow animation', () => {
     expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
     expect(screen.queryByText('Review agent')).not.toBeInTheDocument()
     expect(
-      screen.queryByText('Reply sent to #integrations'),
+      screen.queryByText('Reply sent to #game-support'),
     ).not.toBeInTheDocument()
 
-    advance(1799)
+    advance(1499)
     expect(
       screen.queryByText('Retrieved from the knowledge base'),
     ).not.toBeInTheDocument()
@@ -62,54 +66,142 @@ describe('support workflow animation', () => {
     expect(screen.getByText('Retrieving sources')).toBeVisible()
     expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
 
-    advance(3000)
+    advance(1999)
+    expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
+    advance(1)
     expect(screen.getByText('Answer agent')).toBeVisible()
     expect(screen.getByText('Drafting answer')).toBeVisible()
     expect(screen.queryByText('Review agent')).not.toBeInTheDocument()
 
-    advance(3000)
+    advance(1999)
+    expect(screen.queryByText('Review agent')).not.toBeInTheDocument()
+    advance(1)
     expect(screen.getByText('Review agent')).toBeVisible()
     expect(screen.getByText('Reviewing answer')).toBeVisible()
     expect(
-      screen.queryByText('Reply sent to #integrations'),
+      screen.queryByText('Reply sent to #game-support'),
     ).not.toBeInTheDocument()
 
-    advance(3000)
-    expect(screen.getByText('Reply sent to #integrations')).toBeVisible()
+    advance(1999)
+    expect(screen.queryByText('Reply sent to #game-support')).not.toBeInTheDocument()
+    advance(1)
+    expect(screen.getByText('Reply sent to #game-support')).toBeVisible()
     expect(screen.getByText('Reply delivered')).toBeVisible()
-    advance(6499)
-    expect(screen.getByText('Reply sent to #integrations')).toBeVisible()
+    advance(3499)
+    expect(screen.getByText('Reply sent to #game-support')).toBeVisible()
     advance(1)
     expect(screen.getByText('Question received')).toBeVisible()
     expect(
       screen.queryByText('Retrieved from the knowledge base'),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByText('Reply sent to #integrations'),
+      screen.queryByText('Reply sent to #game-support'),
     ).not.toBeInTheDocument()
   })
 
-  it('cycles the live channel identity from Discord to Telegram to Circle', () => {
+  it('cycles all three channel examples and wraps back to Discord', () => {
     render(<AnimatedChat />)
-
     expect(screen.getByText('answerLoops / Discord')).toBeVisible()
-    advance(1800)
-    advance(3000)
-    advance(3000)
-    advance(3000)
-    advance(6500)
+    expect(screen.getByRole('button', { name: 'Discord' })).toHaveAttribute('aria-pressed', 'true')
+    completeCycle()
     expect(screen.getByText('answerLoops / Telegram')).toBeVisible()
-    advance(1800)
-    advance(3000)
-    advance(3000)
-    advance(3000)
-    advance(6500)
+    expect(screen.getByText(/Our webhook retries created duplicate orders/)).toBeVisible()
+    expect(screen.getByRole('button', { name: 'Telegram' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'Discord' })).toHaveAttribute('aria-pressed', 'false')
+    completeCycle()
     expect(screen.getByText('answerLoops / Circle')).toBeVisible()
+    expect(screen.getByText(/I’m joining the community print swap/)).toBeVisible()
+    completeCycle()
+    expect(screen.getByText('answerLoops / Discord')).toBeVisible()
+    expect(screen.getByText('Question received')).toBeVisible()
+  })
+
+  it.each([
+    {
+      channel: 'Discord', question: /Our co-op game starts rubber-banding/,
+      source: 'Multiplayer connection guide', otherSource: 'Streaming troubleshooting',
+      answer: /Rubber-banding can come from network congestion/,
+      step: 'Lower the stream upload bitrate to leave bandwidth for the game.',
+      review: 'Checked connection troubleshooting and streaming recommendations against both guides.',
+      destination: '#game-support',
+    },
+    {
+      channel: 'Telegram', question: /Our webhook retries created duplicate orders/,
+      source: 'Webhook delivery', otherSource: 'Idempotency guide',
+      answer: /Retries can deliver the same event more than once/,
+      step: 'Save the order and a unique event ID in one transaction.',
+      review: 'Checked retry behavior and duplicate handling against both sources.',
+      destination: 'support chat',
+    },
+    {
+      channel: 'Circle', question: /I’m joining the community print swap/,
+      source: 'Print swap submission guide', otherSource: 'Artwork preparation checklist',
+      answer: /Keep your layered original and prepare a separate print-ready export/,
+      step: 'Use the printer’s requested color profile and check the soft proof before exporting.',
+      review: 'Checked export preparation and submission steps against the print-swap guides.',
+      destination: 'the community',
+    },
+  ])('shows a coherent $channel question, sources, answer, review, and destination', (example) => {
+    render(<AnimatedChat />)
+    fireEvent.click(screen.getByRole('button', { name: example.channel }))
+    expect(screen.getByText(example.question)).toBeVisible()
+    expect(screen.queryByText(example.source)).not.toBeInTheDocument()
+    advance(1500)
+    expect(screen.getByText(example.source)).toBeVisible()
+    expect(screen.getByText(example.otherSource)).toBeVisible()
+    advance(2000)
+    expect(screen.getByText(example.answer)).toBeVisible()
+    expect(screen.getByText(example.step)).toBeVisible()
+    expect(screen.getByText(`[1] ${example.source}`)).toBeVisible()
+    expect(screen.getByText(`[2] ${example.otherSource}`)).toBeVisible()
+    advance(2000)
+    expect(screen.getByText(example.review)).toBeVisible()
+    advance(2000)
+    expect(screen.getByText(`Reply sent to ${example.destination}`)).toBeVisible()
+  })
+
+  it('resets the stage and pending timer when a different channel is selected', () => {
+    render(<AnimatedChat />)
+    advance(1500)
+    advance(2000)
+    advance(1000)
+    fireEvent.click(screen.getByRole('button', { name: 'Circle' }))
+    expect(screen.getByText('Question received')).toBeVisible()
+    expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Our co-op game/)).not.toBeInTheDocument()
+    advance(1499)
+    expect(screen.queryByText('Retrieved from the knowledge base')).not.toBeInTheDocument()
+    advance(1)
+    expect(screen.getByText('Print swap submission guide')).toBeVisible()
+  })
+
+  it('restarts the current example when its channel is selected again', () => {
+    render(<AnimatedChat />)
+    advance(1500)
+    advance(2000)
+    fireEvent.click(screen.getByRole('button', { name: 'Discord' }))
+    expect(screen.getByText('Question received')).toBeVisible()
+    expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
+    advance(1500)
+    expect(screen.getByText('Retrieving sources')).toBeVisible()
+  })
+
+  it('keeps manual channel selection paused until playback resumes', () => {
+    render(<AnimatedChat />)
+    fireEvent.click(screen.getByRole('button', { name: 'Pause example animation' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Telegram' }))
+    advance(20000)
+    expect(screen.getByText('answerLoops / Telegram')).toBeVisible()
+    expect(screen.getByText('Question received')).toBeVisible()
+    expect(vi.getTimerCount()).toBe(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Play example animation' }))
+    advance(1500)
+    expect(screen.getByText('Webhook delivery')).toBeVisible()
   })
 
   it('pauses progression and resumes from the current stage', () => {
     render(<AnimatedChat />)
-    advance(1800)
+    advance(1500)
     fireEvent.click(
       screen.getByRole('button', { name: 'Pause example animation' }),
     )
@@ -120,7 +212,7 @@ describe('support workflow animation', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Play example animation' }),
     )
-    advance(3000)
+    advance(2000)
     expect(screen.getByText('Answer agent')).toBeVisible()
     expect(
       screen.getByRole('button', { name: 'Pause example animation' }),
@@ -132,19 +224,23 @@ describe('support workflow animation', () => {
     render(<AnimatedChat />)
     expect(screen.getByText('Answer agent')).toBeVisible()
     expect(screen.getByText('Review agent')).toBeVisible()
-    expect(screen.getByText('Reply sent to #integrations')).toBeVisible()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.getByText('Reply sent to #game-support')).toBeVisible()
+    expect(screen.queryByRole('button', { name: /example animation/ })).not.toBeInTheDocument()
     expect(vi.getTimerCount()).toBe(0)
     advance(20000)
     expect(screen.getByText('Reply delivered')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: 'Circle' }))
+    expect(screen.getByText('Reply sent to the community')).toBeVisible()
+    expect(screen.getByText(/Keep your layered original/)).toBeVisible()
+    expect(vi.getTimerCount()).toBe(0)
   })
 
   it('responds to reduced-motion preference changes while mounted', () => {
     render(<AnimatedChat />)
-    advance(1800)
+    advance(1500)
     setReducedMotion(true)
     expect(screen.getByText('Reply delivered')).toBeVisible()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /example animation/ })).not.toBeInTheDocument()
     expect(vi.getTimerCount()).toBe(0)
 
     setReducedMotion(false)
@@ -152,7 +248,7 @@ describe('support workflow animation', () => {
     expect(
       screen.getByRole('button', { name: 'Pause example animation' }),
     ).toBeVisible()
-    advance(3000)
+    advance(2000)
     expect(screen.getByText('Drafting answer')).toBeVisible()
   })
 
@@ -165,7 +261,7 @@ describe('support workflow animation', () => {
 
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
     act(() => document.dispatchEvent(new Event('visibilitychange')))
-    advance(1800)
+    advance(1500)
     expect(screen.getByText('Retrieving sources')).toBeVisible()
   })
 

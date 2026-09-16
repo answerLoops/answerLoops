@@ -26,10 +26,10 @@ export const GithubIcon = ({
 )
 export function NavWordmark() {
   return (
-    <span className="flex items-center gap-2">
+    <span className="flex shrink-0 items-center gap-3">
       <LogoMark size={28} />
       <span className="text-base font-semibold tracking-tight">
-        answer<span className="text-blue-600">Loops</span>
+        answer<span className="text-[#082e50]">Loops</span>
       </span>
     </span>
   )
@@ -45,13 +45,13 @@ const NAV = [
 export function Nav({ state }: { state?: NavState }) {
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-4 sm:gap-3 sm:px-8">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-8">
         <Link href="/" aria-label="answerLoops home" className="shrink-0">
           <NavWordmark />
         </Link>
         <nav
           aria-label="Main navigation"
-          className="hidden items-center gap-6 lg:flex"
+          className="hidden items-center gap-5 xl:flex"
         >
           {NAV.map(([label, href]) => (
             <Link
@@ -63,11 +63,11 @@ export function Nav({ state }: { state?: NavState }) {
             </Link>
           ))}
         </nav>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-3">
           <NavCta variant="header" initialState={state} />
           <MobileDrawer
             triggerLabel="Open navigation"
-            triggerClassName="lg:hidden"
+            triggerClassName="xl:hidden"
           >
             <nav
               aria-label="Mobile navigation"
