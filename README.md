@@ -83,6 +83,22 @@ Or, for an agent with ticket access:
 
 A successful first run returns relevant knowledge or ticket results from your workspace. If a search has no matches, add or publish content that covers the question and try again.
 
+### Connect through MCP
+
+In **Settings → API Keys**, a workspace owner or admin can create a key and choose its permissions. Use the generated configuration in your MCP client. The endpoint is your answerLoops instance URL followed by `/api/mcp`.
+
+| Ask your agent to… | MCP tool | Permission |
+|---|---|---|
+| Find an existing answer | `search_kb` | `kb:read` |
+| Read the latest FAQ digest | `get_faq` | `faq:read` |
+| Summarize tickets by status, priority, or category | `get_tickets` | `tickets:read` |
+| Open a support ticket | `create_ticket` | `tickets:write` |
+| Generate an answer with a confidence score | `generate_answer` | `answers:write` |
+
+`generate_answer` returns an answer without opening a ticket. `create_ticket` sends a question into the shared triage and drafting workflow for your team to review in the dashboard.
+
+[**MCP setup guide →**](https://answerloops.com/docs/integrations/mcp)
+
 </details>
 
 <details>
@@ -123,6 +139,8 @@ To modify the code, use the build-from-source instructions under [For developers
 2. **Answer where the question starts.** Draft answers for community questions, or let agents search knowledge, generate answers, and create tickets.
 3. **Choose when to automate.** Enable automatic replies for eligible questions that pass confidence review. Your team reviews the rest.
 4. **Build on what you solve.** Promote useful resolved tickets into published articles. Review knowledge gaps and FAQ digests to improve future answers.
+
+For the implementation, see the [shared ingestion pipeline](./lib/ingest/pipeline.ts), [agent operations](./lib/agent/core.ts), and [architecture guide](./ARCHITECTURE.md).
 
 ## Integrations
 
