@@ -9,10 +9,6 @@
 [![License](https://img.shields.io/github/license/answerLoops/answerLoops?style=flat-square&label=license&color=2563eb)](./LICENSE)
 [![npm](https://img.shields.io/npm/v/%40answerloops%2Fagent-sdk?style=flat-square&label=agent-sdk&logo=npm)](https://www.npmjs.com/package/@answerloops/agent-sdk)
 
-[Website](https://answerloops.com) · [Documentation](https://answerloops.com/docs) · [Hosted app](https://app.answerloops.com) · [Agent quickstart](#get-started-with-your-agent) · [Architecture](#how-the-loop-works)
-
-[Agent skills](./skills) · [MCP server](https://answerloops.com/docs/integrations/mcp) · [TypeScript SDK](./packages/agent-sdk)
-
 </div>
 
 # answerLoops — agent-native AI support for your community
@@ -49,8 +45,8 @@ Choose the path that fits where you are today:
 | Starting point | Next step |
 |---|---|
 | **I want to try answerLoops** | Open the [hosted app](https://app.answerloops.com), complete onboarding, and add your knowledge sources. Then connect your agent below. |
-| **I want my agent to help me self-host** | Install `answerloops-setup`. It checks prerequisites, guides configuration, starts Docker Compose, and verifies the health endpoint. |
-| **I already have a workspace** | Install `answerloops-operate` to connect your agent through MCP and start using your knowledge and tickets. |
+| **I want my agent to help me self-host** | Install the [setup skill](./skills/setup). It checks prerequisites, guides configuration, starts Docker Compose, and verifies the health endpoint. |
+| **I already have a workspace** | Install the [operation skill](./skills/operate) to connect your agent through MCP and start using your knowledge and tickets. |
 
 ### 1. Install the agent skills
 
@@ -298,8 +294,6 @@ Bring answerLoops knowledge and support into your own application, agent, or aut
 MCP and REST expose the same five operations: knowledge search, FAQ lookup, ticket listing, ticket creation, and answer generation. The SDK wraps the REST API.
 
 [Agent API reference](https://answerloops.com/docs/integrations/agent-api) · [SDK installation and usage](./packages/agent-sdk/README.md)
-
-Using Claude Code? [`skills/`](./skills) has an installable skill for self-hosting (`skills/setup`) and one for operating a running workspace over MCP (`skills/operate`) — see the [agent skills guide](https://answerloops.com/docs/integrations/agent-skills).
 
 ## Contributing
 
