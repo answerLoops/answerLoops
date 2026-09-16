@@ -146,6 +146,15 @@ export function Footer() {
             <p className="mt-3 text-sm text-slate-600">
               Open source. Hosted or self-hosted.
             </p>
+            <Link
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center gap-1.5 text-sm font-medium text-slate-600 transition-colors hover:text-blue-700"
+            >
+              <GithubIcon className="h-4 w-4" />
+              Proudly open source
+            </Link>
           </div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
             {GROUPS.map((group) => (
