@@ -74,27 +74,40 @@ describe('marketingSiteEnabled is off unless this is the managed deployment', ()
 })
 
 describe('robots.txt does not invite crawlers onto a self-hosted install', () => {
-  it('disallows the whole origin and offers no sitemap when not cloud', async () => {
-    const robots = await fresh<() => unknown>(undefined, () => import('@/app/robots'))
-    const out = robots() as { rules: unknown; sitemap?: unknown }
+  async function robotsText(mode: string | undefined): Promise<string> {
+    if (mode === undefined) delete process.env.DEPLOYMENT_MODE
+    else process.env.DEPLOYMENT_MODE = mode
+    const { GET } = await import('@/app/robots.txt/route')
+    const res = await GET()
+    return res.text()
+  }
 
-    expect(out.rules).toEqual({ userAgent: '*', disallow: '/' })
-    expect(
-      out.sitemap,
-      'a self-hosted instance must not advertise our sitemap as its own',
-    ).toBeUndefined()
+  it('disallows the whole origin and offers no sitemap when not cloud', async () => {
+    const text = await robotsText(undefined)
+
+    expect(text).toBe('User-agent: *\nDisallow: /\n')
+    expect(text, 'a self-hosted instance must not advertise our sitemap as its own').not.toContain('Sitemap:')
   })
 
   it('allows crawling and points at our sitemap on the managed deployment', async () => {
-    const robots = await fresh<() => unknown>('cloud', () => import('@/app/robots'))
-    const out = robots() as { rules: { allow?: unknown; disallow?: unknown }; sitemap?: unknown }
+    const text = await robotsText('cloud')
 
-    expect(out.rules.allow).toBe('/')
-    expect(out.sitemap).toBe('https://answerloops.com/sitemap.xml')
+    expect(text).toContain('Allow: /')
+    expect(text).toContain('Sitemap: https://answerloops.com/sitemap.xml')
     // The app routes stay excluded — a crawler gets a /login redirect from
     // every one of them.
-    expect(out.rules.disallow).toContain('/dashboard')
-    expect(out.rules.disallow).toContain('/api/')
+    expect(text).toContain('Disallow: /dashboard')
+    expect(text).toContain('Disallow: /api/')
+  })
+
+  it('opts out of AI training reuse while staying searchable and citable', async () => {
+    // Blocking crawl access here would also cut off the AI-referral citation
+    // traffic this site is trying to earn — see the SEO/crawlability push.
+    // Content Signals lets it separate the two: stay indexable and quotable,
+    // opt out of the separate grant of using the content to train a model.
+    const text = await robotsText('cloud')
+
+    expect(text).toContain('Content-Signal: search=yes, ai-input=yes, ai-train=no')
   })
 })
 
