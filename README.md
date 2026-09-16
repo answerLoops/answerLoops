@@ -11,55 +11,55 @@
 
 </div>
 
-# answerLoops — agent-native AI support for your community
+# answerLoops — AI support for your community
 
-**Faster answers. More time to build.**
+answerLoops turns your documentation and resolved support questions into answers for your community. Answer repeat questions, bring your team in when human judgment is needed, and turn each resolution into knowledge for the next person.
 
-answerLoops turns your documentation and resolved support questions into answers your community and AI agents can use. Resolve repeat questions in Discord, Slack, GitHub, forums, email, and web chat. Bring your team in when a question needs human judgment, then turn useful resolutions into knowledge for the next person who asks.
+Connect your own AI agent through skills, MCP, the REST API, or the TypeScript SDK. Use the hosted app or self-host with your preferred AI provider.
 
-**Bring your own agent from day one.** Agent skills guide self-hosted setup and connect your agent to a running workspace. The built-in MCP server lets it search your knowledge base, generate grounded answers, review incoming tickets, and open a ticket when someone needs help. A REST API and TypeScript SDK bring the same capabilities to your own tools.
+[**Try the hosted app →**](https://app.answerloops.com) · [Documentation](https://answerloops.com/docs) · [Get started](#get-started)
 
-Built for developer tools, open-source projects, and teams supporting an active community. Use the [hosted app](https://app.answerloops.com), or self-host with Docker and choose your AI provider.
+## Why answerLoops
 
-Start with the [agent quickstart](#get-started-with-your-agent), follow the [self-hosting steps](#run-it-locally), or explore the [documentation](https://answerloops.com/docs).
-
-## What answerLoops helps you do
-
-| Outcome | How it works |
-|---|---|
-| **Spend less time answering repeat questions** | Ground answers in your docs, published knowledge, resolved tickets, and connected repositories. Enable automatic replies for eligible questions that pass confidence review. |
-| **Give your agent useful work immediately** | Install the setup or operation skill, then connect it to your workspace through MCP. Ask it to find answers, summarize open tickets, or create a support ticket. |
-| **Keep your team focused on questions that need them** | Review drafts and escalations in one inbox. Bug reports and feature requests stay human-led. |
-| **Make each resolution useful again** | Promote resolved tickets into knowledge-base articles. Use knowledge gaps and FAQ digests to decide what to document next. |
-| **Support users where they already are** | Bring community conversations into a shared support workflow across chat, forums, GitHub, and email. |
-| **Choose how you run support** | Start with the hosted app or run your own stack. Use your preferred AI provider, including local models. |
+- **Answer fewer repeat questions:** Ground answers in your docs, knowledge base, connected repositories, and resolved tickets.
+- **Keep your team focused:** Review drafts and escalations in one inbox; keep bug reports and feature requests human-led.
+- **Make every resolution count:** Turn solved tickets into articles and use knowledge gaps to decide what to document next.
+- **Put your agent to work:** Search knowledge, generate answers, summarize tickets, and open a ticket when someone needs help.
 
 <div align="center">
   <img src="./.github/readme/dashboard.png" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
 </div>
 
-## Get started with your agent
+## Get started
 
-Choose the path that fits where you are today:
+Choose your path:
 
-| Starting point | Next step |
-|---|---|
-| **I want to try answerLoops** | Open the [hosted app](https://app.answerloops.com), complete onboarding, and add your knowledge sources. Then connect your agent below. |
-| **I want my agent to help me self-host** | Install the [setup skill](./skills/setup). It checks prerequisites, guides configuration, starts Docker Compose, and verifies the health endpoint. |
-| **I already have a workspace** | Install the [operation skill](./skills/operate) to connect your agent through MCP and start using your knowledge and tickets. |
-| **I don't use an agent, just give me a CLI** | Run `npx @answerloops/agent-sdk setup` directly — no Claude Code required. See [below](#no-agent-self-host-from-the-cli). |
+- **Hosted:** [Open answerLoops](https://app.answerloops.com), complete onboarding, and add your knowledge sources.
+- **With your agent:** Use the setup skill to self-host or the operation skill to connect an existing workspace. Expand the guide below.
+- **Self-hosted:** Run the CLI command below, or expand the manual Docker instructions.
 
-### 1. Install the agent skills
+The CLI requires Node.js, Git, and Docker with Compose. You'll also need a PostgreSQL connection, Google OAuth credentials, and AI provider settings. Follow the [configuration guide](https://answerloops.com/docs/quickstart-self-host) for these values.
 
-The included skills are packaged for **Claude Code**. Install both with the `answerloops` CLI — no clone needed first, it's the bin of [`@answerloops/agent-sdk`](https://www.npmjs.com/package/@answerloops/agent-sdk):
+```bash
+npx @answerloops/agent-sdk setup
+```
+
+The CLI checks prerequisites, clones the repository if needed, generates app secrets, and starts the published image. If configuration is missing, it tells you what to add to `.env`; add it and rerun the command. Setup verifies `/api/health` before finishing.
+
+<details>
+<summary><strong>Set up with your agent</strong></summary>
+
+### Install the agent skills
+
+The included skills are packaged for **Claude Code**. Install both without cloning the repository:
 
 ```bash
 npx @answerloops/agent-sdk skills answerloops-setup answerloops-operate
 ```
 
-That writes both into `.claude/skills/` in the current directory. Install just one by naming it alone. See the [skill source](./skills) and [installation guide](https://answerloops.com/docs/integrations/agent-skills) for details. Other MCP-compatible clients can [connect directly](#connect-through-mcp).
+That writes both into `.claude/skills/` in the current directory. Install just one by naming it alone. See the [skill source](./skills) and [installation guide](https://answerloops.com/docs/integrations/agent-skills) for details. Other MCP-compatible clients can use the [MCP setup guide](https://answerloops.com/docs/integrations/mcp).
 
-### 2. Ask your agent to help you get running
+### Ask your agent to help you get running
 
 For a new self-hosted instance:
 
@@ -71,7 +71,7 @@ For an existing hosted or self-hosted workspace:
 
 > Use answerloops-operate to help me connect to my answerLoops workspace. Walk me through creating an API key with the permissions I need, configure MCP for my client, and verify the connection with a knowledge-base search.
 
-### 3. Give your agent its first support task
+### Give your agent its first support task
 
 After connecting an AI provider and adding published knowledge, try:
 
@@ -82,16 +82,6 @@ Or, for an agent with ticket access:
 > Summarize our open, high-priority tickets and group them by category so I can decide what to handle first.
 
 A successful first run returns relevant knowledge or ticket results from your workspace. If a search has no matches, add or publish content that covers the question and try again.
-
-### No agent? Self-host from the CLI
-
-`@answerloops/agent-sdk` ships a plain CLI too — no Claude Code, no bash, runs anywhere Node + Docker do:
-
-```bash
-npx @answerloops/agent-sdk setup
-```
-
-Clones the repo if needed, checks Docker + git are present, generates `AUTH_SECRET`/`ENCRYPTION_KEY`, starts the published image, and polls `/api/health` until it's up. It never invents `DATABASE_URL`, `AUTH_URL`, or your Google OAuth credentials — if any are missing it tells you exactly what to add to `.env` and exits, rather than guessing. Add them and re-run.
 
 ### Connect through MCP
 
@@ -109,46 +99,10 @@ In **Settings → API Keys**, a workspace owner or admin can create a key and ch
 
 [**MCP setup guide →**](https://answerloops.com/docs/integrations/mcp)
 
-## How the loop works
-
-<div align="center">
-  <img src="./.github/readme/workflow.svg" alt="Community conversations enter triage and confidence review. Agents use MCP or REST to search knowledge, generate answers, and create tickets. Teams promote useful resolutions into published knowledge for future answers." width="100%" />
-</div>
-
-1. **Bring in your knowledge.** Connect documentation, files, and repositories; publish the content you want available for answers.
-2. **Answer where the question starts.** Community questions enter triage and drafting. Agents can search knowledge and generate answers directly, or create a ticket when support needs to take over.
-3. **Choose when to automate.** Eligible channel replies can post automatically when enabled and when they pass confidence review. Other questions go to your team for review or follow-up.
-4. **Build on what you solve.** Promote useful resolved tickets into published articles. Review knowledge gaps and FAQ digests to improve future answers.
-
-For the implementation, see the [shared ingestion pipeline](./lib/ingest/pipeline.ts), [agent operations](./lib/agent/core.ts), and [architecture guide](./ARCHITECTURE.md).
-
-## Support channels and knowledge sources
-
-| Capability | Connect or use |
-|---|---|
-| **Community support** | Discord, Slack, Discourse, Circle, GitHub Issues and Discussions, Telegram, Google Chat, email, and embeddable web chat |
-| **Knowledge sources** | Website documentation, GitHub repositories, Notion, PDF, DOCX, Markdown, text, CSV, and resolved support tickets |
-| **Support operations** | Unified inbox, AI drafts, priority and category triage, SLA tracking, human escalation, CSAT, analytics, and knowledge-gap reporting |
-| **AI providers** | OpenAI, Anthropic, Google Gemini, Groq, Mistral, Ollama, and OpenAI-compatible endpoints |
-| **Agent access** | Setup and operation skills, MCP tools, REST API, OpenAPI schema, and TypeScript SDK |
-
-[Explore the documentation →](https://answerloops.com/docs)
-
-<details>
-<summary><strong>See the unified inbox</strong></summary>
-<br />
-<img src="./.github/readme/tickets.png" alt="Unified answerLoops inbox with support tickets from multiple channels" width="100%" />
 </details>
 
 <details>
-<summary><strong>See confidence review and escalation</strong></summary>
-<br />
-<img src="./.github/readme/ticket-detail.png" alt="answerLoops ticket detail with AI confidence review, evidence, and human escalation" width="100%" />
-</details>
-
-## Run it locally
-
-### Run the published image
+<summary><strong>Self-host with Docker manually</strong></summary>
 
 The published image runs the app and channel listener without a local build. First download the Compose file:
 
@@ -171,11 +125,53 @@ ANSWERLOOPS_IMAGE='ghcr.io/answerloops/answerloops:<release-tag>' \
   docker compose -f docker-compose.ghcr.yml up -d
 ```
 
-Building from source instead is the path below, and the one to take if you intend to modify the code.
+To modify the code, use the build-from-source instructions under [For developers](#for-developers).
 
-### Build from source
+</details>
 
-Docker Compose is the quickest way to get everything up. It starts the Next.js app, the channel listener, and PostgreSQL, and runs the Drizzle migrations for you.
+## How it works
+
+<div align="center">
+  <img src="./.github/readme/workflow.svg" alt="Community conversations enter triage and confidence review. Agents use MCP or REST to search knowledge, generate answers, and create tickets. Teams promote useful resolutions into published knowledge for future answers." width="100%" />
+</div>
+
+1. **Bring in your knowledge.** Connect documentation, files, and repositories; publish the content you want available for answers.
+2. **Answer where the question starts.** Draft answers for community questions, or let agents search knowledge, generate answers, and create tickets.
+3. **Choose when to automate.** Enable automatic replies for eligible questions that pass confidence review. Your team reviews the rest.
+4. **Build on what you solve.** Promote useful resolved tickets into published articles. Review knowledge gaps and FAQ digests to improve future answers.
+
+For the implementation, see the [shared ingestion pipeline](./lib/ingest/pipeline.ts), [agent operations](./lib/agent/core.ts), and [architecture guide](./ARCHITECTURE.md).
+
+## Integrations
+
+- **Support channels:** Discord, Slack, Discourse, Circle, GitHub Issues and Discussions, Telegram, Google Chat, email, and embeddable web chat.
+- **Knowledge sources:** Website documentation, GitHub repositories, Notion, PDF, DOCX, Markdown, text, CSV, and resolved tickets.
+- **Support tools:** Unified inbox, AI drafts, priority and category triage, SLA tracking, human escalation, CSAT, analytics, knowledge gaps, and FAQ digests.
+- **AI providers:** OpenAI, Anthropic, Google Gemini, Groq, Mistral, Ollama, and OpenAI-compatible endpoints, including local models.
+- **Agent interfaces:** Setup and operation skills, MCP, REST, OpenAPI, and the TypeScript SDK.
+
+[Explore the integrations →](https://answerloops.com/docs/introduction)
+
+<details>
+<summary><strong>See the unified inbox</strong></summary>
+<br />
+<img src="./.github/readme/tickets.png" alt="Unified answerLoops inbox with support tickets from multiple channels" width="100%" />
+</details>
+
+<details>
+<summary><strong>See confidence review and escalation</strong></summary>
+<br />
+<img src="./.github/readme/ticket-detail.png" alt="answerLoops ticket detail with AI confidence review, evidence, and human escalation" width="100%" />
+</details>
+
+## For developers
+
+Build your own integrations or contribute to answerLoops. Start with the [Agent API reference](https://answerloops.com/docs/integrations/agent-api), [TypeScript SDK](./packages/agent-sdk/README.md), or [architecture guide](./ARCHITECTURE.md).
+
+<details>
+<summary><strong>Build and run from source</strong></summary>
+
+Docker Compose starts the Next.js app, the channel listener, and PostgreSQL, and runs the Drizzle migrations for you.
 
 ### Prerequisites
 
@@ -233,7 +229,10 @@ curl http://localhost:3000/api/health
 
 For deployment, provider-specific setup, and every environment variable, follow the [self-hosting documentation](https://answerloops.com/docs/quickstart-self-host).
 
-## Native development
+</details>
+
+<details>
+<summary><strong>Native development and commands</strong></summary>
 
 Use Node.js 22 (see [`.nvmrc`](./.nvmrc)) and pnpm. Running Postgres in Docker while the app processes run on the host works well:
 
@@ -243,7 +242,7 @@ pnpm install
 cp .env.example .env.local
 ```
 
-Set `DATABASE_URL=<your-local-postgres-connection-string>` and the required values above in `.env.local`. Next.js loads that file for the web app. To run both the web app and listener from the same shell, export it first:
+In `.env.local`, set `DATABASE_URL=<your-local-postgres-connection-string>` and the other required values listed under **Build and run from source**. Next.js loads that file for the web app. To run both the web app and listener from the same shell, export it first:
 
 ```bash
 set -a
@@ -265,7 +264,10 @@ The main development commands are:
 | `pnpm test:e2e:typecheck` | Type-check the Playwright suite |
 | `pnpm build` | Create the production Next.js build |
 
-## Repository map
+</details>
+
+<details>
+<summary><strong>Repository map</strong></summary>
 
 ```text
 app/                 Next.js pages, server actions, webhooks, REST, and MCP
@@ -287,7 +289,10 @@ public/widget.js     Embeddable widget loader
 
 Production is two processes — `app` and `bot` — built from one multi-stage image, with PostgreSQL behind them. [`ARCHITECTURE.md`](./ARCHITECTURE.md) goes through the pipeline and the data model in detail.
 
-## Build with the APIs
+</details>
+
+<details>
+<summary><strong>Choose an API or SDK</strong></summary>
 
 Bring answerLoops knowledge and support into your own application, agent, or automation. Create a workspace API key in **Settings → API Keys**, then choose your interface:
 
@@ -300,19 +305,21 @@ Bring answerLoops knowledge and support into your own application, agent, or aut
 
 MCP and REST expose the same five operations: knowledge search, FAQ lookup, ticket listing, ticket creation, and answer generation. The SDK wraps the REST API.
 
-[Agent API reference](https://answerloops.com/docs/integrations/agent-api) · [SDK installation and usage](./packages/agent-sdk/README.md)
+Generating an answer doesn't open a ticket. Creating a ticket sends the question into the team's triage and drafting workflow.
+
+[MCP setup and permissions](https://answerloops.com/docs/integrations/mcp) · [Agent API reference](https://answerloops.com/docs/integrations/agent-api) · [SDK installation and usage](./packages/agent-sdk/README.md)
+
+</details>
 
 ## Contributing
 
-Help improve community support and agent workflows. Contributions are welcome:
+Contributions are welcome. Open or link an issue to agree on the behavior before you build it.
 
-1. Open or link an issue so we agree on the behavior before you build it.
-2. Every data-access path has to scope by organization. Don't merge one that doesn't.
-3. Behavior changes need test coverage.
-4. Run `pnpm lint`, `pnpm test`, and `pnpm build` before you push.
-5. If you change product behavior, architecture, setup, or an integration, update the matching page under `content/docs/`.
+- Scope every data-access path by organization and cover behavior changes with tests.
+- Run `pnpm lint`, `pnpm test`, and `pnpm build` before pushing.
+- Update the matching page under `content/docs/` when changing product behavior, architecture, setup, or an integration.
 
-Found a security issue? Follow [`SECURITY.md`](./SECURITY.md). Don't open a public issue for it.
+Report security issues privately through [SECURITY.md](./SECURITY.md).
 
 ## License
 
@@ -320,6 +327,6 @@ Found a security issue? Follow [`SECURITY.md`](./SECURITY.md). Don't open a publ
 
 <div align="center">
 
-[Docs](https://answerloops.com/docs) · [Run it locally](#run-it-locally) · [Open an issue](https://github.com/answerLoops/answerLoops/issues)
+[Docs](https://answerloops.com/docs) · [Get started](#get-started) · [Open an issue](https://github.com/answerLoops/answerLoops/issues)
 
 </div>
