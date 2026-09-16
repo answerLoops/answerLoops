@@ -1,8 +1,32 @@
 # @answerloops/agent-sdk
 
-Typed Node/browser client for the [answerLoops Agent API](https://answerloops.com/docs/integrations/agent-api) — search the knowledge base, read the FAQ digest, list/create tickets, and generate grounded answers.
+Typed Node/browser client for the [answerLoops Agent API](https://answerloops.com/docs/integrations/agent-api) — search the knowledge base, read the FAQ digest, list/create tickets, and generate grounded answers. Also ships a CLI (`answerloops`) that bootstraps a self-hosted instance or installs the [Claude Code agent skills](https://answerloops.com/docs/integrations/agent-skills).
 
-## Install
+## Getting started
+
+Don't have a running answerLoops instance yet? Bootstrap one:
+
+```bash
+npx @answerloops/agent-sdk setup
+```
+
+Clones the repo if needed, checks Docker + git are present, generates
+`AUTH_SECRET`/`ENCRYPTION_KEY`, starts the published image via Docker
+Compose, and polls `/api/health` until it's actually up. It never invents a
+real credential — if `DATABASE_URL`, `AUTH_URL`, or the Google OAuth pair are
+missing, it tells you exactly what to add to `.env` and exits, rather than
+guessing.
+
+Already have a workspace (hosted or self-hosted) and just want an agent
+connected to it? Install the Claude Code skills instead:
+
+```bash
+npx @answerloops/agent-sdk skills answerloops-setup answerloops-operate
+```
+
+Writes both into `.claude/skills/` — install just one by naming it alone.
+
+Building against the API directly instead? Install the library:
 
 ```bash
 npm install @answerloops/agent-sdk

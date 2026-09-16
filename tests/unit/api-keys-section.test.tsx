@@ -226,8 +226,7 @@ describe('API keys settings section', () => {
 
     expect(writeText).toHaveBeenCalledTimes(1)
     const copiedText = writeText.mock.calls[0][0] as string
-    expect(copiedText).toContain('mkdir -p .claude/skills/answerloops-operate')
-    expect(copiedText).toContain('skills/operate/SKILL.md')
+    expect(copiedText).toContain('npx @answerloops/agent-sdk skills answerloops-operate')
   })
 
   it('flips the Copy command label to "✓ Copied" after a click, then reverts it after 2 seconds', async () => {

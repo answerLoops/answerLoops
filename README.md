@@ -50,17 +50,13 @@ Choose the path that fits where you are today:
 
 ### 1. Install the agent skills
 
-The included skills are packaged for **Claude Code**. From a clone of this repository, copy the skill folders into the project's skills directory:
+The included skills are packaged for **Claude Code**. Install both with the `answerloops` CLI — no clone needed first, it's the bin of [`@answerloops/agent-sdk`](https://www.npmjs.com/package/@answerloops/agent-sdk):
 
 ```bash
-git clone https://github.com/answerLoops/answerLoops.git
-cd answerLoops
-mkdir -p .claude/skills/answerloops-setup .claude/skills/answerloops-operate
-cp -R skills/setup/. .claude/skills/answerloops-setup/
-cp -R skills/operate/. .claude/skills/answerloops-operate/
+npx @answerloops/agent-sdk skills answerloops-setup answerloops-operate
 ```
 
-Already cloned the repository? Run the `mkdir` and `cp` commands from its root. See the [skill source](./skills) and [installation guide](https://answerloops.com/docs/integrations/agent-skills) for details. Other MCP-compatible clients can [connect directly](#connect-through-mcp).
+That writes both into `.claude/skills/` in the current directory. Install just one by naming it alone. See the [skill source](./skills) and [installation guide](https://answerloops.com/docs/integrations/agent-skills) for details. Other MCP-compatible clients can [connect directly](#connect-through-mcp).
 
 ### 2. Ask your agent to help you get running
 
