@@ -21,10 +21,10 @@ Connect your own AI agent through skills, MCP, the REST API, or the TypeScript S
 
 ## Why answerLoops
 
-- **Answer fewer repeat questions.** Ground answers in your docs, knowledge base, connected repositories, and resolved tickets.
-- **Keep your team focused.** Review drafts and escalations in one inbox; keep bug reports and feature requests human-led.
-- **Make every resolution count.** Turn solved tickets into articles and use knowledge gaps to decide what to document next.
-- **Put your agent to work.** Search knowledge, generate answers, summarize tickets, and open a ticket when someone needs help.
+- **Answer fewer repeat questions:** Ground answers in your docs, knowledge base, connected repositories, and resolved tickets.
+- **Keep your team focused:** Review drafts and escalations in one inbox; keep bug reports and feature requests human-led.
+- **Make every resolution count:** Turn solved tickets into articles and use knowledge gaps to decide what to document next.
+- **Put your agent to work:** Search knowledge, generate answers, summarize tickets, and open a ticket when someone needs help.
 
 <div align="center">
   <img src="./.github/readme/dashboard.png" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
@@ -150,7 +150,7 @@ For the implementation, see the [shared ingestion pipeline](./lib/ingest/pipelin
 - **AI providers:** OpenAI, Anthropic, Google Gemini, Groq, Mistral, Ollama, and OpenAI-compatible endpoints, including local models.
 - **Agent interfaces:** Setup and operation skills, MCP, REST, OpenAPI, and the TypeScript SDK.
 
-[Explore the integrations →](https://answerloops.com/docs)
+[Explore the integrations →](https://answerloops.com/docs/introduction)
 
 <details>
 <summary><strong>See the unified inbox</strong></summary>
