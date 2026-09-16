@@ -33,8 +33,8 @@ test.describe('dashboard surfaces', () => {
     await page.goto('/settings')
     // SLA priorities seeded by schema.
     await expect(page.getByText('critical', { exact: false }).first()).toBeVisible()
-    // Repo seeded by global setup — lives under the GitHub tab.
-    await page.goto('/settings?tab=github')
+    // Repo seeded by global setup — lives under the GitHub tab on Integrations.
+    await page.goto('/integrations?tab=github')
     await expect(page.getByText('acme/demo')).toBeVisible()
   })
 

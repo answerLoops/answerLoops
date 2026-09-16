@@ -13,14 +13,14 @@ answerLoops connects to Slack in one of two ways, and the two are independent of
 Every connected channel appears in the unified ticket list with a Slack source badge. Slack is a Standard-plan-and-above feature — `saveSlackIntegrationAction`, `saveSlackChannelsAction`, and the `/api/slack/install` route all gate on the `slack_integration` entitlement and return an error before touching the workspace if the org's plan doesn't include it.
 
 <Callout type="info">
-  **Automatic Deflections** is off by default for every newly connected platform. While it's off, even a high-confidence AI answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — Slack gets a brief acknowledgment reaction/reply instead of the real answer. Turn it on per-workspace in **Settings → Slack → Edit channels → Automatic Deflections toggle → Save channels** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
+  **Automatic Deflections** is off by default for every newly connected platform. While it's off, even a high-confidence AI answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — Slack gets a brief acknowledgment reaction/reply instead of the real answer. Turn it on per-workspace in **Integrations → Slack → Edit channels → Automatic Deflections toggle → Save channels** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
 </Callout>
 
 ---
 
 ## Option 1: 1-click OAuth (recommended)
 
-1. In **Settings → Channels → Slack** (or the onboarding wizard), click **Add to Slack**
+1. In **Integrations → Slack** (or the onboarding wizard), click **Add to Slack**
 2. answerLoops requests the `channels:history`, `channels:read`, `channels:join`, `chat:write`, `reactions:write`, and `users:read` scopes and redirects to Slack's authorization screen
 3. An admin picks the workspace and approves
 4. Slack redirects back to `/api/slack/callback`, which exchanges the code for a bot token and stores it (along with the team ID and an internally-generated `bot_secret` used to authenticate the bot's own traffic back to answerLoops)
@@ -47,7 +47,7 @@ You still need to `/invite @answerLoops` (or add the app via that channel's **In
 
 The Events API webhook is what gives OAuth-connected workspaces instant delivery. It's automatic on managed cloud (the platform has one shared webhook URL already configured) and requires one extra step for self-hosted deployments:
 
-1. In your Slack app's **Event Subscriptions**, set the Request URL to `{YOUR_DOMAIN}/api/slack/events` — the self-hosted Settings page surfaces this exact URL once Slack is connected
+1. In your Slack app's **Event Subscriptions**, set the Request URL to `{YOUR_DOMAIN}/api/slack/events` — the self-hosted Integrations page surfaces this exact URL once Slack is connected
 2. Subscribe to the `message.channels` and `reaction_added` bot events
 3. Slack sends a `url_verification` challenge on save; `/api/slack/events` answers it before any signature check runs
 4. Every subsequent event is verified against `SLACK_SIGNING_SECRET` using the `x-slack-request-timestamp` and `x-slack-signature` headers — a request that fails verification gets a `403`, and an event for a team answerLoops has no integration record for is rejected the same way
@@ -60,7 +60,7 @@ Once wired up, new messages create tickets in real time, and 👍/👎 or 1️�
 
 Self-hosted only — every managed-cloud org already gets real-time delivery through the shared Events API webhook, so cloud never starts the polling loop at all. Polling exists for operators who can't get Slack admin approval for an OAuth install, or who can't expose a public webhook URL to Slack for security-review or firewall reasons.
 
-1. Go to **Settings → Channels → Slack** and click **Set up manually instead** (only shown on self-hosted deployments, next to **Add to Slack**)
+1. Go to **Integrations → Slack** and click **Set up manually instead** (only shown on self-hosted deployments, next to **Add to Slack**)
 2. Paste a bot token (`xoxb-…`), the workspace's Team ID (`T…`), and one or more channel IDs
 3. A signing secret is optional here — only required if you also plan to wire up the Events API webhook alongside polling
 4. answerLoops calls `conversations.join` on every listed channel the same way OAuth does, then starts polling `conversations.history` on that channel every `SLACK_POLL_INTERVAL_SECONDS` (default 60, minimum recommended 30)
@@ -99,7 +99,7 @@ SLACK_POLL_INTERVAL_SECONDS=60  # default. Minimum recommended: 30.
 
 ## Escalation, confidence, and deflection settings
 
-The channel picker's save form (**Settings → Slack → Edit channels**) also sets three per-workspace fields stored on the integration record:
+The channel picker's save form (**Integrations → Slack → Edit channels**) also sets three per-workspace fields stored on the integration record:
 
 - **Escalation User Group ID** (optional) — a Slack user group or user ID (`S…` or `U…`) pinged when the AI's confidence is below threshold
 - **Confidence threshold** (0–1, default `0.8`) — the AI answer confidence required before answerLoops treats a question as answerable at all
@@ -131,7 +131,7 @@ Add `{AUTH_URL}/api/slack/callback` to your Slack app's **OAuth & Permissions �
     Saving a channel selection calls `conversations.join` for every public channel automatically, so this usually means the channel is **private**. Slack doesn't allow any bot to self-join a private channel — invite it manually with `/invite @answerLoops` or via that channel's **Integrations → Add apps**, then re-save the channel list so the poller or webhook path picks it up.
   </Accordion>
   <Accordion title="Tickets show a raw Slack ID (like U0BMB9H6SFQ) instead of a name">
-    The `users:read` scope resolves user IDs to display names via `users.info`. It was added after some workspaces first connected, and OAuth grants aren't retroactive — a workspace that authorized before this scope existed keeps its old-scoped token. Disconnect and reconnect Slack (**Settings → Slack → Disconnect**, then **Add to Slack** again) to pick up the new scope.
+    The `users:read` scope resolves user IDs to display names via `users.info`. It was added after some workspaces first connected, and OAuth grants aren't retroactive — a workspace that authorized before this scope existed keeps its old-scoped token. Disconnect and reconnect Slack (**Integrations → Slack → Disconnect**, then **Add to Slack** again) to pick up the new scope.
   </Accordion>
   <Accordion title="Connecting Slack floods the ticket list with old messages">
     This shouldn't happen — a channel's first poll intentionally seeds its cursor to the newest existing message and tickets nothing on that pass, so only messages posted after the connection become tickets. If you're seeing old history come in as tickets, check whether the channel was previously connected and disconnected (the cursor is tied to org + channel and isn't reset on disconnect).

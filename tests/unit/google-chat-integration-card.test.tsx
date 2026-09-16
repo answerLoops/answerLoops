@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { GoogleChatIntegrationCard } from '@/app/(dashboard)/settings/page'
+import { GoogleChatIntegrationCard } from '@/components/settings/googlechat'
 import {
   generateGoogleChatConnectCodeAction,
   saveGoogleChatSettingsAction,

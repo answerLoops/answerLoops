@@ -7,7 +7,7 @@ import { DeflectionStatusBanner } from '@/components/deflection-status-banner'
 // integration is on auto-send (offPlatforms empty), otherwise it warns that
 // N integrations are set to manual review, pluralizing "integration" vs
 // "integrations" correctly and naming the affected platforms, with a link
-// back to /settings so the user can flip them to auto-send.
+// back to /integrations so the user can flip them to auto-send.
 
 describe('DeflectionStatusBanner', () => {
   it('renders nothing when offPlatforms is empty', () => {
@@ -31,9 +31,9 @@ describe('DeflectionStatusBanner', () => {
     expect(names.className).toContain('font-semibold')
   })
 
-  it('renders a Review Settings link pointing to /settings', () => {
+  it('renders a Review Integrations link pointing to /integrations', () => {
     render(<DeflectionStatusBanner offPlatforms={['Discord']} />)
-    const link = screen.getByRole('link', { name: 'Review Settings' })
-    expect(link).toHaveAttribute('href', '/settings')
+    const link = screen.getByRole('link', { name: 'Review Integrations' })
+    expect(link).toHaveAttribute('href', '/integrations')
   })
 })

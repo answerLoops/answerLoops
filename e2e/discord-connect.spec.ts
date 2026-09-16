@@ -38,14 +38,14 @@ test.describe('discord connect: /api/discord/guilds', () => {
   })
 })
 
-test.describe('discord connect: settings UI flow', () => {
-  test('settings page shows Discord integration section', async ({ page }) => {
-    await page.goto('/settings')
+test.describe('discord connect: integrations UI flow', () => {
+  test('integrations page shows Discord integration section', async ({ page }) => {
+    await page.goto('/integrations')
     await expect(page.getByText(/discord/i).first()).toBeVisible()
   })
 
   test('can enter bot token and fetch guilds', async ({ page }) => {
-    await page.goto('/settings?tab=discord')
+    await page.goto('/integrations?tab=discord')
 
     // Discord connect is OAuth-first now; the manual bot-token form (legacy,
     // self-hosted path) is behind an Edit action on an already-connected

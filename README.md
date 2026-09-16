@@ -13,7 +13,7 @@
 
 # answerLoops — agent-native AI support for your community
 
-**Help your users get answers faster. Give your team more time to build.**
+**Faster answers. More time to build.**
 
 answerLoops turns your documentation and resolved support questions into answers your community and AI agents can use. Resolve repeat questions in Discord, Slack, GitHub, forums, email, and web chat. Bring your team in when a question needs human judgment, then turn useful resolutions into knowledge for the next person who asks.
 
