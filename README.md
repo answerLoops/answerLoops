@@ -9,10 +9,6 @@
 [![License](https://img.shields.io/github/license/answerLoops/answerLoops?style=flat-square&label=license&color=2563eb)](./LICENSE)
 [![npm](https://img.shields.io/npm/v/%40answerloops%2Fagent-sdk?style=flat-square&label=agent-sdk&logo=npm)](https://www.npmjs.com/package/@answerloops/agent-sdk)
 
-[Website](https://answerloops.com) · [Documentation](https://answerloops.com/docs) · [Hosted app](https://app.answerloops.com) · [Agent quickstart](#get-started-with-your-agent) · [Architecture](#how-the-loop-works)
-
-[Agent skills](./skills) · [MCP server](https://answerloops.com/docs/integrations/mcp) · [TypeScript SDK](./packages/agent-sdk)
-
 </div>
 
 # answerLoops — agent-native AI support for your community
@@ -25,7 +21,7 @@ answerLoops turns your documentation and resolved support questions into answers
 
 Built for developer tools, open-source projects, and teams supporting an active community. Use the [hosted app](https://app.answerloops.com), or self-host with Docker and choose your AI provider.
 
-[**Get started with your agent →**](#get-started-with-your-agent) · [**Try the hosted app →**](https://app.answerloops.com) · [**Self-host →**](#run-it-locally)
+Start with the [agent quickstart](#get-started-with-your-agent), follow the [self-hosting steps](#run-it-locally), or explore the [documentation](https://answerloops.com/docs).
 
 ## What answerLoops helps you do
 
@@ -49,8 +45,8 @@ Choose the path that fits where you are today:
 | Starting point | Next step |
 |---|---|
 | **I want to try answerLoops** | Open the [hosted app](https://app.answerloops.com), complete onboarding, and add your knowledge sources. Then connect your agent below. |
-| **I want my agent to help me self-host** | Install `answerloops-setup`. It checks prerequisites, guides configuration, starts Docker Compose, and verifies the health endpoint. |
-| **I already have a workspace** | Install `answerloops-operate` to connect your agent through MCP and start using your knowledge and tickets. |
+| **I want my agent to help me self-host** | Install the [setup skill](./skills/setup). It checks prerequisites, guides configuration, starts Docker Compose, and verifies the health endpoint. |
+| **I already have a workspace** | Install the [operation skill](./skills/operate) to connect your agent through MCP and start using your knowledge and tickets. |
 
 ### 1. Install the agent skills
 
