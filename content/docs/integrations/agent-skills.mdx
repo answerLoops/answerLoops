@@ -4,11 +4,19 @@ description: Installable Claude Code skills that set up self-hosted answerLoops 
 ---
 
 answerLoops ships two [Claude Code skills](https://docs.claude.com/en/docs/claude-code/skills)
-directly in this repository, under `skills/`. A skill is a `SKILL.md` file
-plus any helper scripts it needs — Claude Code reads it and follows the
-instructions inside, so installing one gives an agent a repeatable, reviewed
-procedure instead of it improvising the setup or API calls from scratch each
-time.
+directly in this repository, under `skills/`. A skill is a `SKILL.md` file —
+Claude Code reads it and follows the instructions inside, so installing one
+gives an agent a repeatable, reviewed procedure instead of it improvising the
+setup or API calls from scratch each time. The easiest way to install either
+one is the `answerloops` CLI, the bin of the
+[`@answerloops/agent-sdk`](https://www.npmjs.com/package/@answerloops/agent-sdk)
+npm package:
+
+```bash
+npx @answerloops/agent-sdk skills answerloops-setup answerloops-operate
+```
+
+That writes both into `.claude/skills/`. Install just one by naming it alone.
 
 <Tip>
   Both skills are plain files in a public repo — read them before installing if you want to know exactly what they do. Nothing here runs implicitly; a skill only acts when you ask your agent to use it.
@@ -16,32 +24,26 @@ time.
 
 ## `answerloops-setup`
 
-Installs a self-hosted instance: checks prerequisites, scaffolds `.env`,
-runs `docker compose -f docker-compose.ghcr.yml up -d` (the published-image
-path, no build step), and polls `/api/health` until it's actually up rather
-than guessing from a fixed sleep.
-
-It stops and hands back to you for anything external — OAuth app creation,
-AI provider keys. It never invents a credential; every secret either comes
-from a command you ran (`openssl rand -hex 32`) or from you pasting a real
-value from a provider's dashboard.
-
-Install:
+Installs a self-hosted instance. The mechanical work — prerequisite checks,
+cloning, `.env` scaffolding, starting the published image via
+`docker compose -f docker-compose.ghcr.yml up -d`, polling `/api/health`
+until it's actually up — is done by the same CLI:
 
 ```bash
-mkdir -p .claude/skills/answerloops-setup
-curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/setup/SKILL.md \
-  -o .claude/skills/answerloops-setup/SKILL.md
-mkdir -p .claude/skills/answerloops-setup/scripts
-curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/setup/scripts/check-prereqs.sh \
-  -o .claude/skills/answerloops-setup/scripts/check-prereqs.sh
-curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/setup/scripts/wait-for-health.sh \
-  -o .claude/skills/answerloops-setup/scripts/wait-for-health.sh
-chmod +x .claude/skills/answerloops-setup/scripts/*.sh
+npx @answerloops/agent-sdk setup
 ```
 
-Then, from a clone of the answerLoops repo, ask Claude Code to set up
-answerLoops.
+It stops and hands back to you for anything external — OAuth app creation,
+AI provider keys. It never invents a credential: `AUTH_SECRET` and
+`ENCRYPTION_KEY` are generated with real randomness in-process, and anything
+else required (`DATABASE_URL`, `AUTH_URL`, `AUTH_GOOGLE_ID`,
+`AUTH_GOOGLE_SECRET`) it reports as missing rather than guessing at.
+
+Installing the skill (`answerloops-setup`, above) gives an agent the
+judgment layer around this — collecting those real values from you in
+conversation and re-running the command — rather than you running it solo
+and hand-editing `.env` yourself. Either works; the skill just makes it
+conversational.
 
 ## `answerloops-operate`
 
@@ -50,16 +52,8 @@ Connects an agent to a running workspace — hosted or self-hosted — via the
 FAQ, list and open tickets, generate grounded answers. Same pipeline every
 other channel uses, same per-key scopes and org isolation.
 
-Install:
-
-```bash
-mkdir -p .claude/skills/answerloops-operate
-curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/operate/SKILL.md \
-  -o .claude/skills/answerloops-operate/SKILL.md
-```
-
-Then mint a scoped API key (**Settings → API Keys** in your workspace) and
-ask your agent to connect it — the skill walks the rest.
+Mint a scoped API key (**Settings → API Keys** in your workspace) and ask
+your agent to connect it — the skill walks the rest.
 
 ## Which one do I need?
 

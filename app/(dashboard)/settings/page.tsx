@@ -1017,9 +1017,7 @@ export function ApiKeysSection() {
   }
 }`
 
-  const operateSkillInstallCommand = `mkdir -p .claude/skills/answerloops-operate
-curl -fsSL https://raw.githubusercontent.com/answerLoops/answerLoops/main/skills/operate/SKILL.md \\
-  -o .claude/skills/answerloops-operate/SKILL.md`
+  const operateSkillInstallCommand = `npx @answerloops/agent-sdk skills answerloops-operate`
 
   function copySkillCommand() {
     navigator.clipboard.writeText(operateSkillInstallCommand).then(() => {

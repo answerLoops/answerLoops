@@ -1,12 +1,15 @@
 {
   "name": "@answerloops/agent-sdk",
-  "version": "0.5.1",
-  "description": "Typed client for the answerLoops Agent API (knowledge base search, FAQ, tickets, grounded answers).",
+  "version": "0.6.0",
+  "description": "Typed client for the answerLoops Agent API (knowledge base search, FAQ, tickets, grounded answers) and a CLI to self-host answerLoops or install its Claude Code skills.",
   "license": "AGPL-3.0",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "answerloops": "./dist/cli/index.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -38,7 +41,7 @@
     "knowledge-base"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts --clean",
+    "build": "tsup src/index.ts src/cli/index.ts --format esm,cjs --dts --clean && chmod +x dist/cli/index.js",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
