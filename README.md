@@ -47,6 +47,7 @@ Choose the path that fits where you are today:
 | **I want to try answerLoops** | Open the [hosted app](https://app.answerloops.com), complete onboarding, and add your knowledge sources. Then connect your agent below. |
 | **I want my agent to help me self-host** | Install the [setup skill](./skills/setup). It checks prerequisites, guides configuration, starts Docker Compose, and verifies the health endpoint. |
 | **I already have a workspace** | Install the [operation skill](./skills/operate) to connect your agent through MCP and start using your knowledge and tickets. |
+| **I don't use an agent, just give me a CLI** | Run `npx @answerloops/agent-sdk setup` directly — no Claude Code required. See [below](#no-agent-self-host-from-the-cli). |
 
 ### 1. Install the agent skills
 
@@ -81,6 +82,16 @@ Or, for an agent with ticket access:
 > Summarize our open, high-priority tickets and group them by category so I can decide what to handle first.
 
 A successful first run returns relevant knowledge or ticket results from your workspace. If a search has no matches, add or publish content that covers the question and try again.
+
+### No agent? Self-host from the CLI
+
+`@answerloops/agent-sdk` ships a plain CLI too — no Claude Code, no bash, runs anywhere Node + Docker do:
+
+```bash
+npx @answerloops/agent-sdk setup
+```
+
+Clones the repo if needed, checks Docker + git are present, generates `AUTH_SECRET`/`ENCRYPTION_KEY`, starts the published image, and polls `/api/health` until it's up. It never invents `DATABASE_URL`, `AUTH_URL`, or your Google OAuth credentials — if any are missing it tells you exactly what to add to `.env` and exits, rather than guessing. Add them and re-run.
 
 ### Connect through MCP
 
