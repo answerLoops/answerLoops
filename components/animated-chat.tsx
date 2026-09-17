@@ -13,9 +13,45 @@ const STAGES = [
 ]
 
 const CHANNELS = [
-  { name: 'Discord', color: '#5865f2', destination: '#integrations' },
-  { name: 'Telegram', color: '#229ed9', destination: 'support chat' },
-  { name: 'Circle', color: '#7c3aed', destination: 'the community' },
+  {
+    name: 'Discord', color: '#5865f2', destination: '#game-support',
+    author: 'Player', avatar: 'GX', room: '#game-support',
+    question: 'Our co-op game starts rubber-banding when I stream. How can I reduce lag without lowering the graphics settings?',
+    sources: ['Multiplayer connection guide', 'Streaming troubleshooting'],
+    answer: 'Rubber-banding can come from network congestion rather than graphics settings. Check the connection first:',
+    steps: [
+      'Connect your gaming device by Ethernet and pause background uploads.',
+      'Lower the stream upload bitrate to leave bandwidth for the game.',
+      'Select a nearby game server and compare latency with streaming off and on.',
+    ],
+    review: 'Checked connection troubleshooting and streaming recommendations against both guides.',
+  },
+  {
+    name: 'Telegram', color: '#229ed9', destination: 'support chat',
+    author: 'Developer', avatar: 'JD', room: 'support chat',
+    question: 'Our webhook retries created duplicate orders. How do we prevent that without dropping events?',
+    sources: ['Webhook delivery', 'Idempotency guide'],
+    answer: 'Retries can deliver the same event more than once. Use the event_id to make processing idempotent:',
+    steps: [
+      'Check whether the event was already processed.',
+      'Save the order and a unique event ID in one transaction.',
+      'For a duplicate, return success without creating another order.',
+    ],
+    review: 'Checked retry behavior and duplicate handling against both sources.',
+  },
+  {
+    name: 'Circle', color: '#7c3aed', destination: 'the community',
+    author: 'Artist', avatar: 'AL', room: 'Print swap',
+    question: 'I’m joining the community print swap. How should I export my digital illustration so the colors and edges print correctly?',
+    sources: ['Print swap submission guide', 'Artwork preparation checklist'],
+    answer: 'Keep your layered original and prepare a separate print-ready export using the swap’s submission template:',
+    steps: [
+      'Match the template dimensions and extend the artwork into the marked bleed area.',
+      'Use the printer’s requested color profile and check the soft proof before exporting.',
+      'Export in the requested format, then share a preview in the print-swap space for feedback.',
+    ],
+    review: 'Checked export preparation and submission steps against the print-swap guides.',
+  },
 ]
 
 export function AnimatedChat() {
@@ -51,16 +87,16 @@ export function AnimatedChat() {
         }
         setStage((current) => current + 1)
       },
-      stage === 4 ? 6500 : stage === 0 ? 1800 : 3000,
+      stage === 4 ? 3500 : stage === 0 ? 1500 : 2000,
     )
     return () => window.clearTimeout(timer)
-  }, [stage, paused, reducedMotion, visible])
+  }, [stage, channelIndex, paused, reducedMotion, visible])
 
   useEffect(() => {
     if (reducedMotion || paused) return
     const thread = threadRef.current
     if (thread) thread.scrollTop = stage === 0 ? 0 : thread.scrollHeight
-  }, [stage, reducedMotion, paused])
+  }, [stage, channelIndex, reducedMotion, paused])
 
   const current = reducedMotion ? 4 : stage
   const channel = CHANNELS[channelIndex]
@@ -77,18 +113,31 @@ export function AnimatedChat() {
         </span>
         <span className="support-demo-live">LIVE ANSWER LOOP</span>
       </div>
+      <div className="demo-channel-picker" role="group" aria-label="Example channel">
+        {CHANNELS.map((item, index) => (
+          <button
+            key={item.name}
+            type="button"
+            aria-pressed={channelIndex === index}
+            onClick={() => {
+              setChannelIndex(index)
+              setStage(0)
+            }}
+          >
+            <IntegrationIcon name={item.name} color={item.color} />
+            {item.name}
+          </button>
+        ))}
+      </div>
       <div className="support-demo-thread" ref={threadRef}>
         <div className="demo-question">
-          <span className="demo-avatar">JD</span>
+          <span className="demo-avatar">{channel.avatar}</span>
           <div>
             <div className="demo-message-meta">
-              <strong>Developer</strong>
-              <span>#integrations</span>
+              <strong>{channel.author}</strong>
+              <span>{channel.room}</span>
             </div>
-            <p>
-              Our webhook retries created duplicate orders. How do we prevent
-              that without dropping events?
-            </p>
+            <p>{channel.question}</p>
           </div>
         </div>
         {current >= 1 && (
@@ -97,8 +146,7 @@ export function AnimatedChat() {
             <div>
               <span>Retrieved from the knowledge base</span>
               <div className="demo-source-chips">
-                <span>Webhook delivery</span>
-                <span>Idempotency guide</span>
+                {channel.sources.map((source) => <span key={source}>{source}</span>)}
               </div>
             </div>
           </div>
@@ -110,20 +158,14 @@ export function AnimatedChat() {
               <strong>Answer agent</strong>
               <span>Draft</span>
             </div>
-            <p>
-              Retries can deliver the same event more than once. Use the{' '}
-              <code>event_id</code> to make processing idempotent:
-            </p>
+            <p>{channel.answer}</p>
             <ol>
-              <li>Check whether the event was already processed.</li>
-              <li>Save the order and a unique event ID in one transaction.</li>
-              <li>
-                For a duplicate, return success without creating another order.
-              </li>
+              {channel.steps.map((step) => <li key={step}>{step}</li>)}
             </ol>
             <div className="demo-citations">
-              Sources <span>[1] Webhook delivery</span>
-              <span>[2] Idempotency guide</span>
+              Sources {channel.sources.map((source, index) => (
+                <span key={source}>[{index + 1}] {source}</span>
+              ))}
             </div>
           </div>
         )}
@@ -132,10 +174,7 @@ export function AnimatedChat() {
             <ScanLine size={18} />
             <div>
               <strong>Review agent</strong>
-              <p>
-                Checked retry behavior and duplicate handling against both
-                sources.
-              </p>
+              <p>{channel.review}</p>
               <span>
                 <Check size={13} /> Source-grounded <Check size={13} />{' '}
                 Threshold met

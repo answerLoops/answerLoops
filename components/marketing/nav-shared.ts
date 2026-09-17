@@ -33,6 +33,6 @@ export const DASHBOARD_HREF = process.env.NEXT_PUBLIC_APP_URL
   : '/dashboard'
 
 export const CTA_CLASS =
-  'inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 sm:px-4'
+  'inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-lg bg-[#082e50] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#184566] sm:px-4'
 export const SECONDARY_CTA_CLASS =
   'hidden min-h-10 items-center whitespace-nowrap px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-700 sm:inline-flex'

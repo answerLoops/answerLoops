@@ -77,7 +77,7 @@ export function NavCta({
         </Link>
         <Link
           href={START_HREF}
-          className="mt-1 rounded-lg bg-blue-600 px-3 py-3 text-center text-[0.91875rem] font-semibold !text-white shadow-sm"
+          className="mt-1 rounded-lg bg-[#082e50] px-3 py-3 text-center text-[0.91875rem] font-semibold !text-white shadow-sm"
         >
           <span style={{ color: '#fff', WebkitTextFillColor: '#fff' }}>
             {START_LABEL}

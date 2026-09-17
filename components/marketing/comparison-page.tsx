@@ -55,7 +55,7 @@ export function ComparisonPage({
             Scroll the table horizontally to compare both products.
           </p>
           <div
-            className="overflow-x-auto"
+            className="marketing-table-wrap"
             role="region"
             aria-label={`${competitor} comparison`}
             tabIndex={0}

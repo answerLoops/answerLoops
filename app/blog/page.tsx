@@ -31,10 +31,10 @@ export default function BlogIndexPage() {
           communities.
         </p>
       </PageHero>
-      <section className="marketing-section">
-        <div className="marketing-container marketing-reading">
+      <section className="marketing-section marketing-soft">
+        <div className="marketing-container marketing-reading marketing-post-list">
           {BLOG_POSTS.map((post) => (
-            <article className="border-b border-slate-200 pb-8" key={post.slug}>
+            <article className="marketing-post-card" key={post.slug}>
               <p className="marketing-meta">
                 <time dateTime={post.datePublished}>
                   {formatPostDate(post.datePublished)}

@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { Nav, Footer, type NavState } from './chrome'
 import './marketing-site.css'
+import './marketing-theme.css'
 
 export function MarketingPage({
   children,
@@ -26,17 +27,24 @@ export function PageHero({
   eyebrow,
   title,
   children,
+  aside,
 }: {
   eyebrow: string
   title: string
   children?: ReactNode
+  aside?: ReactNode
 }) {
   return (
     <section className="marketing-hero">
-      <div className="marketing-container">
-        <p className="marketing-eyebrow">{eyebrow}</p>
-        <h1>{title}</h1>
-        {children && <div className="marketing-intro">{children}</div>}
+      <div
+        className={`marketing-container${aside ? ' marketing-hero-split' : ''}`}
+      >
+        <div className="marketing-hero-copy">
+          <p className="marketing-eyebrow">{eyebrow}</p>
+          <h1>{title}</h1>
+          {children && <div className="marketing-intro">{children}</div>}
+        </div>
+        {aside}
       </div>
     </section>
   )
