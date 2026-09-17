@@ -62,7 +62,7 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
             <option value="how_to">How-to</option>
             <option value="general_question">General Question</option>
           </select>
-          <button type="submit" className="rounded-full bg-gradient-to-r from-blue-700 to-blue-500 px-4 py-2 text-sm font-medium text-white hover:from-blue-800 hover:to-blue-600">
+          <button type="submit" className="rounded-lg bg-[#082e50] px-4 py-2 text-sm font-medium text-white hover:bg-[#184566]">
             Filter
           </button>
           <Link href="/tickets" className="rounded-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">

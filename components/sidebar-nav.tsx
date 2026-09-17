@@ -142,7 +142,7 @@ export function SidebarNav() {
   }, [])
 
   return (
-    <nav className="flex flex-1 flex-col overflow-y-auto px-3 py-4">
+    <nav className="dashboard-navigation flex flex-1 flex-col overflow-y-auto px-3 py-5">
       <div className="flex-1 space-y-5">
         {groups.map((group) => (
           <div key={group}>
@@ -160,14 +160,14 @@ export function SidebarNav() {
                     aria-current={active ? 'page' : undefined}
                     className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.8125rem] font-medium transition-all duration-150 ${
                       active
-                        ? 'bg-blue-50 text-blue-700 shadow-sm ring-1 ring-blue-200/70'
+                        ? 'bg-[#e3f1f2] text-[#082e50] ring-1 ring-[#c4dfe2]'
                         : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
                     }`}
                   >
-                    <span className={active ? 'text-blue-600' : 'text-slate-400 group-hover:text-blue-500'}>{item.icon}</span>
+                    <span className={active ? 'text-[#168fa3]' : 'text-slate-400 group-hover:text-blue-500'}>{item.icon}</span>
                     {item.label}
                     {locked && <span className="ml-auto"><LockBadge /></span>}
-                    {!locked && active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(103,232,249,0.8)]" />}
+                    {!locked && active && <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#168fa3]" />}
                   </Link>
                 )
               })}
@@ -175,7 +175,7 @@ export function SidebarNav() {
           </div>
         ))}
       </div>
-      <div className="mt-4 border-t border-white/8 pt-3">
+      <div className="mt-4 border-t border-slate-200 pt-3">
         <a
           href="/docs"
           target="_blank"

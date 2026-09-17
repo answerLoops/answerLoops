@@ -103,7 +103,7 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="dashboard-stats grid grid-cols-2 gap-3 md:grid-cols-4">
       {cards.map((card, index) => {
         const featured = 'featured' in card ? card.featured : undefined
         const isDark = featured === 'dark'
@@ -113,9 +113,9 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
           key={card.label}
           className={`group relative overflow-hidden rounded-2xl border p-4 transition duration-200 hover:-translate-y-0.5 ${
             isDark
-              ? 'border-slate-700 bg-[#252525] text-white shadow-[0_18px_45px_rgba(15,23,42,0.16)]'
+              ? 'border-[#082e50] bg-[#082e50] text-white shadow-none'
               : isBlue
-                ? 'border-blue-500/15 bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-[0_18px_45px_rgba(37,99,235,0.18)]'
+                ? 'border-[#c4dfe2] bg-[#dceff0] text-[#082e50] shadow-none'
                 : 'border-slate-200/80 bg-white/90 shadow-[0_12px_32px_rgba(30,64,175,0.05)] hover:shadow-[0_16px_40px_rgba(30,64,175,0.09)]'
           }`}
         >
