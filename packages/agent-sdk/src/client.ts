@@ -54,19 +54,19 @@ export class AgentClient {
     this.fetchImpl = options.fetch ?? fetch;
   }
 
-  /** GET /api/agent/kb/search — requires the `kb:read` scope. */
+  /** GET /api/v1/agent/kb/search — requires the `kb:read` scope. */
   searchKb(params: SearchKbParams): Promise<KbSearchResponse> {
     const query = new URLSearchParams({ query: params.query });
     if (params.limit !== undefined) query.set("limit", String(params.limit));
-    return this.request("GET", `/api/agent/kb/search?${query}`);
+    return this.request("GET", `/api/v1/agent/kb/search?${query}`);
   }
 
-  /** GET /api/agent/faq — requires the `faq:read` scope. */
+  /** GET /api/v1/agent/faq — requires the `faq:read` scope. */
   getFaq(): Promise<unknown> {
-    return this.request("GET", "/api/agent/faq");
+    return this.request("GET", "/api/v1/agent/faq");
   }
 
-  /** GET /api/agent/tickets — requires the `tickets:read` scope. */
+  /** GET /api/v1/agent/tickets — requires the `tickets:read` scope. */
   getTickets(params: GetTicketsParams = {}): Promise<GetTicketsResponse> {
     const query = new URLSearchParams();
     if (params.status) query.set("status", params.status);
@@ -75,11 +75,11 @@ export class AgentClient {
     if (params.limit !== undefined) query.set("limit", String(params.limit));
     if (params.cursor !== undefined) query.set("cursor", params.cursor);
     const qs = query.toString();
-    return this.request("GET", `/api/agent/tickets${qs ? `?${qs}` : ""}`);
+    return this.request("GET", `/api/v1/agent/tickets${qs ? `?${qs}` : ""}`);
   }
 
   /**
-   * POST /api/agent/tickets — requires the `tickets:write` scope.
+   * POST /api/v1/agent/tickets — requires the `tickets:write` scope.
    * `idempotencyKey`, when given, is sent as the standard `Idempotency-Key`
    * header (what most HTTP clients/SDKs attach automatically) rather than a
    * body field — the server accepts either, but the header is what it
@@ -88,15 +88,15 @@ export class AgentClient {
   createTicket(params: CreateTicketParams): Promise<Ticket> {
     return this.request(
       "POST",
-      "/api/agent/tickets",
+      "/api/v1/agent/tickets",
       { content: params.content, authorName: params.authorName },
       params.idempotencyKey ? { "Idempotency-Key": params.idempotencyKey } : undefined
     );
   }
 
-  /** POST /api/agent/answers — requires the `answers:write` scope. */
+  /** POST /api/v1/agent/answers — requires the `answers:write` scope. */
   generateAnswer(params: GenerateAnswerParams): Promise<GenerateAnswerResponse> {
-    return this.request("POST", "/api/agent/answers", { question: params.question });
+    return this.request("POST", "/api/v1/agent/answers", { question: params.question });
   }
 
   private async request<T>(

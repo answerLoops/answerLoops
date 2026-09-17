@@ -14,7 +14,7 @@ import type { TicketStatus, Priority, TicketCategory } from '@/types'
 /**
  * Core agent-facing business logic — the actual implementation behind both
  * the MCP server (lib/mcp/tools.ts) and the REST Agent API
- * (app/api/agent/*). Each surface only differs in how a request is shaped
+ * (app/api/v1/agent/*). Each surface only differs in how a request is shaped
  * in/out (JSON-RPC tool call vs. plain REST JSON); the underlying pipeline
  * calls, validation, and error messages must stay identical between them —
  * hence a single implementation here that both wrap, rather than two

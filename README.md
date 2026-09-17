@@ -309,8 +309,8 @@ Bring answerLoops knowledge and support into your own application, agent, or aut
 | Interface | Endpoint or package | Best for |
 |---|---|---|
 | MCP | `POST /api/mcp` | MCP-compatible agents and IDEs |
-| REST | `/api/agent/*` | Scripts, services, and custom integrations |
-| OpenAPI | `GET /api/agent/openapi.json` | API exploration and client generation |
+| REST | `/api/v1/agent/*` | Scripts, services, and custom integrations |
+| OpenAPI | `GET /api/v1/agent/openapi.json` | API exploration and client generation |
 | TypeScript SDK | `@answerloops/agent-sdk` | Typed Node.js and browser integrations |
 
 MCP and REST expose the same five operations: knowledge search, FAQ lookup, ticket listing, ticket creation, and answer generation. The SDK wraps the REST API.

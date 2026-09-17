@@ -5,9 +5,16 @@ import { API_SCOPES } from '@/lib/agent/scopes'
  *
  * Every path below actually exists and works. It is served verbatim at two
  * URLs so an agent finds it wherever it looks:
- *   - /openapi.json              (the conventional root location scanners probe)
- *   - /api/agent/openapi.json    (kept — linked from .well-known/ai-plugin.json
- *                                 and consumed by scripts/generate-api-reference)
+ *   - /openapi.json                 (the conventional root location scanners probe)
+ *   - /api/v1/agent/openapi.json    (kept — linked from .well-known/ai-plugin.json
+ *                                    and consumed by scripts/generate-api-reference)
+ *
+ * Every operation path carries a /v1/ prefix so a breaking change to the
+ * response shape or an operation's semantics can ship as /v2/ alongside it
+ * rather than mutating what a caller already integrated against. The MCP
+ * server (POST /api/mcp) is deliberately unversioned here — MCP has its own
+ * protocol-version negotiation (the Mcp-Protocol-Version header), and this
+ * spec doesn't describe that surface.
  *
  * MCP-native clients (Claude Code, Cursor) should use the MCP server at
  * POST /api/mcp instead; this REST surface exists for tooling that speaks
@@ -30,7 +37,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
   const scoped = (scope: keyof typeof API_SCOPES) => [{ bearerAuth: [scope] }]
 
   // Attached to every response below (success and business-logic error alike)
-  // — see components.responses.headers' comment for why.
+  // — see components.headers' comment for why.
   const rateLimitHeaders = {
     'RateLimit-Limit': { $ref: '#/components/headers/RateLimit-Limit' },
     'RateLimit-Remaining': { $ref: '#/components/headers/RateLimit-Remaining' },
@@ -43,7 +50,10 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
       title: 'answerLoops Agent API',
       description:
         'REST API for AI agents and non-MCP frameworks (LangChain, AutoGen, custom bots) to search a knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline every other answerLoops channel uses. MCP-native clients (Claude Code, Cursor) should use the MCP server at POST /api/mcp instead; this REST surface exists for tooling that speaks HTTP + OpenAPI, not JSON-RPC.',
-      version: '1.1.0',
+      // Bumped from 1.1.0: every operation path now carries a /v1/ prefix —
+      // a caller pinned to the old bare /api/agent/* paths breaks, which is
+      // exactly what a major bump communicates.
+      version: '2.0.0',
     },
     servers: [{ url: origin }],
     security: [{ bearerAuth: [] }],
@@ -112,7 +122,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
     },
 
     paths: {
-      '/api/agent/kb/search': {
+      '/api/v1/agent/kb/search': {
         get: {
           operationId: 'searchKb',
           summary: "Semantically search the organization's knowledge base",
@@ -153,7 +163,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           },
         },
       },
-      '/api/agent/faq': {
+      '/api/v1/agent/faq': {
         get: {
           operationId: 'getFaq',
           summary: "Get the organization's most recently generated FAQ digest",
@@ -169,7 +179,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           },
         },
       },
-      '/api/agent/tickets': {
+      '/api/v1/agent/tickets': {
         get: {
           operationId: 'getTickets',
           summary: 'List support tickets for the organization',
@@ -260,7 +270,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           },
         },
       },
-      '/api/agent/answers': {
+      '/api/v1/agent/answers': {
         post: {
           operationId: 'generateAnswer',
           summary: "Generate a grounded answer using the organization's knowledge base, without opening a ticket",

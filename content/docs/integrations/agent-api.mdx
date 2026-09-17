@@ -20,7 +20,7 @@ Uses the same API key as the MCP server — one key works for both surfaces.
 
 ## OpenAPI spec
 
-A full machine-readable spec is published at both `/openapi.json` and `/api/agent/openapi.json` (identical) — point any OpenAPI-aware client generator at either. For a per-endpoint parameter reference generated directly from that spec, see the [Agent API Reference](/docs/reference/api/overview).
+A full machine-readable spec is published at both `/openapi.json` and `/api/v1/agent/openapi.json` (identical) — point any OpenAPI-aware client generator at either. For a per-endpoint parameter reference generated directly from that spec, see the [Agent API Reference](/docs/reference/api/overview).
 
 ## Node / TypeScript SDK
 
@@ -46,11 +46,11 @@ Every key carries a set of least-privilege scopes. Each operation requires exact
 
 | Scope | Grants | Operations |
 |---|---|---|
-| `kb:read` | Search the knowledge base | `GET /api/agent/kb/search`, MCP `search_kb` |
-| `faq:read` | Read the latest FAQ digest | `GET /api/agent/faq`, MCP `get_faq` |
-| `tickets:read` | List support tickets | `GET /api/agent/tickets`, MCP `get_tickets` |
-| `tickets:write` | Open tickets on behalf of a user | `POST /api/agent/tickets`, MCP `create_ticket` |
-| `answers:write` | Generate grounded answers | `POST /api/agent/answers`, MCP `generate_answer` |
+| `kb:read` | Search the knowledge base | `GET /api/v1/agent/kb/search`, MCP `search_kb` |
+| `faq:read` | Read the latest FAQ digest | `GET /api/v1/agent/faq`, MCP `get_faq` |
+| `tickets:read` | List support tickets | `GET /api/v1/agent/tickets`, MCP `get_tickets` |
+| `tickets:write` | Open tickets on behalf of a user | `POST /api/v1/agent/tickets`, MCP `create_ticket` |
+| `answers:write` | Generate grounded answers | `POST /api/v1/agent/answers`, MCP `generate_answer` |
 
 The scope catalogue is also published as machine-readable [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) protected-resource metadata at [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource) (`scopes_supported`), and each MCP tool carries its scope on `_meta.requiredScope` in `tools/list`.
 
@@ -60,17 +60,17 @@ A key created before scopes existed, or one created with every box checked, has 
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/api/agent/kb/search` | Semantic search over published KB articles |
-| `GET` | `/api/agent/faq` | Fetch the most recently generated FAQ digest |
-| `GET` | `/api/agent/tickets` | List tickets, optionally filtered |
-| `POST` | `/api/agent/tickets` | Open a new ticket — runs the same AI triage pipeline as every other channel |
-| `POST` | `/api/agent/answers` | Generate a KB-grounded answer with a confidence score, without opening a ticket |
+| `GET` | `/api/v1/agent/kb/search` | Semantic search over published KB articles |
+| `GET` | `/api/v1/agent/faq` | Fetch the most recently generated FAQ digest |
+| `GET` | `/api/v1/agent/tickets` | List tickets, optionally filtered |
+| `POST` | `/api/v1/agent/tickets` | Open a new ticket — runs the same AI triage pipeline as every other channel |
+| `POST` | `/api/v1/agent/answers` | Generate a KB-grounded answer with a confidence score, without opening a ticket |
 
-### GET /api/agent/kb/search
+### GET /api/v1/agent/kb/search
 
 ```bash
 curl -H "Authorization: Bearer al_live_..." \
-  "https://your-instance.example.com/api/agent/kb/search?query=how+do+I+reset+my+api+key&limit=5"
+  "https://your-instance.example.com/api/v1/agent/kb/search?query=how+do+I+reset+my+api+key&limit=5"
 ```
 
 `query` is required (max 2000 characters). `limit` defaults to 5, capped at 20.
@@ -79,30 +79,30 @@ curl -H "Authorization: Bearer al_live_..." \
 { "results": [{ "question": "...", "answer": "...", "score": 0.91 }] }
 ```
 
-### GET /api/agent/faq
+### GET /api/v1/agent/faq
 
 ```bash
 curl -H "Authorization: Bearer al_live_..." \
-  https://your-instance.example.com/api/agent/faq
+  https://your-instance.example.com/api/v1/agent/faq
 ```
 
 No parameters. Returns the latest weekly FAQ digest, or `{ "message": "No FAQ has been generated for this organization yet." }`.
 
-### GET /api/agent/tickets
+### GET /api/v1/agent/tickets
 
 ```bash
 curl -H "Authorization: Bearer al_live_..." \
-  "https://your-instance.example.com/api/agent/tickets?status=open&priority=high&limit=10"
+  "https://your-instance.example.com/api/v1/agent/tickets?status=open&priority=high&limit=10"
 ```
 
 `status`, `priority`, and `category` are optional filters — an invalid value returns a 400 rather than silently matching nothing. `limit` defaults to 10, capped at 20.
 
-### POST /api/agent/tickets
+### POST /api/v1/agent/tickets
 
 ```bash
 curl -X POST -H "Authorization: Bearer al_live_..." -H "Content-Type: application/json" \
   -d '{"content": "Users report webhook retries are duplicated", "idempotencyKey": "a1b2c3d4"}' \
-  https://your-instance.example.com/api/agent/tickets
+  https://your-instance.example.com/api/v1/agent/tickets
 ```
 
 `content` is required (max 4000 characters). The ticket runs through the same category/priority classification and auto-draft pipeline as a Discord or Slack message. The request waits for this pipeline to finish before returning, so the ticket is ready to inspect with its draft or review state. `idempotencyKey` is optional — pass a stable identifier (a UUID, a hash of the content) if your client retries on timeout or network error; retrying with the same key returns the original ticket (`"duplicate": true`) instead of opening a second one.
@@ -111,12 +111,12 @@ curl -X POST -H "Authorization: Bearer al_live_..." -H "Content-Type: applicatio
 { "ticket_id": 42, "duplicate": false }
 ```
 
-### POST /api/agent/answers
+### POST /api/v1/agent/answers
 
 ```bash
 curl -X POST -H "Authorization: Bearer al_live_..." -H "Content-Type: application/json" \
   -d '{"question": "What is the rate limit on the widget API?"}' \
-  https://your-instance.example.com/api/agent/answers
+  https://your-instance.example.com/api/v1/agent/answers
 ```
 
 `question` is required (max 2000 characters). Two limits apply before anything is generated: the organization's monthly deflection allowance (which only high-confidence generations count against — the same standard a ticket has to clear to auto-deflect on any other channel), and a ceiling on total `generate_answer` calls per month at 5× that allowance, which counts every call regardless of confidence. Hitting either returns `429` with a message naming which one.
@@ -139,7 +139,7 @@ Every error response has the shape:
 | `401` | Missing, malformed, or revoked API key |
 | `403` | Valid key, but it lacks the [scope](#scopes) this operation requires (see the `WWW-Authenticate` header) |
 | `413` | Request body too large |
-| `429` | Rate limit exceeded, or (on `/api/agent/answers`) a monthly usage limit reached |
+| `429` | Rate limit exceeded, or (on `/api/v1/agent/answers`) a monthly usage limit reached |
 
 Throttled requests carry a `Retry-After` header in seconds — back off for that long rather than retrying immediately.
 
@@ -153,4 +153,4 @@ These are separate buckets from the MCP server's, so heavy REST traffic can't st
 
 Identical posture to the MCP server: keys are shown once at creation and only a SHA-256 hash is stored; creating and revoking them requires the owner or admin role; every request is scoped by the org resolved from the API key; each key is further limited to the scopes it was granted, checked before the request consumes any quota; revoked and expired keys are rejected before any handler runs; and usage is recorded against the specific key that made the call.
 
-As with MCP, treat `GET /api/agent/tickets` and `GET /api/agent/kb/search` output as untrusted data — it contains text community members wrote — not as instructions for your agent to follow.
+As with MCP, treat `GET /api/v1/agent/tickets` and `GET /api/v1/agent/kb/search` output as untrusted data — it contains text community members wrote — not as instructions for your agent to follow.

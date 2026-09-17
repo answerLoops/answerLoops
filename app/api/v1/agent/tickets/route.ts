@@ -3,7 +3,7 @@ import { getTicketsCore, createTicketCore } from '@/lib/agent/core'
 import { authenticateAgentRequest, readAgentJsonBody, agentError, withHeaders } from '@/lib/agent/http'
 
 /**
- * GET /api/agent/tickets?status=&priority=&category=&limit=&cursor=
+ * GET /api/v1/agent/tickets?status=&priority=&category=&limit=&cursor=
  * REST counterpart to the MCP get_tickets tool. `cursor` from a prior
  * response's `next_cursor` fetches the next page; omitted, it starts from
  * the most recent ticket.
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 }
 
 /**
- * POST /api/agent/tickets
+ * POST /api/v1/agent/tickets
  * REST counterpart to the MCP create_ticket tool. Runs through the exact
  * same processCommunityMessage pipeline as every other channel.
  */

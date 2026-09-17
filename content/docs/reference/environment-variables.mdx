@@ -24,7 +24,7 @@ All variables are set in your `.env` file (local) or in your hosting provider's 
 | Variable | Description |
 |---|---|
 | `TRUST_PROXY_HOPS` | Number of proxies between the public internet and the app. Defaults to `1`. Rate limiters resolve the client IP by counting this many entries in from the right of `x-forwarded-for`, so a caller-supplied prefix on that header can't be used to mint a fresh bucket per request. Set to `2` for Cloudflare in front of a platform load balancer. `cf-connecting-ip` takes precedence when present |
-| `ORIGIN_VERIFY_SECRET` | Optional. When set, every public pre-auth POST route (`/api/mcp`, `/api/agent/*`, `/api/widget/chat`) rejects any request missing a matching `x-origin-verify` header — without it, the proxy-supplied client-IP header can be spoofed by hitting the origin directly instead of through your edge proxy. Requires a matching rule on your CDN/edge proxy; see the self-hosting guide |
+| `ORIGIN_VERIFY_SECRET` | Optional. When set, every public pre-auth POST route (`/api/mcp`, `/api/v1/agent/*`, `/api/widget/chat`) rejects any request missing a matching `x-origin-verify` header — without it, the proxy-supplied client-IP header can be spoofed by hitting the origin directly instead of through your edge proxy. Requires a matching rule on your CDN/edge proxy; see the self-hosting guide |
 
 ## Multi-domain
 

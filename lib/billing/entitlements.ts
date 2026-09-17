@@ -70,7 +70,7 @@ const RATE_LIMIT_PER_MINUTE: Record<PlanId, number> = {
 }
 
 /**
- * Per-org-per-minute ceiling on /api/mcp and /api/agent/* — both routes ran
+ * Per-org-per-minute ceiling on /api/mcp and /api/v1/agent/* — both routes ran
  * a single flat 60/min for every plan until now. Each paid tier now gets a
  * real, enforced ceiling rather than a marketing-only claim. Pure, env-free
  * — safe to call from either surface's route handler directly.

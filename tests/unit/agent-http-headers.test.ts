@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { NextRequest } from 'next/server'
 
 // Behavioral coverage for lib/agent/http.ts's RateLimit-* headers and
-// app/api/agent/tickets/route.ts's Idempotency-Key header — both added to
+// app/api/v1/agent/tickets/route.ts's Idempotency-Key header — both added to
 // close gaps an external API-quality scanner flagged (no rate-limit headers
 // on ordinary responses, no header-based idempotency, only the body field).
 
@@ -24,7 +24,7 @@ vi.mock('@/lib/agent/core', () => ({
 }))
 
 const { authenticateAgentRequest } = await import('@/lib/agent/http')
-const { POST: createTicketPost } = await import('@/app/api/agent/tickets/route')
+const { POST: createTicketPost } = await import('@/app/api/v1/agent/tickets/route')
 
 function req(path: string, init?: ConstructorParameters<typeof NextRequest>[1]) {
   return new NextRequest(`https://answerloops.com${path}`, init)
@@ -45,7 +45,7 @@ describe('authenticateAgentRequest: RateLimit-* headers', () => {
       .mockResolvedValueOnce({ ok: true, retryAfterMs: 0, count: 1, resetAt: new Date(Date.now() + 60_000) }) // IP bucket
       .mockResolvedValueOnce({ ok: true, retryAfterMs: 0, count: 12, resetAt }) // org bucket
 
-    const result = await authenticateAgentRequest(req('/api/agent/tickets', { headers: { authorization: `Bearer ${VALID_KEY}` } }))
+    const result = await authenticateAgentRequest(req('/api/v1/agent/tickets', { headers: { authorization: `Bearer ${VALID_KEY}` } }))
     expect('response' in result).toBe(false)
     if ('response' in result) return
 
@@ -62,7 +62,7 @@ describe('authenticateAgentRequest: RateLimit-* headers', () => {
       .mockResolvedValueOnce({ ok: true, retryAfterMs: 0, count: 1, resetAt: new Date(Date.now() + 60_000) }) // IP bucket
       .mockResolvedValueOnce({ ok: false, retryAfterMs: 10_000, count: 61, resetAt }) // org bucket exhausted
 
-    const result = await authenticateAgentRequest(req('/api/agent/tickets', { headers: { authorization: `Bearer ${VALID_KEY}` } }))
+    const result = await authenticateAgentRequest(req('/api/v1/agent/tickets', { headers: { authorization: `Bearer ${VALID_KEY}` } }))
     expect('response' in result).toBe(true)
     if (!('response' in result)) return
 
@@ -75,13 +75,13 @@ describe('authenticateAgentRequest: RateLimit-* headers', () => {
   })
 })
 
-describe('POST /api/agent/tickets: Idempotency-Key header', () => {
+describe('POST /api/v1/agent/tickets: Idempotency-Key header', () => {
   it('a header-supplied Idempotency-Key reaches createTicketCore as args.idempotencyKey', async () => {
     h.rateLimitShared.mockResolvedValue({ ok: true, retryAfterMs: 0, count: 1, resetAt: new Date(Date.now() + 60_000) })
     h.createTicketCore.mockResolvedValue({ ok: true, data: { ticket_id: 1, duplicate: false } })
 
     await createTicketPost(
-      req('/api/agent/tickets', {
+      req('/api/v1/agent/tickets', {
         method: 'POST',
         headers: {
           authorization: `Bearer ${VALID_KEY}`,
@@ -102,7 +102,7 @@ describe('POST /api/agent/tickets: Idempotency-Key header', () => {
     h.createTicketCore.mockResolvedValue({ ok: true, data: { ticket_id: 1, duplicate: false } })
 
     await createTicketPost(
-      req('/api/agent/tickets', {
+      req('/api/v1/agent/tickets', {
         method: 'POST',
         headers: {
           authorization: `Bearer ${VALID_KEY}`,
@@ -122,7 +122,7 @@ describe('POST /api/agent/tickets: Idempotency-Key header', () => {
     h.createTicketCore.mockResolvedValue({ ok: true, data: { ticket_id: 1, duplicate: false } })
 
     await createTicketPost(
-      req('/api/agent/tickets', {
+      req('/api/v1/agent/tickets', {
         method: 'POST',
         headers: { authorization: `Bearer ${VALID_KEY}`, 'content-type': 'application/json' },
         body: JSON.stringify({ content: 'help', idempotencyKey: 'from-body' }),
@@ -140,7 +140,7 @@ describe('POST /api/agent/tickets: Idempotency-Key header', () => {
     h.createTicketCore.mockResolvedValue({ ok: true, data: { ticket_id: 1, duplicate: false } })
 
     const res = await createTicketPost(
-      req('/api/agent/tickets', {
+      req('/api/v1/agent/tickets', {
         method: 'POST',
         headers: { authorization: `Bearer ${VALID_KEY}`, 'content-type': 'application/json' },
         body: JSON.stringify({ content: 'help' }),

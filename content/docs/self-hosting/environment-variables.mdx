@@ -57,7 +57,7 @@ To close this:
 1. Generate a secret: `openssl rand -hex 32`.
 2. Set `ORIGIN_VERIFY_SECRET` to that value in your deployment's environment.
 3. On your CDN/edge proxy, add a rule (most offer a "modify request header" or equivalent feature) that runs for all traffic and sets a request header `x-origin-verify` to the same secret value.
-4. Confirm requests hitting your origin without that header now get a `403 Forbidden` from `/api/mcp`, `/api/agent/*`, and `/api/widget/chat`.
+4. Confirm requests hitting your origin without that header now get a `403 Forbidden` from `/api/mcp`, `/api/v1/agent/*`, and `/api/widget/chat`.
 
 <Warning>
   Until this is configured, the proxy-supplied client-IP header is trusted unconditionally — the app has no way to tell an edge-routed request from a direct one. Set `ORIGIN_VERIFY_SECRET` on any deployment sitting behind a CDN or edge proxy.

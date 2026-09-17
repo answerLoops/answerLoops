@@ -1,6 +1,6 @@
 /**
  * Machine-readable least-privilege scopes for the agent-facing surfaces
- * (the REST Agent API at /api/agent/* and the MCP server at /api/mcp).
+ * (the REST Agent API at /api/v1/agent/* and the MCP server at /api/mcp).
  *
  * Both surfaces authenticate with the same per-org Bearer key from
  * Settings → API Keys. Historically every key carried implicit full access;
