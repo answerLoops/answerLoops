@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { signOAuthState } from '@/lib/oauth/state'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const rawSlug = process.env.GITHUB_APP_SLUG
   if (!rawSlug) {
     return NextResponse.json({ error: 'GITHUB_APP_SLUG not configured' }, { status: 503 })
@@ -20,7 +20,10 @@ export async function GET() {
     return NextResponse.json({ error: access.error }, { status: 401 })
   }
 
-  const state = signOAuthState({ orgId: access.orgId })
+  // Where the flow started, so the callback returns the user to the right
+  // screen. Only 'onboarding' is meaningful; anything else means Integrations.
+  const from = req.nextUrl.searchParams.get('from') === 'onboarding' ? 'onboarding' : 'integrations'
+  const state = signOAuthState({ orgId: access.orgId, from })
 
   const url = `https://github.com/apps/${slug}/installations/new?state=${state}`
   return NextResponse.json({ url })
