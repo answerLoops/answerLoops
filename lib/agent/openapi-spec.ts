@@ -59,7 +59,15 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           properties: {
             error: {
               type: 'object',
-              properties: { message: { type: 'string' } },
+              properties: {
+                message: { type: 'string' },
+                code: {
+                  type: 'string',
+                  enum: ['rate_limited', 'deflection_limit_reached', 'call_limit_reached'],
+                  description:
+                    'Present on 429 responses; distinguishes the per-minute rate limit (retry after `Retry-After` seconds) from the monthly deflection quota and the monthly call-attempt quota (both need a plan upgrade or the next billing cycle, not a retry). Absent on other error statuses.',
+                },
+              },
               required: ['message'],
             },
           },
@@ -238,7 +246,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
             '400': { description: 'Missing/invalid question', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
-            '429': { description: 'Monthly deflection limit reached, or rate limit exceeded', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+            '429': { description: 'Rate limit exceeded, monthly deflection limit reached, or monthly call limit reached — see `error.code`', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           },
         },
       },

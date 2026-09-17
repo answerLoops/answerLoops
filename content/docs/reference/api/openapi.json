@@ -49,6 +49,15 @@
             "properties": {
               "message": {
                 "type": "string"
+              },
+              "code": {
+                "type": "string",
+                "enum": [
+                  "rate_limited",
+                  "deflection_limit_reached",
+                  "call_limit_reached"
+                ],
+                "description": "Present on 429 responses; distinguishes the per-minute rate limit (retry after `Retry-After` seconds) from the monthly deflection quota and the monthly call-attempt quota (both need a plan upgrade or the next billing cycle, not a retry). Absent on other error statuses."
               }
             },
             "required": [
@@ -516,7 +525,7 @@
             "$ref": "#/components/responses/InsufficientScope"
           },
           "429": {
-            "description": "Monthly deflection limit reached, or rate limit exceeded",
+            "description": "Rate limit exceeded, monthly deflection limit reached, or monthly call limit reached — see `error.code`",
             "content": {
               "application/json": {
                 "schema": {
