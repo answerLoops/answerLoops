@@ -50,10 +50,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
       title: 'answerLoops Agent API',
       description:
         'REST API for AI agents and non-MCP frameworks (LangChain, AutoGen, custom bots) to search a knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline every other answerLoops channel uses. MCP-native clients (Claude Code, Cursor) should use the MCP server at POST /api/mcp instead; this REST surface exists for tooling that speaks HTTP + OpenAPI, not JSON-RPC.',
-      // Bumped from 1.1.0: every operation path now carries a /v1/ prefix —
-      // a caller pinned to the old bare /api/agent/* paths breaks, which is
-      // exactly what a major bump communicates.
-      version: '2.0.0',
+      version: '1.1.0',
     },
     servers: [{ url: origin }],
     security: [{ bearerAuth: [] }],
