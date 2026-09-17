@@ -48,7 +48,9 @@ const answer = await client.generateAnswer({ question: "How do I reset my API ke
 
 const ticket = await client.createTicket({ content: "My webhook stopped firing." });
 
-const { tickets } = await client.getTickets({ status: "open", limit: 10 });
+const { tickets, next_cursor } = await client.getTickets({ status: "open", limit: 10 });
+// next_cursor is non-null while more tickets remain — pass it back as `cursor` to keep paging:
+// await client.getTickets({ status: "open", limit: 10, cursor: next_cursor });
 ```
 
 Every key carries least-privilege scopes (`kb:read`, `faq:read`, `tickets:read`, `tickets:write`, `answers:write`) set in **Settings → API Keys**. A call against a scope the key doesn't have throws `AgentApiError` with `status === 403`.

@@ -3,8 +3,10 @@ import { getTicketsCore, createTicketCore } from '@/lib/agent/core'
 import { authenticateAgentRequest, readAgentJsonBody, agentError } from '@/lib/agent/http'
 
 /**
- * GET /api/agent/tickets?status=&priority=&category=&limit=
- * REST counterpart to the MCP get_tickets tool.
+ * GET /api/agent/tickets?status=&priority=&category=&limit=&cursor=
+ * REST counterpart to the MCP get_tickets tool. `cursor` from a prior
+ * response's `next_cursor` fetches the next page; omitted, it starts from
+ * the most recent ticket.
  */
 export async function GET(req: NextRequest) {
   const auth = await authenticateAgentRequest(req, 'tickets:read')
@@ -16,10 +18,11 @@ export async function GET(req: NextRequest) {
     priority: searchParams.get('priority') ?? undefined,
     category: searchParams.get('category') ?? undefined,
     limit: searchParams.get('limit') ?? undefined,
+    cursor: searchParams.get('cursor') ?? undefined,
   })
 
   if (!result.ok) return agentError(400, result.error)
-  return NextResponse.json({ tickets: result.data })
+  return NextResponse.json(result.data)
 }
 
 /**

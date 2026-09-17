@@ -150,18 +150,35 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
             { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed'] } },
             { name: 'priority', in: 'query', required: false, schema: { type: 'string', enum: ['critical', 'high', 'medium', 'low'] } },
             { name: 'category', in: 'query', required: false, schema: { type: 'string', enum: ['bug', 'feature_request', 'documentation', 'how_to', 'general_question'] } },
-            { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 } },
+            { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 }, description: 'Max results per page' },
+            {
+              name: 'cursor',
+              in: 'query',
+              required: false,
+              schema: { type: 'string' },
+              description: "Opaque value from a previous response's next_cursor. Omit for the first page.",
+            },
           ],
           responses: {
             '200': {
-              description: 'Most recent tickets first',
+              description: 'Most recent tickets first, page-sized to `limit`',
               content: {
                 'application/json': {
-                  schema: { type: 'object', properties: { tickets: { type: 'array', items: { $ref: '#/components/schemas/Ticket' } } } },
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      tickets: { type: 'array', items: { $ref: '#/components/schemas/Ticket' } },
+                      next_cursor: {
+                        type: 'string',
+                        nullable: true,
+                        description: 'Pass as `cursor` to fetch the next page. null once there are no more tickets.',
+                      },
+                    },
+                  },
                 },
               },
             },
-            '400': { description: 'Invalid filter value', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+            '400': { description: 'Invalid filter value or malformed cursor', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
           },

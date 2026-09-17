@@ -1,4 +1,4 @@
-import { eq, and, or, inArray, sql, desc } from 'drizzle-orm'
+import { eq, and, or, inArray, sql, desc, lt } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import {
   tickets,
@@ -161,17 +161,44 @@ export async function updateTicketTriage(
     .where(eq(tickets.id, id))
 }
 
-export async function getTickets(filters: TicketFilters = {}, orgId: number, limit?: number): Promise<Ticket[]> {
+/**
+ * Keyset cursor into the `getTickets` ordering — (created_at, id) both desc.
+ * `created_at` alone isn't unique enough to seek on: two tickets can share a
+ * timestamp, and seeking on it alone would silently skip or repeat rows
+ * across a page boundary. `id` (serial, insertion-ordered) breaks every tie.
+ */
+export interface TicketCursor {
+  createdAt: string
+  id: number
+}
+
+export async function getTickets(
+  filters: TicketFilters = {},
+  orgId: number,
+  limit?: number,
+  cursor?: TicketCursor
+): Promise<Ticket[]> {
   const conditions = [eq(tickets.orgId, orgId)]
   if (filters.status) conditions.push(eq(tickets.status, filters.status))
   if (filters.priority) conditions.push(eq(tickets.priority, filters.priority))
   if (filters.category) conditions.push(eq(tickets.category, filters.category))
+  // Strictly older than the cursor row on the same (created_at, id) ordering
+  // the query sorts by, so a page picks up exactly where the previous one
+  // stopped regardless of inserts/deletes elsewhere in the table.
+  if (cursor) {
+    conditions.push(
+      or(
+        lt(tickets.createdAt, cursor.createdAt),
+        and(eq(tickets.createdAt, cursor.createdAt), lt(tickets.id, cursor.id))
+      )!
+    )
+  }
 
   let query = getDb()
     .select()
     .from(tickets)
     .where(and(...conditions))
-    .orderBy(desc(tickets.createdAt))
+    .orderBy(desc(tickets.createdAt), desc(tickets.id))
     .$dynamic()
   if (limit) query = query.limit(limit)
 

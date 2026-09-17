@@ -31,12 +31,16 @@ export interface GetTicketsParams {
   status?: TicketStatus;
   priority?: TicketPriority;
   category?: TicketCategory;
-  /** 1-20, defaults to 10 */
+  /** Max results per page, 1-20, defaults to 10 */
   limit?: number;
+  /** Opaque value from a previous response's `next_cursor`. Omit for the first page. */
+  cursor?: string;
 }
 
 export interface GetTicketsResponse {
   tickets: Ticket[];
+  /** Pass as `cursor` on the next call to keep paging; null once there's nothing left. */
+  next_cursor: string | null;
 }
 
 export interface CreateTicketParams {

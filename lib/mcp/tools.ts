@@ -61,14 +61,15 @@ async function getFaq(orgId: number): Promise<McpToolResult> {
 
 const getTicketsDef: McpToolDefinition = {
   name: 'get_tickets',
-  description: 'List support tickets for the organization, optionally filtered by status, priority, or category. Returns the most recent tickets first.',
+  description: 'List support tickets for the organization, optionally filtered by status, priority, or category. Returns the most recent tickets first, plus a next_cursor to page through the rest — pass it back as `cursor` to keep going until next_cursor comes back null.',
   inputSchema: {
     type: 'object',
     properties: {
       status: { type: 'string', enum: [...TICKET_STATUSES] },
       priority: { type: 'string', enum: [...PRIORITIES] },
       category: { type: 'string', enum: [...CATEGORIES] },
-      limit: { type: 'number', description: 'Max results to return (default 10, max 20)' },
+      limit: { type: 'number', description: 'Max results per page (default 10, max 20)' },
+      cursor: { type: 'string', description: "Opaque value from a previous response's next_cursor. Omit for the first page." },
     },
   },
   _meta: { requiredScope: TOOL_SCOPES.get_tickets },

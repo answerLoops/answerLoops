@@ -69,6 +69,7 @@ export class AgentClient {
     if (params.priority) query.set("priority", params.priority);
     if (params.category) query.set("category", params.category);
     if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.cursor !== undefined) query.set("cursor", params.cursor);
     const qs = query.toString();
     return this.request("GET", `/api/agent/tickets${qs ? `?${qs}` : ""}`);
   }

@@ -4,7 +4,7 @@ import { chatModel, DEFAULT_CHAT_MODEL, NoAIProviderConfiguredError } from '@/li
 import { embedText } from '@/lib/ai/embed'
 import { searchArticles, getKBContext } from '@/lib/db/queries/kb'
 import { getLatestFAQ } from '@/lib/db/queries/faq'
-import { getTickets } from '@/lib/db/queries/tickets'
+import { getTickets, type TicketCursor } from '@/lib/db/queries/tickets'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { assessAnswer, shouldAutoDeflect } from '@/lib/ai/assess'
 import { reserveGeneration, commitDeflection } from '@/lib/billing/usage'
@@ -132,7 +132,45 @@ export interface TicketSummary {
   created_at: string
 }
 
-export async function getTicketsCore(orgId: number, args: Record<string, unknown>): Promise<CoreResult<TicketSummary[]>> {
+export interface TicketsPage {
+  tickets: TicketSummary[]
+  /** Pass back as `cursor` to fetch the next page; null once there isn't one. */
+  next_cursor: string | null
+}
+
+/**
+ * Opaque, forward-only cursor over the (created_at, id) ordering getTickets
+ * sorts by. Base64url rather than a raw "timestamp|id" string so callers
+ * treat it as opaque (matching every other keyset-paginated API) instead of
+ * building assumptions about its internal shape into their own code.
+ */
+function encodeTicketCursor(cursor: TicketCursor): string {
+  return Buffer.from(`${cursor.createdAt}|${cursor.id}`, 'utf8').toString('base64url')
+}
+
+/**
+ * Returns `undefined` when the caller omitted `cursor` (first page), `null`
+ * when they sent one that doesn't decode to a valid cursor — the caller
+ * distinguishes "no cursor" from "bad cursor" the same way `parseEnumArg` does.
+ */
+function decodeTicketCursor(value: unknown): TicketCursor | null | undefined {
+  if (value === undefined) return undefined
+  if (typeof value !== 'string' || !value) return null
+  let decoded: string
+  try {
+    decoded = Buffer.from(value, 'base64url').toString('utf8')
+  } catch {
+    return null
+  }
+  const sep = decoded.lastIndexOf('|')
+  if (sep === -1) return null
+  const createdAt = decoded.slice(0, sep)
+  const id = Number(decoded.slice(sep + 1))
+  if (!createdAt || !Number.isInteger(id)) return null
+  return { createdAt, id }
+}
+
+export async function getTicketsCore(orgId: number, args: Record<string, unknown>): Promise<CoreResult<TicketsPage>> {
   const limit = clampLimit(args.limit, 10)
   const status = parseEnumArg<TicketStatus>(args.status, TICKET_STATUSES)
   const priority = parseEnumArg<Priority>(args.priority, PRIORITIES)
@@ -141,9 +179,19 @@ export async function getTicketsCore(orgId: number, args: Record<string, unknown
   if (priority === null) return err(`priority must be one of: ${PRIORITIES.join(', ')}`)
   if (category === null) return err(`category must be one of: ${CATEGORIES.join(', ')}`)
 
-  const tickets = await getTickets({ status, priority, category }, orgId, limit)
-  return ok(
-    tickets.map((t) => ({
+  const cursor = decodeTicketCursor(args.cursor)
+  if (cursor === null) return err('cursor is invalid or malformed')
+
+  // Fetch one row past the page so whether another page follows is known
+  // without a second round trip or a separate COUNT query.
+  const rows = await getTickets({ status, priority, category }, orgId, limit + 1, cursor)
+  const hasMore = rows.length > limit
+  const page = hasMore ? rows.slice(0, limit) : rows
+  const last = page[page.length - 1]
+  const next_cursor = hasMore && last ? encodeTicketCursor({ createdAt: last.created_at, id: last.id }) : null
+
+  return ok({
+    tickets: page.map((t) => ({
       id: t.id,
       content: t.content,
       category: t.category,
@@ -151,8 +199,9 @@ export async function getTicketsCore(orgId: number, args: Record<string, unknown
       status: t.status,
       ai_summary: t.ai_summary,
       created_at: t.created_at,
-    }))
-  )
+    })),
+    next_cursor,
+  })
 }
 
 // ── create_ticket ────────────────────────────────────────────────────────
