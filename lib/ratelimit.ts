@@ -24,6 +24,10 @@ export interface RateLimitResult {
   ok: boolean
   /** Milliseconds until the window resets (0 when allowed). */
   retryAfterMs: number
+  /** Hits recorded in the current window so far, including this one. */
+  count: number
+  /** When the current window resets, regardless of `ok`. */
+  resetAt: Date
 }
 
 /**
@@ -36,16 +40,17 @@ export function rateLimit(key: string, max: number, windowMs: number): RateLimit
   const bucket = buckets.get(key)
 
   if (!bucket || bucket.reset < now) {
-    buckets.set(key, { count: 1, reset: now + windowMs })
-    return { ok: true, retryAfterMs: 0 }
+    const reset = now + windowMs
+    buckets.set(key, { count: 1, reset })
+    return { ok: true, retryAfterMs: 0, count: 1, resetAt: new Date(reset) }
   }
 
   if (bucket.count >= max) {
-    return { ok: false, retryAfterMs: bucket.reset - now }
+    return { ok: false, retryAfterMs: bucket.reset - now, count: bucket.count, resetAt: new Date(bucket.reset) }
   }
 
   bucket.count++
-  return { ok: true, retryAfterMs: 0 }
+  return { ok: true, retryAfterMs: 0, count: bucket.count, resetAt: new Date(bucket.reset) }
 }
 
 // Cleanup of long-stale rows — e.g. one-off/scanner IPs that will never come
@@ -105,8 +110,8 @@ export async function rateLimitShared(
   }
 
   if (row.count > max) {
-    return { ok: false, retryAfterMs: Math.max(0, row.resetAt.getTime() - now.getTime()) }
+    return { ok: false, retryAfterMs: Math.max(0, row.resetAt.getTime() - now.getTime()), count: row.count, resetAt: row.resetAt }
   }
 
-  return { ok: true, retryAfterMs: 0 }
+  return { ok: true, retryAfterMs: 0, count: row.count, resetAt: row.resetAt }
 }

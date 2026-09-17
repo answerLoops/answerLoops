@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateAnswerCore } from '@/lib/agent/core'
-import { authenticateAgentRequest, readAgentJsonBody, agentError } from '@/lib/agent/http'
+import { authenticateAgentRequest, readAgentJsonBody, agentError, withHeaders } from '@/lib/agent/http'
 
 /**
  * POST /api/agent/answers
@@ -22,9 +22,9 @@ export async function POST(req: NextRequest) {
   if (!result.ok) {
     const deflectionLimit = result.error.startsWith('Monthly deflection limit reached')
     const callLimit = result.error.startsWith('Monthly generate_answer call limit reached')
-    if (deflectionLimit) return agentError(429, result.error, 'deflection_limit_reached')
-    if (callLimit) return agentError(429, result.error, 'call_limit_reached')
-    return agentError(400, result.error)
+    if (deflectionLimit) return withHeaders(agentError(429, result.error, 'deflection_limit_reached'), auth.rateLimitHeaders)
+    if (callLimit) return withHeaders(agentError(429, result.error, 'call_limit_reached'), auth.rateLimitHeaders)
+    return withHeaders(agentError(400, result.error), auth.rateLimitHeaders)
   }
-  return NextResponse.json(result.data)
+  return withHeaders(NextResponse.json(result.data), auth.rateLimitHeaders)
 }

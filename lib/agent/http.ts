@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { resolveApiKey } from '@/lib/db/queries/api-keys'
 import { isValidApiKeyFormat } from '@/lib/mcp/keys'
-import { rateLimitShared } from '@/lib/ratelimit'
+import { rateLimitShared, type RateLimitResult } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
@@ -64,22 +64,52 @@ export function agentError(
 }
 
 /**
- * 429 with a `Retry-After` header. The limiter already computes how long the
- * window has left; without surfacing it, a client has nothing to back off
- * against and its only option is to keep hammering until something succeeds.
- * Header is in whole seconds per RFC 9110, minimum 1.
+ * `RateLimit-Limit`/`-Remaining`/`-Reset` per the IETF RateLimit Fields draft
+ * (draft-ietf-httpapi-ratelimit-headers) — the convention scanners and HTTP
+ * clients actually check for. Previously the only rate-limit signal was
+ * `Retry-After` on a 429, which tells a caller nothing until it's already
+ * been throttled; these let a well-behaved client see it's close to the
+ * ceiling on an ordinary 200 and slow down on its own.
  */
-function rateLimitedResponse(retryAfterMs: number): NextResponse<AgentErrorBody> {
-  const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
+function rateLimitHeaders(max: number, result: RateLimitResult): Record<string, string> {
+  return {
+    'RateLimit-Limit': String(max),
+    'RateLimit-Remaining': String(Math.max(0, max - result.count)),
+    'RateLimit-Reset': String(Math.max(0, Math.ceil((result.resetAt.getTime() - Date.now()) / 1000))),
+  }
+}
+
+/**
+ * 429 with a `Retry-After` header plus the same `RateLimit-*` headers a
+ * successful response carries (`-Remaining` pinned to 0) — a client parsing
+ * one set of header names doesn't need a special case for the throttled
+ * response. Header is in whole seconds per RFC 9110, minimum 1.
+ */
+function rateLimitedResponse(max: number, result: RateLimitResult): NextResponse<AgentErrorBody> {
+  const seconds = Math.max(1, Math.ceil(result.retryAfterMs / 1000))
   return NextResponse.json(
     { error: { message: 'Rate limit exceeded', code: 'rate_limited' } },
-    { status: 429, headers: { 'Retry-After': String(seconds) } }
+    {
+      status: 429,
+      headers: { 'Retry-After': String(seconds), ...rateLimitHeaders(max, result) },
+    }
   )
 }
 
 export type AgentAuthResult =
-  | { orgId: number; keyId: number; scopes: ApiScope[] }
+  | { orgId: number; keyId: number; scopes: ApiScope[]; rateLimitHeaders: Record<string, string> }
   | { response: NextResponse<AgentErrorBody> }
+
+/**
+ * Copies headers onto an existing response — every /api/agent/* route calls
+ * this on its way out so a request that got past auth carries its
+ * `RateLimit-*` headers on every response, success or business-logic error,
+ * not just the one path that happened to build them.
+ */
+export function withHeaders<T>(res: NextResponse<T>, headers: Record<string, string>): NextResponse<T> {
+  for (const [key, value] of Object.entries(headers)) res.headers.set(key, value)
+  return res
+}
 
 /**
  * 403 for a valid key that wasn't granted the scope this operation needs.
@@ -119,7 +149,7 @@ export async function authenticateAgentRequest(
   const ip = clientIp(req)
   const ipLimit = await rateLimitShared(`agent-ip:${ip}`, IP_RATE_LIMIT_MAX, IP_RATE_LIMIT_WINDOW_MS)
   if (!ipLimit.ok) {
-    return { response: rateLimitedResponse(ipLimit.retryAfterMs) }
+    return { response: rateLimitedResponse(IP_RATE_LIMIT_MAX, ipLimit) }
   }
 
   const authHeader = req.headers.get('authorization') ?? ''
@@ -150,10 +180,10 @@ export async function authenticateAgentRequest(
   const orgRateLimitMax = await orgRateLimitPerMinute(orgId)
   const orgLimit = await rateLimitShared(`agent:${orgId}`, orgRateLimitMax, RATE_LIMIT_WINDOW_MS)
   if (!orgLimit.ok) {
-    return { response: rateLimitedResponse(orgLimit.retryAfterMs) }
+    return { response: rateLimitedResponse(orgRateLimitMax, orgLimit) }
   }
 
-  return { orgId, keyId, scopes }
+  return { orgId, keyId, scopes, rateLimitHeaders: rateLimitHeaders(orgRateLimitMax, orgLimit) }
 }
 
 export type AgentBodyResult =
