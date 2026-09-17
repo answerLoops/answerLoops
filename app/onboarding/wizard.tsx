@@ -3,9 +3,10 @@
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { updateWorkspaceNameAction, completeOnboardingAction } from '@/app/actions/onboarding'
-import { saveDiscordIntegrationAction, saveDiscordGuildChannelsAction, saveTelegramIntegrationAction, saveSlackChannelsAction } from '@/app/actions/integrations'
+import { saveDiscordIntegrationAction, saveDiscordGuildChannelsAction, saveSlackChannelsAction } from '@/app/actions/integrations'
 import { ingestUrlAction } from '@/app/actions/ingest-url'
 import type { IngestUrlResult } from '@/app/actions/ingest-url'
+import { getWidgetTokenAction } from '@/app/actions/widget'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -25,10 +26,18 @@ function SlackIcon({ className }: { className?: string }) {
   )
 }
 
-function TelegramIcon({ className }: { className?: string }) {
+function GitHubIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+      <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.385-1.333-1.754-1.333-1.754-1.089-.744.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.108-.775.418-1.305.762-1.604-2.665-.303-5.467-1.334-5.467-5.93 0-1.31.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.51 11.51 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.814 1.103.814 2.222 0 1.606-.015 2.898-.015 3.293 0 .322.216.694.825.576C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
+    </svg>
+  )
+}
+
+function WidgetIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" strokeLinecap="round" strokeLinejoin="round"/>
     </svg>
   )
 }
@@ -49,14 +58,13 @@ const inputCls = 'w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 
 
 function PrimaryButton({ pending, label, pendingLabel, color, type = 'submit', onClick }: {
   pending?: boolean; label: string; pendingLabel?: string
-  color?: 'discord' | 'slack' | 'telegram' | 'default'
+  color?: 'discord' | 'slack' | 'default'
   type?: 'submit' | 'button'
   onClick?: () => void
 }) {
   const colors =
     color === 'discord'  ? 'bg-[#5865F2] hover:bg-[#4752c4] text-white shadow-[#5865F2]/25' :
     color === 'slack'    ? 'bg-[#4A154B] hover:bg-[#3d1040] text-white shadow-[#4A154B]/25' :
-    color === 'telegram' ? 'bg-[#229ED9] hover:bg-[#1a8ec5] text-white shadow-[#229ED9]/25' :
                            'bg-brand-600 hover:bg-brand-700 text-white shadow-brand-600/25'
   return (
     <button
@@ -77,7 +85,7 @@ function PlatformCard({ icon, label, badge, bg, borderColor, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex flex-col items-center gap-3 rounded-2xl border-2 p-5 text-sm font-semibold text-gray-700 transition-all hover:shadow-md active:scale-[0.98] ${bg} ${borderColor}`}
+      className={`relative flex flex-col items-center gap-3 rounded-2xl border-2 p-5 text-sm font-semibold text-gray-700 transition-all hover:shadow-md active:scale-[0.98] ${badge ? 'pt-7' : ''} ${bg} ${borderColor}`}
     >
       {badge && (
         <span className="absolute top-2 right-2 text-[0.5625rem] font-bold uppercase tracking-wider text-white bg-brand-500 rounded-full px-1.5 py-0.5 leading-tight">
@@ -159,7 +167,7 @@ function NameStep({ onDone, initialName }: { onDone: () => void; initialName: st
 
 // ── Step 2: Connect ────────────────────────────────────────────────────────────
 
-type Platform = 'discord' | 'slack' | 'telegram' | null
+type Platform = 'discord' | 'slack' | 'github' | 'widget' | null
 type DiscordSubStep = 'choose' | 'invite' | 'channels' | 'manual'
 
 interface GuildChannel { id: string; name: string }
@@ -433,55 +441,125 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
   )
 }
 
-function TelegramFlow({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
-  const [state, formAction, pending] = useActionState(
-    async (prev: unknown, fd: FormData) => {
-      const result = await saveTelegramIntegrationAction(prev, fd)
-      // A warning means the bot saved but webhook registration needs a retry
-      // in Settings — still a completed step, so advance.
-      if (!result?.error) onDone()
-      return result
-    },
-    null
-  )
+export function GitHubFlow({ onDone, onBack, connected }: { onDone: () => void; onBack: () => void; connected?: boolean }) {
+  const [connecting, setConnecting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleConnect() {
+    setConnecting(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/github/install-url?from=onboarding')
+      const data = await res.json() as { url?: string; error?: string }
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        setError(data.error ?? 'Failed to get GitHub install URL')
+        setConnecting(false)
+      }
+    } catch {
+      setError('Failed to connect to GitHub')
+      setConnecting(false)
+    }
+  }
+
+  // Just returned from installing the GitHub App — every repo it was granted
+  // access to is already being watched, so there's nothing left to pick.
+  if (connected) {
+    return (
+      <div className="space-y-5">
+        <div className="flex items-center gap-2.5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100">
+            <CheckIcon className="h-3.5 w-3.5 text-green-600" />
+          </div>
+          <p className="text-xs font-medium text-gray-700">GitHub connected — its repos are now watched for Issues and Discussions.</p>
+        </div>
+        <PrimaryButton type="button" label="Continue →" onClick={onDone} />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-5">
       <BackButton onClick={onBack} />
-      <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3 text-xs text-sky-700 space-y-1.5">
-        <p className="font-semibold">Get your bot token from Telegram</p>
-        <ol className="list-decimal list-inside space-y-1 text-sky-600">
-          <li>Open Telegram → search <strong>@BotFather</strong></li>
-          <li>Send <span className="font-mono">/newbot</span> and follow prompts</li>
-          <li>Copy the token (format: <span className="font-mono">123456789:AAHdqTcv…</span>)</li>
-        </ol>
+      <div className="space-y-1.5">
+        <p className="text-sm font-semibold text-gray-800">Install the answerLoops GitHub App</p>
+        <p className="text-xs text-gray-500">Turn Issues and Discussions into tickets — you'll pick which repos to grant access to on GitHub's install screen.</p>
       </div>
-      <form action={formAction} className="space-y-4">
-        <Field label="Bot Token">
-          <input name="botToken" type="password" autoComplete="new-password"
-            placeholder="123456789:AAHdqTcv…" className={inputCls} required />
-        </Field>
-        <p className="text-xs text-gray-400">After connecting, add your bot to your group so it can see messages. Its privacy mode must be off (BotFather → <span className="font-mono">/setprivacy</span> → Disable).</p>
-        {(state as { error?: string } | null)?.error && (
-          <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{(state as { error?: string }).error}</p>
-        )}
-        {(state as { warning?: string } | null)?.warning && (
-          <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">{(state as { warning?: string }).warning}</p>
-        )}
-        <PrimaryButton pending={pending} label="Connect Telegram →" pendingLabel="Connecting…" color="telegram" />
-      </form>
+      {error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
+      <PrimaryButton type="button" pending={connecting} label="Connect GitHub" pendingLabel="Redirecting…" onClick={handleConnect} />
     </div>
   )
 }
 
-function ConnectStep({ onDone, oauthGuildId, slackConnected }: { onDone: () => void; oauthGuildId?: string; slackConnected?: boolean }) {
-  const [platform, setPlatform] = useState<Platform>(oauthGuildId ? 'discord' : slackConnected ? 'slack' : null)
+export function WidgetFlow({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+  const [token, setToken] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    getWidgetTokenAction()
+      .then((result) => {
+        if (result.error || !result.token) { setError(result.error ?? 'Failed to load the widget embed code.'); return }
+        setToken(result.token)
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  const embedCode = token ? `<script src="${baseUrl}/widget.js" data-widget-id="${token}"></script>` : ''
+
+  function copyEmbed() {
+    if (!embedCode) return
+    navigator.clipboard.writeText(embedCode).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <div className="space-y-5">
+      <BackButton onClick={onBack} />
+      <div className="space-y-1.5">
+        <p className="text-sm font-semibold text-gray-800">Add the chat widget to your site</p>
+        <p className="text-xs text-gray-500">
+          Paste this before <code className="text-brand-600">&lt;/body&gt;</code>. You can restrict which domains it loads on later in Integrations.
+        </p>
+      </div>
+      {loading ? (
+        <p className="text-xs text-gray-400">Loading…</p>
+      ) : error ? (
+        <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+      ) : (
+        <div className="relative">
+          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 pr-16 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap break-all">{embedCode}</pre>
+          <button
+            type="button"
+            onClick={copyEmbed}
+            className="absolute top-2 right-2 rounded px-2 py-1 text-[0.625rem] font-medium bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+          >
+            {copied ? '✓ Copied' : 'Copy'}
+          </button>
+        </div>
+      )}
+      <PrimaryButton type="button" label="Continue →" onClick={onDone} />
+    </div>
+  )
+}
+
+function ConnectStep({ onDone, oauthGuildId, slackConnected, githubConnected }: {
+  onDone: () => void; oauthGuildId?: string; slackConnected?: boolean; githubConnected?: boolean
+}) {
+  const [platform, setPlatform] = useState<Platform>(
+    oauthGuildId ? 'discord' : slackConnected ? 'slack' : githubConnected ? 'github' : null
+  )
 
   return (
     <div className="space-y-6">
       <div className="space-y-1.5">
         <h2 className="text-xl font-bold text-gray-900">Connect your community</h2>
-        <p className="text-sm text-gray-500">Choose where your community lives. You can change this later in Settings.</p>
+        <p className="text-sm text-gray-500">Choose where your community lives. You can change this later in Integrations.</p>
       </div>
 
       {platform === null && (
@@ -504,15 +582,23 @@ function ConnectStep({ onDone, oauthGuildId, slackConnected }: { onDone: () => v
               onClick={() => setPlatform('slack')}
             />
             <PlatformCard
-              icon={<TelegramIcon className="h-7 w-7 text-[#229ED9]" />}
-              label="Telegram"
-              bg="hover:bg-sky-50/60 bg-white"
-              borderColor="border-gray-200 hover:border-sky-400/50"
-              onClick={() => setPlatform('telegram')}
+              icon={<GitHubIcon className="h-7 w-7 text-gray-900" />}
+              label="GitHub"
+              badge="1-click"
+              bg="hover:bg-gray-50 bg-white"
+              borderColor="border-gray-200 hover:border-gray-400/50"
+              onClick={() => setPlatform('github')}
+            />
+            <PlatformCard
+              icon={<WidgetIcon className="h-7 w-7 text-brand-500" />}
+              label="Website Widget"
+              bg="hover:bg-brand-50/60 bg-white"
+              borderColor="border-gray-200 hover:border-brand-400/50"
+              onClick={() => setPlatform('widget')}
             />
           </div>
           <button type="button" onClick={onDone} className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors pt-1">
-            Skip for now — connect later in Settings
+            Skip for now — connect later in Integrations
           </button>
         </>
       )}
@@ -521,8 +607,12 @@ function ConnectStep({ onDone, oauthGuildId, slackConnected }: { onDone: () => v
         <DiscordFlow onDone={onDone} onBack={() => setPlatform(null)} oauthGuildId={oauthGuildId} />
       )}
 
-      {platform === 'telegram' && (
-        <TelegramFlow onDone={onDone} onBack={() => setPlatform(null)} />
+      {platform === 'github' && (
+        <GitHubFlow onDone={onDone} onBack={() => setPlatform(null)} connected={githubConnected} />
+      )}
+
+      {platform === 'widget' && (
+        <WidgetFlow onDone={onDone} onBack={() => setPlatform(null)} />
       )}
 
       {platform === 'slack' && (
@@ -894,6 +984,7 @@ export default function OnboardingWizard({ initialName }: { initialName: string 
   const [completed, setCompleted] = useState<Set<string>>(new Set())
   const [discordOAuthGuildId, setDiscordOAuthGuildId] = useState<string | undefined>()
   const [slackConnected, setSlackConnected] = useState(false)
+  const [githubConnected, setGithubConnected] = useState(false)
 
   // After Discord OAuth callback the bot has joined the server, but no
   // channels are monitored yet — land on the channel picker (Connect step)
@@ -924,6 +1015,20 @@ export default function OnboardingWizard({ initialName }: { initialName: string 
       const url = new URL(window.location.href)
       url.searchParams.delete('slack_connected')
       url.searchParams.delete('slack_team')
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [searchParams])
+
+  // Just returned from installing the GitHub App — every granted repo is
+  // already watched, so land on Connect only to show that confirmation
+  // before advancing, same as Discord/Slack above.
+  useEffect(() => {
+    if (searchParams.get('github_connected') === '1') {
+      setCompleted((prev) => new Set([...prev, 'name']))
+      setStep('connect')
+      setGithubConnected(true)
+      const url = new URL(window.location.href)
+      url.searchParams.delete('github_connected')
       window.history.replaceState({}, '', url.toString())
     }
   }, [searchParams])
@@ -977,7 +1082,7 @@ export default function OnboardingWizard({ initialName }: { initialName: string 
 
           {/* Step content */}
           {step === 'name'    && <NameStep    initialName={initialName} onDone={() => advance('name')} />}
-          {step === 'connect' && <ConnectStep onDone={() => advance('connect')} oauthGuildId={discordOAuthGuildId} slackConnected={slackConnected} />}
+          {step === 'connect' && <ConnectStep onDone={() => advance('connect')} oauthGuildId={discordOAuthGuildId} slackConnected={slackConnected} githubConnected={githubConnected} />}
           {step === 'seed'    && <SeedStep    onDone={() => advance('seed')} />}
           {step === 'done'    && <DoneStep    completedSteps={completed} />}
         </div>

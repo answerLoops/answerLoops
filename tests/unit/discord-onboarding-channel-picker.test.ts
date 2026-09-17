@@ -84,7 +84,7 @@ describe('onboarding wizard routes 1-click Discord connects to the channel picke
 
   it('ConnectStep defaults straight into the Discord flow when oauthGuildId is present, skipping the platform picker', () => {
     const src = read('app/onboarding/wizard.tsx')
-    expect(src).toContain("useState<Platform>(oauthGuildId ? 'discord' : slackConnected ? 'slack' : null)")
+    expect(src).toContain("oauthGuildId ? 'discord' : slackConnected ? 'slack' : githubConnected ? 'github' : null")
   })
 })
 

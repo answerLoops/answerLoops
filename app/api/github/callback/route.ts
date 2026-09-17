@@ -9,15 +9,28 @@ const MOD = 'api/github/callback'
 
 export async function GET(req: NextRequest) {
   const baseUrl = process.env.AUTH_URL ?? req.nextUrl.origin
+  const { searchParams } = req.nextUrl
+
+  // Decode `from` before we know whether the rest of the flow succeeds, so
+  // even a failure redirects back to whichever screen started it.
+  let from = 'integrations'
+  try {
+    const decoded = verifyOAuthState(searchParams.get('state'))
+    from = decoded.from === 'onboarding' ? 'onboarding' : 'integrations'
+  } catch {
+    // handled again below, where the failure is actually reported
+  }
+
   const errUrl = (code: string) =>
-    NextResponse.redirect(new URL(`/integrations?tab=github&github_error=${code}`, baseUrl))
+    from === 'onboarding'
+      ? NextResponse.redirect(new URL(`/onboarding?github_error=${code}`, baseUrl))
+      : NextResponse.redirect(new URL(`/integrations?tab=github&github_error=${code}`, baseUrl))
 
   const access = await requireOrgAccess()
   if (!access.ok) {
     return NextResponse.redirect(new URL('/login', baseUrl))
   }
 
-  const { searchParams } = req.nextUrl
   const installationId = Number(searchParams.get('installation_id'))
 
   // The installation is bound to the org named in a state this server signed,
@@ -49,5 +62,8 @@ export async function GET(req: NextRequest) {
     return errUrl('installation_failed')
   }
 
+  if (from === 'onboarding') {
+    return NextResponse.redirect(new URL('/onboarding?github_connected=1', baseUrl))
+  }
   return NextResponse.redirect(new URL('/integrations?tab=github&github_connected=1', baseUrl))
 }
