@@ -5,8 +5,7 @@ interface LogoMarkProps {
   className?: string
 }
 
-// Small icon-only mark — brand gradient is baked into the source image, so
-// this renders identically on light or dark surfaces (unlike a currentColor SVG).
+// Transparent navy mark with an aqua center, shared across app and marketing.
 export function LogoMark({ size = 32, className = '' }: LogoMarkProps) {
   return (
     <Image

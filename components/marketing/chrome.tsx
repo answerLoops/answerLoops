@@ -29,7 +29,7 @@ export function NavWordmark() {
     <span className="flex shrink-0 items-center gap-3">
       <LogoMark size={28} />
       <span className="text-base font-semibold tracking-tight">
-        answer<span className="text-[#082e50]">Loops</span>
+        answer<span className="text-[#168fa3]">Loops</span>
       </span>
     </span>
   )

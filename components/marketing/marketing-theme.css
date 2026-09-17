@@ -161,3 +161,173 @@
 .marketing-site .marketing-post-card > p:not(.marketing-meta) { color: var(--marketing-muted); margin-block: 1rem; }
 .marketing-site .marketing-post-card .marketing-meta { margin-top: 0; }
 .marketing-site .marketing-faq details[open] { border-bottom-color: #8fafba; }
+
+/* Interior pages: generous editorial headings and distinct content surfaces. */
+.marketing-site .marketing-hero {
+  padding-block: clamp(3.5rem, 7vw, 6.5rem);
+}
+.marketing-hero h1 {
+  font-weight: 500;
+  letter-spacing: -0.045em;
+  line-height: 1.08;
+}
+.marketing-hero-copy {
+  min-width: 0;
+}
+.marketing-hero-split {
+  display: grid;
+  gap: 2.5rem;
+  align-items: center;
+}
+.marketing-audience {
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+  border-radius: 16px;
+  border-top: 4px solid #b9e0e5;
+  background: var(--marketing-navy);
+  color: #f4f8fc;
+}
+.marketing-audience h2 {
+  font-size: 1.375rem;
+  margin-bottom: 1rem;
+  color: #f4f8fc;
+}
+.marketing-audience p {
+  color: #d0deeb;
+  line-height: 1.8;
+}
+.marketing-site .marketing-capabilities {
+  gap: 1.25rem;
+}
+.marketing-capabilities .marketing-card {
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+}
+.marketing-capabilities .marketing-card:nth-child(4n + 2) {
+  background: var(--marketing-aqua);
+}
+.marketing-capabilities .marketing-card:nth-child(4n + 3) {
+  background: var(--marketing-sand);
+}
+.marketing-site .marketing-setup {
+  background: var(--marketing-sand);
+}
+.marketing-setup-steps {
+  margin-top: 2rem;
+  border-color: #e5dac6;
+  border-radius: 12px;
+}
+.marketing-setup-steps .marketing-workflow-step {
+  background: transparent;
+}
+.marketing-setup-steps .marketing-eyebrow {
+  color: var(--marketing-link);
+}
+.marketing-proof-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+.marketing-proof-grid .marketing-card {
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: var(--marketing-soft);
+}
+.marketing-proof-grid .marketing-card:nth-child(3n + 2) {
+  background: var(--marketing-aqua);
+}
+.marketing-proof-grid .marketing-card:nth-child(3n + 3) {
+  background: var(--marketing-sand);
+}
+.marketing-proof-grid .marketing-card ul {
+  padding-top: 1rem;
+  border-top: 1px solid var(--marketing-border);
+}
+.marketing-site .pricing-section {
+  background: var(--marketing-soft);
+}
+.pricing-toolbar {
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.pricing-billing-control {
+  background: #fff;
+  padding: 1rem;
+  border: 1px solid var(--marketing-border);
+  border-radius: 12px;
+}
+.pricing-billing-control button {
+  flex-shrink: 0;
+}
+.marketing-site .pricing-plan {
+  padding: clamp(1.5rem, 3vw, 2rem);
+  border-top: 4px solid #b9e0e5;
+}
+.pricing-plan h3 {
+  font-size: 1.625rem;
+  font-weight: 500;
+}
+.pricing-amount > span:first-child {
+  font-size: clamp(2.5rem, 4vw, 3.25rem);
+  font-weight: 500;
+}
+.marketing-site .pricing-plan[aria-label="Pro plan"] {
+  border-top-color: #b9e0e5;
+}
+.marketing-site .pricing-plan[aria-label="Pro plan"] .border-slate-200 {
+  border-color: #375875;
+}
+.marketing-site .pricing-plan[aria-label="Pro plan"] li > span {
+  color: #a6dce2;
+}
+.marketing-site .pricing-cost-note {
+  padding: clamp(1.5rem, 3vw, 2.5rem);
+}
+.marketing-site .marketing-faq {
+  border-top: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.marketing-site .marketing-faq details {
+  border: 1px solid var(--marketing-border);
+  border-radius: 10px;
+  padding: 1.25rem 1.5rem;
+  background: var(--marketing-soft);
+}
+.marketing-site .marketing-faq details[open] {
+  background: var(--marketing-aqua);
+  border-color: #b7d5da;
+}
+.marketing-site .marketing-faq summary {
+  line-height: 1.6;
+}
+.marketing-site .marketing-story {
+  border: 0;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  background: var(--marketing-sand);
+  border-radius: 16px;
+}
+.marketing-story h2:first-child {
+  margin-top: 0;
+}
+.marketing-post-card .marketing-meta {
+  color: var(--marketing-link);
+  font-size: 0.8125rem;
+}
+.marketing-site .marketing-post-card {
+  border-top: 4px solid #b9e0e5;
+}
+@media (min-width: 768px) {
+  .marketing-site .marketing-capabilities {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .marketing-proof-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .marketing-post-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+@media (min-width: 1024px) {
+  .marketing-hero-split {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+    gap: 4rem;
+  }
+}

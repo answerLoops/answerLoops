@@ -123,7 +123,10 @@ export default async function PricingPage({
           Choose monthly billing or save 20% with an annual subscription.
         </p>
       </PageHero>
-      <section id="plans" className="marketing-section scroll-mt-24">
+      <section
+        id="plans"
+        className="marketing-section pricing-section scroll-mt-24"
+      >
         <div className="marketing-container">
           {checkout === 'failed' && (
             <div

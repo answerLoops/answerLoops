@@ -14,14 +14,14 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
   const [annual, setAnnual] = useState(true)
   return (
     <>
-      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="pricing-toolbar mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2>Hosted plans</h2>
           <p className="mt-2 text-sm text-slate-600">
             No per-seat fees. Model usage is billed separately.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 text-sm">
+        <div className="pricing-billing-control flex flex-wrap items-center gap-3 text-sm">
           <span>Monthly</span>
           <button
             type="button"
@@ -45,7 +45,7 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
           </span>
         </div>
       </div>
-      <div className="grid gap-5 lg:grid-cols-3">
+      <div className="pricing-plans grid gap-5 lg:grid-cols-3">
         {plans.map((plan) => {
           const highlighted = plan.id === HIGHLIGHTED_PLAN_ID
           const copy = PLAN_COPY[plan.id]
@@ -71,7 +71,7 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
               <p className="mt-2 min-h-16 text-sm text-slate-600">
                 {copy.description}
               </p>
-              <div className="mt-5">
+              <div className="pricing-amount mt-5">
                 <span className="text-4xl font-semibold tracking-tight">
                   {formatPrice(
                     annual ? annualMonthlyPrice(plan) : plan.priceMonthly,

@@ -29,7 +29,16 @@ export function IntentPage({
   return (
     <MarketingPage navState={navState}>
       <PageSchema {...schema} />
-      <PageHero eyebrow={eyebrow} title={title}>
+      <PageHero
+        eyebrow={eyebrow}
+        title={title}
+        aside={
+          <aside className="marketing-audience">
+            <h2>Who uses this</h2>
+            <p>{audience}</p>
+          </aside>
+        }
+      >
         <p>{intro}</p>
         <div className="marketing-actions">
           {docs.slice(0, 2).map((doc) => (
@@ -45,11 +54,7 @@ export function IntentPage({
       </PageHero>
       <section className="marketing-section">
         <div className="marketing-container">
-          <div className="marketing-section-heading">
-            <h2>Who uses this</h2>
-            <p>{audience}</p>
-          </div>
-          <div className="marketing-grid">
+          <div className="marketing-grid marketing-capabilities">
             {highlights.map((h, index) => (
               <article className="marketing-card" key={h.title}>
                 <p className="marketing-eyebrow">0{index + 1} / Capability</p>
@@ -60,10 +65,10 @@ export function IntentPage({
           </div>
         </div>
       </section>
-      <section className="marketing-section marketing-soft">
+      <section className="marketing-section marketing-setup">
         <div className="marketing-container">
           <h2>Set up your workflow</h2>
-          <ol className="marketing-workflow">
+          <ol className="marketing-workflow marketing-setup-steps">
             {workflow.map((w) => (
               <li className="marketing-workflow-step" key={w.step}>
                 <p className="marketing-eyebrow">{w.step}</p>
