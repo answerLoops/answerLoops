@@ -66,7 +66,14 @@ try {
   await client.generateAnswer({ question: "..." });
 } catch (err) {
   if (err instanceof AgentApiError) {
-    console.error(err.status, err.body);
+    console.error(err.status, err.message);
+    // On a 429, err.code tells apart the per-minute rate limit from either
+    // monthly quota — "rate_limited" (retry shortly) vs.
+    // "deflection_limit_reached" / "call_limit_reached" (upgrade, or wait
+    // for the next billing cycle; retrying immediately won't help).
+    if (err.code === "rate_limited") {
+      // back off and retry
+    }
   }
 }
 ```

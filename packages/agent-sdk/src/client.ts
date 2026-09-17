@@ -1,5 +1,6 @@
 import type {
   AgentApiErrorBody,
+  AgentApiErrorCode,
   CreateTicketParams,
   GenerateAnswerParams,
   GenerateAnswerResponse,
@@ -25,12 +26,15 @@ export interface AgentClientOptions {
 export class AgentApiError extends Error {
   readonly status: number;
   readonly body: AgentApiErrorBody | undefined;
+  /** Only ever set on a 429 — see AgentApiErrorCode. */
+  readonly code: AgentApiErrorCode | undefined;
 
   constructor(status: number, body: AgentApiErrorBody | undefined, message: string) {
     super(message);
     this.name = "AgentApiError";
     this.status = status;
     this.body = body;
+    this.code = body?.error?.code;
   }
 }
 
@@ -102,10 +106,11 @@ export class AgentClient {
     const data = text ? JSON.parse(text) : undefined;
 
     if (!res.ok) {
+      const errorBody = data as AgentApiErrorBody | undefined;
       throw new AgentApiError(
         res.status,
-        data as AgentApiErrorBody | undefined,
-        (data as AgentApiErrorBody | undefined)?.error ?? `Agent API request failed: ${res.status}`,
+        errorBody,
+        errorBody?.error?.message ?? `Agent API request failed: ${res.status}`,
       );
     }
 
