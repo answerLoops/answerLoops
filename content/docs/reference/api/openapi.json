@@ -109,6 +109,26 @@
           }
         }
       }
+    },
+    "headers": {
+      "RateLimit-Limit": {
+        "description": "The org's per-minute request ceiling (plan-scaled).",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "RateLimit-Remaining": {
+        "description": "Requests left in the current one-minute window.",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "RateLimit-Reset": {
+        "description": "Seconds until the current window resets.",
+        "schema": {
+          "type": "integer"
+        }
+      }
     }
   },
   "paths": {
@@ -148,6 +168,17 @@
         "responses": {
           "200": {
             "description": "Matching KB articles, most relevant first",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -177,6 +208,17 @@
           },
           "400": {
             "description": "Missing or invalid query",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -200,6 +242,17 @@
           },
           "429": {
             "description": "Rate limit exceeded",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -225,6 +278,17 @@
         "responses": {
           "200": {
             "description": "Latest FAQ digest, or a message if none has been generated yet",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -329,6 +393,17 @@
         "responses": {
           "200": {
             "description": "Most recent tickets first, page-sized to `limit`",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -352,6 +427,17 @@
           },
           "400": {
             "description": "Invalid filter value or malformed cursor",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -386,6 +472,18 @@
           }
         ],
         "description": "Runs through the same AI triage/answer pipeline as every other channel (Discord, Slack, email) — the ticket may get auto-answered if confidence is high, otherwise it queues for human review.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200
+            },
+            "description": "Retrying with the same key returns the original ticket instead of opening a duplicate. Equivalent to the request body's idempotencyKey field — this header takes precedence when both are sent."
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -418,6 +516,17 @@
         "responses": {
           "201": {
             "description": "Ticket created (or the original ticket, if idempotencyKey matched a prior call)",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -436,6 +545,17 @@
           },
           "400": {
             "description": "Missing/invalid content",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -494,6 +614,17 @@
         "responses": {
           "200": {
             "description": "Generated answer with confidence score",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -518,6 +649,17 @@
           },
           "400": {
             "description": "Missing/invalid question",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -541,6 +683,17 @@
           },
           "429": {
             "description": "Rate limit exceeded, monthly deflection limit reached, or monthly call limit reached — see `error.code`",
+            "headers": {
+              "RateLimit-Limit": {
+                "$ref": "#/components/headers/RateLimit-Limit"
+              },
+              "RateLimit-Remaining": {
+                "$ref": "#/components/headers/RateLimit-Remaining"
+              },
+              "RateLimit-Reset": {
+                "$ref": "#/components/headers/RateLimit-Reset"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {

@@ -89,7 +89,7 @@ describe('lib/agent/http: REST surface shares the MCP rate-limit store', () => {
   })
 
   it('returns keyId alongside orgId so callers can attribute usage to a credential', () => {
-    expect(src()).toContain('return { orgId, keyId, scopes }')
+    expect(src()).toContain('return { orgId, keyId, scopes, rateLimitHeaders:')
   })
 })
 

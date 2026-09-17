@@ -29,6 +29,14 @@ import { API_SCOPES } from '@/lib/agent/scopes'
 export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
   const scoped = (scope: keyof typeof API_SCOPES) => [{ bearerAuth: [scope] }]
 
+  // Attached to every response below (success and business-logic error alike)
+  // — see components.responses.headers' comment for why.
+  const rateLimitHeaders = {
+    'RateLimit-Limit': { $ref: '#/components/headers/RateLimit-Limit' },
+    'RateLimit-Remaining': { $ref: '#/components/headers/RateLimit-Remaining' },
+    'RateLimit-Reset': { $ref: '#/components/headers/RateLimit-Reset' },
+  }
+
   return {
     openapi: '3.1.0',
     info: {
@@ -92,7 +100,17 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
         },
       },
+      // Per draft-ietf-httpapi-ratelimit-headers — every authenticated response
+      // (success or business-logic error) carries these, not just a 429, so a
+      // well-behaved client can slow down before it gets throttled instead of
+      // only finding out after.
+      headers: {
+        'RateLimit-Limit': { description: "The org's per-minute request ceiling (plan-scaled).", schema: { type: 'integer' } },
+        'RateLimit-Remaining': { description: 'Requests left in the current one-minute window.', schema: { type: 'integer' } },
+        'RateLimit-Reset': { description: 'Seconds until the current window resets.', schema: { type: 'integer' } },
+      },
     },
+
     paths: {
       '/api/agent/kb/search': {
         get: {
@@ -106,6 +124,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           responses: {
             '200': {
               description: 'Matching KB articles, most relevant first',
+              headers: rateLimitHeaders,
               content: {
                 'application/json': {
                   schema: {
@@ -127,10 +146,10 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
                 },
               },
             },
-            '400': { description: 'Missing or invalid query', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+            '400': { description: 'Missing or invalid query', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
-            '429': { description: 'Rate limit exceeded', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+            '429': { description: 'Rate limit exceeded', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           },
         },
       },
@@ -142,6 +161,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           responses: {
             '200': {
               description: 'Latest FAQ digest, or a message if none has been generated yet',
+              headers: rateLimitHeaders,
               content: { 'application/json': { schema: { type: 'object' } } },
             },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
@@ -170,6 +190,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           responses: {
             '200': {
               description: 'Most recent tickets first, page-sized to `limit`',
+              headers: rateLimitHeaders,
               content: {
                 'application/json': {
                   schema: {
@@ -186,7 +207,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
                 },
               },
             },
-            '400': { description: 'Invalid filter value or malformed cursor', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+            '400': { description: 'Invalid filter value or malformed cursor', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
           },
@@ -197,6 +218,16 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           security: scoped('tickets:write'),
           description:
             'Runs through the same AI triage/answer pipeline as every other channel (Discord, Slack, email) — the ticket may get auto-answered if confidence is high, otherwise it queues for human review.',
+          parameters: [
+            {
+              name: 'Idempotency-Key',
+              in: 'header',
+              required: false,
+              schema: { type: 'string', maxLength: 200 },
+              description:
+                "Retrying with the same key returns the original ticket instead of opening a duplicate. Equivalent to the request body's idempotencyKey field — this header takes precedence when both are sent.",
+            },
+          ],
           requestBody: {
             required: true,
             content: {
@@ -216,13 +247,14 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           responses: {
             '201': {
               description: 'Ticket created (or the original ticket, if idempotencyKey matched a prior call)',
+              headers: rateLimitHeaders,
               content: {
                 'application/json': {
                   schema: { type: 'object', properties: { ticket_id: { type: 'integer' }, duplicate: { type: 'boolean' } } },
                 },
               },
             },
-            '400': { description: 'Missing/invalid content', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+            '400': { description: 'Missing/invalid content', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
           },
@@ -246,6 +278,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           responses: {
             '200': {
               description: 'Generated answer with confidence score',
+              headers: rateLimitHeaders,
               content: {
                 'application/json': {
                   schema: {
@@ -260,10 +293,10 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
                 },
               },
             },
-            '400': { description: 'Missing/invalid question', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+            '400': { description: 'Missing/invalid question', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
-            '429': { description: 'Rate limit exceeded, monthly deflection limit reached, or monthly call limit reached — see `error.code`', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+            '429': { description: 'Rate limit exceeded, monthly deflection limit reached, or monthly call limit reached — see `error.code`', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           },
         },
       },

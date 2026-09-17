@@ -78,13 +78,20 @@ export class AgentClient {
     return this.request("GET", `/api/agent/tickets${qs ? `?${qs}` : ""}`);
   }
 
-  /** POST /api/agent/tickets — requires the `tickets:write` scope. */
+  /**
+   * POST /api/agent/tickets — requires the `tickets:write` scope.
+   * `idempotencyKey`, when given, is sent as the standard `Idempotency-Key`
+   * header (what most HTTP clients/SDKs attach automatically) rather than a
+   * body field — the server accepts either, but the header is what it
+   * prefers when both are present.
+   */
   createTicket(params: CreateTicketParams): Promise<Ticket> {
-    return this.request("POST", "/api/agent/tickets", {
-      content: params.content,
-      authorName: params.authorName,
-      idempotencyKey: params.idempotencyKey,
-    });
+    return this.request(
+      "POST",
+      "/api/agent/tickets",
+      { content: params.content, authorName: params.authorName },
+      params.idempotencyKey ? { "Idempotency-Key": params.idempotencyKey } : undefined
+    );
   }
 
   /** POST /api/agent/answers — requires the `answers:write` scope. */
@@ -92,12 +99,18 @@ export class AgentClient {
     return this.request("POST", "/api/agent/answers", { question: params.question });
   }
 
-  private async request<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+  private async request<T>(
+    method: "GET" | "POST",
+    path: string,
+    body?: unknown,
+    extraHeaders?: Record<string, string>
+  ): Promise<T> {
     const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         ...(body ? { "Content-Type": "application/json" } : {}),
+        ...extraHeaders,
       },
       body: body ? JSON.stringify(body) : undefined,
     });
