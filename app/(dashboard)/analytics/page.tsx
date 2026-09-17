@@ -63,13 +63,13 @@ export default async function AnalyticsPage() {
 
       {/* Hero ROI */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="relative overflow-hidden rounded-2xl border border-slate-700 bg-[#252525] p-5 text-white shadow-[0_20px_50px_-28px_rgba(15,23,42,0.3)]">
+        <div className="relative overflow-hidden rounded-2xl border border-[#375875] bg-[#082e50] p-5 text-white shadow-[0_20px_50px_-28px_rgba(15,23,42,0.3)]">
           <div className="absolute -right-10 -top-16 h-36 w-36 rounded-full bg-blue-400/10 blur-2xl" />
           <p className="relative text-xs font-medium uppercase tracking-wide text-blue-200">Staff time saved</p>
           <p className="relative mt-1 text-3xl font-bold text-white">{hours(savings.hoursSaved)}</p>
           <p className="relative mt-1 text-xs text-blue-100/80">≈ {money(savings.dollarsSaved)} at {money(savings.hourlyRate)}/hr</p>
         </div>
-        <div className="rounded-2xl border border-blue-100 bg-[linear-gradient(145deg,#ffffff_20%,#eff6ff_100%)] p-5">
+        <div className="rounded-2xl border border-[#c4dfe2] bg-[#dceff0] p-5">
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Deflection rate</p>
           <p className="mt-1 text-3xl font-bold text-gray-900">{pct(rate)}</p>
           <p className="text-xs text-gray-500 mt-1">{stats.deflected} of {stats.answered} answered auto-resolved</p>

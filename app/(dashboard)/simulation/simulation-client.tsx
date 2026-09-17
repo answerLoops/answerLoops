@@ -164,7 +164,7 @@ export default function SimulationClient({ configuredProvider, configuredModel }
       </div>
 
       {/* Config */}
-      <div className="relative overflow-hidden rounded-2xl border border-slate-700 bg-[#252525] p-5 text-white shadow-[0_24px_65px_-36px_rgba(15,23,42,0.3)] sm:p-6">
+      <div className="relative overflow-hidden rounded-2xl border dashboard-dark-panel border-[#375875] bg-[#082e50] p-5 text-white shadow-[0_24px_65px_-36px_rgba(15,23,42,0.3)] sm:p-6">
         <div className="pointer-events-none absolute -right-12 -top-24 h-52 w-52 rounded-full bg-blue-400/10 blur-3xl" />
         <h2 className="relative text-xs font-semibold uppercase tracking-[0.16em] text-blue-200">Simulation controls</h2>
         <div className="relative mt-5 grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -215,7 +215,7 @@ export default function SimulationClient({ configuredProvider, configuredModel }
         <button
           onClick={run}
           disabled={running}
-          className="relative mt-5 rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-950/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          className="relative mt-5 rounded-lg bg-[#dceff0] px-5 py-2.5 text-sm font-semibold text-[#082e50] shadow-lg shadow-blue-950/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {running ? 'Running simulation…' : 'Run simulation'}
         </button>
@@ -229,7 +229,7 @@ export default function SimulationClient({ configuredProvider, configuredModel }
 
       {/* Live progress */}
       {(running || (progress.length > 0 && !result)) && (
-        <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+        <div className="dashboard-dark-panel bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
           <div className="px-5 py-3 border-b border-gray-800 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-300">
               {running ? 'Running…' : 'Complete'}
@@ -313,7 +313,7 @@ export default function SimulationClient({ configuredProvider, configuredModel }
               { label: 'Avg confidence', value: pct(result.summary.avgConfidence) },
               { label: 'Avg time', value: `${(result.summary.avgDurationMs / 1000).toFixed(1)}s` },
             ].map(({ label, value }) => (
-              <div key={label} className="bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
+              <div key={label} className="dashboard-dark-panel bg-gray-900 border border-gray-800 rounded-xl p-4 text-center">
                 <div className="text-xl font-bold text-white">{value}</div>
                 <div className="text-xs text-gray-400 mt-1">{label}</div>
               </div>
@@ -330,14 +330,14 @@ export default function SimulationClient({ configuredProvider, configuredModel }
               ? `This model/threshold combo would deflect ${pct(Math.abs(delta))} fewer tickets than production.`
               : 'Deflect rate matches production exactly.'
             return (
-              <div className={`bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm ${color}`}>
+              <div className={`dashboard-dark-panel bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm ${color}`}>
                 {label}
               </div>
             )
           })()}
 
           {/* Per-ticket results */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+          <div className="dashboard-dark-panel bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
             <div className="px-5 py-3 border-b border-gray-800">
               <h2 className="text-sm font-semibold text-gray-300">Per-ticket results</h2>
             </div>

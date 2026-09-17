@@ -36,30 +36,30 @@
   --radius-xl: var(--radius-xl);
 
   /* answerLoops brand blue — Brand Style Guide §2 */
-  --color-brand-50:  #eff6ff;
-  --color-brand-100: #dbeafe;
-  --color-brand-200: #bfdbfe;
-  --color-brand-300: #93c5fd;
-  --color-brand-400: #60a5fa;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --color-brand-800: #1e40af;
-  --color-brand-900: #1e3a8a;
-  --color-brand-950: #172554;
+  --color-brand-50:  var(--brand-50, #eff6ff);
+  --color-brand-100: var(--brand-100, #dbeafe);
+  --color-brand-200: var(--brand-200, #bfdbfe);
+  --color-brand-300: var(--brand-300, #93c5fd);
+  --color-brand-400: var(--brand-400, #60a5fa);
+  --color-brand-500: var(--brand-500, #3b82f6);
+  --color-brand-600: var(--brand-600, #2563eb);
+  --color-brand-700: var(--brand-700, #1d4ed8);
+  --color-brand-800: var(--brand-800, #1e40af);
+  --color-brand-900: var(--brand-900, #1e3a8a);
+  --color-brand-950: var(--brand-950, #172554);
 
   /* Charcoal neutrals (aligned to gray scale for dashboards) */
-  --color-ink-50:  #f9fafb;
-  --color-ink-100: #f3f4f6;
-  --color-ink-200: #e5e7eb;
-  --color-ink-300: #d1d5db;
-  --color-ink-400: #9ca3af;
-  --color-ink-500: #6b7280;
-  --color-ink-600: #4b5563;
-  --color-ink-700: #374151;
-  --color-ink-800: #1f2937;
-  --color-ink-900: #111827;
-  --color-ink-950: #030712;
+  --color-ink-50:  var(--ink-50, #f9fafb);
+  --color-ink-100: var(--ink-100, #f3f4f6);
+  --color-ink-200: var(--ink-200, #e5e7eb);
+  --color-ink-300: var(--ink-300, #d1d5db);
+  --color-ink-400: var(--ink-400, #9ca3af);
+  --color-ink-500: var(--ink-500, #6b7280);
+  --color-ink-600: var(--ink-600, #4b5563);
+  --color-ink-700: var(--ink-700, #374151);
+  --color-ink-800: var(--ink-800, #1f2937);
+  --color-ink-900: var(--ink-900, #111827);
+  --color-ink-950: var(--ink-950, #030712);
 }
 
 @layer base {

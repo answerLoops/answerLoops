@@ -1,0 +1,148 @@
+/* Presentation only: shared by the dashboard shell and its portalled navigation. */
+.dashboard-theme {
+  --background: #e9eef3;
+  --foreground: #082e50;
+  --surface: #fff;
+  --surface-muted: #f4f7f9;
+  --border: #d9e2e9;
+  --border-strong: #b8c7d3;
+  --muted: #5d6b7c;
+  --ring: #168fa3;
+  --brand-50: #eef7f7;
+  --brand-100: #dceff0;
+  --brand-200: #b9dfe3;
+  --brand-300: #8fc5ce;
+  --brand-400: #469aaa;
+  --brand-500: #168396;
+  --brand-600: #082e50;
+  --brand-700: #184566;
+  --brand-800: #103954;
+  --brand-900: #082e50;
+  --brand-950: #05243e;
+  --ink-50: #f5f7fa;
+  --ink-100: #edf1f5;
+  --ink-200: #d9e2e9;
+  --ink-300: #b8c7d3;
+  --ink-400: #67798c;
+  --ink-500: #5d6b7c;
+  --ink-600: #4c6074;
+  --ink-700: #344f68;
+  --ink-800: #244662;
+  --ink-900: #123956;
+  --ink-950: #082e50;
+  --color-blue-50: var(--brand-50);
+  --color-blue-100: var(--brand-100);
+  --color-blue-200: var(--brand-200);
+  --color-blue-300: var(--brand-300);
+  --color-blue-400: var(--brand-400);
+  --color-blue-500: var(--brand-500);
+  --color-blue-600: var(--brand-600);
+  --color-blue-700: var(--brand-700);
+  --color-blue-800: var(--brand-800);
+  --color-blue-900: var(--brand-900);
+  --color-blue-950: var(--brand-950);
+  --color-slate-50: var(--ink-50);
+  --color-slate-100: var(--ink-100);
+  --color-slate-200: var(--ink-200);
+  --color-slate-300: var(--ink-300);
+  --color-slate-400: var(--ink-400);
+  --color-slate-500: var(--ink-500);
+  --color-slate-600: var(--ink-600);
+  --color-slate-700: var(--ink-700);
+  --color-slate-800: var(--ink-800);
+  --color-slate-900: var(--ink-900);
+  --color-slate-950: var(--ink-950);
+  --color-gray-50: var(--ink-50);
+  --color-gray-100: var(--ink-100);
+  --color-gray-200: var(--ink-200);
+  --color-gray-300: var(--ink-300);
+  --color-gray-400: var(--ink-400);
+  --color-gray-500: var(--ink-500);
+  --color-gray-600: var(--ink-600);
+  --color-gray-700: var(--ink-700);
+  --color-gray-800: var(--ink-800);
+  --color-gray-900: var(--ink-900);
+  --color-gray-950: var(--ink-950);
+  color: var(--foreground);
+  accent-color: var(--ring);
+}
+.dashboard-shell .dashboard-grid { background: none; }
+.dashboard-sidebar { background: #f8fafb; }
+.dashboard-sidebar > div:first-child { border-top: 4px solid #b9dfe3; }
+.dashboard-navigation a { min-height: 42px; border-radius: 8px; }
+.dashboard-navigation a[aria-current='page'] { box-shadow: inset 3px 0 #168fa3; }
+.dashboard-navigation > div > div > p { color: #5d6b7c; letter-spacing: 0.12em; }
+.dashboard-topbar { box-shadow: none; }
+.dashboard-content { background: #e9eef3; }
+.dashboard-content > .relative { padding-top: clamp(1.5rem, 3vw, 2.5rem); }
+.dashboard-page { margin-inline: auto; }
+.dashboard-page h1 { color: #082e50; font-weight: 500; line-height: 1.2; }
+.dashboard-page h2 { letter-spacing: -0.015em; }
+.dashboard-page > :first-child { margin-bottom: 1.75rem; }
+.dashboard-page :is(.rounded-lg, .rounded-xl, .rounded-2xl)[class*='border'][class*='bg-white'],
+.dashboard-page :is(.rounded-lg, .rounded-xl, .rounded-2xl)[class*='border'][class*='bg-surface'] {
+  background-color: #fff;
+  border-color: #d9e2e9;
+  border-radius: 12px;
+  box-shadow: 0 2px 5px #082e5004;
+}
+.dashboard-page :is(button, a)[class*='shadow'] { box-shadow: none; }
+.dashboard-page :is(button, a):focus-visible,
+.dashboard-navigation a:focus-visible {
+  outline: 2px solid #168fa3;
+  outline-offset: 3px;
+}
+.dashboard-page input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+.dashboard-page select,
+.dashboard-page textarea {
+  border-color: #b8c7d3;
+  border-radius: 8px;
+  box-shadow: none;
+  min-height: 2.625rem;
+}
+.dashboard-page input:not([type='checkbox']):not([type='radio']):focus,
+.dashboard-page select:focus,
+.dashboard-page textarea:focus {
+  border-color: #168fa3;
+  box-shadow: 0 0 0 3px #168fa31f;
+  outline: 2px solid transparent;
+}
+.dashboard-page input::placeholder,
+.dashboard-page textarea::placeholder { color: #67798c; opacity: 1; }
+.dashboard-page table { font-size: 0.8125rem; }
+.dashboard-page table thead { background: #f0f4f7; }
+.dashboard-page table th { color: #4c6074; font-weight: 600; }
+.dashboard-page table :is(th, td) { padding-block: 1rem; border-color: #e3e9ee; }
+.dashboard-page table tbody tr:hover { background: #eef7f7; }
+.dashboard-tabs { scrollbar-width: thin; scrollbar-color: #b8c7d3 transparent; }
+.dashboard-tabs button { min-height: 42px; border-radius: 8px; }
+.dashboard-tabs button:focus-visible { outline-offset: -2px; }
+.dashboard-stats > div { border-radius: 12px; transform: none; box-shadow: none; }
+.dashboard-stats .landing-grid { display: none; }
+.dashboard-stats > div:nth-child(2) p { color: #082e50; }
+.dashboard-stats > div:nth-child(2) .text-cyan-200 { color: #235d70; background: #ffffff80; border-color: #b9dfe3; }
+.dashboard-stats > div:first-child .text-white\/65 { color: #d0deeb; }
+.dashboard-stats .bg-cyan-300 { background: #69b6c2; }
+.dashboard-stats > div:nth-child(2) .bg-white\/10 { background: #b9dfe3; }
+.dashboard-dark-panel { color: #f4f8fc; }
+.dashboard-dark-panel.text-green-400 { color: var(--color-green-400); }
+.dashboard-dark-panel.text-red-400 { color: var(--color-red-400); }
+.dashboard-dark-panel.text-gray-400,
+.dashboard-dark-panel :is(label, .text-gray-300, .text-gray-400) { color: #d0deeb; }
+.dashboard-dark-panel :is(.text-gray-500, .text-gray-600) { color: #b8c7d3; }
+.dashboard-dark-panel .text-brand-400 { color: #8fc5ce; }
+.dashboard-page .dashboard-dark-panel table thead { background: #123c5d; }
+.dashboard-page .dashboard-dark-panel table th { color: #d0deeb; }
+.dashboard-page .dashboard-dark-panel table :is(th, td) { border-color: #375875; }
+.dashboard-page .dashboard-dark-panel table tbody tr:hover { background: #244662; }
+.dashboard-dark-panel input:not([type='range']),
+.dashboard-dark-panel select { background: #123c5d; border-color: #52748e; color: #fff; }
+.dashboard-dark-panel .text-blue-200 { color: #b9dfe3; }
+@media (max-width: 767px) {
+  .dashboard-page > :first-child { margin-bottom: 1.25rem; }
+  .dashboard-tabs { margin-inline: 0; }
+  .dashboard-stats > div { padding: 1rem 0.875rem; }
+  .dashboard-stats > div > div:first-of-type { gap: 0.375rem; }
+  .dashboard-stats > div > div:first-of-type > div { flex-shrink: 0; }
+}
+.dashboard-page [class~='bg-[#252525]'] { background-color: #082e50; border-color: #375875; }
