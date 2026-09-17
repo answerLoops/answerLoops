@@ -43,12 +43,24 @@ const IP_RATE_LIMIT_WINDOW_MS = 60_000
 // envelope — 64KB is generous headroom.
 export const MAX_BODY_BYTES = 64 * 1024
 
+/**
+ * `code` distinguishes the three independent ceilings this surface can 429
+ * on — a client can only back off correctly (retry the request vs. wait for
+ * the billing cycle vs. upgrade the plan) if it knows which one it hit,
+ * and the message string alone isn't a stable contract to match on.
+ */
+export type AgentErrorCode = 'rate_limited' | 'deflection_limit_reached' | 'call_limit_reached'
+
 export interface AgentErrorBody {
-  error: { message: string }
+  error: { message: string; code?: AgentErrorCode }
 }
 
-export function agentError(status: number, message: string): NextResponse<AgentErrorBody> {
-  return NextResponse.json({ error: { message } }, { status })
+export function agentError(
+  status: number,
+  message: string,
+  code?: AgentErrorCode
+): NextResponse<AgentErrorBody> {
+  return NextResponse.json({ error: { message, code } }, { status })
 }
 
 /**
@@ -60,7 +72,7 @@ export function agentError(status: number, message: string): NextResponse<AgentE
 function rateLimitedResponse(retryAfterMs: number): NextResponse<AgentErrorBody> {
   const seconds = Math.max(1, Math.ceil(retryAfterMs / 1000))
   return NextResponse.json(
-    { error: { message: 'Rate limit exceeded' } },
+    { error: { message: 'Rate limit exceeded', code: 'rate_limited' } },
     { status: 429, headers: { 'Retry-After': String(seconds) } }
   )
 }

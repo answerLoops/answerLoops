@@ -20,11 +20,11 @@ export async function POST(req: NextRequest) {
   // "come back later or upgrade" semantics better than a flat 400, and lets a
   // client's retry logic treat them the way it already treats rate limiting.
   if (!result.ok) {
-    const quotaError =
-      result.error.startsWith('Monthly deflection limit reached') ||
-      result.error.startsWith('Monthly generate_answer call limit reached')
-    const status = quotaError ? 429 : 400
-    return agentError(status, result.error)
+    const deflectionLimit = result.error.startsWith('Monthly deflection limit reached')
+    const callLimit = result.error.startsWith('Monthly generate_answer call limit reached')
+    if (deflectionLimit) return agentError(429, result.error, 'deflection_limit_reached')
+    if (callLimit) return agentError(429, result.error, 'call_limit_reached')
+    return agentError(400, result.error)
   }
   return NextResponse.json(result.data)
 }
