@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     title: 'answerLoops — Answers from your documentation',
     description:
       'Answers from your documentation, separate AI review, and automatic replies you control. Hosted or self-hosted.',
-    // Social card image comes from app/opengraph-image.tsx (1200×630) via the
+    // Social card image comes from app/opengraph-image.png (2400×1260) via the
     // Next file convention — it fills both openGraph and twitter automatically.
   },
   twitter: {
@@ -34,13 +34,8 @@ export const metadata: Metadata = {
     description:
       'Answers from your documentation, separate AI review, and automatic replies you control. Hosted or self-hosted.',
   },
-  icons: {
-    icon: [
-      { url: '/favicon.ico', sizes: '32x32', type: 'image/x-icon' },
-      { url: '/icon.png', sizes: '512x512', type: 'image/png' },
-    ],
-    apple: { url: '/icon.png', sizes: '512x512', type: 'image/png' },
-  },
+  // Icons are generated from app/favicon.ico, app/icon.png, and app/apple-icon.png.
+  // File-based metadata keeps their dimensions and cache versions in sync.
 }
 
 export default function RootLayout({

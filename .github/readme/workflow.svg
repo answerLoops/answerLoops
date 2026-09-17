@@ -2,76 +2,76 @@
   <title id="title">answerLoops: from first setup to reusable answers</title>
   <desc id="desc">The setup skill helps launch a workspace. The operation skill connects an agent through MCP. Community tickets enter triage, drafting, and confidence review. Agents can search published knowledge, read FAQs and tickets, generate standalone answers, or create tickets for the shared workflow. Teams promote useful resolutions into published knowledge.</desc>
   <defs>
-    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#64748b"/></marker>
-    <marker id="blueArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#2563eb"/></marker>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#5d6b7c"/></marker>
+    <marker id="blueArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#168396"/></marker>
   </defs>
-  <rect x="1" y="1" width="1098" height="1118" rx="24" fill="#fff" stroke="#dedede"/>
+  <rect x="1" y="1" width="1098" height="1118" rx="24" fill="#f5f7fa" stroke="#d9e2e9"/>
   <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
-    <text x="48" y="53" fill="#2563eb" font-size="13" font-weight="700" letter-spacing="2">HOW ANSWERLOOPS WORKS</text>
-    <text x="48" y="99" fill="#171717" font-size="32" font-weight="700">Your knowledge. Your community. Your agent.</text>
+    <text x="48" y="53" fill="#168396" font-size="13" font-weight="700" letter-spacing="2">HOW ANSWERLOOPS WORKS</text>
+    <text x="48" y="99" fill="#082e50" font-size="32" font-weight="700">Your knowledge. Your community. Your agent.</text>
     <g transform="translate(48 130)">
-      <rect width="1004" height="112" rx="16" fill="#eff6ff" stroke="#bfdbfe"/>
-      <text x="24" y="33" fill="#1d4ed8" font-size="13" font-weight="700" letter-spacing="1">START WITH AGENT SKILLS</text>
-      <text x="24" y="63" fill="#171717" font-size="19" font-weight="650">Setup skill → launch your instance</text>
-      <text x="24" y="88" fill="#475569" font-size="15">Prerequisites, configuration, Docker, health check</text>
-      <line x1="490" y1="24" x2="490" y2="88" stroke="#bfdbfe"/>
-      <text x="522" y="63" fill="#171717" font-size="19" font-weight="650">Operate skill → connect your agent</text>
-      <text x="522" y="88" fill="#475569" font-size="15">A running workspace, an API key, and MCP</text>
+      <rect width="1004" height="112" rx="16" fill="#eef7f7" stroke="#b9dfe3"/>
+      <text x="24" y="33" fill="#315e81" font-size="13" font-weight="700" letter-spacing="1">START WITH AGENT SKILLS</text>
+      <text x="24" y="63" fill="#082e50" font-size="19" font-weight="650">Setup skill → launch your instance</text>
+      <text x="24" y="88" fill="#4c6074" font-size="15">Prerequisites, configuration, Docker, health check</text>
+      <line x1="490" y1="24" x2="490" y2="88" stroke="#b9dfe3"/>
+      <text x="522" y="63" fill="#082e50" font-size="19" font-weight="650">Operate skill → connect your agent</text>
+      <text x="522" y="88" fill="#4c6074" font-size="15">A running workspace, an API key, and MCP</text>
     </g>
     <g transform="translate(48 282)">
-      <rect width="474" height="134" rx="16" fill="#171717"/>
-      <text x="24" y="34" fill="#93c5fd" font-size="13" font-weight="700" letter-spacing="1">COMMUNITY CONVERSATIONS</text>
+      <rect width="474" height="134" rx="16" fill="#082e50"/>
+      <text x="24" y="34" fill="#a6cbdc" font-size="13" font-weight="700" letter-spacing="1">COMMUNITY CONVERSATIONS</text>
       <text x="24" y="67" fill="#fff" font-size="23" font-weight="650">Meet users where they ask</text>
-      <text x="24" y="96" fill="#d1d5db" font-size="16">Discord · Slack · GitHub · forums</text>
-      <text x="24" y="119" fill="#d1d5db" font-size="16">Email · Telegram · Google Chat</text>
+      <text x="24" y="96" fill="#d0deeb" font-size="16">Discord · Slack · GitHub · forums</text>
+      <text x="24" y="119" fill="#d0deeb" font-size="16">Email · Telegram · Google Chat</text>
     </g>
     <g transform="translate(578 282)">
-      <rect width="474" height="134" rx="16" fill="#171717"/>
-      <text x="24" y="34" fill="#93c5fd" font-size="13" font-weight="700" letter-spacing="1">YOUR AGENT AND APPLICATIONS</text>
+      <rect width="474" height="134" rx="16" fill="#082e50"/>
+      <text x="24" y="34" fill="#a6cbdc" font-size="13" font-weight="700" letter-spacing="1">YOUR AGENT AND APPLICATIONS</text>
       <text x="24" y="67" fill="#fff" font-size="23" font-weight="650">Put your agent to work</text>
-      <text x="24" y="96" fill="#d1d5db" font-size="16">MCP server · REST API · TypeScript SDK</text>
-      <text x="24" y="119" fill="#d1d5db" font-size="16">Search · FAQ · tickets · answers</text>
+      <text x="24" y="96" fill="#d0deeb" font-size="16">MCP server · REST API · TypeScript SDK</text>
+      <text x="24" y="119" fill="#d0deeb" font-size="16">Search · FAQ · tickets · answers</text>
     </g>
-    <g fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)">
+    <g fill="none" stroke="#5d6b7c" stroke-width="2" marker-end="url(#arrow)">
       <path d="M285 416V472"/>
       <path d="M815 416V472"/>
     </g>
     <g transform="translate(48 478)">
-      <rect width="474" height="182" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
-      <text x="24" y="37" fill="#171717" font-size="22" font-weight="650">Shared ticket workflow</text>
-      <text x="24" y="72" fill="#475569" font-size="16">Triage → retrieve → draft → review</text>
-      <text x="24" y="105" fill="#475569" font-size="16">Eligible channel reply: auto-post when enabled</text>
-      <text x="24" y="131" fill="#475569" font-size="16">Other questions: team review and follow-up</text>
-      <text x="24" y="159" fill="#1d4ed8" font-size="15" font-weight="600">Bug reports and feature requests stay human-led.</text>
+      <rect width="474" height="182" rx="16" fill="#faf4e8" stroke="#e5dac6"/>
+      <text x="24" y="37" fill="#082e50" font-size="22" font-weight="650">Shared ticket workflow</text>
+      <text x="24" y="72" fill="#4c6074" font-size="16">Triage → retrieve → draft → review</text>
+      <text x="24" y="105" fill="#4c6074" font-size="16">Eligible channel reply: auto-post when enabled</text>
+      <text x="24" y="131" fill="#4c6074" font-size="16">Other questions: team review and follow-up</text>
+      <text x="24" y="159" fill="#315e81" font-size="15" font-weight="600">Bug reports and feature requests stay human-led.</text>
     </g>
     <g transform="translate(578 478)">
-      <rect width="474" height="182" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
-      <text x="24" y="37" fill="#171717" font-size="22" font-weight="650">Answers on demand</text>
-      <text x="24" y="72" fill="#475569" font-size="16">Search knowledge and read the latest FAQ</text>
-      <text x="24" y="105" fill="#475569" font-size="16">Generate an answer with a confidence score</text>
-      <text x="24" y="131" fill="#475569" font-size="16">Read tickets or create one for team review</text>
-      <text x="24" y="159" fill="#1d4ed8" font-size="15" font-weight="600">Standalone answers do not open a ticket.</text>
+      <rect width="474" height="182" rx="16" fill="#faf4e8" stroke="#e5dac6"/>
+      <text x="24" y="37" fill="#082e50" font-size="22" font-weight="650">Answers on demand</text>
+      <text x="24" y="72" fill="#4c6074" font-size="16">Search knowledge and read the latest FAQ</text>
+      <text x="24" y="105" fill="#4c6074" font-size="16">Generate an answer with a confidence score</text>
+      <text x="24" y="131" fill="#4c6074" font-size="16">Read tickets or create one for team review</text>
+      <text x="24" y="159" fill="#315e81" font-size="15" font-weight="600">Standalone answers do not open a ticket.</text>
     </g>
-    <path d="M602 660V702H285V668" fill="none" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M602 660V702H285V668" fill="none" stroke="#5d6b7c" stroke-width="2" marker-end="url(#arrow)"/>
     <rect x="358" y="688" width="164" height="27" rx="8" fill="#fff"/>
-    <text x="440" y="707" fill="#475569" font-size="14" text-anchor="middle">create_ticket</text>
+    <text x="440" y="707" fill="#4c6074" font-size="14" text-anchor="middle">create_ticket</text>
     <g transform="translate(48 768)">
-      <rect width="1004" height="138" rx="16" fill="#eff6ff" stroke="#bfdbfe"/>
-      <text x="24" y="36" fill="#1d4ed8" font-size="13" font-weight="700" letter-spacing="1">KNOWLEDGE FOR FUTURE ANSWERS</text>
-      <text x="24" y="71" fill="#171717" font-size="23" font-weight="650">Publish what you know. Reuse what you solve.</text>
-      <text x="24" y="102" fill="#475569" font-size="16">Docs · uploaded files · connected sources · articles promoted from resolved tickets</text>
-      <text x="24" y="125" fill="#475569" font-size="15">Published knowledge also powers answers in the website chat widget.</text>
+      <rect width="1004" height="138" rx="16" fill="#eef7f7" stroke="#b9dfe3"/>
+      <text x="24" y="36" fill="#315e81" font-size="13" font-weight="700" letter-spacing="1">KNOWLEDGE FOR FUTURE ANSWERS</text>
+      <text x="24" y="71" fill="#082e50" font-size="23" font-weight="650">Publish what you know. Reuse what you solve.</text>
+      <text x="24" y="102" fill="#4c6074" font-size="16">Docs · uploaded files · connected sources · articles promoted from resolved tickets</text>
+      <text x="24" y="125" fill="#4c6074" font-size="15">Published knowledge also powers answers in the website chat widget.</text>
     </g>
-    <g fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#blueArrow)">
+    <g fill="none" stroke="#168396" stroke-width="2" marker-end="url(#blueArrow)">
       <path d="M72 768V668"/>
       <path d="M1028 768V668"/>
     </g>
     <g transform="translate(48 960)">
-      <rect width="1004" height="112" rx="16" fill="#171717"/>
+      <rect width="1004" height="112" rx="16" fill="#082e50"/>
       <text x="24" y="40" fill="#fff" font-size="22" font-weight="650">Make the next answer easier</text>
-      <text x="24" y="72" fill="#d1d5db" font-size="16">Resolve tickets → promote useful answers → improve published knowledge</text>
-      <text x="24" y="96" fill="#93c5fd" font-size="15">Use knowledge gaps and FAQ digests to decide what to document next.</text>
+      <text x="24" y="72" fill="#d0deeb" font-size="16">Resolve tickets → promote useful answers → improve published knowledge</text>
+      <text x="24" y="96" fill="#a6cbdc" font-size="15">Use knowledge gaps and FAQ digests to decide what to document next.</text>
     </g>
-    <path d="M550 960V914" fill="none" stroke="#2563eb" stroke-width="2" marker-end="url(#blueArrow)"/>
+    <path d="M550 960V914" fill="none" stroke="#168396" stroke-width="2" marker-end="url(#blueArrow)"/>
   </g>
 </svg>
