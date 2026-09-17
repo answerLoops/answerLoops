@@ -136,13 +136,14 @@ describe('app/api/agent/faq/route: GET', () => {
 describe('app/api/agent/tickets/route: GET list + POST create', () => {
   const src = () => readSrc('app/api/agent/tickets/route.ts')
 
-  it('GET reads status/priority/category/limit from query params and maps validation errors to 400', () => {
+  it('GET reads status/priority/category/limit/cursor from query params and maps validation errors to 400', () => {
     const s = src()
     const getStart = s.indexOf('export async function GET')
     const getBody = s.slice(getStart, s.indexOf('export async function POST'))
     expect(getBody).toContain("searchParams.get('status')")
     expect(getBody).toContain("searchParams.get('priority')")
     expect(getBody).toContain("searchParams.get('category')")
+    expect(getBody).toContain("searchParams.get('cursor')")
     expect(getBody).toContain('agentError(400, result.error)')
   })
 

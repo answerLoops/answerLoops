@@ -202,15 +202,17 @@ describe('lib/agent/core: shared business logic behind both the MCP server and t
   it('getTicketsCore passes limit down to the query layer instead of pulling the full org table into memory', () => {
     const s = src()
     const fnStart = s.indexOf('export async function getTicketsCore')
-    const fnBody = s.slice(fnStart, fnStart + 1000)
-    expect(fnBody).toMatch(/getTickets\(\s*\{[\s\S]*?\},\s*orgId,\s*limit\s*\)/)
-    expect(fnBody).not.toContain('.slice(0, limit)')
+    const fnBody = s.slice(fnStart, fnStart + 1400)
+    // Fetches limit + 1 (one row past the page) so it can tell whether
+    // another page follows without a second round trip — still a DB-level
+    // limit, not an unbounded fetch of the org's tickets.
+    expect(fnBody).toMatch(/getTickets\(\s*\{[\s\S]*?\},\s*orgId,\s*limit \+ 1,\s*cursor\s*\)/)
   })
 
   it('getTicketsCore validates enum filters instead of casting caller input straight into the query', () => {
     const s = src()
     const fnStart = s.indexOf('export async function getTicketsCore')
-    const fnBody = s.slice(fnStart, fnStart + 1000)
+    const fnBody = s.slice(fnStart, fnStart + 1400)
     expect(fnBody).toContain('parseEnumArg<TicketStatus>(args.status, TICKET_STATUSES)')
     expect(fnBody).toContain('parseEnumArg<Priority>(args.priority, PRIORITIES)')
     expect(fnBody).toContain('parseEnumArg<TicketCategory>(args.category, CATEGORIES)')
@@ -398,7 +400,7 @@ describe('lib/db/queries/tickets: getTickets supports a DB-level limit', () => {
   it('accepts an optional limit param and applies it with $dynamic().limit(), not a client-side slice', () => {
     const src = readSrc('lib/db/queries/tickets.ts')
     const fnStart = src.indexOf('export async function getTickets')
-    const fnBody = src.slice(fnStart, fnStart + 600)
+    const fnBody = src.slice(fnStart, fnStart + 1400)
     expect(fnBody).toContain('limit?: number')
     expect(fnBody).toContain('.$dynamic()')
     expect(fnBody).toMatch(/if \(limit\) query = query\.limit\(limit\)/)
