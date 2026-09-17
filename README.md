@@ -6,25 +6,30 @@
 
 [![CI](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/security.yml?branch=main&label=security&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/security.yml)
-[![License](https://img.shields.io/github/license/answerLoops/answerLoops?style=flat-square&label=license&color=2563eb)](./LICENSE)
+[![License](https://img.shields.io/github/license/answerLoops/answerLoops?style=flat-square&label=license&color=082e50)](./LICENSE)
 [![npm](https://img.shields.io/npm/v/%40answerloops%2Fagent-sdk?style=flat-square&label=agent-sdk&logo=npm)](https://www.npmjs.com/package/@answerloops/agent-sdk)
 
 </div>
 
-# answerLoops — AI support for your community
+# answerLoops
+
+### Your knowledge. Your community. Your agents.
 
 answerLoops turns your documentation and resolved support questions into answers for your community. Answer repeat questions, bring your team in when human judgment is needed, and turn each resolution into knowledge for the next person.
 
 Connect your own AI agent through skills, MCP, the REST API, or the TypeScript SDK. Use the hosted app or self-host with your preferred AI provider.
 
-[**Try the hosted app →**](https://app.answerloops.com) · [Documentation](https://answerloops.com/docs) · [Get started](#get-started)
+[**Try the hosted app →**](https://app.answerloops.com) · [Documentation](https://answerloops.com/docs) · [Get started](#get-started) · [For developers](#for-developers)
 
-## Why answerLoops
+<a id="why-answerloops"></a>
 
-- **Answer fewer repeat questions:** Ground answers in your docs, knowledge base, connected repositories, and resolved tickets.
-- **Keep your team focused:** Review drafts and escalations in one inbox; keep bug reports and feature requests human-led.
-- **Make every resolution count:** Turn solved tickets into articles and use knowledge gaps to decide what to document next.
-- **Put your agent to work:** Search knowledge, generate answers, summarize tickets, and open a ticket when someone needs help.
+## Built around the answer loop
+
+| Answer | Review | Improve |
+| --- | --- | --- |
+| Ground repeat answers in your docs, connected sources, and resolved tickets. | Keep drafts and escalations in one inbox. Bug reports and feature requests stay human-led. | Turn useful resolutions into articles. Use knowledge gaps to decide what to document next. |
+
+Agents use the same knowledge: search, generate answers, summarize tickets, and open a ticket when someone needs help.
 
 <div align="center">
   <img src="./.github/readme/dashboard.png" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
@@ -32,11 +37,11 @@ Connect your own AI agent through skills, MCP, the REST API, or the TypeScript S
 
 ## Get started
 
-Choose your path:
-
-- **Hosted:** [Open answerLoops](https://app.answerloops.com), complete onboarding, and add your knowledge sources.
-- **With your agent:** Use the setup skill to self-host or the operation skill to connect an existing workspace. Expand the guide below.
-- **Self-hosted:** Run the CLI command below, or expand the manual Docker instructions.
+| Start with | Best for | First step |
+| --- | --- | --- |
+| **Hosted** | A managed workspace | [Open answerLoops](https://app.answerloops.com), complete onboarding, and add your knowledge. |
+| **Your agent** | Guided setup or an existing workspace | Use the setup and operation skills in the guide below. |
+| **Self-hosted** | Your own infrastructure | Run the CLI below, or expand the manual Docker guide. |
 
 The CLI requires Node.js, Git, and Docker with Compose. You'll also need a PostgreSQL connection, Google OAuth credentials, and AI provider settings. Follow the [configuration guide](https://answerloops.com/docs/quickstart-self-host) for these values.
 
@@ -142,13 +147,18 @@ To modify the code, use the build-from-source instructions under [For developers
 
 For the implementation, see the [shared ingestion pipeline](./lib/ingest/pipeline.ts), [agent operations](./lib/agent/core.ts), and [architecture guide](./ARCHITECTURE.md).
 
-## Integrations
+<a id="integrations"></a>
 
-- **Support channels:** Discord, Slack, Discourse, Circle, GitHub Issues and Discussions, Telegram, Google Chat, email, and embeddable web chat.
-- **Knowledge sources:** Website documentation, GitHub repositories, Notion, PDF, DOCX, Markdown, text, CSV, and resolved tickets.
-- **Support tools:** Unified inbox, AI drafts, priority and category triage, SLA tracking, human escalation, CSAT, analytics, knowledge gaps, and FAQ digests.
-- **AI providers:** OpenAI, Anthropic, Google Gemini, Groq, Mistral, Ollama, and OpenAI-compatible endpoints, including local models.
-- **Agent interfaces:** Setup and operation skills, MCP, REST, OpenAPI, and the TypeScript SDK.
+## Connect your workspace
+
+| Connect | Supported interfaces |
+| --- | --- |
+| **Community channels** | Discord, Slack, Discourse, Circle, GitHub Issues and Discussions, Telegram, Google Chat, email, and web chat |
+| **Knowledge** | Website documentation, GitHub, Notion, PDF, DOCX, Markdown, text, CSV, and resolved tickets |
+| **Agents** | Setup and operation skills, MCP, REST, OpenAPI, and the TypeScript SDK |
+| **AI providers** | OpenAI, Anthropic, Google Gemini, Groq, Mistral, Ollama, and OpenAI-compatible endpoints, including local models |
+
+The workspace includes a unified inbox, reviewed AI drafts, triage, SLA tracking, human escalation, CSAT, analytics, knowledge gaps, and FAQ digests.
 
 [Explore the integrations →](https://answerloops.com/docs/introduction)
 
