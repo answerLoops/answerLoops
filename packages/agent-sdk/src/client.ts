@@ -2,13 +2,14 @@ import type {
   AgentApiErrorBody,
   AgentApiErrorCode,
   CreateTicketParams,
+  CreateTicketResponse,
+  FaqResult,
   GenerateAnswerParams,
   GenerateAnswerResponse,
   GetTicketsParams,
   GetTicketsResponse,
   KbSearchResponse,
   SearchKbParams,
-  Ticket,
 } from "./types.js";
 
 export interface AgentClientOptions {
@@ -62,7 +63,7 @@ export class AgentClient {
   }
 
   /** GET /api/v1/agent/faq — requires the `faq:read` scope. */
-  getFaq(): Promise<unknown> {
+  getFaq(): Promise<FaqResult> {
     return this.request("GET", "/api/v1/agent/faq");
   }
 
@@ -85,7 +86,7 @@ export class AgentClient {
    * body field — the server accepts either, but the header is what it
    * prefers when both are present.
    */
-  createTicket(params: CreateTicketParams): Promise<Ticket> {
+  createTicket(params: CreateTicketParams): Promise<CreateTicketResponse> {
     return this.request(
       "POST",
       "/api/v1/agent/tickets",
