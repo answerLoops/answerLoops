@@ -3,7 +3,7 @@ import { generateAnswerCore } from '@/lib/agent/core'
 import { authenticateAgentRequest, readAgentJsonBody, agentError, withHeaders } from '@/lib/agent/http'
 
 /**
- * POST /api/agent/answers
+ * POST /api/v1/agent/answers
  * REST counterpart to the MCP generate_answer tool. Gated by the org's
  * monthly deflection limit before any LLM call runs.
  */

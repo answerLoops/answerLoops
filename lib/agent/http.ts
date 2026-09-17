@@ -9,7 +9,7 @@ import { orgRateLimitPerMinute } from '@/lib/billing/entitlements-server'
 import { hasScope, type ApiScope } from '@/lib/agent/scopes'
 
 /**
- * Auth + rate-limit gate shared by every /api/agent/* REST route. Mirrors
+ * Auth + rate-limit gate shared by every /api/v1/agent/* REST route. Mirrors
  * app/api/mcp/route.ts's posture exactly (same api_keys table, same Bearer
  * format, same generic "invalid or revoked" message so neither surface leaks
  * key validity as an oracle) but returns plain REST JSON errors instead of a
@@ -24,7 +24,7 @@ import { hasScope, type ApiScope } from '@/lib/agent/scopes'
  * Both buckets use the Postgres-backed `rateLimitShared`, matching MCP. They
  * previously used the in-process limiter, which meant a key throttled at
  * 60/min on /api/mcp got an independent, per-instance, restart-resettable
- * bucket just by calling /api/agent/* instead — the same key, the same
+ * bucket just by calling /api/v1/agent/* instead — the same key, the same
  * lib/agent/core.ts work, one door with a real ceiling and one without.
  */
 
@@ -101,7 +101,7 @@ export type AgentAuthResult =
   | { response: NextResponse<AgentErrorBody> }
 
 /**
- * Copies headers onto an existing response — every /api/agent/* route calls
+ * Copies headers onto an existing response — every /api/v1/agent/* route calls
  * this on its way out so a request that got past auth carries its
  * `RateLimit-*` headers on every response, success or business-logic error,
  * not just the one path that happened to build them.

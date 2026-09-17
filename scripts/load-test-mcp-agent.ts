@@ -1,5 +1,5 @@
 /**
- * Load test for /api/mcp and /api/agent/* — Roadmap pre-launch checklist
+ * Load test for /api/mcp and /api/v1/agent/* — Roadmap pre-launch checklist
  * item 1 ("Load test /api/mcp and /api/agent/* before committing to tiered
  * rate limits").
  *
@@ -182,7 +182,7 @@ async function main(): Promise<void> {
   async function hitAgent(apiKey: string): Promise<{ status: number | 'error'; latencyMs: number }> {
     const t0 = Date.now()
     try {
-      const res = await fetch(`${args.url}/api/agent/tickets?limit=1`, {
+      const res = await fetch(`${args.url}/api/v1/agent/tickets?limit=1`, {
         method: 'GET',
         headers: headers(apiKey),
       })

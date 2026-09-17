@@ -4,7 +4,7 @@ import path from 'node:path'
 import { transformSync } from 'esbuild'
 
 // Coverage for scripts/load-test-mcp-agent.ts (Roadmap pre-launch checklist
-// item 1: load test /api/mcp and /api/agent/* before committing to tiered
+// item 1: load test /api/mcp and /api/v1/agent/* before committing to tiered
 // rate limits).
 //
 // This script is a CLI load-test tool, not something to load-test itself: its

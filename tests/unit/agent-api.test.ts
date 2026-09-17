@@ -98,8 +98,8 @@ describe('lib/agent/http: shared REST auth/rate-limit gate', () => {
   })
 })
 
-describe('app/api/agent/kb/search/route: GET', () => {
-  const src = () => readSrc('app/api/agent/kb/search/route.ts')
+describe('app/api/v1/agent/kb/search/route: GET', () => {
+  const src = () => readSrc('app/api/v1/agent/kb/search/route.ts')
 
   it('authenticates before calling searchKbCore', () => {
     const s = src()
@@ -121,8 +121,8 @@ describe('app/api/agent/kb/search/route: GET', () => {
   })
 })
 
-describe('app/api/agent/faq/route: GET', () => {
-  const src = () => readSrc('app/api/agent/faq/route.ts')
+describe('app/api/v1/agent/faq/route: GET', () => {
+  const src = () => readSrc('app/api/v1/agent/faq/route.ts')
 
   it('authenticates before calling getFaqCore', () => {
     const s = src()
@@ -133,8 +133,8 @@ describe('app/api/agent/faq/route: GET', () => {
   })
 })
 
-describe('app/api/agent/tickets/route: GET list + POST create', () => {
-  const src = () => readSrc('app/api/agent/tickets/route.ts')
+describe('app/api/v1/agent/tickets/route: GET list + POST create', () => {
+  const src = () => readSrc('app/api/v1/agent/tickets/route.ts')
 
   it('GET reads status/priority/category/limit/cursor from query params and maps validation errors to 400', () => {
     const s = src()
@@ -167,8 +167,8 @@ describe('app/api/agent/tickets/route: GET list + POST create', () => {
   })
 })
 
-describe('app/api/agent/answers/route: POST', () => {
-  const src = () => readSrc('app/api/agent/answers/route.ts')
+describe('app/api/v1/agent/answers/route: POST', () => {
+  const src = () => readSrc('app/api/v1/agent/answers/route.ts')
 
   it('authenticates and reads a capped JSON body before calling generateAnswerCore', () => {
     const s = src()
@@ -188,7 +188,7 @@ describe('app/api/agent/answers/route: POST', () => {
   })
 })
 
-describe('app/api/agent/openapi.json/route: GET', () => {
+describe('app/api/v1/agent/openapi.json/route: GET', () => {
   const src = () => readSrc('lib/agent/openapi-spec.ts')
 
   it('declares bearerAuth as the (only) security scheme, matching every route\'s actual auth requirement', () => {
@@ -199,28 +199,28 @@ describe('app/api/agent/openapi.json/route: GET', () => {
 
   it('documents exactly the 4 real REST paths this PR ships — not aspirational ones', () => {
     const s = src()
-    for (const p of ['/api/agent/kb/search', '/api/agent/faq', '/api/agent/tickets', '/api/agent/answers']) {
+    for (const p of ['/api/v1/agent/kb/search', '/api/v1/agent/faq', '/api/v1/agent/tickets', '/api/v1/agent/answers']) {
       expect(s, p).toContain(`'${p}'`)
     }
   })
 
   it('is a real OpenAPI document — parses as valid JSON with the expected top-level shape', async () => {
-    const mod = await import('../../app/api/agent/openapi.json/route')
+    const mod = await import('../../app/api/v1/agent/openapi.json/route')
     const res = await mod.GET()
     const body = await res.json()
     expect(body.openapi).toBe('3.1.0')
     expect(Object.keys(body.paths).sort()).toEqual(
-      ['/api/agent/answers', '/api/agent/faq', '/api/agent/kb/search', '/api/agent/tickets'].sort()
+      ['/api/v1/agent/answers', '/api/v1/agent/faq', '/api/v1/agent/kb/search', '/api/v1/agent/tickets'].sort()
     )
   })
 })
 
-describe('lib/mcp/tools + app/api/agent routes: both surfaces share lib/agent/core, not duplicated logic', () => {
+describe('lib/mcp/tools + app/api/v1/agent routes: both surfaces share lib/agent/core, not duplicated logic', () => {
   it('no route file re-implements clampLimit/parseEnumArg — both surfaces import them from lib/agent/core', () => {
     const routeFiles = [
-      'app/api/agent/kb/search/route.ts',
-      'app/api/agent/tickets/route.ts',
-      'app/api/agent/answers/route.ts',
+      'app/api/v1/agent/kb/search/route.ts',
+      'app/api/v1/agent/tickets/route.ts',
+      'app/api/v1/agent/answers/route.ts',
       'lib/mcp/tools.ts',
     ]
     for (const f of routeFiles) {
@@ -231,27 +231,27 @@ describe('lib/mcp/tools + app/api/agent routes: both surfaces share lib/agent/co
   })
 })
 
-describe('auth.ts: /api/agent is a public path (self-authenticates via Bearer key, same as /api/mcp)', () => {
-  it('lists /api/agent in PUBLIC_PATHS so the session middleware does not redirect/401 it before the route runs', () => {
+describe('auth.ts: /api/v1/agent is a public path (self-authenticates via Bearer key, same as /api/mcp)', () => {
+  it('lists /api/v1/agent in PUBLIC_PATHS so the session middleware does not redirect/401 it before the route runs', () => {
     const s = readSrc('auth.ts')
     const match = s.match(/const PUBLIC_PATHS = \[([^\]]+)\]/)
     expect(match).toBeTruthy()
-    expect(match![1]).toContain("'/api/agent'")
+    expect(match![1]).toContain("'/api/v1/agent'")
   })
 })
 
 describe('public/.well-known/ai-plugin.json: points at the real Agent API spec now that it exists', () => {
-  it('api.url points to /api/agent/openapi.json, not the old GEO-era health-only placeholder', () => {
+  it('api.url points to /api/v1/agent/openapi.json, not the old GEO-era health-only placeholder', () => {
     const raw = readSrc('public/.well-known/ai-plugin.json')
     const manifest = JSON.parse(raw)
-    expect(manifest.api.url).toBe('https://answerloops.com/api/agent/openapi.json')
+    expect(manifest.api.url).toBe('https://answerloops.com/api/v1/agent/openapi.json')
   })
 })
 
-describe('OpenAPI spec is served at the root /openapi.json too, byte-identical to /api/agent/openapi.json', () => {
+describe('OpenAPI spec is served at the root /openapi.json too, byte-identical to /api/v1/agent/openapi.json', () => {
   it('both route handlers render buildAgentOpenApiSpec() with no divergence', async () => {
     const rootMod = await import('../../app/openapi.json/route')
-    const agentMod = await import('../../app/api/agent/openapi.json/route')
+    const agentMod = await import('../../app/api/v1/agent/openapi.json/route')
     const rootBody = await (await rootMod.GET()).json()
     const agentBody = await (await agentMod.GET()).json()
     expect(rootBody).toEqual(agentBody)
@@ -267,7 +267,7 @@ describe('OpenAPI spec is served at the root /openapi.json too, byte-identical t
 
 describe('content/docs/reference/api/openapi.json stays in sync with the live spec', () => {
   it('the checked-in reference copy is exactly what the route renders (run `pnpm docs:generate-api` after editing the spec)', async () => {
-    const mod = await import('../../app/api/agent/openapi.json/route')
+    const mod = await import('../../app/api/v1/agent/openapi.json/route')
     const live = await (await mod.GET()).json()
     const committed = JSON.parse(readSrc('content/docs/reference/api/openapi.json'))
     expect(committed).toEqual(live)
@@ -276,7 +276,7 @@ describe('content/docs/reference/api/openapi.json stays in sync with the live sp
 
 describe('OpenAPI version allows scoped security requirements', () => {
   it('declares 3.1.0 — 3.0.x forbids a non-empty scope array on a plain bearer scheme', async () => {
-    const mod = await import('../../app/api/agent/openapi.json/route')
+    const mod = await import('../../app/api/v1/agent/openapi.json/route')
     const spec = await (await mod.GET()).json()
     expect(spec.openapi).toBe('3.1.0')
   })
@@ -290,19 +290,19 @@ describe('OpenAPI version allows scoped security requirements', () => {
 
 describe('least-privilege scopes: every agent operation declares the one scope it needs', () => {
   it('each REST route passes its required scope to authenticateAgentRequest', () => {
-    expect(readSrc('app/api/agent/kb/search/route.ts')).toContain("authenticateAgentRequest(req, 'kb:read')")
-    expect(readSrc('app/api/agent/faq/route.ts')).toContain("authenticateAgentRequest(req, 'faq:read')")
-    expect(readSrc('app/api/agent/answers/route.ts')).toContain("authenticateAgentRequest(req, 'answers:write')")
-    const tickets = readSrc('app/api/agent/tickets/route.ts')
+    expect(readSrc('app/api/v1/agent/kb/search/route.ts')).toContain("authenticateAgentRequest(req, 'kb:read')")
+    expect(readSrc('app/api/v1/agent/faq/route.ts')).toContain("authenticateAgentRequest(req, 'faq:read')")
+    expect(readSrc('app/api/v1/agent/answers/route.ts')).toContain("authenticateAgentRequest(req, 'answers:write')")
+    const tickets = readSrc('app/api/v1/agent/tickets/route.ts')
     expect(tickets).toContain("authenticateAgentRequest(req, 'tickets:read')")
     expect(tickets).toContain("authenticateAgentRequest(req, 'tickets:write')")
   })
 
   it('the OpenAPI spec pins each operation to its scope and publishes the scope catalogue', async () => {
-    const mod = await import('../../app/api/agent/openapi.json/route')
+    const mod = await import('../../app/api/v1/agent/openapi.json/route')
     const spec = await (await mod.GET()).json()
-    expect(spec.paths['/api/agent/kb/search'].get.security).toEqual([{ bearerAuth: ['kb:read'] }])
-    expect(spec.paths['/api/agent/tickets'].post.security).toEqual([{ bearerAuth: ['tickets:write'] }])
+    expect(spec.paths['/api/v1/agent/kb/search'].get.security).toEqual([{ bearerAuth: ['kb:read'] }])
+    expect(spec.paths['/api/v1/agent/tickets'].post.security).toEqual([{ bearerAuth: ['tickets:write'] }])
     expect(Object.keys(spec['x-api-scopes']).sort()).toEqual(
       ['answers:write', 'faq:read', 'kb:read', 'tickets:read', 'tickets:write'].sort()
     )

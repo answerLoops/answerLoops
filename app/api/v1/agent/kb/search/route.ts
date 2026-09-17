@@ -3,7 +3,7 @@ import { searchKbCore } from '@/lib/agent/core'
 import { authenticateAgentRequest, agentError, withHeaders } from '@/lib/agent/http'
 
 /**
- * GET /api/agent/kb/search?query=...&limit=...
+ * GET /api/v1/agent/kb/search?query=...&limit=...
  * REST counterpart to the MCP search_kb tool — same underlying
  * lib/agent/core.ts logic, same validation, same response shape.
  */

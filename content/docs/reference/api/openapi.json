@@ -3,7 +3,7 @@
   "info": {
     "title": "answerLoops Agent API",
     "description": "REST API for AI agents and non-MCP frameworks (LangChain, AutoGen, custom bots) to search a knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline every other answerLoops channel uses. MCP-native clients (Claude Code, Cursor) should use the MCP server at POST /api/mcp instead; this REST surface exists for tooling that speaks HTTP + OpenAPI, not JSON-RPC.",
-    "version": "1.1.0"
+    "version": "2.0.0"
   },
   "servers": [
     {
@@ -132,7 +132,7 @@
     }
   },
   "paths": {
-    "/api/agent/kb/search": {
+    "/api/v1/agent/kb/search": {
       "get": {
         "operationId": "searchKb",
         "summary": "Semantically search the organization's knowledge base",
@@ -264,7 +264,7 @@
         }
       }
     },
-    "/api/agent/faq": {
+    "/api/v1/agent/faq": {
       "get": {
         "operationId": "getFaq",
         "summary": "Get the organization's most recently generated FAQ digest",
@@ -313,7 +313,7 @@
         }
       }
     },
-    "/api/agent/tickets": {
+    "/api/v1/agent/tickets": {
       "get": {
         "operationId": "getTickets",
         "summary": "List support tickets for the organization",
@@ -580,7 +580,7 @@
         }
       }
     },
-    "/api/agent/answers": {
+    "/api/v1/agent/answers": {
       "post": {
         "operationId": "generateAnswer",
         "summary": "Generate a grounded answer using the organization's knowledge base, without opening a ticket",

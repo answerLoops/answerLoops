@@ -231,7 +231,7 @@ describe('per-key usage attribution', () => {
     expect(readSrc('app/api/mcp/route.ts')).toContain('callMcpTool(toolName, toolArgs, orgId, keyId)')
     expect(readSrc('lib/mcp/tools.ts')).toContain('generateAnswerCore(orgId, args, keyId)')
     expect(readSrc('lib/agent/core.ts')).toContain('reserveGeneration(orgId, keyId)')
-    expect(readSrc('app/api/agent/answers/route.ts')).toContain('generateAnswerCore(auth.orgId, bodyResult.body, auth.keyId)')
+    expect(readSrc('app/api/v1/agent/answers/route.ts')).toContain('generateAnswerCore(auth.orgId, bodyResult.body, auth.keyId)')
   })
 
   it('the tool-call log line carries keyId so traffic can be traced to a credential', () => {

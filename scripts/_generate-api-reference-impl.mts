@@ -1,6 +1,6 @@
 /**
  * Regenerates content/docs/reference/api/**\/*.mdx from the live Agent API
- * OpenAPI spec (app/api/agent/openapi.json/route.ts) — replacing the old
+ * OpenAPI spec (app/api/v1/agent/openapi.json/route.ts) — replacing the old
  * hand-written docs/reference/api-endpoints.mdx (issue #197). The route
  * handler is self-contained (no DB/env access, just builds and returns the
  * spec object), so it's imported directly rather than requiring a running
@@ -22,7 +22,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { generateFiles } from 'fumadocs-openapi'
 import { createOpenAPI } from 'fumadocs-openapi/server'
-import { GET } from '../app/api/agent/openapi.json/route'
+import { GET } from '../app/api/v1/agent/openapi.json/route'
 
 async function main() {
   const response = await GET()
@@ -60,7 +60,7 @@ For setup, auth, curl examples, error shapes, and rate limits, see the
 [Agent API guide](/docs/integrations/agent-api) — this page is just an
 index into the detailed parameter reference for each endpoint below,
 generated directly from the live OpenAPI spec at
-[\`/api/agent/openapi.json\`](/api/agent/openapi.json).
+[\`/api/v1/agent/openapi.json\`](/api/v1/agent/openapi.json).
 
 <CardGroup>
   <Card title="Search the knowledge base" href="/docs/reference/api/searchKb">

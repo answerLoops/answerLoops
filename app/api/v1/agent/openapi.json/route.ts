@@ -1,7 +1,7 @@
 import { buildAgentOpenApiSpec } from '@/lib/agent/openapi-spec'
 
 /**
- * GET /api/agent/openapi.json
+ * GET /api/v1/agent/openapi.json
  *
  * Real OpenAPI 3.1 spec for the Agent API — the spec object itself lives in
  * lib/agent/openapi-spec.ts and is also served at /openapi.json (the root

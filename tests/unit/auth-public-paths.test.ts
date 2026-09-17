@@ -25,7 +25,7 @@ describe('auth.ts PUBLIC_PATHS covers every self-authenticating API route', () =
     '/api/slack/events', // Slack signing secret
     '/api/google-chat/events', // Google-signed OIDC bearer token
     '/api/mcp', // Bearer API key
-    '/api/agent', // Bearer API key (REST twin of the MCP surface)
+    '/api/v1/agent', // Bearer API key (REST twin of the MCP surface)
   ]
 
   // Static, crawler-/agent-fetchable documents. Same failure mode as the

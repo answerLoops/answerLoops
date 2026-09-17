@@ -42,7 +42,7 @@ Each org can bring its own AI provider key (Settings → AI Model); the platform
 | Telegram | Webhook-based |
 | Email | Zero-setup platform-hosted inbound address by default, or bring-your-own provider |
 | Website widget | Embeddable `<script>` chat widget |
-| MCP / Agent API | AI agents (Claude, Cursor, custom bots) call the platform as a tool via `POST /api/mcp` (JSON-RPC) or `/api/agent/*` (REST) |
+| MCP / Agent API | AI agents (Claude, Cursor, custom bots) call the platform as a tool via `POST /api/mcp` (JSON-RPC) or `/api/v1/agent/*` (REST) |
 
 ---
 

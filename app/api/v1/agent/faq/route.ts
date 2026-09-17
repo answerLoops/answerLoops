@@ -3,7 +3,7 @@ import { getFaqCore } from '@/lib/agent/core'
 import { authenticateAgentRequest, withHeaders } from '@/lib/agent/http'
 
 /**
- * GET /api/agent/faq
+ * GET /api/v1/agent/faq
  * REST counterpart to the MCP get_faq tool.
  */
 export async function GET(req: NextRequest) {
