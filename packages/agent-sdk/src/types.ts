@@ -71,8 +71,18 @@ export interface SearchKbParams {
   limit?: number;
 }
 
+/**
+ * `code` is only ever present on a 429 — it's how a caller tells apart the
+ * three independent ceilings this API can hit (rate limit vs. either
+ * monthly quota) without pattern-matching `message`. See the `Error` schema
+ * in the OpenAPI spec (lib/agent/openapi-spec.ts) for the source of truth.
+ */
+export type AgentApiErrorCode = "rate_limited" | "deflection_limit_reached" | "call_limit_reached";
+
 /** Shape of the `Error` schema returned on 400/401/403/429 responses. */
 export interface AgentApiErrorBody {
-  error: string;
-  [key: string]: unknown;
+  error: {
+    message: string;
+    code?: AgentApiErrorCode;
+  };
 }
