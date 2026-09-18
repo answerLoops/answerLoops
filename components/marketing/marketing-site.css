@@ -786,6 +786,50 @@
   border-radius: 3px;
   letter-spacing: 0.06em;
 }
+.marketing-section-heading-center {
+  grid-template-columns: 1fr;
+  text-align: center;
+  justify-items: center;
+}
+.audience-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1.5rem;
+}
+.audience-card {
+  padding: 2rem;
+  background: #fff;
+  border: 1px solid var(--marketing-border);
+  border-radius: 12px;
+}
+.audience-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 8px;
+  background: var(--marketing-soft);
+  color: var(--marketing-navy);
+  margin-bottom: 1.5rem;
+}
+.audience-card h3 {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--marketing-ink);
+}
+.audience-card p {
+  color: var(--marketing-muted);
+  margin-top: 0.75rem;
+}
+@media (max-width: 767px) {
+  .audience-grid {
+    grid-template-columns: 1fr;
+  }
+  .audience-card {
+    padding: 1.5rem;
+  }
+}
 .deployment-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

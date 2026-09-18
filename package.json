@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "prepare": "test -f scripts/install-hooks.sh && sh scripts/install-hooks.sh || true",
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "prebuild": "fumadocs-mdx",
     "build": "next build",
     "start": "next start",

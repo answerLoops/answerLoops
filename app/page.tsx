@@ -13,10 +13,13 @@ import {
   ArrowUpRight,
   BookOpen,
   GitBranch,
+  GraduationCap,
   Layers,
   Terminal,
   Network,
   ShieldCheck,
+  Users,
+  Wrench,
 } from 'lucide-react'
 import { IntegrationIcon } from '@/components/marketing/integration-icon'
 import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
@@ -392,6 +395,49 @@ export default function LandingPage() {
               Talk to us about Enterprise ↗
             </a>
             <a href={GITHUB_URL}>View source ↗</a>
+          </div>
+        </div>
+      </section>
+      <section id="who-its-for" className="marketing-section scroll-mt-20">
+        <div className="marketing-container">
+          <div className="marketing-section-heading marketing-section-heading-center">
+            <h2>
+              Built for teams
+              <br />
+              that run on trust.
+            </h2>
+          </div>
+          <div className="audience-grid">
+            {[
+              {
+                icon: Terminal,
+                title: 'SaaS Companies',
+                body: 'Deflect repetitive support tickets on Discord, Slack, and your website widget so your team only sees the ones that need a human.',
+              },
+              {
+                icon: GraduationCap,
+                title: 'Course Creators',
+                body: 'Answer student questions instantly from your course docs across Discord and Circle, without staffing a support inbox.',
+              },
+              {
+                icon: Users,
+                title: 'Communities',
+                body: 'Resolve member questions automatically from your knowledge base, keeping Discourse and Circle threads answered without mod burnout.',
+              },
+              {
+                icon: Wrench,
+                title: 'Service Businesses',
+                body: 'Answer common client questions by email and website chat automatically, sourced from your own docs.',
+              },
+            ].map(({ icon: Icon, title, body }) => (
+              <article className="audience-card" key={title}>
+                <span className="audience-icon">
+                  <Icon size={20} strokeWidth={1.6} />
+                </span>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
