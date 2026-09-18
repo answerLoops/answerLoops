@@ -1,3 +1,5 @@
+import * as Sentry from '@sentry/nextjs'
+
 type Level = 'debug' | 'info' | 'warn' | 'error'
 
 interface LogFields {
@@ -6,6 +8,8 @@ interface LogFields {
   orgId?: number
   durationMs?: number
   error?: unknown
+  /** Correlation id for tracing one request across logs — see lib/request-id.ts. */
+  requestId?: string
   [key: string]: unknown
 }
 
@@ -38,6 +42,19 @@ function log(level: Level, message: string, fields: LogFields = {}): void {
     msg: message,
     ...rest,
     ...(error !== undefined ? { error: serializeError(error) } : {}),
+  }
+
+  // No-ops when SENTRY_DSN is unset (see sentry.server.config.ts) — every
+  // logger.error() call also reports to Sentry so a real error tracker
+  // captures the same failures the structured log already records, instead
+  // of only whatever Next.js's own onRequestError hook happens to catch.
+  if (level === 'error') {
+    Sentry.withScope((scope) => {
+      for (const [key, value] of Object.entries(rest)) scope.setExtra(key, value)
+      if (typeof rest.requestId === 'string') scope.setTag('requestId', rest.requestId)
+      if (typeof rest.module === 'string') scope.setTag('module', rest.module)
+      Sentry.captureException(error instanceof Error ? error : new Error(message), scope)
+    })
   }
 
   if (IS_PROD) {

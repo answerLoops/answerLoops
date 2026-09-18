@@ -44,7 +44,7 @@ export async function notionFetch(
   headers.set('Authorization', `Bearer ${token}`)
   headers.set('Notion-Version', NOTION_VERSION)
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
-  return fetch(`${NOTION_BASE}${path}`, { ...init, headers })
+  return fetch(`${NOTION_BASE}${path}`, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(10_000) })
 }
 
 async function notionJson<T>(token: string, path: string, init: RequestInit = {}): Promise<T> {

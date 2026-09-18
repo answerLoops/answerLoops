@@ -149,6 +149,7 @@ export async function sendGmail(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ raw: encodeMimeMessage(params) }),
+      signal: AbortSignal.timeout(10_000),
     })
     if (!res.ok) {
       const body = await res.text()

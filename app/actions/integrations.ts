@@ -91,6 +91,7 @@ export async function saveDiscordIntegrationAction(
       if (!MOCK_EXTERNALS) {
         const verify = await fetch('https://discord.com/api/v10/users/@me', {
           headers: { Authorization: `Bot ${newToken}` },
+          signal: AbortSignal.timeout(10_000),
         })
         if (!verify.ok) {
           return { error: 'Discord rejected this token — check it and try again' }
@@ -324,6 +325,7 @@ export async function joinSlackChannels(
             'Content-Type': 'application/x-www-form-urlencoded',
           },
           body: new URLSearchParams({ channel: channelId }),
+          signal: AbortSignal.timeout(10_000),
         })
         const data = await res.json() as { ok: boolean; error?: string }
         if (!data.ok) {
@@ -427,7 +429,7 @@ export async function saveTelegramIntegrationAction(
       return { error: 'Invalid Telegram bot token format — should be: 123456789:AAHdqTcv...' }
     }
     if (!MOCK_EXTERNALS) {
-      const verify = await fetch(`https://api.telegram.org/bot${newToken}/getMe`)
+      const verify = await fetch(`https://api.telegram.org/bot${newToken}/getMe`, { signal: AbortSignal.timeout(10_000) })
       if (!verify.ok) {
         return { error: 'Telegram rejected this token — check it and try again' }
       }

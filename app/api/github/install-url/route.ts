@@ -1,6 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { signOAuthState } from '@/lib/oauth/state'
+import { logger } from '@/lib/logger'
+import { getRequestId } from '@/lib/request-id'
+
+const MOD = 'api/github/install-url'
 
 export async function GET(req: NextRequest) {
   const rawSlug = process.env.GITHUB_APP_SLUG
@@ -15,16 +19,21 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'GITHUB_APP_SLUG is not a valid slug or URL' }, { status: 503 })
   }
 
-  const access = await requireOrgAccess()
-  if (!access.ok) {
-    return NextResponse.json({ error: access.error }, { status: 401 })
+  try {
+    const access = await requireOrgAccess()
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: 401 })
+    }
+
+    // Where the flow started, so the callback returns the user to the right
+    // screen. Only 'onboarding' is meaningful; anything else means Integrations.
+    const from = req.nextUrl.searchParams.get('from') === 'onboarding' ? 'onboarding' : 'integrations'
+    const state = signOAuthState({ orgId: access.orgId, from })
+
+    const url = `https://github.com/apps/${slug}/installations/new?state=${state}`
+    return NextResponse.json({ url })
+  } catch (err) {
+    logger.error('github install url generation failed', { module: MOD, requestId: getRequestId(req), error: err })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-
-  // Where the flow started, so the callback returns the user to the right
-  // screen. Only 'onboarding' is meaningful; anything else means Integrations.
-  const from = req.nextUrl.searchParams.get('from') === 'onboarding' ? 'onboarding' : 'integrations'
-  const state = signOAuthState({ orgId: access.orgId, from })
-
-  const url = `https://github.com/apps/${slug}/installations/new?state=${state}`
-  return NextResponse.json({ url })
 }

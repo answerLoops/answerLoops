@@ -4,6 +4,10 @@ import { verifyOAuthState } from '@/lib/oauth/state'
 import { exchangeOutlookCode } from '@/lib/email/outlook'
 import { upsertEmailOauthConnection } from '@/lib/db/queries/email-oauth'
 import { upsertIntegration } from '@/lib/db/queries/integrations'
+import { logger } from '@/lib/logger'
+import { getRequestId } from '@/lib/request-id'
+
+const MOD = 'api/email/outlook/callback'
 
 export async function GET(req: NextRequest) {
   const access = await requireOrgAccess()
@@ -33,23 +37,29 @@ export async function GET(req: NextRequest) {
     return Response.redirect(settingsUrl)
   }
 
-  const result = await exchangeOutlookCode(code)
-  if ('error' in result) {
+  try {
+    const result = await exchangeOutlookCode(code)
+    if ('error' in result) {
+      settingsUrl.searchParams.set('outlook_error', 'token_exchange_failed')
+      return Response.redirect(settingsUrl)
+    }
+
+    await upsertEmailOauthConnection({
+      orgId,
+      provider: 'outlook',
+      mailboxAddress: result.mailboxAddress,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      accessTokenExpiresAt: result.expiresAt,
+      grantedScope: result.scope,
+    })
+    await upsertIntegration({ orgId, platform: 'email', emailSendMethod: 'oauth' })
+
+    settingsUrl.searchParams.set('outlook_connected', '1')
+    return Response.redirect(settingsUrl)
+  } catch (err) {
+    logger.error('outlook oauth callback failed', { module: MOD, requestId: getRequestId(req), orgId, error: err })
     settingsUrl.searchParams.set('outlook_error', 'token_exchange_failed')
     return Response.redirect(settingsUrl)
   }
-
-  await upsertEmailOauthConnection({
-    orgId,
-    provider: 'outlook',
-    mailboxAddress: result.mailboxAddress,
-    accessToken: result.accessToken,
-    refreshToken: result.refreshToken,
-    accessTokenExpiresAt: result.expiresAt,
-    grantedScope: result.scope,
-  })
-  await upsertIntegration({ orgId, platform: 'email', emailSendMethod: 'oauth' })
-
-  settingsUrl.searchParams.set('outlook_connected', '1')
-  return Response.redirect(settingsUrl)
 }

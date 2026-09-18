@@ -47,6 +47,7 @@
     "@mendable/firecrawl-js": "^4.28.1",
     "@octokit/app": "^16.1.2",
     "@octokit/rest": "^22.0.1",
+    "@sentry/nextjs": "^10.74.0",
     "@stripe/react-stripe-js": "^6.8.1",
     "@stripe/stripe-js": "^9.13.0",
     "ai": "^6.0.153",

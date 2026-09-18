@@ -29,7 +29,7 @@ export async function discourseFetch(
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  return fetch(`${normalizeSiteUrl(creds.siteUrl)}${path}`, { ...init, headers })
+  return fetch(`${normalizeSiteUrl(creds.siteUrl)}${path}`, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(10_000) })
 }
 
 /**

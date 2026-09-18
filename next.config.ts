@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import { createMDX } from "fumadocs-mdx/next";
+import { withSentryConfig } from "@sentry/nextjs";
 import docsNav from "./docs/docs.json" with { type: "json" };
 import { MARKETING_PAGE_PATHS } from "./lib/marketing/website-paths";
 
@@ -178,4 +179,14 @@ const nextConfig: NextConfig = {
   },
 }
 
-export default withMDX(nextConfig);
+export default withSentryConfig(withMDX(nextConfig), {
+  // Only used to upload source maps on build; silently no-ops without a
+  // token so local/dev builds and PR CI never need Sentry credentials.
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: true,
+  widenClientFileUpload: true,
+  disableLogger: true,
+  automaticVercelMonitors: false,
+});

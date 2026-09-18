@@ -4,6 +4,10 @@ import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
+import { logger } from '@/lib/logger'
+import { getRequestId } from '@/lib/request-id'
+
+const MOD = 'api/widget/lead'
 
 // This endpoint writes a row per call, so it carries the same abuse controls
 // as widget chat next door: per-token and per-IP rate limits, a body cap, and
@@ -73,15 +77,20 @@ export async function POST(request: Request) {
     return new Response('Invalid email', { status: 400 })
   }
 
-  const org = await getOrgByWidgetToken(widgetToken)
-  if (!org) return new Response('Invalid widget token', { status: 404 })
+  try {
+    const org = await getOrgByWidgetToken(widgetToken)
+    if (!org) return new Response('Invalid widget token', { status: 404 })
 
-  // No origin allowlist here by design. This request is made from inside our
-  // own iframe, so it is same-origin to us and its Origin header is our
-  // hostname — the embedding page's identity is not present on it. The
-  // allowlist is enforced at the iframe navigation instead (see
-  // app/widget/[widgetToken]/page.tsx).
+    // No origin allowlist here by design. This request is made from inside our
+    // own iframe, so it is same-origin to us and its Origin header is our
+    // hostname — the embedding page's identity is not present on it. The
+    // allowlist is enforced at the iframe navigation instead (see
+    // app/widget/[widgetToken]/page.tsx).
 
-  await saveWidgetLead(org.id, widgetToken, normalized)
-  return Response.json({ ok: true })
+    await saveWidgetLead(org.id, widgetToken, normalized)
+    return Response.json({ ok: true })
+  } catch (err) {
+    logger.error('widget lead save failed', { module: MOD, requestId: getRequestId(request), widgetToken, error: err })
+    return new Response('Internal server error', { status: 500 })
+  }
 }

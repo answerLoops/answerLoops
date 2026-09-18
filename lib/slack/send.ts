@@ -43,6 +43,7 @@ export async function sendToSlackChannel(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ channel: channelId, text, ...(threadTs ? { thread_ts: threadTs } : {}) }),
+      signal: AbortSignal.timeout(10_000),
     })
 
     const data = await res.json() as { ok: boolean; ts?: string; error?: string }

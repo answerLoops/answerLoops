@@ -68,6 +68,7 @@ export async function pollChannel(
 
   const res = await fetch(url.toString(), {
     headers: { Authorization: `Bearer ${botToken}` },
+    signal: AbortSignal.timeout(10_000),
   })
   const data = await res.json() as { ok: boolean; messages?: SlackMessage[]; error?: string }
 
@@ -134,6 +135,7 @@ export async function pollChannel(
           platform: 'slack',
           source_url: sourceUrl ?? undefined,
         }),
+        signal: AbortSignal.timeout(10_000),
       })
       if (!res.ok) {
         logger.warn('ingest failed for polled Slack message', { module: MOD, ts: msg.ts, status: res.status })

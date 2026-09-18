@@ -186,7 +186,7 @@ export interface KBSearchResult extends KBArticle {
 }
 
 export type FeedbackVote = 'up' | 'down'
-export type FeedbackSource = 'discord' | 'staff'
+export type FeedbackSource = 'discord' | 'slack' | 'staff'
 
 export interface FeedbackSummary {
   up: number

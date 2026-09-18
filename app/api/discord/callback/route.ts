@@ -5,6 +5,10 @@ import { verifyOAuthState } from '@/lib/oauth/state'
 import { getIntegration, upsertIntegration } from '@/lib/db/queries/integrations'
 import { addDiscordGuild, DiscordGuildTakenError } from '@/lib/db/queries/discord-guilds'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
+import { logger } from '@/lib/logger'
+import { getRequestId } from '@/lib/request-id'
+
+const MOD = 'api/discord/callback'
 
 export async function GET(req: NextRequest) {
   const baseUrl = process.env.AUTH_URL ?? req.nextUrl.origin
@@ -44,28 +48,34 @@ export async function GET(req: NextRequest) {
     return Response.redirect(failUrl)
   }
 
-  if (!(await orgHasFeature(orgId, 'discord_integration'))) {
-    failUrl.searchParams.set('discord_error', 'plan_required')
-    return Response.redirect(failUrl)
-  }
-
-  // Org-level row still carries the shared bot_secret used for every guild
-  // this org connects — ensure it exists, but no longer stores a single
-  // connected_guild_id (that's now one row per guild in discord_guilds).
-  const existing = await getIntegration(orgId, 'discord')
-  const botSecret = existing?.bot_secret ?? crypto.randomBytes(32).toString('hex')
-  if (!existing?.bot_secret) {
-    await upsertIntegration({ orgId, platform: 'discord', botSecret })
-  }
-
   try {
-    await addDiscordGuild(orgId, guildId)
-  } catch (err) {
-    if (err instanceof DiscordGuildTakenError) {
-      failUrl.searchParams.set('discord_error', 'guild_already_connected')
+    if (!(await orgHasFeature(orgId, 'discord_integration'))) {
+      failUrl.searchParams.set('discord_error', 'plan_required')
       return Response.redirect(failUrl)
     }
-    throw err
+
+    // Org-level row still carries the shared bot_secret used for every guild
+    // this org connects — ensure it exists, but no longer stores a single
+    // connected_guild_id (that's now one row per guild in discord_guilds).
+    const existing = await getIntegration(orgId, 'discord')
+    const botSecret = existing?.bot_secret ?? crypto.randomBytes(32).toString('hex')
+    if (!existing?.bot_secret) {
+      await upsertIntegration({ orgId, platform: 'discord', botSecret })
+    }
+
+    try {
+      await addDiscordGuild(orgId, guildId)
+    } catch (err) {
+      if (err instanceof DiscordGuildTakenError) {
+        failUrl.searchParams.set('discord_error', 'guild_already_connected')
+        return Response.redirect(failUrl)
+      }
+      throw err
+    }
+  } catch (err) {
+    logger.error('discord oauth callback failed', { module: MOD, orgId, requestId: getRequestId(req), error: err })
+    failUrl.searchParams.set('discord_error', 'server_error')
+    return Response.redirect(failUrl)
   }
 
   if (from === 'onboarding') {

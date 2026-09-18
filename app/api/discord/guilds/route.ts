@@ -1,6 +1,10 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@/auth'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
+import { logger } from '@/lib/logger'
+import { getRequestId } from '@/lib/request-id'
+
+const MOD = 'api/discord/guilds'
 
 interface DiscordChannel {
   id: string
@@ -41,7 +45,7 @@ async function fetchGuildChannels(guildId: string, token: string): Promise<{ id:
       : []
   }
   const headers = { Authorization: `Bot ${token}`, 'Content-Type': 'application/json' }
-  const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, { headers })
+  const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, { headers, signal: AbortSignal.timeout(10_000) })
   if (!res.ok) return []
   const channels = await res.json() as DiscordChannel[]
   return channels
@@ -62,8 +66,13 @@ export async function GET(req: NextRequest) {
   const token = process.env.DISCORD_TOKEN
   if (!token) return Response.json({ error: 'Platform bot token not configured' }, { status: 503 })
 
-  const channels = await fetchGuildChannels(guildId, token)
-  return Response.json({ guildId, channels })
+  try {
+    const channels = await fetchGuildChannels(guildId, token)
+    return Response.json({ guildId, channels })
+  } catch (err) {
+    logger.error('failed to fetch discord guild channels', { module: MOD, guildId, requestId: getRequestId(req), error: err })
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
+  }
 }
 
 // POST /api/discord/guilds — legacy: fetch all guilds using a user-supplied bot token
@@ -71,29 +80,34 @@ export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const body = await req.json() as { token?: string }
-  const token = body.token?.trim()
-  if (!token) return Response.json({ error: 'Bot token required' }, { status: 400 })
+  try {
+    const body = await req.json() as { token?: string }
+    const token = body.token?.trim()
+    if (!token) return Response.json({ error: 'Bot token required' }, { status: 400 })
 
-  let guilds: DiscordGuild[]
-  if (MOCK_EXTERNALS) {
-    guilds = [MOCK_GUILD]
-  } else {
-    const headers = { Authorization: `Bot ${token}`, 'Content-Type': 'application/json' }
-    const guildsRes = await fetch('https://discord.com/api/v10/users/@me/guilds', { headers })
-    if (!guildsRes.ok) {
-      if (guildsRes.status === 401) return Response.json({ error: 'Invalid bot token. Check it was copied from the Bot tab, not the OAuth2 tab.' }, { status: 400 })
-      return Response.json({ error: 'Discord API error. Try again.' }, { status: 502 })
+    let guilds: DiscordGuild[]
+    if (MOCK_EXTERNALS) {
+      guilds = [MOCK_GUILD]
+    } else {
+      const headers = { Authorization: `Bot ${token}`, 'Content-Type': 'application/json' }
+      const guildsRes = await fetch('https://discord.com/api/v10/users/@me/guilds', { headers, signal: AbortSignal.timeout(10_000) })
+      if (!guildsRes.ok) {
+        if (guildsRes.status === 401) return Response.json({ error: 'Invalid bot token. Check it was copied from the Bot tab, not the OAuth2 tab.' }, { status: 400 })
+        return Response.json({ error: 'Discord API error. Try again.' }, { status: 502 })
+      }
+      guilds = await guildsRes.json() as DiscordGuild[]
     }
-    guilds = await guildsRes.json() as DiscordGuild[]
+
+    const results: GuildWithChannels[] = await Promise.all(
+      guilds.map(async (guild) => {
+        const channels = await fetchGuildChannels(guild.id, token)
+        return { id: guild.id, name: guild.name, channels }
+      })
+    )
+
+    return Response.json(results)
+  } catch (err) {
+    logger.error('failed to fetch discord guilds with a user-supplied token', { module: MOD, requestId: getRequestId(req), error: err })
+    return Response.json({ error: 'Internal server error' }, { status: 500 })
   }
-
-  const results: GuildWithChannels[] = await Promise.all(
-    guilds.map(async (guild) => {
-      const channels = await fetchGuildChannels(guild.id, token)
-      return { id: guild.id, name: guild.name, channels }
-    })
-  )
-
-  return Response.json(results)
 }

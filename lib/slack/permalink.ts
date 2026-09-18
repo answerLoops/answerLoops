@@ -22,6 +22,7 @@ export async function getSlackPermalink(
 
     const res = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${botToken}` },
+      signal: AbortSignal.timeout(10_000),
     })
     const data = (await res.json()) as { ok: boolean; permalink?: string; error?: string }
 
