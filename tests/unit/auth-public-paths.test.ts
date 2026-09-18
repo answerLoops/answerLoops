@@ -20,6 +20,9 @@ describe('auth.ts PUBLIC_PATHS covers every self-authenticating API route', () =
   const selfAuthenticatingRoutes = [
     '/api/email/ingest', // Svix signature / legacy shared-secret header
     '/api/github/webhook', // GitHub HMAC signature
+    '/api/telegram/webhook', // per-org bot_secret, X-Telegram-Bot-Api-Secret-Token header
+    '/api/circle/webhook', // per-org bot_secret, same mechanism as Telegram
+    '/api/discourse/webhook', // per-site HMAC signature
     '/api/widget/chat', // widget token in body
     '/api/billing/webhook', // Stripe signature
     '/api/slack/events', // Slack signing secret

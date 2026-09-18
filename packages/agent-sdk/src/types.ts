@@ -52,6 +52,21 @@ export interface CreateTicketParams {
   idempotencyKey?: string;
 }
 
+export interface CreateTicketResponse {
+  ticket_id: number;
+  /** True if this call matched an existing idempotency key instead of opening a new ticket. */
+  duplicate: boolean;
+}
+
+export interface FaqResult {
+  /** Present only when no FAQ has been generated for the org yet. */
+  message?: string;
+  week_start?: string;
+  week_end?: string;
+  ticket_count?: number;
+  content?: string;
+}
+
 export interface GenerateAnswerParams {
   /** Max 2000 characters. */
   question: string;

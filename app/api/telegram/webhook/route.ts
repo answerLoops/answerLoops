@@ -1,5 +1,8 @@
 import { NextRequest } from 'next/server'
+import { eq } from 'drizzle-orm'
 import { getIntegrationByBotSecret, parseChannelIds } from '@/lib/db/queries/integrations'
+import { getDb } from '@/lib/db/drizzle'
+import { integrations } from '@/lib/db/schema'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { logger } from '@/lib/logger'
 
@@ -41,7 +44,27 @@ export async function POST(req: NextRequest) {
 
   const integration = await getIntegrationByBotSecret(secretToken)
   if (!integration || integration.platform !== 'telegram') {
-    logger.warn('Telegram webhook secret did not match any org', { module: MOD })
+    // TEMPORARY diagnostic — never logs full secret values, only length/
+    // prefix, to compare what Telegram sent against what's actually stored
+    // for every telegram-platform row. Remove once the 401 mismatch is
+    // root-caused.
+    const rows = await getDb()
+      .select({ orgId: integrations.orgId, botSecret: integrations.botSecret, enabled: integrations.enabled })
+      .from(integrations)
+      .where(eq(integrations.platform, 'telegram'))
+    logger.warn('Telegram webhook secret did not match any org', {
+      module: MOD,
+      receivedLength: secretToken.length,
+      receivedPrefix: secretToken.slice(0, 6),
+      receivedSuffix: secretToken.slice(-6),
+      storedRows: rows.map((r) => ({
+        orgId: r.orgId,
+        enabled: r.enabled,
+        secretLength: r.botSecret?.length ?? null,
+        secretPrefix: r.botSecret?.slice(0, 6) ?? null,
+        secretSuffix: r.botSecret?.slice(-6) ?? null,
+      })),
+    })
     return new Response('Unauthorized', { status: 401 })
   }
 

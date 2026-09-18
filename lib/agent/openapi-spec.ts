@@ -106,6 +106,10 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           description: 'Valid key, but it lacks the scope this operation requires',
           content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
         },
+        PayloadTooLarge: {
+          description: 'Request body exceeds the 64 KB cap',
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } },
+        },
       },
       // Per draft-ietf-httpapi-ratelimit-headers — every authenticated response
       // (success or business-logic error) carries these, not just a 429, so a
@@ -169,7 +173,20 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
             '200': {
               description: 'Latest FAQ digest, or a message if none has been generated yet',
               headers: rateLimitHeaders,
-              content: { 'application/json': { schema: { type: 'object' } } },
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      message: { type: 'string', description: 'Present only when no FAQ has been generated for the org yet' },
+                      week_start: { type: 'string' },
+                      week_end: { type: 'string' },
+                      ticket_count: { type: 'integer' },
+                      content: { type: 'string' },
+                    },
+                  },
+                },
+              },
             },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
@@ -264,6 +281,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
             '400': { description: 'Missing/invalid content', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
+            '413': { $ref: '#/components/responses/PayloadTooLarge' },
           },
         },
       },
@@ -303,6 +321,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
             '400': { description: 'Missing/invalid question', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
+            '413': { $ref: '#/components/responses/PayloadTooLarge' },
             '429': { description: 'Rate limit exceeded, monthly deflection limit reached, or monthly call limit reached — see `error.code`', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           },
         },
