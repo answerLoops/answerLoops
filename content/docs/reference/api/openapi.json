@@ -108,6 +108,16 @@
             }
           }
         }
+      },
+      "PayloadTooLarge": {
+        "description": "Request body exceeds the 64 KB cap",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
       }
     },
     "headers": {
@@ -292,7 +302,25 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object"
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "description": "Present only when no FAQ has been generated for the org yet"
+                    },
+                    "week_start": {
+                      "type": "string"
+                    },
+                    "week_end": {
+                      "type": "string"
+                    },
+                    "ticket_count": {
+                      "type": "integer"
+                    },
+                    "content": {
+                      "type": "string"
+                    }
+                  }
                 }
               }
             }
@@ -576,6 +604,9 @@
           },
           "403": {
             "$ref": "#/components/responses/InsufficientScope"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
           }
         }
       }
@@ -680,6 +711,9 @@
           },
           "403": {
             "$ref": "#/components/responses/InsufficientScope"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
           },
           "429": {
             "description": "Rate limit exceeded, monthly deflection limit reached, or monthly call limit reached — see `error.code`",
