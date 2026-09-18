@@ -5,6 +5,10 @@ import { upsertEmailOauthConnection } from '@/lib/db/queries/email-oauth'
 import { upsertIntegration } from '@/lib/db/queries/integrations'
 import { clearGmailOauthStateCookie, GMAIL_OAUTH_STATE_COOKIE } from '../install/route'
 import { appOrigin } from '@/lib/site'
+import { logger } from '@/lib/logger'
+import { getRequestId } from '@/lib/request-id'
+
+const MOD = 'api/email/gmail/callback'
 
 function redirectWithError(url: URL, error: string): NextResponse {
   url.searchParams.set('gmail_error', error)
@@ -47,23 +51,28 @@ export async function GET(req: NextRequest) {
     return redirectWithError(settingsUrl, error ?? 'cancelled')
   }
 
-  const result = await exchangeGmailCode(code)
-  if ('error' in result) {
+  try {
+    const result = await exchangeGmailCode(code)
+    if ('error' in result) {
+      return redirectWithError(settingsUrl, 'token_exchange_failed')
+    }
+
+    await upsertEmailOauthConnection({
+      orgId,
+      provider: 'gmail',
+      mailboxAddress: result.mailboxAddress,
+      accessToken: result.accessToken,
+      refreshToken: result.refreshToken,
+      accessTokenExpiresAt: result.expiresAt,
+      grantedScope: result.scope,
+    })
+    await upsertIntegration({ orgId, platform: 'email', emailSendMethod: 'oauth' })
+
+    settingsUrl.searchParams.set('gmail_connected', '1')
+    const response = NextResponse.redirect(settingsUrl)
+    return clearGmailOauthStateCookie(response)
+  } catch (err) {
+    logger.error('gmail oauth callback failed', { module: MOD, requestId: getRequestId(req), orgId, error: err })
     return redirectWithError(settingsUrl, 'token_exchange_failed')
   }
-
-  await upsertEmailOauthConnection({
-    orgId,
-    provider: 'gmail',
-    mailboxAddress: result.mailboxAddress,
-    accessToken: result.accessToken,
-    refreshToken: result.refreshToken,
-    accessTokenExpiresAt: result.expiresAt,
-    grantedScope: result.scope,
-  })
-  await upsertIntegration({ orgId, platform: 'email', emailSendMethod: 'oauth' })
-
-  settingsUrl.searchParams.set('gmail_connected', '1')
-  const response = NextResponse.redirect(settingsUrl)
-  return clearGmailOauthStateCookie(response)
 }

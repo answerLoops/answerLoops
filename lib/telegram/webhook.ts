@@ -35,6 +35,7 @@ export async function registerTelegramWebhook(
       allowed_updates: ['message'],
       drop_pending_updates: true,
     }),
+    signal: AbortSignal.timeout(10_000),
   })
 
   const data = (await res.json().catch(() => ({}))) as { ok?: boolean; description?: string }

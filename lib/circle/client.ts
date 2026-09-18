@@ -17,7 +17,7 @@ export async function circleFetch(token: string, path: string, init: RequestInit
   headers.set('Authorization', `Bearer ${token}`)
   headers.set('Accept', 'application/json')
   if (init.body && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
-  return fetch(`${CIRCLE_API_BASE}${path}`, { ...init, headers })
+  return fetch(`${CIRCLE_API_BASE}${path}`, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(10_000) })
 }
 
 export interface CircleContent {

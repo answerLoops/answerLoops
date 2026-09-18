@@ -6,6 +6,10 @@ import { sendWaitlistConfirmation } from '@/lib/email/send'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clientIp } from '@/lib/http/client-ip'
+import { logger } from '@/lib/logger'
+import { getRequestId } from '@/lib/request-id'
+
+const MOD = 'api/waitlist'
 
 // Public, unauthenticated, pre-auth endpoint that sends an outbound email per
 // call — same abuse class as the widget lead endpoint, so it carries the same
@@ -50,19 +54,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
   }
 
-  const db = await getDb()
+  try {
+    const db = await getDb()
 
-  const existing = await db.select().from(waitlist).where(eq(waitlist.email, normalized)).limit(1)
-  if (existing.length > 0) {
-    return NextResponse.json({ ok: true, already: true })
+    const existing = await db.select().from(waitlist).where(eq(waitlist.email, normalized)).limit(1)
+    if (existing.length > 0) {
+      return NextResponse.json({ ok: true, already: true })
+    }
+
+    await db.insert(waitlist).values({ email: normalized })
+  } catch (err) {
+    logger.error('waitlist signup failed', { module: MOD, requestId: getRequestId(req), error: err })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-
-  await db.insert(waitlist).values({ email: normalized })
 
   try {
     await sendWaitlistConfirmation(normalized)
   } catch (err) {
-    console.error('[waitlist] Resend error:', err)
+    logger.error('waitlist confirmation email failed', { module: MOD, requestId: getRequestId(req), error: err })
   }
 
   return NextResponse.json({ ok: true })

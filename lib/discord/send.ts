@@ -33,6 +33,7 @@ export async function sendToChannel(channelId: string, content: string, orgId: n
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ content: chunk }),
+      signal: AbortSignal.timeout(10_000),
     })
 
     if (!res.ok) {

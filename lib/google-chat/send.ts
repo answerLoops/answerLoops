@@ -61,6 +61,7 @@ export async function sendToGoogleChatSpace(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ text, ...(threadName ? { thread: { name: threadName } } : {}) }),
+      signal: AbortSignal.timeout(10_000),
     })
 
     if (!res.ok) {

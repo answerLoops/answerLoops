@@ -22,6 +22,7 @@ export async function getSlackDisplayName(
 
     const res = await fetch(url.toString(), {
       headers: { Authorization: `Bearer ${botToken}` },
+      signal: AbortSignal.timeout(10_000),
     })
     const data = (await res.json()) as {
       ok: boolean

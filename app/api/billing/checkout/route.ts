@@ -3,6 +3,10 @@ import { auth } from '@/auth'
 import { stripeConfigured } from '@/lib/billing/plans'
 import { createCheckoutSession } from '@/lib/billing/checkout'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { logger } from '@/lib/logger'
+import { getRequestId } from '@/lib/request-id'
+
+const MOD = 'api/billing/checkout'
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -15,17 +19,23 @@ export async function POST(req: Request) {
   }
 
   const orgId = session.orgId ?? DEFAULT_ORG_ID
-  const { planId } = (await req.json()) as { planId: string }
 
-  const result = await createCheckoutSession(
-    orgId,
-    planId,
-    session.user.email ?? '',
-    session.user.name ?? '',
-  )
+  try {
+    const { planId } = (await req.json()) as { planId: string }
 
-  if (!result.ok) {
-    return NextResponse.json({ error: result.error }, { status: result.status })
+    const result = await createCheckoutSession(
+      orgId,
+      planId,
+      session.user.email ?? '',
+      session.user.name ?? '',
+    )
+
+    if (!result.ok) {
+      return NextResponse.json({ error: result.error }, { status: result.status })
+    }
+    return NextResponse.json({ url: result.url })
+  } catch (err) {
+    logger.error('failed to create checkout session', { module: MOD, orgId, requestId: getRequestId(req), error: err })
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
-  return NextResponse.json({ url: result.url })
 }

@@ -175,6 +175,7 @@ async function githubGraphql<T>(
       Accept: 'application/vnd.github+json',
     },
     body: JSON.stringify({ query, variables }),
+    signal: AbortSignal.timeout(20_000),
   })
 
   const body = (await res.json()) as { data: T; errors?: Array<{ message: string }> }

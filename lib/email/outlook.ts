@@ -73,6 +73,7 @@ export async function exchangeOutlookCode(code: string): Promise<ExchangedOutloo
         client_secret: creds.clientSecret,
         scope: OUTLOOK_SCOPE,
       }),
+      signal: AbortSignal.timeout(10_000),
     })
     const tokenData = (await tokenRes.json()) as OutlookTokenResponse
     if (!tokenRes.ok || !tokenData.access_token || !tokenData.refresh_token) {
@@ -82,6 +83,7 @@ export async function exchangeOutlookCode(code: string): Promise<ExchangedOutloo
 
     const meRes = await fetch(`${GRAPH_BASE}/me?$select=mail,userPrincipalName`, {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      signal: AbortSignal.timeout(10_000),
     })
     const me = (await meRes.json()) as { mail?: string; userPrincipalName?: string }
     const mailboxAddress = me.mail ?? me.userPrincipalName ?? null
@@ -128,6 +130,7 @@ export async function getValidOutlookAccessToken(
         client_secret: creds.clientSecret,
         scope: OUTLOOK_SCOPE,
       }),
+      signal: AbortSignal.timeout(10_000),
     })
     const tokenData = (await tokenRes.json()) as OutlookTokenResponse
     if (!tokenRes.ok || !tokenData.access_token) {
@@ -168,6 +171,7 @@ async function readBackInternetMessageId(accessToken: string, messageId: string)
     try {
       const res = await fetch(`${GRAPH_BASE}/me/messages/${messageId}?$select=internetMessageId`, {
         headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(10_000),
       })
       if (res.ok) {
         const data = (await res.json()) as { internetMessageId?: string }
@@ -202,6 +206,7 @@ export async function sendOutlook(
         body: { contentType: 'Text', content: params.text },
         toRecipients: [{ emailAddress: { address: params.to } }],
       }),
+      signal: AbortSignal.timeout(10_000),
     })
     if (!draftRes.ok) {
       const body = await draftRes.text()
@@ -217,6 +222,7 @@ export async function sendOutlook(
         body: JSON.stringify({
           singleValueExtendedProperties: [{ id: 'String 0x1042', value: params.inReplyTo }],
         }),
+        signal: AbortSignal.timeout(10_000),
       })
       if (!propRes.ok) {
         // Best-effort — a missing In-Reply-To header degrades threading in
@@ -228,6 +234,7 @@ export async function sendOutlook(
     const sendRes = await fetch(`${GRAPH_BASE}/me/messages/${draft.id}/send`, {
       method: 'POST',
       headers: authHeaders,
+      signal: AbortSignal.timeout(10_000),
     })
     if (!sendRes.ok) {
       const body = await sendRes.text()

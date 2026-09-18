@@ -201,6 +201,15 @@ Generate keys:
 pnpm dlx web-push generate-vapid-keys
 ```
 
+## Error tracking — Sentry (optional)
+
+| Variable | Description |
+|---|---|
+| `SENTRY_DSN` | DSN from your Sentry project's Client Keys settings. Unset means error tracking is fully disabled — no requests to Sentry are made. |
+| `SENTRY_AUTH_TOKEN` | Only needed to upload source maps at build time, for readable stack traces. Unset means builds succeed without uploading maps. |
+| `SENTRY_ORG` | Your Sentry organization slug. Only used alongside `SENTRY_AUTH_TOKEN`. |
+| `SENTRY_PROJECT` | Your Sentry project slug. Only used alongside `SENTRY_AUTH_TOKEN`. |
+
 ## Billing / deployment mode
 
 | Variable | Description | Example |
