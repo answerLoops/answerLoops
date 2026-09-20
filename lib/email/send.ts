@@ -3,7 +3,7 @@ import { getOrgMembers } from '@/lib/db/queries/members'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import type { Ticket } from '@/types'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
-import { GITHUB_URL } from '@/lib/site'
+import { GITHUB_URL, appOrigin } from '@/lib/site'
 
 function client() {
   return new Resend(process.env.RESEND_API_KEY)
@@ -165,7 +165,7 @@ export async function sendWelcomeEmail(email: string, name: string | null): Prom
 
   const fromAddress = process.env.RESEND_FROM ?? 'hello@answerloops.com'
   const greeting = name?.trim() ? `Welcome, ${name.trim().split(/\s+/)[0]}.` : 'Welcome.'
-  const dashboard = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? 'https://app.answerloops.com'
+  const dashboard = appOrigin() ?? 'https://app.answerloops.com'
 
   try {
     await client().emails.send({
@@ -180,9 +180,9 @@ export async function sendWelcomeEmail(email: string, name: string | null): Prom
             ${greeting}
           </h2>
           <p style="${MUTED};margin-bottom:16px">
-            Thanks for signing up. answerLoops answers the repeat questions your
-            community keeps asking, so your team can spend its time on the ones
-            that actually need a person.
+            Thanks for signing up. answerLoops answers the questions your
+            community keeps asking, straight from your docs, so your team can focus
+            its time on building the product.
           </p>
           <p style="${MUTED};margin-bottom:24px">
             The quickest start is to connect one channel and point us at your
