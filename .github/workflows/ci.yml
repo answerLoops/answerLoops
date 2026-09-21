@@ -121,7 +121,9 @@ jobs:
     # `pnpm test:e2e` starts the server, closing that gap.
     services:
       postgres:
-        image: postgres:16-alpine
+        # Matches docker-compose.yml's postgres image — pgvector required by
+        # kb_articles.embedding_vec (drizzle/0043_kb_vector_index.sql).
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_USER: community
           POSTGRES_PASSWORD: community

@@ -144,7 +144,11 @@ export function mockLanguageModel(modelId: string): LanguageModel {
 
 // --- Embeddings ---------------------------------------------------------------
 
-const EMBED_DIM = 64
+// Must equal KB_EMBEDDING_DIMENSIONS (lib/ai/embed.ts): kb_articles.embedding_vec
+// is a fixed-width pgvector column, and Postgres rejects an insert of any other
+// length. Not imported from embed.ts to keep this file free of app imports; a
+// unit test (tests/unit/mock-embedding-dimensions.test.ts) keeps the two in sync.
+const EMBED_DIM = 1536
 
 /** Hashed bag-of-words unit vector — similar text → similar vector. */
 function hashEmbed(text: string): number[] {
@@ -160,6 +164,8 @@ function hashEmbed(text: string): number[] {
 
 type DoEmbed = InstanceType<typeof MockEmbeddingModelV3>['doEmbed']
 type EmbResult = Awaited<ReturnType<DoEmbed>>
+
+export const MOCK_EMBEDDING_DIMENSIONS = EMBED_DIM
 
 export function mockEmbeddingModel(modelId: string): EmbeddingModel {
   const doEmbed: DoEmbed = async ({ values }) =>

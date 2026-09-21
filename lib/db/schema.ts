@@ -10,6 +10,7 @@ import {
   index,
   jsonb,
   timestamp,
+  vector,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
@@ -359,6 +360,16 @@ export const kbArticles = pgTable(
     question: text('question').notNull(),
     answer: text('answer').notNull(),
     embedding: text('embedding').notNull(),
+    // pgvector mirror of `embedding` (same values, [n,n,...] text vs. a real
+    // vector), used for ANN search — see lib/db/queries/kb.ts's
+    // searchArticles(). Dimension is fixed platform-wide (see
+    // lib/ai/embed.ts's KB_EMBEDDING_DIMENSIONS) rather than per-org, so a
+    // single index can cover every org — a new write with a mismatched
+    // dimension (an org on a custom, non-1536 embedding_model) fails loudly
+    // at insert instead of silently going unindexed. NULL only occurs for
+    // rows written before this column existed; searchArticles() excludes
+    // NULL rows from vector search.
+    embeddingVec: vector('embedding_vec', { dimensions: 1536 }),
     model: text('model').notNull(),
     sourceTicketId: integer('source_ticket_id').references(() => tickets.id),
     sourceId: integer('source_id'),
@@ -371,6 +382,7 @@ export const kbArticles = pgTable(
     index('idx_kb_articles_published').on(t.published),
     index('idx_kb_articles_source').on(t.sourceTicketId),
     index('idx_kb_articles_source_id').on(t.sourceId),
+    index('idx_kb_articles_embedding_vec').using('hnsw', t.embeddingVec.op('vector_cosine_ops')),
   ]
 )
 
