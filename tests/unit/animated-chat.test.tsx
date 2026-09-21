@@ -45,7 +45,7 @@ describe('support workflow animation', () => {
     render(<AnimatedChat />)
 
     expect(
-      screen.getByText(/Our co-op game starts rubber-banding/),
+      screen.getByText(/Our webhook retries created duplicate orders/),
     ).toBeVisible()
     expect(screen.getByText('Question received')).toBeVisible()
     expect(
@@ -54,7 +54,7 @@ describe('support workflow animation', () => {
     expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
     expect(screen.queryByText('Review agent')).not.toBeInTheDocument()
     expect(
-      screen.queryByText('Reply sent to #game-support'),
+      screen.queryByText('Reply sent to #dev-support'),
     ).not.toBeInTheDocument()
 
     advance(1499)
@@ -79,23 +79,23 @@ describe('support workflow animation', () => {
     expect(screen.getByText('Review agent')).toBeVisible()
     expect(screen.getByText('Reviewing answer')).toBeVisible()
     expect(
-      screen.queryByText('Reply sent to #game-support'),
+      screen.queryByText('Reply sent to #dev-support'),
     ).not.toBeInTheDocument()
 
     advance(1999)
-    expect(screen.queryByText('Reply sent to #game-support')).not.toBeInTheDocument()
+    expect(screen.queryByText('Reply sent to #dev-support')).not.toBeInTheDocument()
     advance(1)
-    expect(screen.getByText('Reply sent to #game-support')).toBeVisible()
+    expect(screen.getByText('Reply sent to #dev-support')).toBeVisible()
     expect(screen.getByText('Reply delivered')).toBeVisible()
     advance(3499)
-    expect(screen.getByText('Reply sent to #game-support')).toBeVisible()
+    expect(screen.getByText('Reply sent to #dev-support')).toBeVisible()
     advance(1)
     expect(screen.getByText('Question received')).toBeVisible()
     expect(
       screen.queryByText('Retrieved from the knowledge base'),
     ).not.toBeInTheDocument()
     expect(
-      screen.queryByText('Reply sent to #game-support'),
+      screen.queryByText('Reply sent to #dev-support'),
     ).not.toBeInTheDocument()
   })
 
@@ -105,7 +105,7 @@ describe('support workflow animation', () => {
     expect(screen.getByRole('button', { name: 'Discord' })).toHaveAttribute('aria-pressed', 'true')
     completeCycle()
     expect(screen.getByText('answerLoops / Telegram')).toBeVisible()
-    expect(screen.getByText(/Our webhook retries created duplicate orders/)).toBeVisible()
+    expect(screen.getByText(/I’m new to the guild/)).toBeVisible()
     expect(screen.getByRole('button', { name: 'Telegram' })).toHaveAttribute('aria-pressed', 'true')
     expect(screen.getByRole('button', { name: 'Discord' })).toHaveAttribute('aria-pressed', 'false')
     completeCycle()
@@ -118,20 +118,20 @@ describe('support workflow animation', () => {
 
   it.each([
     {
-      channel: 'Discord', question: /Our co-op game starts rubber-banding/,
-      source: 'Multiplayer connection guide', otherSource: 'Streaming troubleshooting',
-      answer: /Rubber-banding can come from network congestion/,
-      step: 'Lower the stream upload bitrate to leave bandwidth for the game.',
-      review: 'Checked connection troubleshooting and streaming recommendations against both guides.',
-      destination: '#game-support',
-    },
-    {
-      channel: 'Telegram', question: /Our webhook retries created duplicate orders/,
+      channel: 'Discord', question: /Our webhook retries created duplicate orders/,
       source: 'Webhook delivery', otherSource: 'Idempotency guide',
       answer: /Retries can deliver the same event more than once/,
       step: 'Save the order and a unique event ID in one transaction.',
       review: 'Checked retry behavior and duplicate handling against both sources.',
-      destination: 'support chat',
+      destination: '#dev-support',
+    },
+    {
+      channel: 'Telegram', question: /I’m new to the guild/,
+      source: 'Guild raid guide', otherSource: 'New member checklist',
+      answer: /Start with the raid signup/,
+      step: 'Choose your role and review the gear and preparation checklist.',
+      review: 'Checked raid signup and preparation steps against both guild guides.',
+      destination: 'guild chat',
     },
     {
       channel: 'Circle', question: /I’m joining the community print swap/,
@@ -168,7 +168,7 @@ describe('support workflow animation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Circle' }))
     expect(screen.getByText('Question received')).toBeVisible()
     expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
-    expect(screen.queryByText(/Our co-op game/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Our webhook retries/)).not.toBeInTheDocument()
     advance(1499)
     expect(screen.queryByText('Retrieved from the knowledge base')).not.toBeInTheDocument()
     advance(1)
@@ -196,7 +196,7 @@ describe('support workflow animation', () => {
     expect(vi.getTimerCount()).toBe(0)
     fireEvent.click(screen.getByRole('button', { name: 'Play example animation' }))
     advance(1500)
-    expect(screen.getByText('Webhook delivery')).toBeVisible()
+    expect(screen.getByText('Guild raid guide')).toBeVisible()
   })
 
   it('pauses progression and resumes from the current stage', () => {
@@ -224,7 +224,7 @@ describe('support workflow animation', () => {
     render(<AnimatedChat />)
     expect(screen.getByText('Answer agent')).toBeVisible()
     expect(screen.getByText('Review agent')).toBeVisible()
-    expect(screen.getByText('Reply sent to #game-support')).toBeVisible()
+    expect(screen.getByText('Reply sent to #dev-support')).toBeVisible()
     expect(screen.queryByRole('button', { name: /example animation/ })).not.toBeInTheDocument()
     expect(vi.getTimerCount()).toBe(0)
     advance(20000)

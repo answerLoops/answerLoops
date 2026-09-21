@@ -1,13 +1,15 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { MarketingPage, PageHero } from '@/components/marketing/layout'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'Terms of Service — answerLoops',
   description:
     'Terms governing access to and use of the answerLoops hosted service, subscriptions, connected channels, and AI features.',
-}
+  path: '/terms',
+})
 
 const EFFECTIVE_DATE = 'August 22, 2026'
 

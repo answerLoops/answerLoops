@@ -6,16 +6,16 @@ export function WorkflowDiagram() {
           [
             '01 / Receive',
             'Keep the conversation attached',
-            'A question becomes a ticket with its channel and original message.',
+            'A question becomes a help ticket with its channel and original message.',
           ],
           [
             '02 / Answer agent',
-            'Draft from your docs',
-            'answerLoops retrieves relevant knowledge and drafts a reply with its sources.',
+            'Draft from your knowledge',
+            'answerLoops retrieves relevant docs and drafts a reply with its sources.',
           ],
           [
             '03 / Review agent',
-            'A second agent checks the work',
+            'A second AI agent checks the work',
             'A second agent checks source alignment and confidence. Your channel settings determine the next step.',
           ],
         ].map(([label, title, body]) => (
@@ -34,7 +34,7 @@ export function WorkflowDiagram() {
         <div>
           <h3>Team review</h3>
           <p>
-            Your team reviews, edits, or answers tickets that need attention.
+            Your team reviews, edits, or answers help tickets that need attention.
           </p>
         </div>
       </div>

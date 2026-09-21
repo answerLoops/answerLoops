@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
@@ -16,12 +17,12 @@ import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { marketingSiteEnabled } from '@/lib/site'
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
-  title: 'Pricing — answerLoops',
+export const metadata: Metadata = publicPageMetadata({
+  title: 'Community support software pricing | answerLoops',
   description:
     'Compare Standard, Pro, and Enterprise plans. See exact monthly and annual prices, automated-answer allowances, model costs, and trial terms.',
-  alternates: { canonical: '/pricing' },
-}
+  path: '/pricing',
+})
 function PricingStructuredData() {
   const softwareJsonLd = {
     '@context': 'https://schema.org',
@@ -115,7 +116,7 @@ export default async function PricingPage({
       <PricingStructuredData />
       <PageHero
         eyebrow="Pricing"
-        title="Agent-powered support. Priced for your volume."
+        title="Choose a plan for the number of answers you need"
       >
         <p>
           Every hosted plan includes MCP and REST API access, with a monthly
@@ -169,7 +170,7 @@ export default async function PricingPage({
               className="marketing-text-link mt-4"
               href="/docs/product/ai-config"
             >
-              Provider and model requirements →
+              Provider and model requirements
             </Link>
           </div>
         </div>
@@ -214,7 +215,7 @@ export default async function PricingPage({
           </p>
         </div>
       </section>
-      <TrialCta title="Start with your own support questions." />
+      <TrialCta title="Try it with your own support questions" />
     </MarketingPage>
   )
 }

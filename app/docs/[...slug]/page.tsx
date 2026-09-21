@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { DocsPage, DocsBody, DocsDescription, DocsTitle } from 'fumadocs-ui/page'
@@ -39,14 +40,9 @@ export async function generateMetadata({
   const page = docsSource.getPage(slug)
   if (!page) notFound()
 
-  return {
+  return publicPageMetadata({
     title: page.data.title,
-    description: page.data.description,
-    alternates: { canonical: page.url },
-    openGraph: {
-      title: page.data.title,
-      description: page.data.description,
-      url: page.url,
-    },
-  }
+    description: page.data.description ?? 'Setup and product guides for answerLoops community support.',
+    path: page.url,
+  })
 }

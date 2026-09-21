@@ -1,9 +1,9 @@
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {}
   event.waitUntil(
-    self.registration.showNotification(data.title ?? 'Community Platform', {
+    self.registration.showNotification(data.title ?? 'answerLoops', {
       body: data.body ?? '',
-      icon: '/next.svg',
+      icon: '/icon.png',
       data: { url: data.url ?? '/' },
     })
   )

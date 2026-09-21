@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProofPage } from '@/components/marketing/proof-page'
@@ -6,12 +7,12 @@ import { AnimatedChat } from '@/components/animated-chat'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
-  title: 'Inspect a question, source, draft, and review | answerLoops',
+export const metadata: Metadata = publicPageMetadata({
+  title: 'See how a support reply is prepared | answerLoops',
   description:
-    'This illustrative example follows a workspace invitation question. Select each step to see the information used to prepare the reply.',
-  alternates: { canonical: '/support-example' },
-}
+    'See how answerLoops handles questions from Discord, Telegram, and Circle. Choose a channel to follow the question, source documents, draft, and review.',
+  path: '/support-example',
+})
 
 export default async function SupportExamplePage() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
@@ -22,16 +23,16 @@ export default async function SupportExamplePage() {
     <ProofPage
       navState={await resolveNavState()}
       eyebrow="Support example"
-      title="Inspect a question, source, draft, and review"
-      intro="This illustrative example follows a workspace invitation question. Select each step to see the information used to prepare the reply."
+      title="See how a support reply is prepared"
+      intro="See how answerLoops handles questions from Discord, Telegram, and Circle. Choose a channel to follow the question, source documents, draft, and review."
       sections={[
         {
           title: 'What the draft uses',
-          body: 'The source describes who can invite a teammate and where to send the invitation.',
+          body: 'Each example includes a question and two sample documents that provide the information for the reply.',
           details: [
-            'The answer names the Settings → Team screen.',
-            'It includes the email and role fields.',
-            'It links to the team documentation.',
+            'Discord shows a developer asking about duplicate webhook events.',
+            'Telegram shows a new guild member preparing for a weekend raid.',
+            'Circle shows an artist preparing work for a community print swap.',
           ],
         },
         {
@@ -46,8 +47,8 @@ export default async function SupportExamplePage() {
       ]}
       docs={[
         {
-          label: 'Team guide',
-          href: '/docs/product/team',
+          label: 'Knowledge source guide',
+          href: '/docs/product/knowledge-base',
         },
         {
           label: 'Reply settings',
@@ -59,9 +60,9 @@ export default async function SupportExamplePage() {
         },
       ]}
       schema={{
-        name: 'Inspect a question, source, draft, and review',
+        name: 'See how a support reply is prepared',
         description:
-          'This illustrative example follows a workspace invitation question. Select each step to see the information used to prepare the reply.',
+          'See how answerLoops handles questions from Discord, Telegram, and Circle. Choose a channel to follow the question, source documents, draft, and review.',
         path: '/support-example',
       }}
     >

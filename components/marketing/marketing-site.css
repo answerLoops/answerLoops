@@ -633,7 +633,14 @@
 }
 .marketing-workflow-step h3 {
   font-size: 1.2rem;
-  max-width: 17ch;
+  max-width: none;
+}
+@media (min-width: 768px) {
+  .marketing-workflow-step {
+    display: grid;
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+  }
 }
 .marketing-workflow-outcomes {
   gap: 1rem;
@@ -864,6 +871,12 @@
 }
 .enterprise-line a {
   color: #4c4c4c;
+}
+.hosting-enterprise-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
 }
 .marketing-site > header {
   background: #fffffff5;

@@ -1,1 +1,1 @@
-answerLoops — Faster answers. More time to build. Your docs become answers for your community and agents, with skills and MCP.
+answerLoops: Answer support questions with the docs you already have. Community support across your channels, with a chat widget for any website or documentation site.

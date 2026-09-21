@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -15,11 +16,11 @@ import { marketingSiteEnabled } from '@/lib/site'
 const post = getBlogPost('managing-every-community-platform-from-one-place')!
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: post.title,
   description: post.description,
-  alternates: { canonical: `/blog/${post.slug}` },
-}
+  path: `/blog/${post.slug}`,
+})
 
 export default function ManagingEveryPlatformPost() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
@@ -39,7 +40,7 @@ export default function ManagingEveryPlatformPost() {
         datePublished: post.datePublished,
         dateModified: post.datePublished,
         url,
-        author: { '@type': 'Person', name: post.author },
+        author: { '@type': 'Person', name: post.author, url: 'https://answerloops.com/about' },
         publisher: { '@id': ORGANIZATION_ID },
         isPartOf: { '@id': WEBSITE_ID },
         mainEntityOfPage: { '@type': 'WebPage', '@id': url },
@@ -58,7 +59,7 @@ export default function ManagingEveryPlatformPost() {
           <time dateTime={post.datePublished}>
             {formatPostDate(post.datePublished)}
           </time>{' '}
-          · {post.author}
+          · <Link href="/about">{post.author}</Link>
         </p>
       </PageHero>
       <section className="marketing-section">
@@ -108,7 +109,7 @@ export default function ManagingEveryPlatformPost() {
             part of the work.
           </p>
           <Link className="marketing-text-link" href="/support-workflow">
-            See the support workflow →
+            See the support workflow
           </Link>
         </article>
       </section>

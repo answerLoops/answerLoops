@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { IntentPage } from '@/components/marketing/intent-page'
@@ -5,12 +6,12 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
-  title: 'Run answerLoops on your infrastructure | answerLoops',
+export const metadata: Metadata = publicPageMetadata({
+  title: 'Self-hosted AI support software | answerLoops',
   description:
     'Deploy the application and channel services yourself. Choose your model configuration and take responsibility for database operations, backups, and updates.',
-  alternates: { canonical: '/self-hosted-ai-support' },
-}
+  path: '/self-hosted-ai-support',
+})
 export default async function Page() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
   // and the page would be advertising our pricing from somebody else's domain.

@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProofPage } from '@/components/marketing/proof-page'
@@ -6,12 +7,12 @@ import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
-  title: 'One agent answers. A second checks its work. | answerLoops',
+export const metadata: Metadata = publicPageMetadata({
+  title: 'AI support replies with source review | answerLoops',
   description:
     'The answer agent retrieves your documentation and drafts a reply. The review agent checks that draft against its sources. Your channel settings decide whether a qualifying answer is sent or held for your team.',
-  alternates: { canonical: '/agentic-support' },
-}
+  path: '/agentic-support',
+})
 
 export default async function AgenticSupportPage() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
@@ -21,8 +22,8 @@ export default async function AgenticSupportPage() {
   return (
     <ProofPage
       navState={await resolveNavState()}
-      eyebrow="Agentic support"
-      title="One agent answers. A second checks its work."
+      eyebrow="Answer preparation"
+      title="How answerLoops drafts and checks a reply"
       intro="The answer agent retrieves your documentation and drafts a reply. The review agent checks that draft against its sources. Your channel settings decide whether a qualifying answer is sent or held for your team."
       sections={[
         {
@@ -77,7 +78,7 @@ export default async function AgenticSupportPage() {
         },
       ]}
       schema={{
-        name: 'One agent answers. A second checks its work.',
+        name: 'How answerLoops drafts and checks a reply',
         description:
           'The answer agent retrieves your documentation and drafts a reply. The review agent checks that draft against its sources. Your channel settings decide whether a qualifying answer is sent or held for your team.',
         path: '/agentic-support',

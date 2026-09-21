@@ -1,12 +1,14 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
 import { MarketingPage, PageHero } from '@/components/marketing/layout'
 
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'Privacy Policy — answerLoops',
   description:
     'How answerLoops collects, uses, stores, and protects data for connected support channels, AI processing, and billing.',
-}
+  path: '/privacy',
+})
 
 const EFFECTIVE_DATE = 'August 12, 2026'
 

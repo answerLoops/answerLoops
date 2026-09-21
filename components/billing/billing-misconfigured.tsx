@@ -1,3 +1,4 @@
+import { PRICING_HREF } from '@/components/marketing/nav-shared'
 import Link from 'next/link'
 import { LogoMark } from '@/components/logo'
 
@@ -37,7 +38,7 @@ export function BillingMisconfigured() {
           and we will sort it out.
         </p>
         <Link
-          href="/pricing"
+          href={PRICING_HREF}
           className="mt-7 inline-flex rounded-full border border-slate-200 px-5 py-2.5 text-sm font-medium text-slate-700 transition hover:border-slate-300"
         >
           Back to pricing

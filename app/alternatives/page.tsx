@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -9,12 +10,12 @@ import {
 import { PageSchema } from '@/components/marketing/page-schema'
 import { marketingSiteEnabled } from '@/lib/site'
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'Compare answerLoops',
   description:
     'Compare answerLoops with Intercom, Chatbase, Plain, Pylon, and Zendesk AI.',
-  alternates: { canonical: '/alternatives' },
-}
+  path: '/alternatives',
+})
 const COMPARISONS = [
   {
     slug: 'intercom',
@@ -77,7 +78,7 @@ export default function AlternativesPage() {
               <h2 className="!text-xl">answerLoops vs {c.name}</h2>
               <p>{c.summary}</p>
               <Link className="marketing-text-link" href={`/vs/${c.slug}`}>
-                Compare {c.name} →
+                Compare {c.name}
               </Link>
             </article>
           ))}

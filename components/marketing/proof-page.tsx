@@ -32,11 +32,8 @@ export function ProofPage({
       {children}
       <section className="marketing-section">
         <div className="marketing-container marketing-proof-grid">
-          {sections.map((section, index) => (
+          {sections.map((section) => (
             <article key={section.title} className="marketing-card">
-              <p className="marketing-eyebrow">
-                0{index + 1} / Inside the workflow
-              </p>
               <h2 className="!text-xl">{section.title}</h2>
               <p>{section.body}</p>
               <ul>

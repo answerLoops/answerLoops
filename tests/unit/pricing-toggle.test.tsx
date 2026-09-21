@@ -50,14 +50,14 @@ describe('PricingToggle', () => {
       expect(cardElement).not.toHaveTextContent(/\$[\d,]+\.\d{2}/)
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
-      ).toHaveAttribute('href', `/login?plan=${price.id}&interval=annual`)
+      ).toHaveAttribute('href', 'https://dub.sh/start-a-trial')
       expect(card.getByText(/Card required/)).toHaveTextContent(
         'Cancel before the 14-day trial ends',
       )
     }
   })
 
-  it('updates prices, charge disclosure, and checkout interval together in both directions', async () => {
+  it('updates prices and charge disclosure while keeping the shared trial destination', async () => {
     const user = userEvent.setup()
     render(<PricingToggle plans={ORDERED_PLANS} />)
     const toggle = screen.getByRole('switch', { name: 'Use annual billing' })
@@ -77,7 +77,7 @@ describe('PricingToggle', () => {
       }
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
-      ).toHaveAttribute('href', `/login?plan=${price.id}&interval=monthly`)
+      ).toHaveAttribute('href', 'https://dub.sh/start-a-trial')
       expect(card.getByText(/Card required/)).toHaveTextContent(
         'Cancel before the 14-day trial ends',
       )
@@ -98,7 +98,7 @@ describe('PricingToggle', () => {
       }
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
-      ).toHaveAttribute('href', `/login?plan=${price.id}&interval=annual`)
+      ).toHaveAttribute('href', 'https://dub.sh/start-a-trial')
     }
   })
 

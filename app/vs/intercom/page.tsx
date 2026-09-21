@@ -1,15 +1,16 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ComparisonPage } from '@/components/marketing/comparison-page'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'answerLoops vs Intercom',
   description:
     'Intercom and answerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself.',
-  alternates: { canonical: '/vs/intercom' },
-}
+  path: '/vs/intercom',
+})
 export default function Page() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
   // and the page would be advertising our pricing from somebody else's domain.

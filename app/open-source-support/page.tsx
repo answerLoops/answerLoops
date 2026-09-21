@@ -1,3 +1,5 @@
+import { PRICING_HREF } from '@/components/marketing/nav-shared'
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { IntentPage } from '@/components/marketing/intent-page'
@@ -5,12 +7,12 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
-  title: 'Support your project across community channels | answerLoops',
+export const metadata: Metadata = publicPageMetadata({
+  title: 'Support software for open-source communities | answerLoops',
   description:
     'Collect questions from Discord, GitHub, forums, and other connected channels. Prepare answers from your project documentation and keep requests that need maintainer judgment in the ticket queue.',
-  alternates: { canonical: '/open-source-support' },
-}
+  path: '/open-source-support',
+})
 export default async function Page() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
   // and the page would be advertising our pricing from somebody else's domain.
@@ -77,7 +79,7 @@ export default async function Page() {
         },
         {
           label: 'Hosted plans',
-          href: '/pricing',
+          href: PRICING_HREF,
         },
       ]}
       schema={{
