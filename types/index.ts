@@ -1,5 +1,5 @@
 export type Priority = 'critical' | 'high' | 'medium' | 'low'
-export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed'
+export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'closed' | 'duplicate'
 export type TicketCategory = 'bug' | 'feature_request' | 'documentation' | 'how_to' | 'general_question'
 // 'needs_human' is written by lib/ai/agent.ts whenever a draft is held for
 // staff approval instead of auto-posted — either because Automatic

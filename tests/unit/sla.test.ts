@@ -70,6 +70,11 @@ describe('getSLAStatus', () => {
       expect(r.resolveBreached).toBe(false)
     })
 
+    it('met===null + past deadline + duplicate → not breached', () => {
+      const r = getSLAStatus(ticket({ sla_resolve_deadline: PAST, status: 'duplicate' }))
+      expect(r.resolveBreached).toBe(false)
+    })
+
     it('future deadline → not breached', () => {
       const r = getSLAStatus(ticket({ sla_resolve_deadline: FUTURE, status: 'open' }))
       expect(r.resolveBreached).toBe(false)

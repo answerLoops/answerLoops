@@ -46,6 +46,7 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
             <option value="in_progress">In Progress</option>
             <option value="resolved">Resolved</option>
             <option value="closed">Closed</option>
+            <option value="duplicate">Duplicate</option>
           </select>
           <select name="priority" defaultValue={searchParams.priority ?? ''} className="rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white">
             <option value="">All priorities</option>
