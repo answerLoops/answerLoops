@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server'
 import { auth } from '@/auth'
-import { getIntegration } from '@/lib/db/queries/integrations'
+import { getIntegration, markTelegramWebhookRegistered } from '@/lib/db/queries/integrations'
 import { registerTelegramWebhook } from '@/lib/telegram/webhook'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
     if (!result.ok) {
       return Response.json({ error: result.error }, { status: 502 })
     }
+    await markTelegramWebhookRegistered(orgId)
     return Response.json({ ok: true, webhookUrl: result.webhookUrl })
   } catch (err) {
     logger.error('telegram webhook registration failed', { module: MOD, requestId: getRequestId(req), orgId, error: err })
