@@ -14,6 +14,7 @@ export const SIGNIN_HREF = 'https://dub.sh/sign-in-button'
 
 // Public trial buttons share the same campaign entry point.
 export const START_HREF = 'https://dub.sh/start-a-trial'
+export const PRICING_HREF = 'https://dub.sh/pricing-page'
 
 // Keep the trial and sign-in labels consistent across desktop and mobile.
 export const START_LABEL = 'Start trial'

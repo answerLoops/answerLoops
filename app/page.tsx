@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { START_HREF } from '@/components/marketing/nav-shared'
+import { START_HREF, PRICING_HREF } from '@/components/marketing/nav-shared'
 import { redirect } from 'next/navigation'
 import { AnimatedChat } from '@/components/animated-chat'
 import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
@@ -10,7 +10,7 @@ import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORDERED_PLANS } from '@/lib/billing/plans'
 import { GITHUB_SOURCE_URL, marketingSiteEnabled } from '@/lib/site'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
-import { BookOpen, ShieldCheck, MessagesSquare, FileQuestion, Cloud, Server, Terminal, GraduationCap, Users, Palette, Blocks, Building2 } from 'lucide-react'
+import { BookOpen, ShieldCheck, MessageCircle, MessagesSquare, FileQuestion, Cloud, Server, Terminal, GraduationCap, Users, Palette, Blocks, Building2 } from 'lucide-react'
 import { IntegrationIcon } from '@/components/marketing/integration-icon'
 import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 const FAQ_ITEMS = [
   {
     q: 'What does answerLoops do?',
-    a: 'answerLoops collects questions from your community channels and drafts replies using your documentation. A separate AI review checks each draft against its sources. You can approve replies yourself or enable automatic replies for individual channels. Useful resolutions can be saved for future questions.',
+    a: 'answerLoops collects questions from your community channels and drafts replies using your documented knowledge. A separate AI review checks each draft against its sources. You can approve replies yourself or enable automatic replies for individual channels. Useful resolutions can be saved for future questions.',
   },
   {
     q: 'Can I review answers before they are sent?',
@@ -49,7 +49,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Do I need an AI provider account?',
-    a: 'New hosted workspaces include a one-time allowance of five AI-processed tickets. After that, connect your provider account and pay its usage charges directly. Custom model endpoints are available on Enterprise and self-hosted deployments.',
+    a: 'Your first five help tickets include AI processing at no extra charge. To continue, connect an account with a supported AI service (like Anthropic or OpenAI) that powers the answers. You pay that service directly for AI usage, separately from your answerLoops subscription.',
   },
   {
     q: 'Can I run answerLoops on my own infrastructure?',
@@ -64,11 +64,11 @@ const FAQ_ITEMS = [
     a: 'No. It can use your guides and FAQs to answer questions in art, crypto, course, membership, and general-interest communities, as well as developer communities. The answers depend on the documentation you provide.',
   },
   {
-    q: 'How do I onboard my agent?',
-    a: 'For a running hosted or self-hosted workspace, install the answerloops-operate skill for Claude Code and create a scoped API key in Settings → API Keys. The skill guides your agent through connecting over MCP. Other compatible clients can connect directly through the MCP server or REST API. The answerloops-setup skill helps set up a self-hosted instance.',
+    q: 'How do I onboard an AI agent? (optional)',
+    a: 'Start with the agent onboarding guide and connect your AI agent to your answerLoops workspace. Agents that support skills can use answerloops-operate for guided setup. Other compatible AI tools can connect through MCP or the REST API. Create an API key in Settings → API Keys and choose what your agent can access. For self-hosting, the answerloops-setup skill guides compatible agents through installation.',
   },
   {
-    q: 'Can my own agents use answerLoops?',
+    q: 'Can my own AI agents use answerLoops? (optional)',
     a: 'Yes. Every hosted plan includes MCP and REST API access for searching knowledge, reading FAQs and tickets, generating answers, and creating support tickets. Usage limits depend on your plan.',
   },
 ]
@@ -128,11 +128,11 @@ export default function LandingPage() {
               Agent-native AI support
             </p>
             <h1>
-              Give your community faster answers and your team more time
+              Faster answers. More time to create.
             </h1>
             <p className="marketing-intro">
               Turn your docs into answers wherever your community asks. Keep
-              your team in control, or put your own agent to work.
+              your team in control, or put your own AI agents to work.
             </p>
             <div className="marketing-actions">
               <Link
@@ -147,7 +147,7 @@ export default function LandingPage() {
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Onboard your agent
+                Onboard your AI agent
               </Link>
             </div>
             <p className="marketing-note">
@@ -182,7 +182,7 @@ export default function LandingPage() {
               </h2>
             </div>
             <p>
-              Every draft is checked against the documents used to write it.
+              Every draft is checked against the knowledge used to write it.
               Keep replies in your team’s queue for approval, or enable
               automatic replies for a channel after testing the results.
             </p>
@@ -196,7 +196,15 @@ export default function LandingPage() {
       <section id="website-chat" className="marketing-section marketing-soft scroll-mt-20">
         <div className="marketing-container marketing-section-heading">
           <div>
-            <p className="marketing-eyebrow">Website chat widget</p>
+            <p className="marketing-eyebrow flex items-center gap-3">
+              <MessageCircle
+                size={24}
+                strokeWidth={1.75}
+                className="shrink-0 text-[var(--marketing-link)]"
+                aria-hidden="true"
+              />
+              Website chat widget
+            </p>
             <h2>Add a support chatbot to any website or documentation site</h2>
           </div>
           <div>
@@ -221,10 +229,10 @@ export default function LandingPage() {
         <div className="marketing-container mcp-grid">
           <div>
             <p className="marketing-eyebrow">
-              MCP and API access
+              MCP and API access for AI agents
             </p>
             <h2 id="mcp-title">
-              Let your tools use the same support knowledge
+              Let AI tools use the same support knowledge
             </h2>
             <p className="marketing-lead">
               Give coding assistants, internal agents, and custom tools access
@@ -238,7 +246,7 @@ export default function LandingPage() {
               <Link href="/docs/integrations/mcp" className="marketing-button">
                 Read the MCP guide
               </Link>
-              <Link className="marketing-text-link" href="/mcp-support-agents">
+              <Link className="marketing-button marketing-button-secondary" href="/mcp-support-agents">
                 Connect your agent
               </Link>
             </div>
@@ -282,14 +290,14 @@ export default function LandingPage() {
           <div className="marketing-section-heading">
             <div>
               <p className="marketing-eyebrow">
-                Managing support
+                Managing community support
               </p>
               <h2>
-                Keep your sources and conversations in one place
+                Manage your knowledge base and community support in one place.
               </h2>
             </div>
             <p>
-              Good answers depend on current documentation. Keep track of the
+              Good answers depend on your knowledge base. Keep track of the
               sources you import, the replies your team sends, and the questions
               your docs don’t cover yet.
             </p>
@@ -298,14 +306,14 @@ export default function LandingPage() {
             {[
               {
                 icon: BookOpen,
-                title: 'Import the documentation you already have',
+                title: 'Import any documentation you already have',
                 body: 'Import docs, files, GitHub repositories, and Notion pages. Save useful resolutions so the next answer starts with what your team already knows.',
                 href: '/docs/product/knowledge-base',
                 label: 'Knowledge sources',
               },
               {
                 icon: ShieldCheck,
-                title: 'Choose which channels can reply automatically',
+                title: 'Choose which community channels can reply automatically',
                 body: 'Start with team approval. Enable automatic answers per channel when you’re ready. Questions below your confidence threshold stay with your team.',
                 href: '/docs/product/ai-deflection',
                 label: 'Answer review',
@@ -319,7 +327,7 @@ export default function LandingPage() {
               },
               {
                 icon: FileQuestion,
-                title: 'Find the questions your docs don’t answer',
+                title: 'Expose community knowledge gaps',
                 body: 'Use unanswered topics and customer ratings to decide what to document next. Knowledge-gap reports are included on Pro and Enterprise.',
                 href: '/docs/product/knowledge-gaps',
                 label: 'Knowledge gaps',
@@ -373,7 +381,7 @@ export default function LandingPage() {
                 Start with a hosted workspace. Connect your knowledge and
                 channels, then review your first answers.
               </p>
-              <Link href="/pricing" className="marketing-button marketing-button-secondary">
+              <Link href={PRICING_HREF} className="marketing-button marketing-button-secondary">
                 Explore hosted plans
               </Link>
             </article>
@@ -425,7 +433,7 @@ export default function LandingPage() {
         <div className="marketing-container">
           <div className="marketing-section-heading marketing-section-heading-center">
             <h2>
-              Support for developer, art, crypto, and everyday communities
+              Support for any community
             </h2>
           </div>
           <div className="audience-grid">

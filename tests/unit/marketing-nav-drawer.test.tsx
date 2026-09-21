@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Nav, type NavState } from '@/components/marketing/chrome'
+import { PRICING_HREF } from '@/components/marketing/nav-shared'
 
 /**
  * The marketing header has two navigation surfaces, and only one of them is
@@ -84,7 +85,7 @@ describe('the drawer is the only navigation a phone gets', () => {
     const expected: [RegExp, string][] = [
       [/^product$/i, '/#features'],
       [/^integrations$/i, '/#integrations'],
-      [/^pricing$/i, '/pricing'],
+      [/^pricing$/i, PRICING_HREF],
       [/^docs$/i, '/docs'],
       [/^about$/i, '/about'],
     ]

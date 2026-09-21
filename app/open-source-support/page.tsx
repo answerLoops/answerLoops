@@ -1,3 +1,4 @@
+import { PRICING_HREF } from '@/components/marketing/nav-shared'
 import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -78,7 +79,7 @@ export default async function Page() {
         },
         {
           label: 'Hosted plans',
-          href: '/pricing',
+          href: PRICING_HREF,
         },
       ]}
       schema={{

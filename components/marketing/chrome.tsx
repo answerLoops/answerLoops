@@ -1,3 +1,4 @@
+import { PRICING_HREF } from '@/components/marketing/nav-shared'
 import Link from 'next/link'
 import { LogoMark } from '@/components/logo'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
@@ -7,7 +8,7 @@ import type { NavState } from './nav-shared'
 export { GITHUB_SOURCE_URL } from '@/lib/site'
 export { navState } from './nav-shared'
 export type { NavState } from './nav-shared'
-export const PLANS_HREF = '/pricing#plans'
+export const PLANS_HREF = PRICING_HREF
 export const GithubIcon = ({
   className = 'h-4 w-4',
 }: {
@@ -36,7 +37,7 @@ const NAV = [
   ['Product', '/#features'],
   ['Website chat', '/#website-chat'],
   ['Integrations', '/#integrations'],
-  ['Pricing', '/pricing'],
+  ['Pricing', PRICING_HREF],
   ['Docs', '/docs'],
   ['About', '/about'],
 ]
@@ -96,7 +97,7 @@ const GROUPS = [
       ['Workflow', '/support-workflow'],
       ['Website chat widget', '/docs/product/widget'],
       ['Example', '/support-example'],
-      ['Pricing', '/pricing'],
+      ['Pricing', PRICING_HREF],
     ],
   },
   {

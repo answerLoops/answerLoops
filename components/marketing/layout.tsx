@@ -1,9 +1,16 @@
 import Link from 'next/link'
-import { START_HREF } from './nav-shared'
+import { Source_Sans_3 } from 'next/font/google'
+import { START_HREF, PRICING_HREF } from './nav-shared'
 import type { ReactNode } from 'react'
 import { Nav, Footer, type NavState } from './chrome'
 import './marketing-site.css'
 import './marketing-theme.css'
+
+const marketingFont = Source_Sans_3({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-marketing-sans',
+})
 
 export function MarketingPage({
   children,
@@ -13,7 +20,7 @@ export function MarketingPage({
   navState?: NavState
 }) {
   return (
-    <div className="marketing-site">
+    <div className={`marketing-site ${marketingFont.variable}`}>
       <a className="marketing-skip" href="#main-content">
         Skip to content
       </a>
@@ -74,7 +81,7 @@ export function TrialCta({
             A card is required. Cancel before the trial ends to avoid the
             subscription charge.
           </p>
-          <Link className="marketing-text-link" href="/pricing">
+          <Link className="marketing-text-link" href={PRICING_HREF}>
             View plans and model costs
           </Link>
         </div>

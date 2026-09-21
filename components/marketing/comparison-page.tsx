@@ -1,3 +1,4 @@
+import { PRICING_HREF } from '@/components/marketing/nav-shared'
 /* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- Horizontal scroll regions need keyboard focus so arrow keys can reveal every column. */
 import Link from 'next/link'
 import { MarketingPage, PageHero, TrialCta } from './layout'
@@ -94,7 +95,7 @@ export function ComparisonPage({
           </div>
           <p className="mt-8">
             For answerLoops, compare the{' '}
-            <Link className="marketing-text-link" href="/pricing">
+            <Link className="marketing-text-link" href={PRICING_HREF}>
               hosted plan limits and model costs
             </Link>
             , or review the{' '}
