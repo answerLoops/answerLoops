@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProofPage } from '@/components/marketing/proof-page'
@@ -5,12 +6,12 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'Plan your answerLoops deployment | answerLoops',
   description:
     'Run the application and channel services on infrastructure you manage. Before launch, configure authentication, storage, model access, backups, and updates.',
-  alternates: { canonical: '/self-hosting-proof' },
-}
+  path: '/self-hosting-proof',
+})
 
 export default async function SelfHostingProofPage() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
@@ -20,7 +21,7 @@ export default async function SelfHostingProofPage() {
   return (
     <ProofPage
       navState={await resolveNavState()}
-      eyebrow="Self hosting proof"
+      eyebrow="Deployment checklist"
       title="Plan your answerLoops deployment"
       intro="Run the application and channel services on infrastructure you manage. Before launch, configure authentication, storage, model access, backups, and updates."
       sections={[

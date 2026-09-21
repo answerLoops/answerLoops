@@ -34,7 +34,7 @@ export function IntentPage({
         title={title}
         aside={
           <aside className="marketing-audience">
-            <h2>Who uses this</h2>
+            <h2>When this is useful</h2>
             <p>{audience}</p>
           </aside>
         }
@@ -55,9 +55,8 @@ export function IntentPage({
       <section className="marketing-section">
         <div className="marketing-container">
           <div className="marketing-grid marketing-capabilities">
-            {highlights.map((h, index) => (
+            {highlights.map((h) => (
               <article className="marketing-card" key={h.title}>
-                <p className="marketing-eyebrow">0{index + 1} / Capability</p>
                 <h3>{h.title}</h3>
                 <p>{h.body}</p>
               </article>
@@ -93,7 +92,7 @@ export function IntentPage({
           <div className="marketing-actions">
             {docs.map((d) => (
               <Link key={d.href} className="marketing-text-link" href={d.href}>
-                {d.label} →
+                {d.label}
               </Link>
             ))}
           </div>

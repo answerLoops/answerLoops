@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { IntentPage } from '@/components/marketing/intent-page'
@@ -5,12 +6,12 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
-  title: 'Answer support questions in Discord and GitHub | answerLoops',
+export const metadata: Metadata = publicPageMetadata({
+  title: 'Discord and GitHub support automation | answerLoops',
   description:
     'Receive Discord conversations and GitHub Issues or Discussions in one ticket queue. Draft replies from the documentation and knowledge your team maintains.',
-  alternates: { canonical: '/discord-github-support' },
-}
+  path: '/discord-github-support',
+})
 export default async function Page() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
   // and the page would be advertising our pricing from somebody else's domain.

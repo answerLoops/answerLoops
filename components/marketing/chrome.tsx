@@ -2,9 +2,9 @@ import Link from 'next/link'
 import { LogoMark } from '@/components/logo'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
 import { NavCta } from './nav-cta'
-import { GITHUB_URL } from '@/lib/site'
+import { GITHUB_SOURCE_URL } from '@/lib/site'
 import type { NavState } from './nav-shared'
-export { GITHUB_URL } from '@/lib/site'
+export { GITHUB_SOURCE_URL } from '@/lib/site'
 export { navState } from './nav-shared'
 export type { NavState } from './nav-shared'
 export const PLANS_HREF = '/pricing#plans'
@@ -25,8 +25,8 @@ export const GithubIcon = ({
 export function NavWordmark() {
   return (
     <span className="flex shrink-0 items-center gap-3">
-      <LogoMark size={28} />
-      <span className="text-base font-semibold tracking-tight">
+      <LogoMark size={32} />
+      <span className="text-xl font-semibold tracking-tight sm:text-[30px]">
         answer<span className="text-[#168fa3]">Loops</span>
       </span>
     </span>
@@ -34,7 +34,7 @@ export function NavWordmark() {
 }
 const NAV = [
   ['Product', '/#features'],
-  ['MCP', '/mcp-support-agents'],
+  ['Website chat', '/#website-chat'],
   ['Integrations', '/#integrations'],
   ['Pricing', '/pricing'],
   ['Docs', '/docs'],
@@ -94,6 +94,7 @@ const GROUPS = [
     links: [
       ['Overview', '/agentic-support'],
       ['Workflow', '/support-workflow'],
+      ['Website chat widget', '/docs/product/widget'],
       ['Example', '/support-example'],
       ['Pricing', '/pricing'],
     ],
@@ -125,8 +126,8 @@ const GROUPS = [
     links: [
       ['About', '/about'],
       ['Blog', '/blog'],
+      ['Community', 'https://dub.sh/github-community'],
       ['Contact', 'mailto:hello@answerloops.com'],
-      ['GitHub', GITHUB_URL],
     ],
   },
 ]
@@ -138,20 +139,20 @@ export function Footer() {
           <div>
             <NavWordmark />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">
-              Agent infrastructure for support. Grounded in your docs. Checked
-              by a second agent.
+              answerLoops helps your team answer community questions using
+              the documentation and resolutions you already maintain.
             </p>
             <p className="mt-3 text-sm text-slate-600">
-              Hosted or self-hosted.
+              Use our hosted service or run it yourself.
             </p>
             <Link
-              href={GITHUB_URL}
+              href={GITHUB_SOURCE_URL}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-4 flex items-center gap-2 text-base font-medium text-slate-900 transition-colors hover:text-blue-700"
             >
               <GithubIcon className="h-5 w-5" />
-              Proudly open source
+              Proudly open-source
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">

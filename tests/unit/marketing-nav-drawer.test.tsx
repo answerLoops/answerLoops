@@ -52,13 +52,13 @@ describe('the drawer is the only navigation a phone gets', () => {
     expect(
       signIn.getAttribute('href'),
       'the drawer must use the sign-in framing, not "Create your account"',
-    ).toBe('/login?mode=signin')
+    ).toBe('https://dub.sh/sign-in-button')
 
-    const trial = drawer.getByRole('link', { name: /start for \$0/i })
+    const trial = drawer.getByRole('link', { name: /start trial/i })
     expect(
       trial.getAttribute('href'),
-      'every "start" action goes to auth; the plan is chosen after, at /checkout',
-    ).toBe('/login')
+      'mobile trial buttons use the same campaign entry point',
+    ).toBe('https://dub.sh/start-a-trial')
   })
 
   it('offers no auth actions to somebody who is already signed in', async () => {
@@ -72,7 +72,7 @@ describe('the drawer is the only navigation a phone gets', () => {
       const { drawer } = await openDrawer(user)
 
       expect(drawer.queryByRole('link', { name: /^log in$/i }), `${state} drawer`).toBeNull()
-      expect(drawer.queryByRole('link', { name: /start for \$0/i }), `${state} drawer`).toBeNull()
+      expect(drawer.queryByRole('link', { name: /start trial/i }), `${state} drawer`).toBeNull()
       unmount()
     }
   })
@@ -133,7 +133,7 @@ describe('each state renders its own CTA and nobody else’s', () => {
   const CTAS = {
     dashboard: /go to dashboard/i,
     choosePlan: /choose a plan/i,
-    trial: /start for \$0/i,
+    trial: /start trial/i,
     signIn: /^log in$/i,
   } as const
 

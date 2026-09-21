@@ -83,17 +83,17 @@ describe('the header CTA matches what the visitor can actually do', () => {
     // missing, or the trial button pointing somewhere that cannot start one.
     render(<Nav state="anonymous" />)
 
-    const trial = screen.getByRole('link', { name: /start for \$0/i })
+    const trial = screen.getByRole('link', { name: /start trial/i })
     expect(
       trial.getAttribute('href'),
-      'the trial is free, so the plan is a small decision and belongs after auth, not before it',
-    ).toBe('/login')
+      'trial buttons use the shared campaign entry point',
+    ).toBe('https://dub.sh/start-a-trial')
 
     const signIn = screen.getByRole('link', { name: /^log in$/i })
     expect(
       signIn.getAttribute('href'),
       'returning users must land on the sign-in framing, not "Create your account"',
-    ).toBe('/login?mode=signin')
+    ).toBe('https://dub.sh/sign-in-button')
 
     expect(screen.queryByRole('link', { name: /go to dashboard/i })).toBeNull()
   })
@@ -103,7 +103,7 @@ describe('the header CTA matches what the visitor can actually do', () => {
     // renders a perfectly reasonable-looking header, and the loss only shows
     // up as the half of visitors who quietly leave.
     render(<Nav state="anonymous" />)
-    expect(screen.queryByRole('link', { name: /start for \$0/i })).not.toBeNull()
+    expect(screen.queryByRole('link', { name: /start trial/i })).not.toBeNull()
     expect(screen.queryByRole('link', { name: /^log in$/i })).not.toBeNull()
   })
 
@@ -149,10 +149,7 @@ describe('the plan cards the header CTA points at', () => {
   })
 
   it('carries the billing period through sign-in, not just the plan', () => {
-    // The pricing cards link to /login?plan=..&interval=.. . An already
-    // signed-in visitor is redirected straight on to /start-trial, which
-    // defaults to monthly when no interval arrives — so dropping it here bills
-    // the monthly price to someone who clicked an annual card.
+    // Direct sign-in URLs must still preserve an explicitly selected interval.
     const src = read('app/login/page.tsx')
     expect(src).toContain('parseBillingInterval')
     expect(src).toMatch(/interval=\$\{parsed\}/)

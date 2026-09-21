@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, FileText, Pause, Play, ScanLine, Sparkles } from 'lucide-react'
+import { Check, FileText, Pause, Play, ScanLine, MessageSquare } from 'lucide-react'
 import { IntegrationIcon } from '@/components/marketing/integration-icon'
 
 const STAGES = [
@@ -14,21 +14,8 @@ const STAGES = [
 
 const CHANNELS = [
   {
-    name: 'Discord', color: '#5865f2', destination: '#game-support',
-    author: 'Player', avatar: 'GX', room: '#game-support',
-    question: 'Our co-op game starts rubber-banding when I stream. How can I reduce lag without lowering the graphics settings?',
-    sources: ['Multiplayer connection guide', 'Streaming troubleshooting'],
-    answer: 'Rubber-banding can come from network congestion rather than graphics settings. Check the connection first:',
-    steps: [
-      'Connect your gaming device by Ethernet and pause background uploads.',
-      'Lower the stream upload bitrate to leave bandwidth for the game.',
-      'Select a nearby game server and compare latency with streaming off and on.',
-    ],
-    review: 'Checked connection troubleshooting and streaming recommendations against both guides.',
-  },
-  {
-    name: 'Telegram', color: '#229ed9', destination: 'support chat',
-    author: 'Developer', avatar: 'JD', room: 'support chat',
+    name: 'Discord', color: '#5865f2', destination: '#dev-support',
+    author: 'Developer', avatar: 'JD', room: '#dev-support',
     question: 'Our webhook retries created duplicate orders. How do we prevent that without dropping events?',
     sources: ['Webhook delivery', 'Idempotency guide'],
     answer: 'Retries can deliver the same event more than once. Use the event_id to make processing idempotent:',
@@ -38,6 +25,19 @@ const CHANNELS = [
       'For a duplicate, return success without creating another order.',
     ],
     review: 'Checked retry behavior and duplicate handling against both sources.',
+  },
+  {
+    name: 'Telegram', color: '#229ed9', destination: 'guild chat',
+    author: 'Player', avatar: 'GX', room: 'guild chat',
+    question: 'I’m new to the guild. How do I join this weekend’s raid, and what should I prepare?',
+    sources: ['Guild raid guide', 'New member checklist'],
+    answer: 'Start with the raid signup in the pinned guild message:',
+    steps: [
+      'Open the signup and check the start time and time zone.',
+      'Choose your role and review the gear and preparation checklist.',
+      'Join the listed voice channel before the raid so the organizer can confirm the group.',
+    ],
+    review: 'Checked raid signup and preparation steps against both guild guides.',
   },
   {
     name: 'Circle', color: '#7c3aed', destination: 'the community',
@@ -154,7 +154,7 @@ export function AnimatedChat() {
         {current >= 2 && (
           <div className="demo-answer demo-enter">
             <div className="demo-message-meta">
-              <Sparkles size={17} />
+              <MessageSquare size={17} />
               <strong>Answer agent</strong>
               <span>Draft</span>
             </div>

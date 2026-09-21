@@ -68,7 +68,7 @@ describe('the public repository URL', () => {
 
   it('backs the marketing chrome, which re-exports rather than redeclaring it', () => {
     const src = readFileSync(path.join(repoRoot, 'components/marketing/chrome.tsx'), 'utf-8')
-    expect(src).toContain("export { GITHUB_URL } from '@/lib/site'")
+    expect(src).toContain("export { GITHUB_SOURCE_URL } from '@/lib/site'")
     expect(src, 'a second definition is what drifted last time').not.toMatch(
       /const GITHUB_URL\s*=\s*['"]https/,
     )

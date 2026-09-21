@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProofPage } from '@/components/marketing/proof-page'
@@ -6,12 +7,12 @@ import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'How a question becomes a reviewed answer | answerLoops',
   description:
     'answerLoops records the question, retrieves relevant knowledge, drafts a reply, and runs a separate AI review. Channel settings determine whether the reply posts automatically or waits for your team.',
-  alternates: { canonical: '/architecture' },
-}
+  path: '/architecture',
+})
 
 export default async function ArchitecturePage() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,

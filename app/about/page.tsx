@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -7,14 +8,14 @@ import {
   TrialCta,
 } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
-import { marketingSiteEnabled } from '@/lib/site'
+import { GITHUB_SOURCE_URL, marketingSiteEnabled } from '@/lib/site'
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'About answerLoops',
   description:
     'Nathan and Faith Tarbert built answerLoops to manage support for their online communities.',
-  alternates: { canonical: '/about' },
-}
+  path: '/about',
+})
 export default function AboutPage() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
   // and the page would be advertising our pricing from somebody else's domain.
@@ -29,7 +30,7 @@ export default function AboutPage() {
       />
       <PageHero
         eyebrow="About"
-        title="Built from the work of running a community."
+        title="We kept answering the same questions"
       >
         <p>
           We built answerLoops after answering the same support questions across
@@ -78,13 +79,13 @@ export default function AboutPage() {
               className="marketing-button marketing-button-secondary"
               href="/support-example"
             >
-              Inspect an example
+              See an example reply
             </Link>
             <Link
               className="marketing-text-link"
-              href="https://github.com/answerLoops/answerLoops"
+              href={GITHUB_SOURCE_URL}
             >
-              View the source →
+              View the source
             </Link>
           </div>
         </div>

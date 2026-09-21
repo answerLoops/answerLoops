@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { START_HREF } from './nav-shared'
 import type { ReactNode } from 'react'
 import { Nav, Footer, type NavState } from './chrome'
 import './marketing-site.css'
@@ -51,8 +52,8 @@ export function PageHero({
 }
 
 export function TrialCta({
-  title = 'Give your knowledge an answer loop.',
-  description = 'Connect your docs. Add a channel or an MCP client. Review what your agents can answer.',
+  title = 'Try it with the questions your team gets every week',
+  description = 'Add a few support articles and connect a channel, then review the replies before deciding what to automate.',
 }: {
   title?: string
   description?: string
@@ -66,11 +67,11 @@ export function TrialCta({
           <p>{description}</p>
         </div>
         <div>
-          <Link className="marketing-button" href="/login">
+          <Link className="marketing-button" href={START_HREF}>
             Start a 14-day trial
           </Link>
           <p className="marketing-note">
-            Card required. Cancel before the trial ends to avoid the
+            A card is required. Cancel before the trial ends to avoid the
             subscription charge.
           </p>
           <Link className="marketing-text-link" href="/pricing">

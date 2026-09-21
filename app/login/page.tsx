@@ -76,11 +76,9 @@ export default async function LoginPage({ searchParams }: Props) {
 
   return (
     <div className="flex min-h-screen items-center justify-center relative overflow-hidden px-4">
-      <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-brand-50 to-brand-100/60" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(37,99,235,0.12),_transparent_55%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_right,_rgba(239,246,255,0.9),_transparent_50%)]" />
-      <div className="relative w-full max-w-sm animate-[softRise_0.45s_ease-out]">
-        <div className="rounded-2xl border border-border bg-surface/95 backdrop-blur-sm px-8 py-10 shadow-xl shadow-brand-900/5">
+      <div className="absolute inset-0 bg-slate-50" />
+      <div className="relative w-full max-w-sm">
+        <div className="rounded-lg border border-border bg-surface px-6 py-8 sm:px-8 sm:py-10">
           <div className="mb-8 text-center">
             <div className="mb-3 flex justify-center">
               <Link href="/">
