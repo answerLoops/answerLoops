@@ -1,5 +1,4 @@
-import { eq, and, desc, sql, or, like } from 'drizzle-orm'
-import { cosineSimilarity } from 'ai'
+import { eq, and, desc, sql, or, like, isNotNull, cosineDistance } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbArticles, tickets } from '../schema'
 import type { KBArticle, KBSearchResult, PriorAnswer } from '@/types'
@@ -47,6 +46,7 @@ export async function createArticle(
           question: input.question,
           answer: input.answer,
           embedding: JSON.stringify(input.embedding),
+          embeddingVec: input.embedding,
           model: input.model,
           published: 1,
           updatedAt: new Date().toISOString(),
@@ -63,6 +63,7 @@ export async function createArticle(
       question: input.question,
       answer: input.answer,
       embedding: JSON.stringify(input.embedding),
+      embeddingVec: input.embedding,
       model: input.model,
       sourceTicketId: input.sourceTicketId ?? null,
     })
@@ -113,20 +114,35 @@ export async function listArticles(publishedOnly = true, orgId: number): Promise
   return rows.map((r) => ({ ...toArticle(r.article), source_ticket_number: r.sourceTicketNumber ?? null }))
 }
 
+// pgvector ANN search via the embedding_vec column (see schema.ts) instead of
+// loading every published article and scoring in JS — that full-table scan
+// was the single most-called AI-path bottleneck in the product (search, FAQ
+// answers, chat all route through this). Rows with no embedding_vec (only
+// possible for legacy rows written before this column existed — a new write
+// with a mismatched dimension fails at insert instead, see schema.ts) are
+// excluded rather than silently scored as a zero match.
 export async function searchArticles(vector: number[], limit = 10, orgId: number): Promise<KBSearchResult[]> {
-  const rows = await getDb()
-    .select()
-    .from(kbArticles)
-    .where(and(eq(kbArticles.published, 1), eq(kbArticles.orgId, orgId)))
+  const distance = cosineDistance(kbArticles.embeddingVec, vector)
+  const maxDistance = 1 - KB_MATCH_THRESHOLD
 
-  return rows
-    .map((row) => ({
-      ...toArticle(row),
-      score: cosineSimilarity(vector, JSON.parse(row.embedding) as number[]),
-    }))
-    .filter((r) => r.score >= KB_MATCH_THRESHOLD)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
+  const rows = await getDb()
+    .select({ article: kbArticles, distance })
+    .from(kbArticles)
+    .where(
+      and(
+        eq(kbArticles.published, 1),
+        eq(kbArticles.orgId, orgId),
+        isNotNull(kbArticles.embeddingVec),
+        sql`${distance} <= ${maxDistance}`
+      )
+    )
+    .orderBy(distance)
+    .limit(limit)
+
+  return rows.map((r) => ({
+    ...toArticle(r.article),
+    score: 1 - Number(r.distance),
+  }))
 }
 
 export async function textSearchArticles(query: string, limit = 10, orgId: number): Promise<KBArticle[]> {
@@ -167,6 +183,7 @@ export async function createArticleFromSource(
       question: input.question,
       answer: input.answer,
       embedding: JSON.stringify(input.embedding),
+      embeddingVec: input.embedding,
       model: input.model,
       sourceId: input.sourceId,
       sourcePage: input.sourcePage ?? null,
@@ -212,6 +229,7 @@ export async function upsertArticleFromSource(
         question: input.question,
         answer: input.answer,
         embedding: JSON.stringify(input.embedding),
+        embeddingVec: input.embedding,
         model: input.model,
         published: 1,
         updatedAt: new Date().toISOString(),

@@ -1,6 +1,10 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    # pgvector/pgvector:pg16 is a drop-in postgres:16 image with the pgvector
+    # extension pre-installed — required as of the kb_articles.embedding_vec
+    # column (drizzle/0043_kb_vector_index.sql). See self-hosting docs'
+    # Prerequisites section for the same requirement on managed Postgres.
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: community
       POSTGRES_PASSWORD: community

@@ -16,7 +16,8 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    # See docker-compose.yml's comment — pgvector required by kb_articles.embedding_vec.
+    image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: community_staging
       POSTGRES_PASSWORD: ${STAGING_POSTGRES_PASSWORD:?set STAGING_POSTGRES_PASSWORD in .env.staging}
