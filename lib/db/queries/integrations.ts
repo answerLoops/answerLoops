@@ -17,6 +17,7 @@ export interface Integration {
   connected_guild_id: string | null
   team_id: string | null
   webhook_secret: string | null
+  webhook_registered_at: string | null
   escalation_role_id: string | null
   confidence_threshold: number | null
   enabled: number
@@ -39,6 +40,7 @@ function toIntegration(row: typeof integrations.$inferSelect): Integration {
     connected_guild_id: row.connectedGuildId ?? null,
     team_id: row.teamId,
     webhook_secret: row.webhookSecret,
+    webhook_registered_at: row.webhookRegisteredAt ?? null,
     escalation_role_id: row.escalationRoleId ?? null,
     confidence_threshold: row.confidenceThreshold ?? 0.8,
     enabled: row.enabled,
@@ -245,6 +247,10 @@ export async function upsertIntegration(input: {
         connectedGuildId: input.connectedGuildId !== undefined ? (input.connectedGuildId ?? null) : undefined,
         teamId: input.teamId ?? undefined,
         webhookSecret: encryptedWebhookSecret ?? undefined,
+        // A new token invalidates any prior setWebhook call (Telegram's
+        // getWebhookInfo is keyed to the token), so clear the confirmed
+        // "registered" state and require Register webhook again.
+        webhookRegisteredAt: encryptedBotToken ? null : undefined,
         escalationRoleId: input.escalationRoleId !== undefined ? (input.escalationRoleId ?? null) : undefined,
         confidenceThreshold: input.confidenceThreshold !== undefined ? (input.confidenceThreshold ?? 0.8) : undefined,
         autoDeflectEnabled: input.autoDeflectEnabled !== undefined ? (input.autoDeflectEnabled ? 1 : 0) : undefined,
@@ -277,6 +283,13 @@ export async function upsertIntegration(input: {
     .returning()
 
   return decryptRow(toIntegration(row))
+}
+
+export async function markTelegramWebhookRegistered(orgId: number): Promise<void> {
+  await getDb()
+    .update(integrations)
+    .set({ webhookRegisteredAt: new Date().toISOString() })
+    .where(and(eq(integrations.orgId, orgId), eq(integrations.platform, 'telegram')))
 }
 
 export async function disableIntegration(orgId: number, platform: Platform): Promise<void> {

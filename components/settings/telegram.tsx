@@ -16,6 +16,7 @@ interface TelegramIntegration {
   confidence_threshold: number | null
   auto_deflect_enabled: number
   enabled: number
+  webhook_registered_at: string | null
 }
 
 export function TelegramIntegrationCard() {
@@ -65,6 +66,8 @@ export function TelegramIntegrationCard() {
       const data = await res.json() as { ok?: boolean; error?: string; webhookUrl?: string }
       if (data.ok) {
         showToast(`Webhook registered at ${data.webhookUrl}`)
+        const updated = await fetch('/api/integrations').then((r) => r.json())
+        setIntegration(updated.find((i: TelegramIntegration) => i.platform === 'telegram') ?? null)
       } else {
         showToast(data.error ?? 'Failed to register webhook')
       }
@@ -124,14 +127,25 @@ export function TelegramIntegrationCard() {
         )}
 
         {connected && !editing && (
-          <div className="rounded-md bg-sky-50 border border-sky-100 p-3">
-            <p className="text-xs text-sky-700 mb-2">
-              After saving your token, register the webhook so Telegram starts delivering messages.
-            </p>
-            <Button type="button" size="sm" variant="secondary" disabled={registering} onClick={handleRegisterWebhook}>
-              {registering ? 'Registering…' : 'Register webhook'}
-            </Button>
-          </div>
+          integration.webhook_registered_at ? (
+            <div className="rounded-md bg-green-50 border border-green-100 p-3 flex items-center justify-between gap-3">
+              <p className="text-xs text-green-700">
+                Webhook registered {new Date(integration.webhook_registered_at).toLocaleString()} — Telegram is delivering messages here.
+              </p>
+              <Button type="button" size="sm" variant="secondary" disabled={registering} onClick={handleRegisterWebhook}>
+                {registering ? 'Registering…' : 'Re-register'}
+              </Button>
+            </div>
+          ) : (
+            <div className="rounded-md bg-sky-50 border border-sky-100 p-3">
+              <p className="text-xs text-sky-700 mb-2">
+                After saving your token, register the webhook so Telegram starts delivering messages.
+              </p>
+              <Button type="button" size="sm" variant="secondary" disabled={registering} onClick={handleRegisterWebhook}>
+                {registering ? 'Registering…' : 'Register webhook'}
+              </Button>
+            </div>
+          )
         )}
 
         {showForm && (
@@ -145,6 +159,9 @@ export function TelegramIntegrationCard() {
                 placeholder={connected ? '••••••••• (leave blank to keep current)' : '123456789:AAHdqTcv... (from @BotFather)'}
                 className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
               />
+              {connected && (
+                <p className="text-xs text-gray-400 mt-1">A token is saved for this bot. Leave blank to keep it, or paste a new one to replace it.</p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -157,7 +174,7 @@ export function TelegramIntegrationCard() {
                 placeholder="-1001234567890, -1009876543210"
                 className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
               />
-              <p className="text-xs text-gray-400 mt-1">Group/supergroup chat IDs are negative numbers. Forward a message to @userinfobot to get the chat ID.</p>
+              <p className="text-xs text-gray-400 mt-1">Comma-separated to monitor multiple chats (e.g. -1001234567890, -1009876543210). Group/supergroup chat IDs are negative numbers. Forward a message to @userinfobot to get the chat ID.</p>
             </div>
             <hr className="border-gray-100" />
             <div>
@@ -204,7 +221,7 @@ export function TelegramIntegrationCard() {
             )}
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={savePending}>
-                {savePending ? 'Saving…' : 'Update'}
+                {savePending ? 'Saving…' : connected ? 'Update' : 'Connect'}
               </Button>
               {editing && (
                 <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>

@@ -402,6 +402,12 @@ export const integrations = pgTable(
     guildChannelMap: text('guild_channel_map'),
     teamId: text('team_id'),
     webhookSecret: text('webhook_secret'),
+    // Telegram only: set when setWebhook last succeeded, so the Integrations
+    // UI can distinguish "never registered" / "registered" instead of always
+    // showing the same CTA. Cleared implicitly whenever the token changes
+    // (see saveTelegramIntegrationAction), since a new token needs a fresh
+    // setWebhook call before Telegram will deliver to it.
+    webhookRegisteredAt: text('webhook_registered_at'),
     escalationRoleId: text('escalation_role_id'),
     connectedGuildId: text('connected_guild_id'),
     confidenceThreshold: doublePrecision('confidence_threshold').default(0.8),
