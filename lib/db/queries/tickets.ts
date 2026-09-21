@@ -1,4 +1,4 @@
-import { eq, and, or, inArray, sql, desc, lt } from 'drizzle-orm'
+import { eq, and, or, inArray, sql, desc, lt, ne } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import {
   tickets,
@@ -390,7 +390,7 @@ export async function getTicketStats(orgId: number) {
   const [totRow] = await db
     .select({ n: sql<number>`COUNT(*)::int` })
     .from(tickets)
-    .where(eq(tickets.orgId, orgId))
+    .where(and(eq(tickets.orgId, orgId), ne(tickets.status, 'duplicate')))
   const [openRow] = await db
     .select({ n: sql<number>`COUNT(*)::int` })
     .from(tickets)
@@ -406,7 +406,7 @@ export async function getTicketStats(orgId: number) {
 
   const [slaBreachRow] = await db.execute(sql`
     SELECT COUNT(*)::int AS n FROM tickets
-    WHERE (sla_response_met = 0 OR sla_resolve_met = 0) AND org_id = ${orgId}
+    WHERE (sla_response_met = 0 OR sla_resolve_met = 0) AND status != 'duplicate' AND org_id = ${orgId}
   `)
   const [pendingRow] = await db
     .select({ n: sql<number>`COUNT(*)::int` })
@@ -422,7 +422,7 @@ export async function getTicketStats(orgId: number) {
   const [deflectedRow] = await db.execute(sql`
     SELECT COUNT(*)::int AS n FROM ai_assessments a
     JOIN tickets t ON t.id = a.ticket_id
-    WHERE a.auto_deflected = 1 AND t.org_id = ${orgId}
+    WHERE a.auto_deflected = 1 AND t.status != 'duplicate' AND t.org_id = ${orgId}
   `)
 
   return {
@@ -441,7 +441,7 @@ export async function getSLABreachedTickets(orgId: number): Promise<Ticket[]> {
   const rows = await getDb().execute(sql`
     SELECT * FROM tickets
     WHERE (sla_response_met = 0 OR sla_resolve_met = 0)
-      AND status NOT IN ('resolved', 'closed')
+      AND status NOT IN ('resolved', 'closed', 'duplicate')
       AND org_id = ${orgId}
     ORDER BY created_at ASC
   `)

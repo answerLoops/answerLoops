@@ -5,6 +5,7 @@ const statusColors: Record<TicketStatus, string> = {
   in_progress: 'bg-yellow-100 text-yellow-800',
   resolved: 'bg-emerald-100 text-emerald-800',
   closed: 'bg-gray-100 text-gray-600',
+  duplicate: 'bg-purple-100 text-purple-800',
 }
 
 const priorityColors: Record<Priority, string> = {

@@ -199,7 +199,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           summary: 'List support tickets for the organization',
           security: scoped('tickets:read'),
           parameters: [
-            { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed'] } },
+            { name: 'status', in: 'query', required: false, schema: { type: 'string', enum: ['open', 'in_progress', 'resolved', 'closed', 'duplicate'] } },
             { name: 'priority', in: 'query', required: false, schema: { type: 'string', enum: ['critical', 'high', 'medium', 'low'] } },
             { name: 'category', in: 'query', required: false, schema: { type: 'string', enum: ['bug', 'feature_request', 'documentation', 'how_to', 'general_question'] } },
             { name: 'limit', in: 'query', required: false, schema: { type: 'integer', minimum: 1, maximum: 20, default: 10 }, description: 'Max results per page' },

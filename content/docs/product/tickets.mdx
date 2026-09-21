@@ -42,12 +42,13 @@ The Source badge identifies where the ticket originated. Colours are consistent 
 | `in_progress` | Being worked — AI draft generated or human assigned |
 | `resolved` | Answer provided; eligible for KB promotion |
 | `closed` | Ticket archived, no further action needed |
+| `duplicate` | Same question as another ticket. Left out of dashboard counts, analytics, and SLA tracking so it doesn't inflate your numbers |
 
 ## Filters
 
 Use the filter dropdowns at the top of the Tickets page to narrow by:
 
-- **Status** — `open`, `in_progress`, `resolved`, `closed`
+- **Status** — `open`, `in_progress`, `resolved`, `closed`, `duplicate`
 - **Priority** — `low`, `medium`, `high`, `urgent`
 - **Category** — see [Ticket categories](#ticket-categories) below
 - **Source** — filter to a single platform (Discord, GitHub, etc.)

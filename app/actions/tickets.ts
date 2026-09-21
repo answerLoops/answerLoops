@@ -50,7 +50,7 @@ async function sendReply(
 
 const UpdateStatusSchema = z.object({
   ticketId: z.coerce.number(),
-  status: z.enum(['open', 'in_progress', 'resolved', 'closed']),
+  status: z.enum(['open', 'in_progress', 'resolved', 'closed', 'duplicate']),
   staffName: z.string().min(1).max(100),
   resolutionNotes: z.string().optional(),
 })

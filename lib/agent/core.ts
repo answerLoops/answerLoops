@@ -35,7 +35,7 @@ export const MAX_QUERY_LEN = 2000
 
 export const MAX_IDEMPOTENCY_KEY_LEN = 200
 
-export const TICKET_STATUSES = ['open', 'in_progress', 'resolved', 'closed'] as const
+export const TICKET_STATUSES = ['open', 'in_progress', 'resolved', 'closed', 'duplicate'] as const
 export const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const
 export const CATEGORIES = ['bug', 'feature_request', 'documentation', 'how_to', 'general_question'] as const
 

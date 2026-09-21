@@ -19,6 +19,7 @@ export function TicketStatusForm({ ticketId, currentStatus }: { ticketId: number
             <option value="in_progress">In Progress</option>
             <option value="resolved">Resolved</option>
             <option value="closed">Closed</option>
+            <option value="duplicate">Duplicate</option>
           </select>
         </div>
         <div>

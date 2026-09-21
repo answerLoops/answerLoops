@@ -17,17 +17,17 @@ export async function getDeflectionStats(orgId: number): Promise<DeflectionStats
   // (runAIAgent skips assessAnswer/shouldAutoDeflect for that category).
   const [totRow] = await db.execute(sql`
     SELECT COUNT(*)::int AS n FROM tickets
-    WHERE org_id = ${orgId} AND (category IS NULL OR category != 'bug')
+    WHERE org_id = ${orgId} AND status != 'duplicate' AND (category IS NULL OR category != 'bug')
   `)
   const [ansRow] = await db.execute(sql`
     SELECT COUNT(*)::int AS n FROM ai_assessments a
     JOIN tickets t ON t.id = a.ticket_id
-    WHERE t.org_id = ${orgId} AND (t.category IS NULL OR t.category != 'bug')
+    WHERE t.org_id = ${orgId} AND t.status != 'duplicate' AND (t.category IS NULL OR t.category != 'bug')
   `)
   const [defRow] = await db.execute(sql`
     SELECT COUNT(*)::int AS n FROM ai_assessments a
     JOIN tickets t ON t.id = a.ticket_id
-    WHERE a.auto_deflected = 1 AND t.org_id = ${orgId} AND (t.category IS NULL OR t.category != 'bug')
+    WHERE a.auto_deflected = 1 AND t.org_id = ${orgId} AND t.status != 'duplicate' AND (t.category IS NULL OR t.category != 'bug')
   `)
 
   return {
@@ -52,6 +52,7 @@ export async function getDeflectionTrend(days = 14, orgId: number): Promise<Tren
     JOIN tickets t ON t.id = a.ticket_id
     WHERE a.created_at >= (NOW() - (${days - 1} || ' days')::interval)::text
       AND t.org_id = ${orgId}
+      AND t.status != 'duplicate'
       AND (t.category IS NULL OR t.category != 'bug')
     GROUP BY LEFT(a.created_at, 10)
     ORDER BY LEFT(a.created_at, 10)
@@ -68,7 +69,7 @@ export async function getCategoryBreakdown(orgId: number): Promise<CategoryCount
   const rows = await getDb().execute(sql`
     SELECT COALESCE(category, 'uncategorized') AS category, COUNT(*)::int AS count
     FROM tickets
-    WHERE org_id = ${orgId}
+    WHERE org_id = ${orgId} AND status != 'duplicate'
     GROUP BY category
     ORDER BY COUNT(*) DESC
   `)
@@ -121,7 +122,7 @@ export async function getSLAStats(orgId: number): Promise<SLAStats> {
         END
       ) AS "avgFirstResponseMinutes"
     FROM tickets
-    WHERE org_id = ${orgId}
+    WHERE org_id = ${orgId} AND status != 'duplicate'
   `)
   const r = row as Record<string, number | null>
   return {
@@ -165,6 +166,7 @@ export async function getKnowledgeGaps(limit = 50, orgId: number): Promise<Knowl
     LEFT JOIN ai_assessments a ON a.ticket_id = t.id
     LEFT JOIN kb_articles k ON k.source_ticket_id = t.id AND k.org_id = ${orgId}
     WHERE t.org_id = ${orgId}
+      AND t.status != 'duplicate'
       AND k.id IS NULL
       AND (
         t.ai_draft_status = 'needs_human'
@@ -197,6 +199,7 @@ export async function getGapCategorySummary(orgId: number): Promise<GapCategoryS
     LEFT JOIN ai_assessments a ON a.ticket_id = t.id
     LEFT JOIN kb_articles k ON k.source_ticket_id = t.id AND k.org_id = ${orgId}
     WHERE t.org_id = ${orgId}
+      AND t.status != 'duplicate'
       AND k.id IS NULL
       AND (
         t.ai_draft_status = 'needs_human'
