@@ -41,7 +41,7 @@ export async function checkSlaBreaches(orgId: number): Promise<SlaBreachedTicket
     UPDATE tickets
     SET sla_resolve_met = 0, updated_at = ${now}
     WHERE org_id = ${orgId}
-      AND status NOT IN ('resolved', 'closed')
+      AND status NOT IN ('resolved', 'closed', 'duplicate')
       AND sla_resolve_deadline IS NOT NULL
       AND sla_resolve_deadline < ${now}
       AND sla_resolve_met IS NULL
@@ -81,7 +81,7 @@ export function getSLAStatus(ticket: {
     (ticket.sla_resolve_met === null &&
       ticket.sla_resolve_deadline !== null &&
       new Date(ticket.sla_resolve_deadline) < now &&
-      !['resolved', 'closed'].includes(ticket.status))
+      !['resolved', 'closed', 'duplicate'].includes(ticket.status))
 
   const responseDeadlineMs =
     ticket.sla_response_deadline ? new Date(ticket.sla_response_deadline).getTime() - now.getTime() : null

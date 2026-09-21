@@ -363,7 +363,8 @@
                 "open",
                 "in_progress",
                 "resolved",
-                "closed"
+                "closed",
+                "duplicate"
               ]
             }
           },
