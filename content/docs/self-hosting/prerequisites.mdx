@@ -13,6 +13,7 @@ Gather these before you start the [self-host quickstart](/docs/quickstart-self-h
 | Docker | Latest stable | Includes Docker Compose v2 |
 | pnpm | 11+ | Used for package management |
 | Git | Any | For cloning the repo |
+| Postgres with the `pgvector` extension | 15+ | `docker-compose.yml` already runs `pgvector/pgvector:pg16`, so nothing to do for the Docker path. Bringing your own Postgres (Neon, Supabase, RDS, a bare install) instead of the provided compose file? Run `CREATE EXTENSION vector;` once before starting the app — every major managed provider supports this natively. Powers KB search's vector index. |
 
 ## Required accounts / keys
 
