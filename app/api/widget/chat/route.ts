@@ -123,7 +123,12 @@ export function takePendingRun(requestId: unknown): PendingRun | undefined {
 interface RunAgentInputLike {
   threadId?: string
   messages?: { role?: string; content?: string }[]
-  forwardedProps?: { widgetToken?: string; visitorId?: string; requestId?: string }
+  forwardedProps?: {
+    widgetToken?: string
+    visitorId?: string
+    requestId?: string
+    isSelfPreview?: boolean
+  }
 }
 
 interface SingleRouteEnvelope {
@@ -231,6 +236,15 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     return new Response('Invalid widget token', { status: 404 })
   }
 
+  // Client-asserted, not re-derivable here: this request is same-origin to us
+  // from inside the iframe (see the no-origin-allowlist note below), so the
+  // only place that knows whether the embedding page is the org's own
+  // instance is the page render in app/widget/[widgetToken]/page.tsx, which
+  // forwards it. Worst case a caller lies and sees "connect an AI provider"
+  // instead of the generic message — a config-state hint, not a credential —
+  // so trusting it here is an acceptable tradeoff for a real error message.
+  const isSelfPreview = body?.forwardedProps?.isSelfPreview === true
+
   // No origin allowlist here by design. This request is made from inside our
   // own iframe, so it is same-origin to us and its Origin header is our own
   // hostname — the embedding page's identity is not present on it. The
@@ -267,7 +281,13 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
       logger.warn('widget chat: no AI provider configured', { module: MOD, orgId: org.id })
       // Customer-facing surface — a generic message, not the org-owner-facing
       // "connect a provider" instruction, which would only confuse an end user.
-      return new Response('This assistant is temporarily unavailable. Please contact support directly.', { status: 503 })
+      // isSelfPreview swaps in the specific message when the org owner is
+      // testing their own instance (Settings preview, self-host localhost) —
+      // never for a real visitor on a customer's site.
+      const message = isSelfPreview
+        ? 'This workspace has no AI provider connected yet. Add one in Settings → AI Model to test the widget.'
+        : 'This assistant is temporarily unavailable. Please contact support directly.'
+      return new Response(message, { status: 503 })
     }
     throw e
   }
@@ -282,6 +302,30 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     },
   }
   return rebuildRequest(request, JSON.stringify(rewritten))
+}
+
+// Mastra's Agent.stream().fullStream wraps every chunk in its own envelope —
+// `{ type: 'text-delta', payload: { text, id }, runId, from: 'AGENT' }` — not
+// the flat AI SDK v5-style shape (`{ type: 'text-delta', text }`) that
+// CopilotKit's BuiltInAgent 'aisdk' factory reads (see
+// @copilotkit/runtime's agent/converters/aisdk.mjs, which does
+// `"text" in p ? p.text : ""` — `text` never exists at the top level of a
+// Mastra chunk, only nested under `.payload`). Without this, every delta the
+// factory emits is silently `""`: the run completes cleanly with the right
+// event count, just with no visible content — indistinguishable from a
+// misconfigured provider until you inspect the raw stream. Spreading
+// `payload` onto the chunk gives the converter the flat shape it expects.
+async function* flattenMastraStream(stream: AsyncIterable<unknown>): AsyncIterable<unknown> {
+  for await (const chunk of stream) {
+    if (chunk && typeof chunk === 'object' && 'payload' in chunk) {
+      const payload = (chunk as { payload?: unknown }).payload
+      if (payload && typeof payload === 'object') {
+        yield { ...chunk, ...payload }
+        continue
+      }
+    }
+    yield chunk
+  }
 }
 
 // Published knowledge-base articles only.
@@ -357,7 +401,7 @@ If no article below covers the question, answer from general knowledge and do no
   // not the DOM lib global the factory's return type expects — same
   // structurally-identical-but-nominally-distinct type gap the old route had
   // at its createTextStreamResponse boundary. Cast at this one boundary.
-  return { fullStream: result.fullStream as unknown as AsyncIterable<unknown> }
+  return { fullStream: flattenMastraStream(result.fullStream as unknown as AsyncIterable<unknown>) }
 }
 
 const runtime = new CopilotRuntime({

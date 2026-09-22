@@ -25,7 +25,7 @@ type Subscriber = {
   onEvent?: (p: { messages: Message[] }) => void
   onRunInitialized?: () => void
   onRunFinalized?: () => void
-  onRunFailed?: () => void
+  onRunFailed?: (p: { error: Error }) => void
 }
 
 function makeFakeAgent(initialMessages: Message[] = []) {
@@ -54,7 +54,8 @@ function makeFakeAgent(initialMessages: Message[] = []) {
       event: (msgs: Message[]) => act(() => subscriber?.onEvent?.({ messages: msgs })),
       runInitialized: () => act(() => subscriber?.onRunInitialized?.()),
       runFinalized: () => act(() => subscriber?.onRunFinalized?.()),
-      runFailed: () => act(() => subscriber?.onRunFailed?.()),
+      runFailed: (error: Error = new Error('HTTP 503: This assistant is temporarily unavailable. Please contact support directly.')) =>
+        act(() => subscriber?.onRunFailed?.({ error })),
     },
     addMessage,
     runAgent,
@@ -73,7 +74,7 @@ vi.mock('@copilotkit/react-core/v2/headless', () => ({
 async function renderWidget(fake: ReturnType<typeof makeFakeAgent>) {
   h2.current = fake
   const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
-  return render(<WidgetChat widgetToken={'a'.repeat(48)} orgName="Acme" showBranding />)
+  return render(<WidgetChat widgetToken={'a'.repeat(48)} orgName="Acme" showBranding isSelfPreview={false} />)
 }
 
 beforeEach(() => {
@@ -204,10 +205,16 @@ describe('WidgetChat: run lifecycle', () => {
     fake.emit.runInitialized()
     fake.emit.runFailed()
 
-    expect(screen.getByText('Something went wrong. Please try again.')).toBeTruthy()
+    // Displayed text is the server's own message with the AG-UI "HTTP 503: "
+    // transport prefix stripped — see widget-chat.tsx's onRunFailed handler.
+    expect(
+      screen.getByText('This assistant is temporarily unavailable. Please contact support directly.')
+    ).toBeTruthy()
 
     fake.emit.runInitialized()
-    expect(screen.queryByText('Something went wrong. Please try again.')).toBeNull()
+    expect(
+      screen.queryByText('This assistant is temporarily unavailable. Please contact support directly.')
+    ).toBeNull()
   })
 })
 
@@ -215,7 +222,7 @@ describe('WidgetChat: branding', () => {
   it('shows the "Powered by" line when showBranding is true', async () => {
     h2.current = makeFakeAgent()
     const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
-    render(<WidgetChat widgetToken={'a'.repeat(48)} orgName="Acme" showBranding />)
+    render(<WidgetChat widgetToken={'a'.repeat(48)} orgName="Acme" showBranding isSelfPreview={false} />)
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Skip' }))
 
@@ -225,7 +232,7 @@ describe('WidgetChat: branding', () => {
   it('hides the "Powered by" line when showBranding is false', async () => {
     h2.current = makeFakeAgent()
     const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
-    render(<WidgetChat widgetToken={'a'.repeat(48)} orgName="Acme" showBranding={false} />)
+    render(<WidgetChat widgetToken={'a'.repeat(48)} orgName="Acme" showBranding={false} isSelfPreview={false} />)
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Skip' }))
 

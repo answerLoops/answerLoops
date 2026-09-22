@@ -44,11 +44,22 @@ export default async function WidgetPage({ params }: Props) {
 
   const whiteLabel = await orgHasFeature(org.id, 'white_label_widget')
 
+  // Only true when this request is embedded on the org's own instance (the
+  // Settings preview link, or a self-host testing the widget on localhost) —
+  // never on a real customer's site, since isEmbedAllowed above already
+  // required embedOrigin === selfHost for this branch when it's true.
+  // Gates whether the chat route's config-error message names the missing
+  // AI provider: safe for the org owner testing their own setup, but never
+  // shown to an anonymous customer-site visitor (see NoAIProviderConfiguredError
+  // handling in app/api/widget/chat/route.ts).
+  const isSelfPreview = embedOrigin !== null && embedOrigin === selfHost
+
   return (
     <WidgetChat
       widgetToken={widgetToken}
       orgName={org.name}
       showBranding={!whiteLabel}
+      isSelfPreview={isSelfPreview}
     />
   )
 }

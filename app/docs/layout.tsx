@@ -5,12 +5,18 @@ import { DocsLayout } from 'fumadocs-ui/layouts/docs'
 import { docsSource } from '@/lib/docs/source'
 import { GITHUB_SOURCE_URL } from '@/lib/site'
 import './docs.css'
+import Script from 'next/script'
 
 // Docs are intentionally outside the dashboard's session — this layout
 // nests under the app-wide RootLayout (app/layout.tsx supplies <html>/
 // <body> and Geist fonts) but never touches auth. auth.ts's PUBLIC_PATHS
 // includes '/docs' so proxy.ts never redirects here to /login.
 export default function DocsRootLayout({ children }: { children: ReactNode }) {
+  // Local/dev-only — never hardcode a real token here. Set
+  // NEXT_PUBLIC_DOCS_WIDGET_TOKEN in .env.local (gitignored) to test the
+  // widget on the docs site; the script simply doesn't render without it.
+  const widgetToken = process.env.NEXT_PUBLIC_DOCS_WIDGET_TOKEN
+
   return (
     <RootProvider
       // The rest of the app has no dark theme yet (docs.css's `.dark` block
@@ -59,6 +65,13 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
           },
         ]}
       >
+        {widgetToken && (
+          <Script
+            src="/widget.js"
+            data-widget-id={widgetToken}
+            strategy="lazyOnload"
+          />
+        )}
         {children}
       </DocsLayout>
     </RootProvider>
