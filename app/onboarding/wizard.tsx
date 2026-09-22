@@ -565,7 +565,7 @@ function ConnectStep({ onDone, oauthGuildId, slackConnected, githubConnected }: 
 
       {platform === null && (
         <>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <PlatformCard
               icon={<DiscordIcon className="h-7 w-7 text-[#5865F2]" />}
               label="Discord"
@@ -805,7 +805,7 @@ function SeedStep({ onDone }: { onDone: () => void }) {
 
       {mode === 'choose' && (
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button onClick={() => setMode('file')}
               className="flex flex-col items-center gap-2.5 rounded-2xl border-2 border-border bg-white p-5 text-sm font-semibold text-ink-700 transition-all hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-md">
               <svg className="h-7 w-7 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -1056,8 +1056,8 @@ export default function OnboardingWizard({ initialName }: { initialName: string 
             <div className="flex items-center">
               {STEPS.map(({ key, label }, i) => (
                 <div key={key} className="flex items-center flex-1 last:flex-none">
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all ${
+                  <div className="flex flex-col items-center gap-1.5 w-0 min-w-0 flex-1 last:w-auto last:flex-none">
+                    <div className={`flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-xs font-bold transition-all shrink-0 ${
                       i < stepIndex
                         ? 'bg-[#082e50] text-white shadow-md shadow-[#082e50]/30'
                         : i === stepIndex
@@ -1066,10 +1066,10 @@ export default function OnboardingWizard({ initialName }: { initialName: string 
                     }`}>
                       {i < stepIndex ? <CheckIcon className="h-4 w-4" /> : i + 1}
                     </div>
-                    <span className={`text-[0.625rem] font-semibold whitespace-nowrap tracking-wide ${i === stepIndex ? 'text-[#082e50]' : 'text-ink-400'}`}>{label}</span>
+                    <span className={`text-[0.5625rem] sm:text-[0.625rem] font-semibold text-center leading-tight tracking-wide ${i === stepIndex ? 'text-[#082e50]' : 'text-ink-400'}`}>{label}</span>
                   </div>
                   {i < STEPS.length - 1 && (
-                    <div className={`flex-1 h-0.5 mx-1.5 mb-5 rounded-full transition-colors ${i < stepIndex ? 'bg-[#082e50]' : 'bg-ink-200'}`} />
+                    <div className={`flex-1 h-0.5 mx-1 sm:mx-1.5 mb-5 rounded-full transition-colors ${i < stepIndex ? 'bg-[#082e50]' : 'bg-ink-200'}`} />
                   )}
                 </div>
               ))}
