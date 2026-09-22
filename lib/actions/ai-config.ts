@@ -8,8 +8,9 @@ import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { PLANS } from '@/lib/billing/plans'
 import { testAIProviderConnection, type AIConnectionResult } from '@/lib/ai/test-connection'
 import { validateAIConfig } from '@/lib/ai/config-validation'
+import { listModelsForProvider } from '@/lib/ai/list-models'
 
-const CHAT_PROVIDERS = ['openai', 'anthropic', 'google', 'groq', 'mistral', 'openai-compatible'] as const
+const CHAT_PROVIDERS = ['openai', 'anthropic', 'google', 'groq', 'mistral', 'xai', 'openai-compatible'] as const
 const EMBEDDING_PROVIDERS = ['openai', 'openai-compatible'] as const
 
 const SaveSchema = z.object({
@@ -126,4 +127,48 @@ export async function testAIConfigAction(
   })
 
   return { result }
+}
+
+const ListModelsSchema = z.object({
+  chat_provider: z.enum(CHAT_PROVIDERS),
+  chat_api_key: z.string().max(500).optional(),
+  chat_base_url: z.string().url().max(500).optional().or(z.literal('')),
+})
+
+/**
+ * Live model list for the currently selected provider, using the key just
+ * typed (or the org's saved one if that field was left blank) — same
+ * key-resolution semantics as testAIConfigAction. Never persists anything.
+ * Settings' Model ID dropdown calls this instead of relying on a hardcoded
+ * list that goes stale every time a provider ships a new model.
+ */
+export async function listModelsAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<{ error?: string; models?: string[] }> {
+  const access = await resolveOrgForAIConfig()
+  if (!access.ok) return { error: access.error }
+
+  const parsed = ListModelsSchema.safeParse(Object.fromEntries(formData))
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Fill in the form first' }
+  const d = parsed.data
+
+  const existing = await getOrgAIConfig(access.orgId)
+  const apiKey = d.chat_api_key || existing?.chat_api_key || null
+  const baseUrl = d.chat_base_url || existing?.chat_base_url || null
+
+  if (!apiKey && d.chat_provider !== 'openai-compatible') {
+    return { error: 'Enter an API key first' }
+  }
+
+  try {
+    const models = await listModelsForProvider(d.chat_provider, apiKey ?? '', baseUrl)
+    if (models.length === 0) return { error: 'That provider returned no chat models for this key.' }
+    return { models }
+  } catch (err) {
+    // Cap and strip — upstream error bodies can be arbitrarily long and
+    // aren't guaranteed not to echo request details back.
+    const message = err instanceof Error ? err.message : 'Could not fetch the model list.'
+    return { error: message.replace(/\s+/g, ' ').trim().slice(0, 200) }
+  }
 }

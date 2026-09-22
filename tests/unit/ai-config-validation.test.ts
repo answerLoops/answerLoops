@@ -113,4 +113,16 @@ describe('validateAIConfig', () => {
       ),
     ).toBeNull()
   })
+
+  it('rejects xAI with no key, using the "xAI (Grok)" label', () => {
+    expect(validateAIConfig(cfg({ chat_provider: 'xai', chat_api_key: undefined }), null))
+      .toMatch(/Add an API key for xAI \(Grok\)/)
+  })
+
+  it('passes a fresh xAI config with a key', () => {
+    // Non-OpenAI chat still needs its own OpenAI embedding key (finding 17).
+    expect(
+      validateAIConfig(cfg({ chat_provider: 'xai', chat_api_key: 'xai-test', embedding_api_key: 'sk-oai' }), null)
+    ).toBeNull()
+  })
 })

@@ -71,7 +71,7 @@ describe('AIModelSection — Test connection', () => {
     const modelSelect = screen.getAllByRole('combobox')[1]
     await user.selectOptions(modelSelect, '__custom__')
 
-    const customInput = await screen.findByPlaceholderText('gpt-5.6-terra')
+    const customInput = await screen.findByPlaceholderText('gpt-6-astra')
     await user.type(customInput, 'gpt-5.6-experimental')
     await user.click(screen.getByRole('button', { name: /test connection/i }))
 
@@ -81,7 +81,7 @@ describe('AIModelSection — Test connection', () => {
 
     // Switching back drops the custom value and returns to the dropdown.
     await user.click(screen.getByRole('button', { name: /choose from list instead/i }))
-    expect(screen.getAllByRole('combobox')[1]).toHaveValue('gpt-5.6-sol')
+    expect(screen.getAllByRole('combobox')[1]).toHaveValue('gpt-6-astra')
   })
 
   it('surfaces a validation error from the test action', async () => {

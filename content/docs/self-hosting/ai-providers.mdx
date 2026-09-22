@@ -19,16 +19,15 @@ OPENAI_API_KEY=sk-proj-...
 
 Each org can override the platform key in **Settings → AI Model**. Keys are encrypted at rest using `ENCRYPTION_KEY`.
 
-Supported providers:
+Supported providers: OpenAI, Anthropic, Google Gemini, Groq, Mistral, xAI
+(Grok), and any OpenAI-compatible endpoint (Ollama, LM Studio, vLLM).
 
-| Provider | Models |
-|---|---|
-| OpenAI | `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`, `gpt-5.5`, `gpt-5.5-pro`, `gpt-5.4` |
-| Anthropic | `claude-sonnet-4-6`, `claude-opus-4-8`, `claude-haiku-4-5-20251001` |
-| Google Gemini | `gemini-2.5-pro`, `gemini-2.5-flash`, `gemini-2.0-flash` |
-| Groq | `llama-3.3-70b-versatile`, `llama-3.1-8b-instant` |
-| Mistral | `mistral-large-latest`, `mistral-small-latest`, `codestral-latest` |
-| OpenAI-compatible | Any model behind an OpenAI-compatible API (Ollama, LM Studio, vLLM) |
+Model ID is a live dropdown, not a fixed list. After entering an API key,
+click **Refresh models** to fetch that provider's current model list directly
+from its own API — this stays accurate as providers ship new models, instead
+of a hardcoded list going stale. If the live fetch fails, or before you've run
+it, Model ID falls back to a small built-in list of recent models, or you can
+type any model ID directly.
 
 ## Embeddings
 
