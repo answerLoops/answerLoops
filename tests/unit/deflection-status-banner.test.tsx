@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { DeflectionStatusBanner } from '@/components/deflection-status-banner'
+import { DeflectionStatusBanner } from '@/components/dashboard/deflection-status-banner'
 
 // Covers DeflectionStatusBanner: it renders nothing when every connected
 // integration is on auto-send (offPlatforms empty), otherwise it warns that

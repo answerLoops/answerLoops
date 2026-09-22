@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { MockEventSource, defineVisibility } from './mock-event-source'
 import { render, act } from '@testing-library/react'
-import { DashboardLive } from '@/components/dashboard-live'
+import { DashboardLive } from '@/components/dashboard/dashboard-live'
 
 /**
  * DashboardLive is the client island that replaced `<AutoRefresh intervalMs={5000}>`.

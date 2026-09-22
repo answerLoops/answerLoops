@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { AnimatedChat } from '@/components/animated-chat'
+import { AnimatedChat } from '@/components/marketing/animated-chat'
 
 let preference: MediaQueryList
 

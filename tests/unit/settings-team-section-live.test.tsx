@@ -184,7 +184,7 @@ function callsTo(url: string) {
 // --- module graph, re-imported per test -----------------------------------
 
 let TeamSection: typeof import('@/app/(dashboard)/settings/page').TeamSection
-let DashboardLive: typeof import('@/components/dashboard-live').DashboardLive
+let DashboardLive: typeof import('@/components/dashboard/dashboard-live').DashboardLive
 
 beforeEach(async () => {
   vi.clearAllMocks()
@@ -198,7 +198,7 @@ beforeEach(async () => {
 
   vi.resetModules()
   ;({ TeamSection } = await import('@/app/(dashboard)/settings/page'))
-  ;({ DashboardLive } = await import('@/components/dashboard-live'))
+  ;({ DashboardLive } = await import('@/components/dashboard/dashboard-live'))
 })
 
 afterEach(() => {
