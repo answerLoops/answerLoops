@@ -23,19 +23,19 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }))
-vi.mock('@/app/actions/onboarding', () => ({
+vi.mock('@/lib/actions/onboarding', () => ({
   updateWorkspaceNameAction: vi.fn(),
   completeOnboardingAction: vi.fn(),
 }))
-vi.mock('@/app/actions/integrations', () => ({
+vi.mock('@/lib/actions/integrations', () => ({
   saveDiscordIntegrationAction: vi.fn(),
   saveDiscordGuildChannelsAction: vi.fn(),
   saveSlackChannelsAction: vi.fn(),
 }))
-vi.mock('@/app/actions/ingest-url', () => ({
+vi.mock('@/lib/actions/ingest-url', () => ({
   ingestUrlAction: vi.fn(),
 }))
-vi.mock('@/app/actions/widget', () => ({
+vi.mock('@/lib/actions/widget', () => ({
   getWidgetTokenAction: h.getWidgetTokenAction,
 }))
 

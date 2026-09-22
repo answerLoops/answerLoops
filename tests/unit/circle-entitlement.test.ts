@@ -27,8 +27,8 @@ describe('lib/billing/entitlements.ts: circle_integration feature', () => {
   })
 })
 
-describe('app/actions/integrations.ts: Circle action gating', () => {
-  const src = read('app/actions/integrations.ts')
+describe('lib/actions/integrations.ts: Circle action gating', () => {
+  const src = read('lib/actions/integrations.ts')
 
   it('requireFeature union includes circle_integration', () => {
     const sig = src.split('\n').find((l) => l.includes('async function requireFeature')) ?? ''

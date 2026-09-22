@@ -43,7 +43,7 @@ describe('registerTelegramWebhook', () => {
 })
 
 describe('saveTelegramIntegrationAction wiring', () => {
-  const src = fs.readFileSync(path.join(process.cwd(), 'app/actions/integrations.ts'), 'utf-8')
+  const src = fs.readFileSync(path.join(process.cwd(), 'lib/actions/integrations.ts'), 'utf-8')
 
   it('registers the webhook after the upsert, gated on a token + AUTH_URL, not blocking the save', () => {
     const fn = src.slice(src.indexOf('export async function saveTelegramIntegrationAction'))

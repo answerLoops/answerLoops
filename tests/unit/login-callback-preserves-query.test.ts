@@ -50,7 +50,7 @@ describe('the returned destination is always a path on this site', () => {
     // The consumer validates independently of what the gate produces: /login
     // is reachable directly, so it accepts only a same-site relative path
     // regardless of how the value got there.
-    const actions = fs.readFileSync(path.join(process.cwd(), 'app/actions/auth.ts'), 'utf-8')
+    const actions = fs.readFileSync(path.join(process.cwd(), 'lib/actions/auth.ts'), 'utf-8')
     expect(actions).toContain("cb.startsWith('/')")
     expect(actions).toContain("!cb.startsWith('//')")
   })

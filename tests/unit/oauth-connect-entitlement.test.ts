@@ -4,7 +4,7 @@ import path from 'path'
 
 // Known Issues item 47 (Roadmap): the Discord/Slack OAuth connect endpoints
 // bypassed the entitlement gate that existed only in the settings-page server
-// actions (app/actions/integrations.ts) — the actual routes that generate the
+// actions (lib/actions/integrations.ts) — the actual routes that generate the
 // OAuth URL and persist the integration on callback checked session only,
 // never orgHasFeature. Source-shape assertions, matching this repo's
 // convention (see tests/unit/agent-api.test.ts).

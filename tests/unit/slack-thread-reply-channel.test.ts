@@ -86,7 +86,7 @@ vi.mock('@/lib/ai/models', () => ({
 describe('lib/ai/agent.ts — Slack posts use the real channel id, never the conflated thread-or-channel field', () => {
   it('postReply passes slackChannelId (falling back to channelId) and slackThreadTs to sendToSlackChannel for the slack branch', () => {
     // postReply moved to lib/channels/post-reply.ts (shared with
-    // app/actions/tickets.ts) as part of the Automatic Deflections toggle —
+    // lib/actions/tickets.ts) as part of the Automatic Deflections toggle —
     // its per-platform logic, including this Slack branch, is unchanged.
     const src = read('lib/channels/post-reply.ts')
     const fnIdx = src.indexOf('export async function postReply')

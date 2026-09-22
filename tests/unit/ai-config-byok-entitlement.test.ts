@@ -22,8 +22,8 @@ function readSrc(relPath: string): string {
   return fs.readFileSync(absPath, 'utf-8')
 }
 
-describe('app/actions/ai-config.ts — saveAIConfigAction entitlement scope', () => {
-  const src = () => readSrc('app/actions/ai-config.ts')
+describe('lib/actions/ai-config.ts — saveAIConfigAction entitlement scope', () => {
+  const src = () => readSrc('lib/actions/ai-config.ts')
 
   it('parses the form before checking any entitlement, so provider choice can gate the check', () => {
     const s = src()

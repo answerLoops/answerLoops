@@ -8,7 +8,7 @@ import {
   saveDiscordGuildChannelsAction,
   removeDiscordGuildAction,
   updateDiscordAutoDeflectAction,
-} from '@/app/actions/integrations'
+} from '@/lib/actions/integrations'
 import { Button } from '@/components/ui/button'
 import { DeflectionStatusBadge } from '@/components/ui/badge'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'

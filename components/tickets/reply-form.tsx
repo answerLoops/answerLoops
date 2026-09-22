@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useEffect, useRef } from 'react'
-import { postReplyAction } from '@/app/actions/tickets'
+import { postReplyAction } from '@/lib/actions/tickets'
 import { Button } from '@/components/ui/button'
 
 const PLATFORM_LABELS: Record<string, { button: string; hint: string; success: string }> = {

@@ -7,7 +7,7 @@ import path from 'path'
 // one of them would either crash on a doomed live API call or silently try to
 // auto-deflect into a channel with no write path:
 //   - lib/channels/post-reply.ts   — the shared send dispatch: circle -> null
-//   - app/actions/tickets.ts       — sendReply(): circle -> null
+//   - lib/actions/tickets.ts       — sendReply(): circle -> null
 //   - lib/ai/agent.ts              — autoDeflectEnabled: circle -> false
 // Source-string assertions (these modules pull server-only deps).
 
@@ -20,8 +20,8 @@ describe('Circle never posts outbound', () => {
     expect(src).toMatch(/if \(platform === 'circle'\) return null/)
   })
 
-  it('app/actions/tickets.ts sendReply short-circuits circle to null', () => {
-    const src = read('app/actions/tickets.ts')
+  it('lib/actions/tickets.ts sendReply short-circuits circle to null', () => {
+    const src = read('lib/actions/tickets.ts')
     expect(src).toMatch(/if \(ticket\.source_platform === 'circle'\) return null/)
   })
 

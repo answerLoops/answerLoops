@@ -297,7 +297,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
         //
         // Relative by construction: both halves are read off this request's
         // own URL, never from anything a caller supplies, and the consumer in
-        // app/actions/auth.ts accepts only a value beginning with a single
+        // lib/actions/auth.ts accepts only a value beginning with a single
         // slash. searchParams.set handles the encoding.
         loginUrl.searchParams.set('callbackUrl', `${pathname}${search}`)
         return NextResponse.redirect(loginUrl)

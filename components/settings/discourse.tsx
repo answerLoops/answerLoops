@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DeflectionStatusBadge } from '@/components/ui/badge'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
-import { saveDiscourseIntegrationAction,deleteDiscourseIntegrationAction } from '@/app/actions/integrations'
+import { saveDiscourseIntegrationAction,deleteDiscourseIntegrationAction } from '@/lib/actions/integrations'
 
 interface DiscourseIntegration {
   id: number

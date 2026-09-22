@@ -13,7 +13,7 @@ export type Platform = 'discord' | 'slack' | 'telegram' | 'email' | 'github' | '
 // Single per-platform send dispatch, shared by every caller that delivers a
 // reply to a customer channel: the auto-deflect path (lib/ai/agent.ts), the
 // staff manual-reply box, and the Approve/Edit draft actions
-// (app/actions/tickets.ts). Previously each of those three call sites had
+// (lib/actions/tickets.ts). Previously each of those three call sites had
 // its own hand-rolled (and differently incomplete) copy of this switch.
 export async function postReply(
   channelId: string,

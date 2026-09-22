@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DeflectionStatusBadge } from '@/components/ui/badge'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
-import { saveTelegramIntegrationAction,deleteTelegramIntegrationAction } from '@/app/actions/integrations'
+import { saveTelegramIntegrationAction,deleteTelegramIntegrationAction } from '@/lib/actions/integrations'
 
 interface TelegramIntegration {
   id: number

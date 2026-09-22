@@ -89,7 +89,7 @@ describe('send path: lib/email/reply.ts dispatches oauth sends by provider', () 
 
 describe('server actions + routes: Outlook connect/disconnect flow', () => {
   it('disconnectOauthAction branches on provider to call the right revoke function', () => {
-    const src = readSrc('app/actions/integrations.ts')
+    const src = readSrc('lib/actions/integrations.ts')
     expect(src).toContain('export async function disconnectOauthAction')
     const fnStart = src.indexOf('export async function disconnectOauthAction')
     const fnBody = src.slice(fnStart, fnStart + 800)

@@ -75,8 +75,8 @@ describe('app/api/kb/sources/[id]/route.ts — publish toggle', () => {
   })
 })
 
-describe('app/actions/notion.ts — connect / disconnect actions', () => {
-  const src = readRoute('app/actions/notion.ts')
+describe('lib/actions/notion.ts — connect / disconnect actions', () => {
+  const src = readRoute('lib/actions/notion.ts')
 
   it('exports both actions', () => {
     expect(src).toContain('export async function saveNotionConnectionAction(')

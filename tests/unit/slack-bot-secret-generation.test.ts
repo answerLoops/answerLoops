@@ -57,7 +57,7 @@ describe('Slack OAuth callback generates and preserves bot_secret', () => {
 
 describe('saveSlackIntegrationAction (manual form) generates and preserves bot_secret', () => {
   it('generates a new bot_secret via crypto.randomBytes when none exists yet', () => {
-    const src = read('app/actions/integrations.ts')
+    const src = read('lib/actions/integrations.ts')
     const fnIdx = src.indexOf('export async function saveSlackIntegrationAction')
     const nextFnIdx = src.indexOf('export async function', fnIdx + 1)
     const fnBody = src.slice(fnIdx, nextFnIdx)
@@ -68,7 +68,7 @@ describe('saveSlackIntegrationAction (manual form) generates and preserves bot_s
 
 describe('bot_secret generation behaves like every other platform', () => {
   it('Discord/Telegram/Email save actions already use the same existing-or-generate pattern', () => {
-    const src = read('app/actions/integrations.ts')
+    const src = read('lib/actions/integrations.ts')
     const occurrences = src.match(/existing(?:Integration)?\?\.bot_secret \?\? crypto\.randomBytes\(32\)\.toString\('hex'\)/g)
     // Discord, Telegram, Email, and now Slack (manual form) — 4 platforms
     // in this file follow the same pattern.

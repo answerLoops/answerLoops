@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-// app/actions/tickets.ts's postReplyAction and updateAIDraftAction's
+// lib/actions/tickets.ts's postReplyAction and updateAIDraftAction's
 // approve/edit branches all route through one shared sendReply() helper
 // (lib/channels/post-reply.ts) as of the Automatic Deflections toggle.
 // Before this, `approve` only ever sent anything for GitHub — every other
@@ -77,7 +77,7 @@ describe('updateAIDraftAction: approve now sends on every platform, not just Git
 
   it('approve posts the real draft to Slack (previously sent nothing)', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'slack' }))
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
 
@@ -87,7 +87,7 @@ describe('updateAIDraftAction: approve now sends on every platform, not just Git
 
   it('approve posts the real draft to Telegram (previously sent nothing)', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'telegram', source_channel_id: '-100123' }))
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
 
@@ -96,7 +96,7 @@ describe('updateAIDraftAction: approve now sends on every platform, not just Git
 
   it('approve posts the real draft by email (previously sent nothing)', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'email', source_channel_id: 'sender@example.com' }))
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
 
@@ -105,7 +105,7 @@ describe('updateAIDraftAction: approve now sends on every platform, not just Git
 
   it('approve posts a GitHub issue comment via Octokit (already worked, now via the shared module)', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'github', source_channel_id: 'owner/repo', source_message_id: 'github-issue-42' }))
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
 
@@ -118,7 +118,7 @@ describe('updateAIDraftAction: approve now sends on every platform, not just Git
     getTicketById.mockResolvedValue(
       ticket({ source_platform: 'discourse', source_channel_id: '12', source_thread_id: '345' })
     )
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
 
@@ -127,7 +127,7 @@ describe('updateAIDraftAction: approve now sends on every platform, not just Git
 
   it('approve never sends for an mcp-originated ticket — no live channel to post into', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'mcp', source_channel_id: 'mcp-synthetic-id' }))
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
 
@@ -140,7 +140,7 @@ describe('updateAIDraftAction: approve now sends on every platform, not just Git
     getTicketById.mockResolvedValue(
       ticket({ source_platform: 'circle', source_channel_id: '9', source_thread_id: '55' })
     )
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
 
@@ -157,7 +157,7 @@ describe('updateAIDraftAction: edit dispatches on slack/telegram/email too (prev
 
   it('edit posts the new draft to Slack', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'slack' }))
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'edit', newDraft: 'a corrected answer' }))
 
@@ -167,7 +167,7 @@ describe('updateAIDraftAction: edit dispatches on slack/telegram/email too (prev
 
   it('edit posts the new draft to Telegram', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'telegram', source_channel_id: '-100123' }))
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'edit', newDraft: 'a corrected answer' }))
 
@@ -177,7 +177,7 @@ describe('updateAIDraftAction: edit dispatches on slack/telegram/email too (prev
 
   it('edit posts the new draft by email', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'email', source_channel_id: 'sender@example.com' }))
-    const { updateAIDraftAction } = await import('@/app/actions/tickets')
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'edit', newDraft: 'a corrected answer' }))
 
@@ -191,7 +191,7 @@ describe('postReplyAction: manual staff reply dispatches through the same shared
 
   it('posts a staff reply to Slack', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'slack' }))
-    const { postReplyAction } = await import('@/app/actions/tickets')
+    const { postReplyAction } = await import('@/lib/actions/tickets')
 
     await postReplyAction(null, formData({ ticketId: '1', staffName: 'Sarah', content: 'here is the answer' }))
 
@@ -201,7 +201,7 @@ describe('postReplyAction: manual staff reply dispatches through the same shared
 
   it('posts a staff reply as a GitHub issue comment', async () => {
     getTicketById.mockResolvedValue(ticket({ source_platform: 'github', source_channel_id: 'owner/repo', source_message_id: 'github-issue-42' }))
-    const { postReplyAction } = await import('@/app/actions/tickets')
+    const { postReplyAction } = await import('@/lib/actions/tickets')
 
     await postReplyAction(null, formData({ ticketId: '1', staffName: 'Sarah', content: 'here is the answer' }))
 

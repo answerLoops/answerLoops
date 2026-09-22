@@ -94,8 +94,8 @@ describe('OAuth callback connects guilds without overwriting existing connection
 })
 
 describe('settings actions expose per-guild save/remove, not just the single-integration actions', () => {
-  it('app/actions/integrations.ts exports saveDiscordGuildChannelsAction and removeDiscordGuildAction', () => {
-    const src = readSource('app/actions/integrations.ts')
+  it('lib/actions/integrations.ts exports saveDiscordGuildChannelsAction and removeDiscordGuildAction', () => {
+    const src = readSource('lib/actions/integrations.ts')
     expect(src).toContain('export async function saveDiscordGuildChannelsAction')
     expect(src).toContain('export async function removeDiscordGuildAction')
   })

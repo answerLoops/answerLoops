@@ -540,18 +540,18 @@ describe('SourcePlatform / Platform: mcp is a first-class value everywhere sourc
   it('postReply no-ops for mcp tickets instead of trying to post to a nonexistent channel', () => {
     // postReply moved to lib/channels/post-reply.ts as part of the
     // Automatic Deflections toggle — shared by lib/ai/agent.ts and
-    // app/actions/tickets.ts instead of each hand-rolling its own switch.
+    // lib/actions/tickets.ts instead of each hand-rolling its own switch.
     const s = readSrc('lib/channels/post-reply.ts')
     expect(s).toMatch(/if \(platform === 'mcp'\) return null/)
   })
 
   it('staff reply/draft-edit actions also skip posting for mcp tickets — source_channel_id holds a synthetic id, not a real channel', () => {
     // create_ticket stashes its synthetic messageId in source_channel_id, which
-    // reads as "present" to a naive truthiness check — app/actions/tickets.ts's
+    // reads as "present" to a naive truthiness check — lib/actions/tickets.ts's
     // shared sendReply() helper (used by postReplyAction, approve, and edit
     // alike) must explicitly exclude 'mcp', not just check channelId
     // presence, or every staff reply fires a doomed live API call.
-    const s = readSrc('app/actions/tickets.ts')
+    const s = readSrc('lib/actions/tickets.ts')
     const fnIdx = s.indexOf('async function sendReply')
     const fnBody = s.slice(fnIdx, s.indexOf('\n}', fnIdx))
     expect(fnBody).toMatch(/if \(ticket\.source_platform === 'mcp'\) return null/)

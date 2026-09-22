@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DeflectionStatusBadge } from '@/components/ui/badge'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
-import { generateGoogleChatConnectCodeAction,saveGoogleChatSettingsAction,deleteGoogleChatIntegrationAction } from '@/app/actions/integrations'
+import { generateGoogleChatConnectCodeAction,saveGoogleChatSettingsAction,deleteGoogleChatIntegrationAction } from '@/lib/actions/integrations'
 
 interface GoogleChatIntegration {
   id: number

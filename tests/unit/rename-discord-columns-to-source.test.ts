@@ -113,7 +113,7 @@ describe('no leftover discord_* / discordX names in the renamed surface (excludi
     'types/index.ts',
     'lib/db/queries/tickets.ts',
     'lib/ingest/pipeline.ts',
-    'app/actions/tickets.ts',
+    'lib/actions/tickets.ts',
   ]
 
   it.each(filesToCheck)('%s has no leftover old names', (relPath) => {

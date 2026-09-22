@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { submitFeedbackAction } from '@/app/actions/feedback'
+import { submitFeedbackAction } from '@/lib/actions/feedback'
 import type { FeedbackSummary, FeedbackVote } from '@/types'
 
 interface FeedbackButtonsProps {

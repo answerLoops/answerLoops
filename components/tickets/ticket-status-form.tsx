@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { updateTicketStatusAction } from '@/app/actions/tickets'
+import { updateTicketStatusAction } from '@/lib/actions/tickets'
 import { Button } from '@/components/ui/button'
 import type { TicketStatus } from '@/types'
 

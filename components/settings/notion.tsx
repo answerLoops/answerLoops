@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useActionState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { saveNotionConnectionAction, deleteNotionConnectionAction } from '@/app/actions/notion'
+import { saveNotionConnectionAction, deleteNotionConnectionAction } from '@/lib/actions/notion'
 import { runKbSync, pollKbSyncJob, type KbSyncJobStatus } from '@/lib/kb/sync-client'
 import type { NotionConnection } from '@/types'
 import { Button } from '@/components/ui/button'

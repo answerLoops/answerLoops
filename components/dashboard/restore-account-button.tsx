@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState } from 'react'
-import { restoreAccountAction } from '@/app/actions/account'
+import { restoreAccountAction } from '@/lib/actions/account'
 
 export function RestoreAccountButton() {
   const [state, formAction, pending] = useActionState(

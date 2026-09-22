@@ -2,11 +2,11 @@
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { updateWorkspaceNameAction, completeOnboardingAction } from '@/app/actions/onboarding'
-import { saveDiscordIntegrationAction, saveDiscordGuildChannelsAction, saveSlackChannelsAction } from '@/app/actions/integrations'
-import { ingestUrlAction } from '@/app/actions/ingest-url'
-import type { IngestUrlResult } from '@/app/actions/ingest-url'
-import { getWidgetTokenAction } from '@/app/actions/widget'
+import { updateWorkspaceNameAction, completeOnboardingAction } from '@/lib/actions/onboarding'
+import { saveDiscordIntegrationAction, saveDiscordGuildChannelsAction, saveSlackChannelsAction } from '@/lib/actions/integrations'
+import { ingestUrlAction } from '@/lib/actions/ingest-url'
+import type { IngestUrlResult } from '@/lib/actions/ingest-url'
+import { getWidgetTokenAction } from '@/lib/actions/widget'
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 

@@ -4,7 +4,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AIDraftPanel } from '@/components/tickets/ai-draft-panel'
 
-vi.mock('@/app/actions/tickets', () => ({
+vi.mock('@/lib/actions/tickets', () => ({
   updateAIDraftAction: vi.fn(async () => null),
 }))
 

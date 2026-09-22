@@ -90,19 +90,19 @@ describe('site ingest sends exactly one batch-scrape request per import', () => 
 
 describe('user-facing import errors do not name the upstream vendor', () => {
   it('rate-limit message is generic', () => {
-    const src = read('app/actions/ingest-url.ts')
+    const src = read('lib/actions/ingest-url.ts')
     expect(src).not.toContain('Firecrawl rate limit')
     expect(src).toContain('Import rate limit exceeded')
   })
 
   it('missing-API-key message does not tell hosted customers to edit a .env file', () => {
-    const src = read('app/actions/ingest-url.ts')
+    const src = read('lib/actions/ingest-url.ts')
     expect(src).not.toContain('FIRECRAWL_API_KEY is not configured. Add it to your .env file.')
     expect(src).toContain('URL import is not configured for this workspace. Contact your administrator.')
   })
 
   it('still detects the same underlying SDK error to decide which message to show', () => {
-    const src = read('app/actions/ingest-url.ts')
+    const src = read('lib/actions/ingest-url.ts')
     // Detection stays keyed on the real error content; only the wording shown to the user changed.
     expect(src).toContain("msg.includes('Rate limit exceeded') || msg.includes('FirecrawlSdkError')")
   })
@@ -131,7 +131,7 @@ describe('a failed or partial batch-scrape does not silently report full success
   })
 
   it('the server action passes pagesFound and incomplete through to the UI', () => {
-    const src = read('app/actions/ingest-url.ts')
+    const src = read('lib/actions/ingest-url.ts')
     expect(src).toContain('pagesFound: result.pagesFound')
     expect(src).toContain('incomplete: result.incomplete')
   })

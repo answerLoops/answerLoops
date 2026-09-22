@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 const MOD = 'api/api-keys'
 
 // Roles allowed to mint/revoke keys — kept in sync with KEY_ADMIN_ROLES in
-// app/actions/api-keys.ts, which is the authoritative check. This is only so
+// lib/actions/api-keys.ts, which is the authoritative check. This is only so
 // the UI can hide controls a member would be rejected for using.
 const KEY_ADMIN_ROLES = ['owner', 'admin']
 

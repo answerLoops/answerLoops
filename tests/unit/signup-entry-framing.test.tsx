@@ -6,7 +6,7 @@ import path from 'node:path'
 
 // The form calls a server action, which reaches auth.ts and the whole next-auth
 // runtime. None of that is under test here — the rendered label is.
-vi.mock('@/app/actions/auth', () => ({ loginWithGoogle: vi.fn() }))
+vi.mock('@/lib/actions/auth', () => ({ loginWithGoogle: vi.fn() }))
 
 import { LoginForm } from '@/components/auth/login-form'
 
@@ -100,7 +100,7 @@ describe('signing in with no plan goes straight to checkout', () => {
     // visitor had already committed by signing in. /checkout is the one screen
     // that can finish the job: it preselects a plan, allows switching, and
     // takes the card.
-    const src = read('app/actions/auth.ts')
+    const src = read('lib/actions/auth.ts')
     const fallback = src.slice(src.indexOf('const cb = url.searchParams'))
     expect(fallback).toContain("return '/checkout'")
     expect(fallback, 'the dashboard fallback is what caused the original detour').not.toContain(
@@ -115,7 +115,7 @@ describe('signing in with no plan goes straight to checkout', () => {
     // Plan choice moved after auth, but the pricing cards still link with
     // ?plan=, and that choice must survive the round trip — landing on the
     // default plan after clicking a specific card is a silent downgrade.
-    const src = read('app/actions/auth.ts')
+    const src = read('lib/actions/auth.ts')
     expect(src).toContain('/checkout?plan=')
     expect(src).toContain('getPlan(requestedPlan)')
   })

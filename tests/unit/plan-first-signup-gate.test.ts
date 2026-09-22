@@ -211,7 +211,7 @@ describe('the signup entry point carries the chosen plan', () => {
   it('only honours a real plan id when routing after sign-in', async () => {
     // This value lands in a redirect target, so an unvalidated one is an open
     // redirect.
-    const src = fs.readFileSync(path.join(process.cwd(), 'app/actions/auth.ts'), 'utf-8')
+    const src = fs.readFileSync(path.join(process.cwd(), 'lib/actions/auth.ts'), 'utf-8')
     expect(src).toContain('getPlan(requestedPlan)')
     // The destination moved from /start-trial to /checkout when plan choice
     // moved after auth. What must not change is that the id is validated
