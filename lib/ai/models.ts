@@ -7,6 +7,7 @@ import type { EmbeddingModel, LanguageModel } from 'ai'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { getOrgAIConfig } from '@/lib/db/queries/ai-config'
 import { getDeploymentMode } from '@/lib/billing/plans'
+import { XAI_BASE_URL } from '@/lib/ai/list-models'
 
 /**
  * Thrown by chatModel()/embeddingModel() when a production call site on
@@ -126,6 +127,10 @@ export function buildChatProvider(provider: string, apiKey: string | null, baseU
       return createGroq({ apiKey: apiKey ?? undefined })
     case 'mistral':
       return createMistral({ apiKey: apiKey ?? undefined })
+    // xAI's Grok API is OpenAI-compatible — no dedicated @ai-sdk/xai package
+    // needed, just the OpenAI client pointed at xAI's base URL.
+    case 'xai':
+      return createOpenAI({ apiKey: apiKey ?? undefined, baseURL: baseUrl ?? XAI_BASE_URL })
     case 'openai-compatible':
       return createOpenAI({ apiKey: apiKey ?? undefined, baseURL: baseUrl ?? undefined })
     default:

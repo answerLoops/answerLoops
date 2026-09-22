@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { updateSLAAction } from '@/lib/actions/sla'
 import { sendInviteAction, revokeInviteAction, removeMemberAction, transferOwnershipAction } from '@/lib/actions/invitations'
 import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction } from '@/lib/actions/widget'
-import { saveAIConfigAction, clearAIConfigAction, testAIConfigAction } from '@/lib/actions/ai-config'
+import { saveAIConfigAction, clearAIConfigAction, testAIConfigAction, listModelsAction } from '@/lib/actions/ai-config'
 import type { AIConnectionResult } from '@/lib/ai/test-connection'
 import { saveROIConfigAction } from '@/lib/actions/roi'
 import { createApiKeyAction, revokeApiKeyAction } from '@/lib/actions/api-keys'
@@ -307,12 +307,16 @@ export function TeamSection() {
   )
 }
 
+// Fallback lists only — shown before "Refresh models" has fetched a live
+// list (or if that fetch fails), so they're allowed to go stale between
+// releases without breaking anything. See lib/ai/list-models.ts for the
+// live source of truth.
 const CHAT_PROVIDERS = [
   {
     value: 'openai',
     label: 'OpenAI',
-    placeholder: 'gpt-5.6-terra',
-    models: ['gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.5-pro', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.4-nano'],
+    placeholder: 'gpt-6-astra',
+    models: ['gpt-6-astra', 'gpt-6-sol', 'gpt-6-luna', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-5.6-luna', 'gpt-5.5', 'gpt-5.5-pro', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-5.4-nano'],
   },
   {
     value: 'anthropic',
@@ -337,6 +341,16 @@ const CHAT_PROVIDERS = [
     label: 'Mistral',
     placeholder: 'mistral-large-latest',
     models: ['mistral-large-latest', 'mistral-small-latest', 'codestral-latest', 'open-mixtral-8x22b'],
+  },
+  {
+    value: 'xai',
+    label: 'xAI (Grok)',
+    placeholder: 'grok-4',
+    // No hand-curated fallback — Grok models are named/versioned unlike
+    // anything above, and guessing an ID here risks shipping one that never
+    // existed. "Refresh models" (live from xAI's own /v1/models) is the only
+    // source for this provider; until that's run, Model ID is free text.
+    models: [] as string[],
   },
   {
     value: 'openai-compatible',
@@ -397,6 +411,31 @@ export function AIModelSection() {
   const [testing, startTest] = useTransition()
   const [testResult, setTestResult] = useState<AIConnectionResult | null>(null)
   const [testError, setTestError] = useState<string | null>(null)
+
+  // Live model list, fetched on demand rather than relying on the hardcoded
+  // CHAT_PROVIDERS fallback going stale between releases. Cleared whenever
+  // the provider changes, since a previous provider's list is meaningless
+  // once you've switched away from it.
+  const [liveModels, setLiveModels] = useState<string[] | null>(null)
+  const [modelsFetching, startModelsFetch] = useTransition()
+  const [modelsError, setModelsError] = useState<string | null>(null)
+
+  function refreshModels() {
+    if (!formRef.current) return
+    setModelsError(null)
+    const fd = new FormData(formRef.current)
+    startModelsFetch(async () => {
+      const res = await listModelsAction(null, fd)
+      if (res.error) {
+        setModelsError(res.error)
+      } else if (res.models) {
+        setLiveModels(res.models)
+        // A live fetch just proved this model ID is real — drop out of
+        // free-text mode so it shows in the dropdown like any curated one.
+        if (customModel && res.models.includes(chatModel)) setCustomModel(false)
+      }
+    })
+  }
 
   function runTest() {
     if (!formRef.current) return
@@ -466,6 +505,9 @@ export function AIModelSection() {
 
   const configured = config !== null
   const chatMeta = CHAT_PROVIDERS.find((p) => p.value === chatProvider) ?? CHAT_PROVIDERS[0]
+  // Live models (just fetched from the provider itself) win over the
+  // hardcoded fallback list whenever they're available.
+  const modelOptions = liveModels && liveModels.length > 0 ? liveModels : chatMeta.models
   const needsEmbedKey = chatProvider !== 'openai' || embeddingProvider === 'openai-compatible'
   const showForm = !configured || editing
 
@@ -528,6 +570,9 @@ export function AIModelSection() {
                   const resolved = resolveChatModel(value)
                   setChatModel(resolved.model)
                   setCustomModel(resolved.custom)
+                  // A previous provider's live list is meaningless here.
+                  setLiveModels(null)
+                  setModelsError(null)
                 }}
                 className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm bg-white"
               >
@@ -538,8 +583,24 @@ export function AIModelSection() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Model ID</label>
-              {chatMeta.models.length > 0 && !customModel ? (
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-gray-600">Model ID</label>
+                <button
+                  type="button"
+                  onClick={refreshModels}
+                  disabled={modelsFetching}
+                  className="text-xs text-brand-600 hover:underline disabled:opacity-50 disabled:no-underline"
+                >
+                  {modelsFetching ? 'Fetching…' : 'Refresh models'}
+                </button>
+              </div>
+              {liveModels && !modelsError && (
+                <p className="text-xs text-green-700 mb-1">Showing {liveModels.length} live model{liveModels.length === 1 ? '' : 's'} from {chatMeta.label}.</p>
+              )}
+              {modelsError && (
+                <p className="text-xs text-amber-600 mb-1 break-words">{modelsError} — showing the built-in list instead.</p>
+              )}
+              {modelOptions.length > 0 && !customModel ? (
                 <select
                   name="chat_model"
                   value={chatModel}
@@ -549,7 +610,7 @@ export function AIModelSection() {
                   }}
                   className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono bg-white"
                 >
-                  {chatMeta.models.map((m) => (
+                  {modelOptions.map((m) => (
                     <option key={m} value={m}>{m}</option>
                   ))}
                   <option value="__custom__">Custom model ID…</option>
@@ -565,10 +626,10 @@ export function AIModelSection() {
                     className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
                     required
                   />
-                  {chatMeta.models.length > 0 && (
+                  {modelOptions.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => { setCustomModel(false); setChatModel(chatMeta.models[0]) }}
+                      onClick={() => { setCustomModel(false); setChatModel(modelOptions[0]) }}
                       className="text-xs text-brand-600 hover:underline mt-1"
                     >
                       Choose from list instead

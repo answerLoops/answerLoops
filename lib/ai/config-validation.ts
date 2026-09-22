@@ -6,6 +6,7 @@ export const PROVIDER_LABEL: Record<string, string> = {
   google: 'Google Gemini',
   groq: 'Groq',
   mistral: 'Mistral',
+  xai: 'xAI (Grok)',
   'openai-compatible': 'a custom OpenAI-compatible endpoint',
 }
 

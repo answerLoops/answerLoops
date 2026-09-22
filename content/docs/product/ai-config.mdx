@@ -32,6 +32,7 @@ proxy) is part of **Custom AI model configuration**, which is included on Enterp
 | Google Gemini | ✓ | — separate OpenAI key |
 | Groq | ✓ | — separate OpenAI key |
 | Mistral | ✓ | — separate OpenAI key |
+| xAI (Grok) | ✓ | — separate OpenAI key |
 | OpenAI‑compatible endpoint | ✓ (Enterprise) | ✓ (Enterprise) |
 
 In answerLoops, OpenAI is the named provider option for embeddings. If your chat provider is anything else,
@@ -43,8 +44,12 @@ the save is rejected with a clear message if it's missing.
 
 1. **Settings → AI Model → Edit** (or **Save** for a first‑time setup — owner or
    admin only).
-2. Pick the **chat provider** and enter its **model ID** (e.g. `claude-sonnet-4-6`,
-   `gemini-2.5-flash`) and **API key**.
+2. Pick the **chat provider**, enter its **API key**, then click **Refresh
+   models** to pull that provider's current model list live — Model ID stays a
+   dropdown of whatever that provider actually offers today instead of a list
+   that goes stale between releases. If the live fetch fails (or before you've
+   run it), Model ID falls back to a built‑in list of recent models, or you can
+   type an ID directly with **Custom model ID…**.
 3. Pick the **embedding provider** and model. Add an OpenAI embedding key if the
    chat provider isn't OpenAI.
 4. Click **Test connection** — this makes a one‑token call to each provider with
