@@ -31,14 +31,14 @@ function read(relPath: string): string {
 
 describe('completeOnboardingAction no longer throws via redirect()', () => {
   it('does not import or call redirect from next/navigation', () => {
-    const src = read('app/actions/onboarding.ts')
+    const src = read('lib/actions/onboarding.ts')
     expect(src).not.toContain("import { redirect } from 'next/navigation'")
     expect(src).not.toContain("redirect('/dashboard')")
     expect(src).not.toContain("redirect('/login')")
   })
 
   it('returns a plain result the caller can branch on', () => {
-    const src = read('app/actions/onboarding.ts')
+    const src = read('lib/actions/onboarding.ts')
     expect(src).toContain('export async function completeOnboardingAction(): Promise<{ error?: string } | null>')
     expect(src).toContain("return { error: 'Unauthorized' }")
     expect(src).toContain('return null')

@@ -119,7 +119,7 @@ describe('send path: lib/email/reply.ts branches on email_send_method', () => {
 })
 
 describe('server actions: domain verification flow', () => {
-  const src = () => readSrc('app/actions/integrations.ts')
+  const src = () => readSrc('lib/actions/integrations.ts')
 
   it('exports start/check/remove domain actions', () => {
     const s = src()

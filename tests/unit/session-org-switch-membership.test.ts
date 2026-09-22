@@ -121,13 +121,13 @@ describe('auth.ts wires the check into the jwt update branch', () => {
 
 describe('the real consumer of this path keeps working', () => {
   // Accepting an invitation is the one place in the app that legitimately
-  // changes the org claim (app/actions/invitations.ts). It is allowed only
+  // changes the org claim (lib/actions/invitations.ts). It is allowed only
   // because it creates the membership row *before* asking for the switch — so
   // that ordering is load-bearing, and nothing else enforces it. Reversing it
   // would leave the invitee pointed at the personal org the same action just
   // deleted, and the live org check in auth.ts would then sign them out.
   const inviteSrc = () =>
-    fs.readFileSync(path.join(process.cwd(), 'app/actions/invitations.ts'), 'utf-8')
+    fs.readFileSync(path.join(process.cwd(), 'lib/actions/invitations.ts'), 'utf-8')
 
   it('adds the membership before requesting the org switch', () => {
     const s = inviteSrc()
@@ -150,7 +150,7 @@ describe('the real consumer of this path keeps working', () => {
   })
 
   it('leaves an onboarding-style update, which carries no orgId, untouched', async () => {
-    // app/actions/onboarding.ts calls unstable_update({ onboarded: true }).
+    // lib/actions/onboarding.ts calls unstable_update({ onboarded: true }).
     // That must not be affected by, or incur the cost of, the membership check.
     const { resolveOrgIdForSessionUpdate } = await mod()
     expect(await resolveOrgIdForSessionUpdate(5, undefined)).toBeNull()

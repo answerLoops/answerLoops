@@ -4,8 +4,8 @@ import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import type { KBArticle, KBSearchResult, KBSource, GitHubRepo } from '@/types'
-import { ingestUrlAction } from '@/app/actions/ingest-url'
-import type { IngestUrlResult } from '@/app/actions/ingest-url'
+import { ingestUrlAction } from '@/lib/actions/ingest-url'
+import type { IngestUrlResult } from '@/lib/actions/ingest-url'
 import { runKbSync, pollKbSyncJob, type KbSyncJobStatus } from '@/lib/kb/sync-client'
 
 type Article = KBArticle | KBSearchResult

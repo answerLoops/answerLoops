@@ -107,7 +107,7 @@ describe('send path: lib/email/reply.ts branches on email_send_method === oauth'
 
 describe('server actions + routes: Gmail connect/disconnect flow', () => {
   it('exports disconnectOauthAction (shared with Outlook — see email-outlook-infra.test.ts), revoking Gmail best-effort before deleting the row', () => {
-    const src = readSrc('app/actions/integrations.ts')
+    const src = readSrc('lib/actions/integrations.ts')
     expect(src).toContain('export async function disconnectOauthAction')
     const fnStart = src.indexOf('export async function disconnectOauthAction')
     const fnBody = src.slice(fnStart, fnStart + 800)

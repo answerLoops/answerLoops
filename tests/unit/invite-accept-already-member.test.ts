@@ -56,8 +56,8 @@ vi.mock('@/lib/db/queries/invitations', () => ({
 }))
 vi.mock('@/lib/db/queries/members', () => ({ addMember, isMember }))
 
-describe('app/actions/invitations.ts — already-a-member branch consumes the invitation', () => {
-  const src = read('app/actions/invitations.ts')
+describe('lib/actions/invitations.ts — already-a-member branch consumes the invitation', () => {
+  const src = read('lib/actions/invitations.ts')
 
   it('calls acceptInvitation(token) before redirecting when the user is already a member', () => {
     const branchIdx = src.indexOf('if (await isMember(userId, invite.org_id)) {')
@@ -98,7 +98,7 @@ describe('acceptInviteAction — behavioral: execution order when already a memb
   })
 
   it('calls acceptInvitation but not addMember when the user is already a member, then redirects', async () => {
-    const { acceptInviteAction } = await import('@/app/actions/invitations')
+    const { acceptInviteAction } = await import('@/lib/actions/invitations')
 
     await expect(acceptInviteAction('tok')).rejects.toThrow('NEXT_REDIRECT:/dashboard')
 

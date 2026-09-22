@@ -109,7 +109,7 @@ describe('upsertIntegration — google_chat pairing-code creation stays disabled
 })
 
 describe('generateGoogleChatConnectCodeAction — idempotent while unpaired', () => {
-  const src = fs.readFileSync(path.join(process.cwd(), 'app/actions/integrations.ts'), 'utf-8')
+  const src = fs.readFileSync(path.join(process.cwd(), 'lib/actions/integrations.ts'), 'utf-8')
   const fn = src.slice(
     src.indexOf('export async function generateGoogleChatConnectCodeAction'),
     src.indexOf('export async function saveGoogleChatSettingsAction'),

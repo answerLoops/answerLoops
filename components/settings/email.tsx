@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DeflectionStatusBadge } from '@/components/ui/badge'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
-import { saveEmailIntegrationAction,deleteEmailIntegrationAction,startEmailDomainVerificationAction,checkEmailDomainVerificationAction,removeEmailDomainAction,disconnectOauthAction } from '@/app/actions/integrations'
+import { saveEmailIntegrationAction,deleteEmailIntegrationAction,startEmailDomainVerificationAction,checkEmailDomainVerificationAction,removeEmailDomainAction,disconnectOauthAction } from '@/lib/actions/integrations'
 
 interface EmailIntegration {
   id: number
@@ -751,7 +751,7 @@ export function EmailIntegrationCard() {
 // Google Chat has no OAuth "add to workspace" flow like Slack/Discord —
 // connecting is: generate a code here, a Workspace admin adds the app to a
 // Chat space, then posts `/connect <code>` in that space. See
-// app/actions/integrations.ts's generateGoogleChatConnectCodeAction and
+// lib/actions/integrations.ts's generateGoogleChatConnectCodeAction and
 // app/api/google-chat/events/route.ts's pairing handler.
 
 function RemoveDomainModal({

@@ -6,7 +6,7 @@ import { TelegramIntegrationCard } from '@/components/settings/telegram'
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ refresh: vi.fn(), replace: vi.fn() }),
 }))
-vi.mock('@/app/actions/integrations', () => ({
+vi.mock('@/lib/actions/integrations', () => ({
   saveTelegramIntegrationAction: vi.fn(),
   deleteTelegramIntegrationAction: vi.fn(),
 }))

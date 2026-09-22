@@ -157,7 +157,7 @@ describe('widget chat endpoint hardening', () => {
 })
 
 describe('widget token actions cannot act on a defaulted org', () => {
-  const src = () => read('app/actions/widget.ts')
+  const src = () => read('lib/actions/widget.ts')
 
   it('resolves the org from a verified membership', () => {
     const s = src()

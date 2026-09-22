@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DeflectionStatusBadge } from '@/components/ui/badge'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
-import { saveSlackChannelsAction,deleteSlackIntegrationAction,getCurrentDeploymentMode } from '@/app/actions/integrations'
+import { saveSlackChannelsAction,deleteSlackIntegrationAction,getCurrentDeploymentMode } from '@/lib/actions/integrations'
 
 interface SlackIntegration {
   id: number
@@ -354,7 +354,7 @@ function ManualSlackForm({ onSaved, onCancel }: { onSaved: (warning?: string) =>
     setError(null)
     const fd = new FormData(e.currentTarget)
     // Import inline to avoid circular — action is already imported at top of file
-    const { saveSlackIntegrationAction } = await import('@/app/actions/integrations')
+    const { saveSlackIntegrationAction } = await import('@/lib/actions/integrations')
     const result = await saveSlackIntegrationAction(null, fd)
     setSaving(false)
     if (result?.error) { setError(result.error); return }

@@ -180,8 +180,8 @@ describe('lib/billing/stripe.ts: cancelSubscriptionImmediately', () => {
   })
 })
 
-describe('app/actions/account.ts: owner-gating and billing-before-deletion ordering', () => {
-  const src = read('app/actions/account.ts')
+describe('lib/actions/account.ts: owner-gating and billing-before-deletion ordering', () => {
+  const src = read('lib/actions/account.ts')
 
   it('deleteAccountAction and restoreAccountAction are owner-only', () => {
     expect(src).toContain("const OWNER_ONLY = ['owner'] as const")

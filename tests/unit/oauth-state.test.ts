@@ -103,7 +103,7 @@ describe('GitHub webhook fails closed without a secret', () => {
 
 describe('AI config writes are owner/admin only', () => {
   it('every ai-config action gates on requireOrgAccess([owner, admin])', () => {
-    const src = read('app/actions/ai-config.ts')
+    const src = read('lib/actions/ai-config.ts')
     expect(src).not.toContain('DEFAULT_ORG_ID')
     // one shared owner/admin gate helper, called by save, clear, and test
     expect(src).toContain("requireOrgAccess(['owner', 'admin'])")

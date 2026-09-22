@@ -75,7 +75,7 @@ describe('site import: remaining count reaches the user', () => {
   })
 
   it('the server action passes remaining through', () => {
-    const s = read('app/actions/ingest-url.ts')
+    const s = read('lib/actions/ingest-url.ts')
     expect(s).toContain('remaining: result.remaining')
     expect(s).toContain('remaining?: number')
   })

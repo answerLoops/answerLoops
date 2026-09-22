@@ -15,16 +15,16 @@ vi.mock('next/navigation', () => ({
 }))
 
 // settings/page.tsx imports every action module at the top of the file
-// regardless of which section uses it, and @/app/actions/account
+// regardless of which section uses it, and @/lib/actions/account
 // transitively imports @/auth (next-auth), which fails to resolve outside
 // a full Next.js runtime — same fix as tests/unit/api-keys-section.test.tsx.
-vi.mock('@/app/actions/api-keys', () => ({
+vi.mock('@/lib/actions/api-keys', () => ({
   createApiKeyAction: vi.fn(),
   revokeApiKeyAction: vi.fn(),
 }))
-vi.mock('@/app/actions/sla', () => ({ updateSLAAction: vi.fn() }))
-vi.mock('@/app/actions/notion', () => ({ saveNotionConnectionAction: vi.fn(), deleteNotionConnectionAction: vi.fn() }))
-vi.mock('@/app/actions/integrations', () => ({
+vi.mock('@/lib/actions/sla', () => ({ updateSLAAction: vi.fn() }))
+vi.mock('@/lib/actions/notion', () => ({ saveNotionConnectionAction: vi.fn(), deleteNotionConnectionAction: vi.fn() }))
+vi.mock('@/lib/actions/integrations', () => ({
   saveDiscordIntegrationAction: vi.fn(),
   deleteDiscordIntegrationAction: vi.fn(),
   saveDiscordGuildChannelsAction: vi.fn(),
@@ -36,22 +36,22 @@ vi.mock('@/app/actions/integrations', () => ({
   saveEmailIntegrationAction: vi.fn(),
   deleteEmailIntegrationAction: vi.fn(),
 }))
-vi.mock('@/app/actions/invitations', () => ({
+vi.mock('@/lib/actions/invitations', () => ({
   sendInviteAction: vi.fn(),
   revokeInviteAction: vi.fn(),
   removeMemberAction: vi.fn(),
   transferOwnershipAction: vi.fn(),
 }))
-vi.mock('@/app/actions/widget', () => ({
+vi.mock('@/lib/actions/widget', () => ({
   getWidgetTokenAction: vi.fn(),
   regenerateWidgetTokenAction: vi.fn(),
 }))
-vi.mock('@/app/actions/ai-config', () => ({
+vi.mock('@/lib/actions/ai-config', () => ({
   saveAIConfigAction: vi.fn(),
   clearAIConfigAction: vi.fn(),
 }))
-vi.mock('@/app/actions/roi', () => ({ saveROIConfigAction: vi.fn() }))
-vi.mock('@/app/actions/account', () => ({
+vi.mock('@/lib/actions/roi', () => ({ saveROIConfigAction: vi.fn() }))
+vi.mock('@/lib/actions/account', () => ({
   deleteAccountAction: vi.fn(),
   getCurrentOrgName: vi.fn(async () => null),
 }))

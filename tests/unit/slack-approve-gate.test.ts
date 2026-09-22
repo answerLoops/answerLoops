@@ -29,7 +29,7 @@ import path from 'node:path'
 //
 // Note: "Approve" now sends the draft on every platform (fixed in the same
 // pass as the Automatic Deflections toggle — see
-// app/actions/tickets.ts's sendReply and lib/channels/post-reply.ts) — it
+// lib/actions/tickets.ts's sendReply and lib/channels/post-reply.ts) — it
 // used to only send for GitHub. See tests/unit/auto-deflect-toggle.test.ts
 // for coverage of that fix and the toggle itself.
 

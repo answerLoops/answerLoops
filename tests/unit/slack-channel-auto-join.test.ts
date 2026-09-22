@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
 
-// Importing app/actions/integrations.ts pulls in '@/auth' at module scope,
+// Importing lib/actions/integrations.ts pulls in '@/auth' at module scope,
 // which constructs a real NextAuth() instance — that doesn't resolve
 // cleanly under vitest outside a full Next.js runtime (same issue hit
 // earlier this session testing a component that transitively imported a
@@ -10,7 +10,7 @@ import path from 'node:path'
 // these tests call auth() themselves.
 vi.mock('@/auth', () => ({ auth: vi.fn(), signIn: vi.fn(), signOut: vi.fn() }))
 
-const { joinSlackChannels } = await import('@/app/actions/integrations')
+const { joinSlackChannels } = await import('@/lib/actions/integrations')
 
 // Fix for the real bug found while debugging live Slack ingestion: Slack
 // never auto-adds a bot to a channel just because a scope was granted — a
@@ -106,7 +106,7 @@ describe('OAuth scope request includes channels:join', () => {
 })
 
 describe('saveSlackChannelsAction and saveSlackIntegrationAction surface join failures as a warning, never swallow them', () => {
-  const src = read('app/actions/integrations.ts')
+  const src = read('lib/actions/integrations.ts')
 
   it('saveSlackChannelsAction calls joinSlackChannels and returns a warning on partial failure', () => {
     const idx = src.indexOf('export async function saveSlackChannelsAction')

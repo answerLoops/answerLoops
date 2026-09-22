@@ -185,7 +185,7 @@ describe('outbound reply: real Message-ID + References threading', () => {
 
 describe('zero-setup platform-hosted email removed (never provisioned — inbox.answerloops.app was NXDOMAIN)', () => {
   it('connectPlatformEmailAction and its helpers no longer exist', () => {
-    const src = readSrc('app/actions/integrations.ts')
+    const src = readSrc('lib/actions/integrations.ts')
     expect(src).not.toContain('connectPlatformEmailAction')
     expect(src).not.toContain('generateUniqueInboundAddress')
     expect(src).not.toContain('slugifyForEmail')

@@ -262,7 +262,7 @@ describe('lib/ratelimit: stale bucket rows are swept on a guaranteed interval', 
 
 describe('API key management is owner/admin only and membership-verified', () => {
   it('both key actions go through requireOrgAccess with a role gate', () => {
-    const s = readSrc('app/actions/api-keys.ts')
+    const s = readSrc('lib/actions/api-keys.ts')
     expect(s).toContain("const KEY_ADMIN_ROLES = ['owner', 'admin'] as const")
     const gates = [...s.matchAll(/requireOrgAccess\(KEY_ADMIN_ROLES\)/g)]
     expect(gates.length).toBe(2)
@@ -271,7 +271,7 @@ describe('API key management is owner/admin only and membership-verified', () =>
   })
 
   it('no key surface falls back to a default org id', () => {
-    for (const file of ['app/actions/api-keys.ts', 'app/api/api-keys/route.ts']) {
+    for (const file of ['lib/actions/api-keys.ts', 'app/api/api-keys/route.ts']) {
       expect(readSrc(file), file).not.toContain('DEFAULT_ORG_ID')
     }
   })

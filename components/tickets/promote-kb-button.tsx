@@ -2,7 +2,7 @@
 
 import { useActionState } from 'react'
 import Link from 'next/link'
-import { promoteToKBAction } from '@/app/actions/kb'
+import { promoteToKBAction } from '@/lib/actions/kb'
 import { Button } from '@/components/ui/button'
 
 interface PromoteKBButtonProps {

@@ -6,7 +6,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import IntegrationsPage from '@/app/(dashboard)/integrations/page'
 import { useSearchParams } from 'next/navigation'
-import { updateDiscordAutoDeflectAction } from '@/app/actions/integrations'
+import { updateDiscordAutoDeflectAction } from '@/lib/actions/integrations'
 
 // DiscordIntegrationCard now lives in components/settings/discord.tsx and
 // is directly importable, but this file drives it through the full
@@ -26,7 +26,7 @@ vi.mock('next/navigation', () => ({
 // other exports from that module via importActual" doesn't hold for this
 // particular module in this repo, since even the existing precedent tests
 // (settings-page-deflection-tabs.test.tsx, etc.) fully re-mock it instead.
-vi.mock('@/app/actions/integrations', () => ({
+vi.mock('@/lib/actions/integrations', () => ({
   saveDiscordIntegrationAction: vi.fn(),
   deleteDiscordIntegrationAction: vi.fn(),
   saveDiscordGuildChannelsAction: vi.fn(),
@@ -43,29 +43,29 @@ vi.mock('@/app/actions/integrations', () => ({
   deleteGoogleChatIntegrationAction: vi.fn(),
   getCurrentDeploymentMode: vi.fn(async () => 'cloud'),
 }))
-vi.mock('@/app/actions/api-keys', () => ({
+vi.mock('@/lib/actions/api-keys', () => ({
   createApiKeyAction: vi.fn(),
   revokeApiKeyAction: vi.fn(),
 }))
-vi.mock('@/app/actions/sla', () => ({ updateSLAAction: vi.fn() }))
-vi.mock('@/app/actions/notion', () => ({ saveNotionConnectionAction: vi.fn(), deleteNotionConnectionAction: vi.fn() }))
-vi.mock('@/app/actions/invitations', () => ({
+vi.mock('@/lib/actions/sla', () => ({ updateSLAAction: vi.fn() }))
+vi.mock('@/lib/actions/notion', () => ({ saveNotionConnectionAction: vi.fn(), deleteNotionConnectionAction: vi.fn() }))
+vi.mock('@/lib/actions/invitations', () => ({
   sendInviteAction: vi.fn(),
   revokeInviteAction: vi.fn(),
   removeMemberAction: vi.fn(),
   transferOwnershipAction: vi.fn(),
 }))
-vi.mock('@/app/actions/widget', () => ({
+vi.mock('@/lib/actions/widget', () => ({
   getWidgetTokenAction: vi.fn(),
   regenerateWidgetTokenAction: vi.fn(),
   saveWidgetOriginsAction: vi.fn(),
 }))
-vi.mock('@/app/actions/ai-config', () => ({
+vi.mock('@/lib/actions/ai-config', () => ({
   saveAIConfigAction: vi.fn(),
   clearAIConfigAction: vi.fn(),
 }))
-vi.mock('@/app/actions/roi', () => ({ saveROIConfigAction: vi.fn() }))
-vi.mock('@/app/actions/account', () => ({
+vi.mock('@/lib/actions/roi', () => ({ saveROIConfigAction: vi.fn() }))
+vi.mock('@/lib/actions/account', () => ({
   deleteAccountAction: vi.fn(),
   getCurrentOrgName: vi.fn(async () => null),
 }))
@@ -278,7 +278,7 @@ describe('DiscordIntegrationCard — OAuth-connected auto-deflect toggle', () =>
 // them) — following that same pattern here.
 describe('updateDiscordAutoDeflectAction — preserves the existing enabled flag', () => {
   it('passes enabled explicitly, computed from the existing row, not omitted', () => {
-    const src = fs.readFileSync(path.join(process.cwd(), 'app/actions/integrations.ts'), 'utf-8')
+    const src = fs.readFileSync(path.join(process.cwd(), 'lib/actions/integrations.ts'), 'utf-8')
 
     const fnIdx = src.indexOf('export async function updateDiscordAutoDeflectAction')
     expect(fnIdx).toBeGreaterThanOrEqual(0)

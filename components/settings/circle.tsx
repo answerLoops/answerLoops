@@ -4,7 +4,7 @@ import { useState,useEffect,useActionState,useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
-import { saveCircleIntegrationAction,deleteCircleIntegrationAction } from '@/app/actions/integrations'
+import { saveCircleIntegrationAction,deleteCircleIntegrationAction } from '@/lib/actions/integrations'
 
 interface CircleIntegration {
   id: number

@@ -219,7 +219,7 @@ export default function LandingPage() {
               list the domains where it should appear. Your site needs to allow
               custom JavaScript; visitors don’t need an answerLoops account.
             </p>
-            <Link href="/docs/product/widget" className="marketing-text-link mt-4">
+            <Link href="/docs/product/chat-widget" className="marketing-text-link mt-4">
               Install the website chat widget
             </Link>
           </div>

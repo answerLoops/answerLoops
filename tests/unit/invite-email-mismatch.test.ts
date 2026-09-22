@@ -25,8 +25,8 @@ function read(relPath: string): string {
   return fs.readFileSync(abs, 'utf-8')
 }
 
-describe('app/actions/invitations.ts — acceptInviteAction blocks a mismatched email', () => {
-  const src = read('app/actions/invitations.ts')
+describe('lib/actions/invitations.ts — acceptInviteAction blocks a mismatched email', () => {
+  const src = read('lib/actions/invitations.ts')
 
   it('compares session.user.email against invite.email case-insensitively before any acceptance logic', () => {
     const checkIdx = src.indexOf("session.user.email?.toLowerCase() !== invite.email.toLowerCase()")
@@ -62,8 +62,8 @@ describe('app/invite/[token]/page.tsx — shows the mismatch screen before the A
   })
 })
 
-describe('app/actions/auth.ts — logoutAndReturnTo', () => {
-  const src = read('app/actions/auth.ts')
+describe('lib/actions/auth.ts — logoutAndReturnTo', () => {
+  const src = read('lib/actions/auth.ts')
 
   it('only allows same-origin relative redirect targets, guarding against open redirect', () => {
     const fnIdx = src.indexOf('export async function logoutAndReturnTo(')
@@ -128,7 +128,7 @@ describe('acceptInviteAction — behavioral: mismatched email is rejected before
   })
 
   it('redirects to email_mismatch and never calls acceptInvitation or addMember', async () => {
-    const { acceptInviteAction } = await import('@/app/actions/invitations')
+    const { acceptInviteAction } = await import('@/lib/actions/invitations')
 
     await expect(acceptInviteAction('tok')).rejects.toThrow(
       'NEXT_REDIRECT:/invite/tok?error=email_mismatch&email=invitee%40example.com'
@@ -140,7 +140,7 @@ describe('acceptInviteAction — behavioral: mismatched email is rejected before
 
   it('proceeds normally when the signed-in email matches, case-insensitively', async () => {
     auth.mockResolvedValue({ user: { id: '5', email: 'INVITEE@EXAMPLE.COM' }, orgId: 1 })
-    const { acceptInviteAction } = await import('@/app/actions/invitations')
+    const { acceptInviteAction } = await import('@/lib/actions/invitations')
 
     await expect(acceptInviteAction('tok')).rejects.toThrow('NEXT_REDIRECT:/dashboard')
 

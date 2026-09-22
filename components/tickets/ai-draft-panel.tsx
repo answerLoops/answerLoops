@@ -1,7 +1,7 @@
 'use client'
 
 import { useActionState, useState } from 'react'
-import { updateAIDraftAction } from '@/app/actions/tickets'
+import { updateAIDraftAction } from '@/lib/actions/tickets'
 import { Button } from '@/components/ui/button'
 import type { AIDraftStatus } from '@/types'
 

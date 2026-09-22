@@ -10,7 +10,7 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-vi.mock('@/app/actions/ingest-url', () => ({ ingestUrlAction: vi.fn() }))
+vi.mock('@/lib/actions/ingest-url', () => ({ ingestUrlAction: vi.fn() }))
 
 const mockFetch = vi.fn()
 vi.stubGlobal('fetch', mockFetch)

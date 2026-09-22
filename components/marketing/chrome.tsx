@@ -95,7 +95,7 @@ const GROUPS = [
     links: [
       ['Overview', '/agentic-support'],
       ['Workflow', '/support-workflow'],
-      ['Website chat widget', '/docs/product/widget'],
+      ['Website chat widget', '/docs/product/chat-widget'],
       ['Example', '/support-example'],
       ['Pricing', PRICING_HREF],
     ],

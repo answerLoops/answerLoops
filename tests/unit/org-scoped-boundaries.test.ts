@@ -93,7 +93,7 @@ describe('GET /api/tickets authenticates and scopes by session org', () => {
 })
 
 describe('Notification queries are org-scoped', () => {
-  // app/actions/notifications.ts (markReadAction/markAllReadAction) was removed
+  // lib/actions/notifications.ts (markReadAction/markAllReadAction) was removed
   // as dead code: notification-bell.tsx never wired up a "mark read" control,
   // so nothing called it. markNotificationRead/markAllNotificationsRead below
   // are themselves now unused for the same reason — kept for when the bell

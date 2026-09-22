@@ -1,6 +1,6 @@
 'use client'
 
-import { loginWithGoogle } from '@/app/actions/auth'
+import { loginWithGoogle } from '@/lib/actions/auth'
 import { useTransition } from 'react'
 
 function GoogleIcon() {

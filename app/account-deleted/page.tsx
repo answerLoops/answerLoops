@@ -1,8 +1,8 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { Logo } from '@/components/logo'
-import { getAccountDeletionInfo } from '@/app/actions/account'
-import { logout } from '@/app/actions/auth'
+import { getAccountDeletionInfo } from '@/lib/actions/account'
+import { logout } from '@/lib/actions/auth'
 import { RestoreAccountButton } from '@/components/dashboard/restore-account-button'
 
 export const dynamic = 'force-dynamic'

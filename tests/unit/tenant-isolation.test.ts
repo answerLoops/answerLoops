@@ -159,7 +159,7 @@ describe('Ticket queries are org-scoped at boundaries', () => {
   })
 
   it('ticket server actions verify org ownership before mutating', () => {
-    const src = read('app/actions/tickets.ts')
+    const src = read('lib/actions/tickets.ts')
     const scoped = src.match(/getTicketById\(ticketId, orgId\)/g) ?? []
     expect(scoped.length).toBeGreaterThanOrEqual(3)
     // GitHub reply posting (postReplyAction, approve, and edit all route
@@ -173,7 +173,7 @@ describe('Ticket queries are org-scoped at boundaries', () => {
   })
 
   it('KB promote action loads the ticket within the session org', () => {
-    const src = read('app/actions/kb.ts')
+    const src = read('lib/actions/kb.ts')
     expect(src).toContain('getTicketById(parsed.data.ticketId, orgId)')
   })
 })
