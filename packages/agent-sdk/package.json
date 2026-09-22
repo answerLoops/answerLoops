@@ -1,6 +1,6 @@
 {
   "name": "@answerloops/agent-sdk",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Typed client for the answerLoops Agent API (knowledge base search, FAQ, tickets, grounded answers) and a CLI to self-host answerLoops or install its Claude Code skills.",
   "license": "AGPL-3.0",
   "type": "module",
