@@ -43,6 +43,12 @@ export const blog = defineDocs({
       // app/blog/[slug]/opengraph-image.tsx generate one from title+category.
       coverImage: z.string().optional(),
       coverImageAlt: z.string().optional(),
+      // Absolute URL. Set only when this post's canonical version lives
+      // elsewhere — content syndicated from (or to) another site, or a
+      // near-duplicate of another post of ours that should defer to it.
+      // Omitted, a post canonicalizes to itself (the default every other
+      // page on the site gets from publicPageMetadata).
+      canonicalUrl: z.string().url().optional(),
       draft: z.boolean().optional(),
     }),
   },

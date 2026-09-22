@@ -30,6 +30,7 @@ export async function generateMetadata({
     title: post.data.title,
     description: post.data.description,
     path: `/blog/${slug}`,
+    canonicalUrl: post.data.canonicalUrl,
   })
 }
 
