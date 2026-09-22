@@ -117,8 +117,16 @@ describe('app/api/widget/chat/route.ts — customer-facing 503, not a crash', ()
   it('returns 503 with a generic customer-facing message, not an internal "connect a provider" instruction', () => {
     const s = src()
     const catchIdx = s.indexOf('e instanceof NoAIProviderConfiguredError')
-    const block = s.slice(catchIdx, catchIdx + 600)
+    // Widened from 600: isSelfPreview's comment block and message ternary
+    // (see app/widget/[widgetToken]/page.tsx) push the literal 503 further
+    // out than the old fixed-length window fit.
+    const block = s.slice(catchIdx, catchIdx + 900)
     expect(block).toContain('503')
+    expect(block).toContain('isSelfPreview')
+    // Neither branch of the ternary — including the isSelfPreview one,
+    // scoped to the org owner testing their own instance — phrases the
+    // config hint as "connect a/an AI provider"; a real customer-site
+    // visitor only ever sees the generic fallback message either way.
     expect(block).not.toMatch(/connect an? AI provider/i)
   })
 })

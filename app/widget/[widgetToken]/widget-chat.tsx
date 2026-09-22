@@ -4,11 +4,13 @@ import { CopilotKitProvider } from '@copilotkit/react-core/v2'
 import { useAgent } from '@copilotkit/react-core/v2/headless'
 import type { Message } from '@ag-ui/client'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import Image from 'next/image'
 
 interface WidgetChatProps {
   widgetToken: string
   orgName: string
   showBranding: boolean
+  isSelfPreview: boolean
 }
 
 const VISITOR_ID_STORAGE_KEY = 'al_visitor_id'
@@ -31,16 +33,23 @@ function getOrCreateVisitorId(): string {
   }
 }
 
-export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatProps) {
+export function WidgetChat({ widgetToken, orgName, showBranding, isSelfPreview }: WidgetChatProps) {
   const visitorId = useMemo(() => getOrCreateVisitorId(), [])
 
   return (
     <CopilotKitProvider
       runtimeUrl="/api/widget/chat"
+      enableInspector={false}
       useSingleEndpoint
-      properties={{ widgetToken, visitorId }}
+      properties={{ widgetToken, visitorId, isSelfPreview }}
     >
-      <WidgetChatBody widgetToken={widgetToken} orgName={orgName} showBranding={showBranding} />
+      <WidgetChatBody
+        widgetToken={widgetToken}
+        orgName={orgName}
+        showBranding={showBranding}
+        visitorId={visitorId}
+        isSelfPreview={isSelfPreview}
+      />
     </CopilotKitProvider>
   )
 }
@@ -49,10 +58,14 @@ function WidgetChatBody({
   widgetToken,
   orgName,
   showBranding,
+  visitorId,
+  isSelfPreview,
 }: {
   widgetToken: string
   orgName: string
   showBranding: boolean
+  visitorId: string
+  isSelfPreview: boolean
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [input, setInput] = useState('')
@@ -64,20 +77,26 @@ function WidgetChatBody({
   const { agent } = useAgent()
   const [messages, setMessages] = useState<Message[]>(agent.messages)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     setMessages([...agent.messages])
     const { unsubscribe } = agent.subscribe({
       onEvent: ({ messages: current }) => setMessages([...current]),
       onRunInitialized: () => {
-        setError(false)
+        setError(null)
         setIsLoading(true)
       },
       onRunFinalized: () => setIsLoading(false),
-      onRunFailed: () => {
+      // The server only puts a specific message in error.message when
+      // isSelfPreview asked for one — see app/api/widget/chat/route.ts.
+      // Real customer-site visitors get the generic fallback below.
+      onRunFailed: ({ error: runError }) => {
         setIsLoading(false)
-        setError(true)
+        // Strip the "HTTP 503: " transport prefix the AG-UI client adds —
+        // only the server's own message text is meant for display.
+        const message = runError.message.replace(/^HTTP \d+:\s*/, '')
+        setError(message || 'Something went wrong. Please try again.')
       },
     })
     return unsubscribe
@@ -93,7 +112,15 @@ function WidgetChatBody({
     if (!text || isLoading) return
     setInput('')
     agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: text })
-    void agent.runAgent()
+    // addMessage() only mutates the agent's local message list — our
+    // `messages` state otherwise only updates from server-pushed onEvent
+    // data, so without this the user's own bubble disappears for the whole
+    // request round-trip (reappearing only once the server echoes it back).
+    setMessages([...agent.messages])
+    // agent.runAgent() called bare skips CopilotKitCore's forwardedProps merge
+    // (that only happens inside copilotkit.runAgent()) — pass widgetToken and
+    // visitorId explicitly or the server never sees them.
+    void agent.runAgent({ forwardedProps: { widgetToken, visitorId, isSelfPreview } })
   }
 
   async function handleEmailSubmit(e: React.FormEvent) {
@@ -114,21 +141,19 @@ function WidgetChatBody({
     setEmailSubmitted(true)
   }
 
-  const BotIcon = () => (
-    <svg className="h-3.5 w-3.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 14.5v-9l7 4.5-7 4.5z"/>
-    </svg>
+  const BotIcon = ({ size = 14 }: { size?: number }) => (
+    <Image src="/logo.png" alt="" width={size} height={size} className="object-contain" />
   )
 
   return (
     <div className="flex flex-col h-screen bg-white font-sans text-sm">
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-white shrink-0">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600">
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 shrink-0">
           <BotIcon />
         </div>
-        <div>
-          <p className="font-semibold text-gray-900 text-xs">{orgName} Support</p>
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-gray-900 text-xs truncate">{orgName} Support</p>
           <p className="text-[0.625rem] text-green-500 font-medium">Online</p>
         </div>
       </div>
@@ -180,12 +205,10 @@ function WidgetChatBody({
               <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {m.role === 'assistant' && (
                   <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 mr-2 mt-0.5">
-                    <svg className="h-3 w-3 text-brand-600" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 14.5v-9l7 4.5-7 4.5z"/>
-                    </svg>
+                    <BotIcon size={12} />
                   </div>
                 )}
-                <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap ${
+                <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words ${
                   m.role === 'user'
                     ? 'bg-brand-600 text-white rounded-br-sm'
                     : 'bg-gray-100 text-gray-800 rounded-bl-sm'
@@ -198,9 +221,7 @@ function WidgetChatBody({
             {isLoading && (
               <div className="flex justify-start">
                 <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 mr-2 mt-0.5">
-                  <svg className="h-3 w-3 text-brand-600" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 14.5v-9l7 4.5-7 4.5z"/>
-                  </svg>
+                  <BotIcon size={12} />
                 </div>
                 <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-3 py-2">
                   <span className="flex gap-1">
@@ -213,7 +234,7 @@ function WidgetChatBody({
             )}
 
             {error && (
-              <p className="text-center text-xs text-red-400">Something went wrong. Please try again.</p>
+              <p className="text-center text-xs text-red-400">{error}</p>
             )}
 
             <div ref={bottomRef} />
