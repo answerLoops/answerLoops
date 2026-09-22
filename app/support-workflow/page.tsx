@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProofPage } from '@/components/marketing/proof-page'
@@ -6,12 +7,12 @@ import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'Set the rules for automated replies | answerLoops',
   description:
     'Start with drafts your team reviews. Enable automatic replies for a channel after testing your knowledge sources and confidence threshold.',
-  alternates: { canonical: '/support-workflow' },
-}
+  path: '/support-workflow',
+})
 
 export default async function SupportWorkflowPage() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,

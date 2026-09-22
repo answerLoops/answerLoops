@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { DeflectionConfirmModal } from '@/components/deflection-confirm-modal'
+import { DeflectionConfirmModal } from '@/components/ui/deflection-confirm-modal'
 
 interface ToggleSwitchProps {
   label: string

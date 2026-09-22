@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
+import { START_HREF } from './nav-shared'
 import {
   ANNUAL_DISCOUNT_PCT,
   annualMonthlyPrice,
@@ -101,9 +102,7 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
                   : 'Automatic replies pause at the limit.'}
               </p>
               <Link
-                href={`/login?plan=${plan.id}&interval=${
-                  annual ? 'annual' : 'monthly'
-                }`}
+                href={START_HREF}
                 className={`marketing-button mt-5 ${
                   highlighted ? '' : 'marketing-button-secondary'
                 }`}

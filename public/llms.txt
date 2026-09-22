@@ -8,7 +8,7 @@ Questions from connected channels become tickets. The AI retrieves relevant know
 
 ## Who it is for
 
-Community and developer-support teams managing questions across chat, forums, issue trackers, email, and a website. Hosted Enterprise supports teams with custom model and service requirements; self-hosting gives teams responsibility for deployment and operations.
+Teams supporting developer, art, crypto, course, membership, and general-interest communities across chat, forums, issue trackers, and email. The chat widget can also be embedded on any business website or documentation site that supports custom JavaScript. Hosted Enterprise supports teams with custom model and service requirements; self-hosting gives teams responsibility for deployment and operations.
 
 ## Core capabilities
 
@@ -19,6 +19,14 @@ Community and developer-support teams managing questions across chat, forums, is
 - **Agent access:** MCP at `POST /api/mcp` and a REST API. Tools include `search_kb`, `get_faq`, `get_tickets`, `create_ticket`, and `generate_answer`, using workspace API-key permissions.
 - **Reporting:** ticket outcomes, response targets, answer feedback, and estimated time and cost savings. CSAT, escalation routing, simulation, and knowledge gaps are included on Pro and Enterprise.
 - **Self-hosting:** no answerLoops subscription fee under AGPL-3.0. Operators pay infrastructure and model costs. External channel and model providers still process relevant content.
+
+## Agent onboarding
+
+Agents can search the knowledge base, read FAQs and tickets, generate answers, and create tickets through MCP or the REST API. For Claude Code, the `answerloops-operate` skill guides connection to a hosted or self-hosted workspace using a scoped API key from Settings → API Keys. The `answerloops-setup` skill helps set up a self-hosted instance.
+
+- Agent onboarding guide: https://answerloops.com/docs/integrations/agent-skills
+- MCP connection guide: https://answerloops.com/docs/integrations/mcp
+- REST API guide: https://answerloops.com/docs/integrations/agent-api
 
 ## Pricing
 

@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { SidebarNav } from '@/components/sidebar-nav'
+import { SidebarNav } from '@/components/dashboard/sidebar-nav'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 
 const navigation = vi.hoisted(() => ({

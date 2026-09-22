@@ -8,7 +8,7 @@ import path from 'node:path'
 // runtime. None of that is under test here — the rendered label is.
 vi.mock('@/app/actions/auth', () => ({ loginWithGoogle: vi.fn() }))
 
-import { LoginForm } from '@/components/login-form'
+import { LoginForm } from '@/components/auth/login-form'
 
 /**
  * The front door, for someone who has never been here.
@@ -35,7 +35,7 @@ describe('the marketing header speaks to someone with no account', () => {
     // strings live in nav-shared.ts (START_LABEL / SIGNIN_LABEL) so the header
     // and drawer can't drift; nav-cta.tsx references them by name.
     const shared = read('components/marketing/nav-shared.ts')
-    expect(shared, 'the new visitor needs the trial').toContain('Start for $0')
+    expect(shared, 'the new visitor needs the trial').toContain('Start trial')
     expect(shared, 'the returning visitor needs the way back in').toMatch(/SIGNIN_LABEL = 'Log in'/)
     const src = read('components/marketing/nav-cta.tsx')
     expect(src, 'the trial label is wired into the CTA').toContain('START_LABEL')
@@ -57,7 +57,7 @@ describe('the login form matches the mode it was opened in', () => {
   it('reports its pending state rather than looking dead on click', () => {
     // The OAuth redirect is a full navigation, so the gap between click and
     // Google's page is long enough to look broken without this.
-    const src = read('components/login-form.tsx')
+    const src = read('components/auth/login-form.tsx')
     expect(src).toContain('Redirecting…')
     expect(src).toContain('disabled={googlePending}')
   })

@@ -185,12 +185,12 @@ describe('auth.ts wires the gate into every request', () => {
 })
 
 describe('the signup entry point carries the chosen plan', () => {
-  it('pricing CTAs link to sign-in with the plan, not the waitlist', () => {
+  it('pricing CTAs use the shared trial entry point', () => {
     const src = fs.readFileSync(
       path.join(process.cwd(), 'components/marketing/pricing-toggle.tsx'),
       'utf-8',
     )
-    expect(src).toContain('/login?plan=${plan.id}')
+    expect(src).toContain('href={START_HREF}')
     expect(src, 'a pricing CTA still points at the waitlist').not.toContain('href="#waitlist"')
   })
 

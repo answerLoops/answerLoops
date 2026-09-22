@@ -1,14 +1,15 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ComparisonPage } from '@/components/marketing/comparison-page'
 import { marketingSiteEnabled } from '@/lib/site'
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'answerLoops vs Pylon',
   description:
     'Pylon supports Discord, Telegram, and MCP as well as Slack and Teams. Compare the customer context and operational controls your team needs with answerLoops’ documentation-based workflow and self-hosting option.',
-  alternates: { canonical: '/vs/pylon' },
-}
+  path: '/vs/pylon',
+})
 export default function Page() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
   // and the page would be advertising our pricing from somebody else's domain.

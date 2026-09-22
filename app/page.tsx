@@ -1,33 +1,23 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { START_HREF, PRICING_HREF } from '@/components/marketing/nav-shared'
 import { redirect } from 'next/navigation'
-import { AnimatedChat } from '@/components/animated-chat'
+import { AnimatedChat } from '@/components/marketing/animated-chat'
 import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 import { MarketingPage, TrialCta } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORDERED_PLANS } from '@/lib/billing/plans'
-import { GITHUB_URL, marketingSiteEnabled } from '@/lib/site'
+import { GITHUB_SOURCE_URL, marketingSiteEnabled } from '@/lib/site'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
-import {
-  ArrowUpRight,
-  BookOpen,
-  GitBranch,
-  GraduationCap,
-  Layers,
-  Terminal,
-  Network,
-  ShieldCheck,
-  Users,
-  Wrench,
-} from 'lucide-react'
+import { BookOpen, ShieldCheck, MessageCircle, MessagesSquare, FileQuestion, Cloud, Server, Terminal, GraduationCap, Users, Palette, Blocks, Building2 } from 'lucide-react'
 import { IntegrationIcon } from '@/components/marketing/integration-icon'
 import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 
 export const dynamic = 'force-dynamic'
-const PAGE_TITLE = 'answerLoops — Faster answers. More time to build.'
+const PAGE_TITLE = 'AI community support from your docs | answerLoops'
 const PAGE_DESCRIPTION =
-  'Agent-native AI support for your community. Resolve repeat questions, reuse solved tickets, and onboard your agent with skills and MCP. Hosted or self-hosted.'
+  'Answer community questions from your documentation, add chat to your website, and connect your own AI agent through skills, MCP, or the REST API.'
 export const metadata: Metadata = {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
@@ -47,7 +37,7 @@ export const metadata: Metadata = {
 const FAQ_ITEMS = [
   {
     q: 'What does answerLoops do?',
-    a: 'answerLoops helps your community get answers faster and gives your team more time to build. It drafts replies from your knowledge base, reviews them against their sources, and lets your team control when they are sent. Turn useful ticket resolutions into reusable knowledge, and connect your own agent through MCP or the REST API.',
+    a: 'answerLoops collects questions from your community channels and drafts replies using your documented knowledge. A separate AI review checks each draft against its sources. You can approve replies yourself or enable automatic replies for individual channels. Useful resolutions can be saved for future questions.',
   },
   {
     q: 'Can I review answers before they are sent?',
@@ -59,14 +49,26 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Do I need an AI provider account?',
-    a: 'New hosted workspaces include a one-time allowance of five AI-processed tickets. After that, connect your provider account and pay its usage charges directly. Custom model endpoints are available on Enterprise and self-hosted deployments.',
+    a: 'Your first five help tickets include AI processing at no extra charge. To continue, connect an account with a supported AI service (like Anthropic or OpenAI) that powers the answers. You pay that service directly for AI usage, separately from your answerLoops subscription.',
   },
   {
     q: 'Can I run answerLoops on my own infrastructure?',
     a: 'Yes. The source is available under AGPL-3.0. You operate the application and storage, configure the connected services, and cover your infrastructure and model costs.',
   },
   {
-    q: 'Can my own agents use answerLoops?',
+    q: 'Can I add the chat widget to my website or docs?',
+    a: 'Yes. Add the embed snippet to any website or documentation platform that supports custom JavaScript, and configure its allowed domains in Settings. The widget answers from published knowledge-base articles, and visitors do not need an account.',
+  },
+  {
+    q: 'Is answerLoops only for developer communities?',
+    a: 'No. It can use your guides and FAQs to answer questions in art, crypto, course, membership, and general-interest communities, as well as developer communities. The answers depend on the documentation you provide.',
+  },
+  {
+    q: 'How do I onboard an AI agent? (optional)',
+    a: 'Start with the agent onboarding guide and connect your AI agent to your answerLoops workspace. Agents that support skills can use answerloops-operate for guided setup. Other compatible AI tools can connect through MCP or the REST API. Create an API key in Settings → API Keys and choose what your agent can access. For self-hosting, the answerloops-setup skill guides compatible agents through installation.',
+  },
+  {
+    q: 'Can my own AI agents use answerLoops? (optional)',
     a: 'Yes. Every hosted plan includes MCP and REST API access for searching knowledge, reading FAQs and tickets, generating answers, and creating support tickets. Usage limits depend on your plan.',
   },
 ]
@@ -121,37 +123,35 @@ export default function LandingPage() {
       <section className="marketing-home-hero">
         <div className="marketing-container marketing-home-grid">
           <div className="home-hero-copy">
-            <p className="marketing-eyebrow">
-              <span className="eyebrow-dot" /> Agent-native AI support
+            <p className="marketing-eyebrow hero-positioning">
+              <span className="hero-positioning-dot" aria-hidden="true" />
+              Agent-native AI support
             </p>
             <h1>
-              Faster answers.
-              <br />
-              <em>More time to build.</em>
+              Faster answers. More time to create.
             </h1>
             <p className="marketing-intro">
-              Turn your documentation and resolved questions into answers your
-              community can use. Resolve repeat questions, keep your team in
-              control, and put your own agent to work with skills and MCP.
+              Turn your docs into answers wherever your community asks. Keep
+              your team in control, or put your own AI agents to work.
             </p>
             <div className="marketing-actions">
               <Link
-                href="/login"
+                href={START_HREF}
                 className="marketing-button marketing-button-hero"
               >
-                Start a Free Trial for $0 <ArrowUpRight size={17} />
+                Try answerLoops for 14 days
               </Link>
               <Link
-                href="/docs/integrations/agent-skills"
+                href="https://dub.sh/onboard-agent-skills"
                 className="marketing-button marketing-button-secondary"
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <Terminal size={17} /> Onboard your agent
+                Onboard your AI agent
               </Link>
             </div>
             <p className="marketing-note">
-              14-day trial. Card required. Start building your answer loop today.
+              A card is required. Cancel within 14 days to avoid the subscription charge.
             </p>
           </div>
           <AnimatedChat />
@@ -176,50 +176,78 @@ export default function LandingPage() {
         <div className="marketing-container">
           <div className="marketing-section-heading">
             <div>
-              <p className="marketing-eyebrow">01 / The answer loop</p>
+              <p className="marketing-eyebrow">How replies work</p>
               <h2>
-                An answer is a draft.
-                <br />
-                Until it’s been reviewed.
+                Check the answer before it reaches your community
               </h2>
             </div>
             <p>
-              Retrieval, generation, and review belong in the same workflow.
-              answerLoops keeps the question, the source material, and the
-              review together—before anything is sent.
+              Every draft is checked against the knowledge used to write it.
+              Keep replies in your team’s queue for approval, or enable
+              automatic replies for a channel after testing the results.
             </p>
           </div>
           <WorkflowDiagram />
           <Link className="marketing-text-link mt-6" href="/support-workflow">
-            Explore the answer lifecycle <ArrowUpRight size={16} />
+            See the reply settings
           </Link>
+        </div>
+      </section>
+      <section id="website-chat" className="marketing-section marketing-soft scroll-mt-20">
+        <div className="marketing-container marketing-section-heading">
+          <div>
+            <p className="marketing-eyebrow flex items-center gap-3">
+              <MessageCircle
+                size={24}
+                strokeWidth={1.75}
+                className="shrink-0 text-[var(--marketing-link)]"
+                aria-hidden="true"
+              />
+              Website chat widget
+            </p>
+            <h2>Add a support chatbot to any website or documentation site</h2>
+          </div>
+          <div>
+            <p>
+              Give visitors a place to ask questions while they read your site.
+              The answerLoops chat widget answers from the knowledge-base articles
+              you publish, whether you run a community, a business website, or
+              product documentation.
+            </p>
+            <p className="mt-4">
+              Copy the embed snippet from Settings, add it to your website, and
+              list the domains where it should appear. Your site needs to allow
+              custom JavaScript; visitors don’t need an answerLoops account.
+            </p>
+            <Link href="/docs/product/widget" className="marketing-text-link mt-4">
+              Install the website chat widget
+            </Link>
+          </div>
         </div>
       </section>
       <section className="mcp-section" aria-labelledby="mcp-title">
         <div className="marketing-container mcp-grid">
           <div>
             <p className="marketing-eyebrow">
-              02 / An MCP server for your agent
+              MCP and API access for AI agents
             </p>
             <h2 id="mcp-title">
-              Your agents need
-              <br />
-              answers, too.
+              Let AI tools use the same support knowledge
             </h2>
             <p className="marketing-lead">
               Give coding assistants, internal agents, and custom tools access
               to the same knowledge and reviewed answers your community uses.
             </p>
             <p className="marketing-lead">
-              Search docs. Generate an answer. Open a ticket when a person needs
-              to step in. One workspace, through MCP or the REST API.
+              Through MCP or the REST API, an agent can search your docs,
+              prepare an answer, or open a ticket for your team to follow up.
             </p>
             <div className="marketing-actions">
               <Link href="/docs/integrations/mcp" className="marketing-button">
-                Read the MCP guide <ArrowUpRight size={16} />
+                Read the MCP guide
               </Link>
-              <Link className="marketing-text-link" href="/mcp-support-agents">
-                Explore agent access →
+              <Link className="marketing-button marketing-button-secondary" href="/mcp-support-agents">
+                Connect your agent
               </Link>
             </div>
           </div>
@@ -262,67 +290,56 @@ export default function LandingPage() {
           <div className="marketing-section-heading">
             <div>
               <p className="marketing-eyebrow">
-                03 / Built around your knowledge
+                Managing community support
               </p>
               <h2>
-                The infrastructure behind
-                <br />
-                every useful reply.
+                Manage your knowledge base and community support in one place.
               </h2>
             </div>
             <p>
-              Every answer is a loop that allows your team to focus on what
-              matters, your product.
+              Good answers depend on your knowledge base. Keep track of the
+              sources you import, the replies your team sends, and the questions
+              your docs don’t cover yet.
             </p>
           </div>
           <div className="capability-grid">
             {[
               {
                 icon: BookOpen,
-                number: '01',
-                title: 'Knowledge your agents can use.',
+                title: 'Import any documentation you already have',
                 body: 'Import docs, files, GitHub repositories, and Notion pages. Save useful resolutions so the next answer starts with what your team already knows.',
                 href: '/docs/product/knowledge-base',
                 label: 'Knowledge sources',
-                detail: 'DOCS  /  FILES  /  GITHUB  /  NOTION',
               },
               {
                 icon: ShieldCheck,
-                number: '02',
-                title: 'Automation with reply controls.',
+                title: 'Choose which community channels can reply automatically',
                 body: 'Start with team approval. Enable automatic answers per channel when you’re ready. Questions below your confidence threshold stay with your team.',
                 href: '/docs/product/ai-deflection',
                 label: 'Answer review',
-                detail: 'DRAFT  →  REVIEW  →  REPLY',
               },
               {
-                icon: Layers,
-                number: '03',
-                title: 'Keep the conversation intact.',
+                icon: MessagesSquare,
+                title: 'Reply in the original conversation',
                 body: 'Review the question, draft, and source conversation in one ticket. Reply back to the original channel without losing the context.',
                 href: '/docs/product/tickets',
                 label: 'Support workspace',
-                detail: 'QUESTION  +  SOURCES  +  HISTORY',
               },
               {
-                icon: Network,
-                number: '04',
-                title: 'Learn where your docs fall short.',
+                icon: FileQuestion,
+                title: 'Expose community knowledge gaps',
                 body: 'Use unanswered topics and customer ratings to decide what to document next. Knowledge-gap reports are included on Pro and Enterprise.',
                 href: '/docs/product/knowledge-gaps',
                 label: 'Knowledge gaps',
-                detail: 'UNANSWERED  →  DOCUMENTED',
               },
             ].map(
-              ({ icon: Icon, number, title, body, href, label, detail }) => (
+              ({ icon: Icon, title, body, href, label }) => (
                 <article className="capability-card" key={title}>
                   <div className="capability-top">
-                    <Icon size={25} strokeWidth={1.4} />
-                    <span>{number}</span>
+                    <Icon size={25} strokeWidth={1.4} aria-hidden="true" />
                   </div>
                   <h3>{title}</h3>
                   <p>{body}</p>
-                  <div className="capability-detail">{detail}</div>
                   <Link
                     href={href}
                     className="marketing-text-link"
@@ -330,7 +347,6 @@ export default function LandingPage() {
                     rel="noopener noreferrer"
                   >
                     {label}
-                    <ArrowUpRight size={16} />
                   </Link>
                 </article>
               ),
@@ -340,13 +356,11 @@ export default function LandingPage() {
       </section>
       <section className="marketing-section marketing-soft deployment-section">
         <div className="marketing-container">
-          <div className="marketing-section-heading">
+          <div className="marketing-section-heading hosting-heading">
             <div>
-              <p className="marketing-eyebrow">04 / Your deployment</p>
+              <p className="marketing-eyebrow">Hosting</p>
               <h2>
-                Choose where it runs.
-                <br />
-                Keep the same answer loop.
+                Choose how you host answerLoops
               </h2>
             </div>
             <p>
@@ -357,44 +371,61 @@ export default function LandingPage() {
           </div>
           <div className="deployment-grid">
             <article>
+              <div className="hosting-option-heading">
               <span className="deployment-symbol">
-                <Layers size={28} />
+                <Cloud size={28} aria-hidden="true" />
               </span>
-              <h3>We run the infrastructure.</h3>
+              <h3>Managed hosting</h3>
+              </div>
               <p>
                 Start with a hosted workspace. Connect your knowledge and
                 channels, then review your first answers.
               </p>
-              <Link href="/pricing" className="marketing-text-link">
-                Explore hosted plans <ArrowUpRight size={16} />
+              <Link href={PRICING_HREF} className="marketing-button marketing-button-secondary">
+                Explore hosted plans
               </Link>
             </article>
             <article>
+              <div className="hosting-option-heading">
               <span className="deployment-symbol">
-                <GitBranch size={28} />
+                <Server size={28} aria-hidden="true" />
               </span>
-              <h3>You run the infrastructure.</h3>
+              <h3>Self-hosted</h3>
+              </div>
               <p>
                 Deploy the AGPL-3.0 source. Manage your application, storage,
                 updates, and connected services.
               </p>
               <Link
                 href="/self-hosted-ai-support"
-                className="marketing-text-link"
+                className="marketing-button marketing-button-secondary"
               >
-                Explore self-hosting <ArrowUpRight size={16} />
+                Explore self-hosting
               </Link>
             </article>
           </div>
-          <div className="enterprise-line">
-            <span>
+          <div className="enterprise-line hosting-enterprise">
+            <div className="hosting-enterprise-copy">
+              <h3>Need help with your deployment?</h3>
+            <p>
               Custom model endpoints, migration assistance, or deployment
-              requirements?
-            </span>
-            <a href="mailto:hello@answerloops.com">
-              Talk to us about Enterprise ↗
+              requirements.
+            </p>
+            </div>
+            <div className="hosting-enterprise-actions">
+            <a
+              href="https://dub.sh/talk-to-us"
+              className="marketing-button"
+            >
+              Talk to us
             </a>
-            <a href={GITHUB_URL}>View source ↗</a>
+            <a
+              href={GITHUB_SOURCE_URL}
+              className="marketing-button marketing-button-secondary"
+            >
+              View source
+            </a>
+            </div>
           </div>
         </div>
       </section>
@@ -402,37 +433,45 @@ export default function LandingPage() {
         <div className="marketing-container">
           <div className="marketing-section-heading marketing-section-heading-center">
             <h2>
-              Built for teams
-              <br />
-              that run on trust.
+              Support for any community
             </h2>
           </div>
           <div className="audience-grid">
             {[
               {
                 icon: Terminal,
-                title: 'SaaS Companies',
-                body: 'Deflect repetitive support tickets on Discord, Slack, and your website widget so your team only sees the ones that need a human.',
+                title: 'Developer communities',
+                body: 'Use your setup guides and troubleshooting docs to answer recurring questions in Discord, Slack, and website chat.',
               },
               {
                 icon: GraduationCap,
-                title: 'Course Creators',
-                body: 'Answer student questions instantly from your course docs across Discord and Circle, without staffing a support inbox.',
+                title: 'Courses and membership groups',
+                body: 'Help students find course instructions and answers in Discord and Circle, with questions that need your attention kept in the team queue.',
               },
               {
                 icon: Users,
-                title: 'Communities',
-                body: 'Resolve member questions automatically from your knowledge base, keeping Discourse and Circle threads answered without mod burnout.',
+                title: 'General-interest communities',
+                body: 'Answer questions about community rules, events, and getting started in Discourse and Circle using the guides your moderators maintain.',
               },
               {
-                icon: Wrench,
-                title: 'Service Businesses',
-                body: 'Answer common client questions by email and website chat automatically, sourced from your own docs.',
+                icon: Palette,
+                title: 'Art and creative communities',
+                body: 'Help members find submission rules, workshop instructions, and print specifications from your community guides.',
+              },
+              {
+                icon: Blocks,
+                title: 'Crypto and Web3 communities',
+                body: 'Answer questions about project documentation, participation rules, and getting started in Telegram and Discord.',
+              },
+              {
+                icon: Building2,
+                title: 'Businesses and organizations',
+                body: 'Use your service documentation to answer common client questions in email and website chat.',
               },
             ].map(({ icon: Icon, title, body }) => (
               <article className="audience-card" key={title}>
                 <span className="audience-icon">
-                  <Icon size={20} strokeWidth={1.6} />
+                  <Icon size={20} strokeWidth={1.6} aria-hidden="true" />
                 </span>
                 <h3>{title}</h3>
                 <p>{body}</p>

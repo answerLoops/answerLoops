@@ -84,14 +84,14 @@ describe('NavCta — header, no initialState, upgrades from the fetch', () => {
     render(<NavCta variant="header" />)
 
     // First paint: the anonymous CTA, before the fetch has resolved.
-    expect(screen.getByRole('link', { name: /start for \$0/i })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /start trial/i })).toBeTruthy()
     expect(screen.getByRole('link', { name: /^log in$/i })).toBeTruthy()
     expect(screen.queryByRole('link', { name: /go to dashboard/i })).toBeNull()
 
     // After the fetch resolves: upgraded to the active CTA.
     const dashboard = await screen.findByRole('link', { name: /go to dashboard/i })
     expect(dashboard.getAttribute('href')).toMatch(/\/dashboard$/)
-    expect(screen.queryByRole('link', { name: /start for \$0/i })).toBeNull()
+    expect(screen.queryByRole('link', { name: /start trial/i })).toBeNull()
 
     expect(fetchSpy).toHaveBeenCalledWith('/api/nav-state', { credentials: 'include' })
   })
@@ -106,7 +106,7 @@ describe('NavCta — header, no initialState, upgrades from the fetch', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(screen.getByRole('link', { name: /start for \$0/i })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /start trial/i })).toBeTruthy()
     expect(screen.getByRole('link', { name: /^log in$/i })).toBeTruthy()
     expect(screen.queryByRole('link', { name: /go to dashboard/i })).toBeNull()
   })
@@ -120,7 +120,7 @@ describe('NavCta — header, no initialState, upgrades from the fetch', () => {
     await Promise.resolve()
     await Promise.resolve()
 
-    expect(screen.getByRole('link', { name: /start for \$0/i })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /start trial/i })).toBeTruthy()
     expect(screen.queryByRole('link', { name: /go to dashboard/i })).toBeNull()
     expect(screen.queryByRole('link', { name: /choose a plan/i })).toBeNull()
   })
@@ -129,7 +129,7 @@ describe('NavCta — header, no initialState, upgrades from the fetch', () => {
 describe('NavCta — anonymous CTA labels and contrast', () => {
   it('labels the trial action clearly', () => {
     render(<NavCta variant="header" initialState="anonymous" />)
-    expect(screen.getByRole('link', { name: /^start for \$0$/i })).toBeTruthy()
+    expect(screen.getByRole('link', { name: /^start trial$/i })).toBeTruthy()
   })
 
   it('the Sign in link is not styled with white text — it sits on the light header, not a dark one', () => {
@@ -152,10 +152,10 @@ describe('NavCta — drawer variant only renders for the anonymous state', () =>
     render(<NavCta variant="drawer" initialState="anonymous" />)
 
     const signIn = screen.getByRole('link', { name: /^log in$/i })
-    expect(signIn.getAttribute('href')).toBe('/login?mode=signin')
+    expect(signIn.getAttribute('href')).toBe('https://dub.sh/sign-in-button')
 
-    const trial = screen.getByRole('link', { name: /start for \$0/i })
-    expect(trial.getAttribute('href')).toBe('/login')
+    const trial = screen.getByRole('link', { name: /start trial/i })
+    expect(trial.getAttribute('href')).toBe('https://dub.sh/start-a-trial')
   })
 
   it('renders nothing when the fetch reports a non-anonymous state', async () => {

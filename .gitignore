@@ -66,6 +66,10 @@ next-env.d.ts
 # Local-only sibling checkout, not part of this repo
 .internal-tools/
 .env
+.env.supabase
+
+# Supabase CLI local project link cache — machine-local state, not shared config
+/supabase/.temp/
 
 # Owner-only working instructions and the sync command they drive. Both refer to
 # a private workspace and are useful to one person, so they stay off the public

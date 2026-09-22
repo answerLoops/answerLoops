@@ -13,6 +13,8 @@ import { getDeploymentMode } from '@/lib/billing/plans'
  */
 export const GITHUB_URL = 'https://github.com/answerLoops/answerLoops'
 
+export const GITHUB_SOURCE_URL = 'https://git.new/answerloops-github'
+
 export const GITHUB_ISSUES_URL = `${GITHUB_URL}/issues`
 
 /**

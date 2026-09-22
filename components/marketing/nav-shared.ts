@@ -9,17 +9,15 @@ export function navState(loggedIn: boolean, hasAccess: boolean): NavState {
   return hasAccess ? 'active' : 'no-plan'
 }
 
-// Returning users land on the sign-in copy rather than "Create your account".
-// Google is the only provider, so both modes run the same OAuth flow — what
-// differs is what the page claims to be.
-export const SIGNIN_HREF = '/login?mode=signin'
+// Returning users enter through the shared sign-in campaign link.
+export const SIGNIN_HREF = 'https://dub.sh/sign-in-button'
 
-// Every "start" action lands here; the plan is chosen after signing in, on the
-// same screen that takes the card.
-export const START_HREF = '/login'
+// Public trial buttons share the same campaign entry point.
+export const START_HREF = 'https://dub.sh/start-a-trial'
+export const PRICING_HREF = 'https://dub.sh/pricing-page'
 
 // Keep the trial and sign-in labels consistent across desktop and mobile.
-export const START_LABEL = 'Start for $0'
+export const START_LABEL = 'Start trial'
 export const SIGNIN_LABEL = 'Log in'
 
 // A signed-in visitor with no plan is already past auth, so their journey

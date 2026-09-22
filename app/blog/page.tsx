@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -6,12 +7,12 @@ import { PageSchema } from '@/components/marketing/page-schema'
 import { BLOG_POSTS, formatPostDate } from './posts'
 import { marketingSiteEnabled } from '@/lib/site'
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'answerLoops blog',
   description:
     'Notes from the founders on community support and building answerLoops.',
-  alternates: { canonical: '/blog' },
-}
+  path: '/blog',
+})
 export default function BlogIndexPage() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
   // and the page would be advertising our pricing from somebody else's domain.
@@ -51,7 +52,7 @@ export default function BlogIndexPage() {
               </h2>
               <p>{post.description}</p>
               <Link className="marketing-text-link" href={`/blog/${post.slug}`}>
-                Read the article →
+                Read the article
               </Link>
             </article>
           ))}

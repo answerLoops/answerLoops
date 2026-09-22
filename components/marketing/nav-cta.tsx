@@ -94,7 +94,7 @@ export function NavCta({
           className="!text-white"
           style={{ color: '#fff', WebkitTextFillColor: '#fff' }}
         >
-          Go to dashboard →
+          Go to dashboard
         </span>
       </Link>
     )
@@ -107,7 +107,7 @@ export function NavCta({
           className="!text-white"
           style={{ color: '#fff', WebkitTextFillColor: '#fff' }}
         >
-          Choose a plan →
+          Choose a plan
         </span>
       </Link>
     )

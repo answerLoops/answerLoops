@@ -331,3 +331,66 @@
     gap: 4rem;
   }
 }
+
+.marketing-site #who-its-for .marketing-section-heading {
+  max-width: 56rem;
+  margin-inline: auto;
+  text-align: center;
+}
+.marketing-site #who-its-for .audience-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+.marketing-site #who-its-for .audience-card { min-width: 0; }
+@media (min-width: 640px) {
+  .marketing-site #who-its-for .audience-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1024px) {
+  .marketing-site #who-its-for .audience-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.marketing-site .hero-positioning {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.hero-positioning-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--marketing-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marketing-accent) 12%, transparent), 0 0 10px color-mix(in srgb, var(--marketing-accent) 35%, transparent);
+}
+
+.marketing-site {
+  font-family: var(--font-marketing-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-marketing-sans);
+}
+.marketing-site .marketing-eyebrow {
+  font-family: inherit;
+  text-transform: none;
+  letter-spacing: 0.015em;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.marketing-site :is(.channel-band, .capability-detail) { font-family: inherit; }
+
+.marketing-site #features .capability-grid {
+  gap: 1.25rem;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.marketing-site #features .capability-card {
+  border: 1px solid var(--marketing-border);
+  border-radius: 10px;
+}
+.marketing-site .audience-icon > svg {
+  color: var(--marketing-accent);
+}

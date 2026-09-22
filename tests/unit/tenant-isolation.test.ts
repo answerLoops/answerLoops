@@ -83,11 +83,14 @@ describe('GitHub repo API routes enforce session org', () => {
     expect(src).toContain('await removeRepo(Number(id), orgId)')
   })
 
-  it('repo server actions authenticate and pass the session org', () => {
-    const src = read('app/actions/github.ts')
-    expect(src).toContain('await auth()')
-    expect(src).toMatch(/await addRepo\([^)]*orgId\)/)
-    expect(src).toMatch(/await removeRepo\(id, orgId\)/)
+  it('repo connect/remove routes authenticate and pass the session org', () => {
+    const connectSrc = read('app/api/github/connect-installation/route.ts')
+    expect(connectSrc).toContain('await auth()')
+    expect(connectSrc).toMatch(/await addRepo\([^)]*orgId\)/)
+
+    const removeSrc = read('app/api/github/repos/[id]/route.ts')
+    expect(removeSrc).toContain('await auth()')
+    expect(removeSrc).toMatch(/await removeRepo\(Number\(id\), orgId\)/)
   })
 
   it('GitHub webhook resolves org from the repo row, not a re-fetch of org 1', () => {

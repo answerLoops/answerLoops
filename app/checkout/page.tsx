@@ -1,3 +1,4 @@
+import { PRICING_HREF } from '@/components/marketing/nav-shared'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
@@ -97,7 +98,7 @@ export default async function CheckoutPage({
             </span>
           </Link>
           <Link
-            href="/pricing"
+            href={PRICING_HREF}
             className="text-xs font-medium text-slate-500 transition-colors hover:text-slate-900"
           >
             ← Back to pricing

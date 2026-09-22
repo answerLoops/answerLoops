@@ -1,3 +1,4 @@
+import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { IntentPage } from '@/components/marketing/intent-page'
@@ -5,12 +6,12 @@ import { resolveNavState } from '@/lib/marketing/nav-state'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
-export const metadata: Metadata = {
+export const metadata: Metadata = publicPageMetadata({
   title: 'An MCP server for your support knowledge | answerLoops',
   description:
     'Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets.',
-  alternates: { canonical: '/mcp-support-agents' },
-}
+  path: '/mcp-support-agents',
+})
 export default async function Page() {
   // Not served by a self-hosted install: there is no hosted plan to sell there,
   // and the page would be advertising our pricing from somebody else's domain.
@@ -19,7 +20,7 @@ export default async function Page() {
   return (
     <IntentPage
       navState={await resolveNavState()}
-      eyebrow="Agent infrastructure / MCP + REST"
+      eyebrow="MCP and REST API"
       title="An MCP server for your support knowledge"
       intro="Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets."
       audience="Teams connecting coding assistants, internal tools, or support automations to their existing documentation and ticket queue."
