@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest'
 
 // app/sitemap pulls in the Fumadocs source, which drags .mdx through vite and
-// fails to parse under vitest. The docs entries are not what is under test —
-// whether the sitemap is emitted at all is.
+// fails to parse under vitest. The docs/blog entries are not what is under
+// test — whether the sitemap is emitted at all is.
 vi.mock('@/lib/docs/source', () => ({
   docsSource: { getPages: () => [{ url: '/docs/introduction' }] },
+}))
+vi.mock('@/lib/blog/posts', () => ({
+  getBlogPosts: () => [{ url: '/blog/example-post', data: { datePublished: '2026-01-01' } }],
 }))
 
 /**
@@ -147,7 +150,7 @@ describe('the marketing pages themselves are gated', () => {
       'app/about/page.tsx',
       'app/agentic-support/page.tsx',
       'app/blog/page.tsx',
-      'app/blog/managing-every-community-platform-from-one-place/page.tsx',
+      'app/blog/[slug]/page.tsx',
       'app/architecture/page.tsx',
       'app/discord-github-support/page.tsx',
       'app/mcp-support-agents/page.tsx',

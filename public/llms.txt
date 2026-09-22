@@ -58,7 +58,6 @@ All hosted plans have a 14-day trial with a card required. A separate one-time a
 - About: https://answerloops.com/about
 - Agentic support overview: https://answerloops.com/agentic-support
 - Blog: https://answerloops.com/blog
-- Blog: Managing support across community platforms: https://answerloops.com/blog/managing-every-community-platform-from-one-place
 - /architecture: https://answerloops.com/architecture
 - /discord-github-support: https://answerloops.com/discord-github-support
 - /mcp-support-agents: https://answerloops.com/mcp-support-agents

@@ -20,7 +20,6 @@ const LABELS = {
   '/alternatives': 'Alternatives & comparisons',
   '/about': 'About',
   '/blog': 'Blog',
-  '/blog/managing-every-community-platform-from-one-place': 'Blog: Managing support across community platforms',
   '/privacy': 'Privacy policy',
   '/terms': 'Terms of service',
   '/vs/chatbase': 'answerLoops vs Chatbase',

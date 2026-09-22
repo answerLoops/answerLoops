@@ -160,6 +160,14 @@
 .marketing-site .marketing-post-card h2 { margin-top: 0; font-size: clamp(1.5rem, 3vw, 2.25rem); }
 .marketing-site .marketing-post-card > p:not(.marketing-meta) { color: var(--marketing-muted); margin-block: 1rem; }
 .marketing-site .marketing-post-card .marketing-meta { margin-top: 0; }
+.marketing-site .marketing-post-category { color: var(--marketing-accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.75rem; }
+.marketing-site .marketing-post-subtitle { font-size: clamp(1.05rem, 2vw, 1.3rem); color: var(--marketing-muted); margin-top: 0.75rem; }
+.marketing-site .marketing-post-cover { margin-block: clamp(1.5rem, 4vw, 2.5rem); }
+.marketing-site .marketing-post-cover img { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--marketing-border); }
+/* The "Google overview" block: a short, direct-answer paragraph meant to be
+   liftable by featured snippets / AI Overviews, set apart from the article
+   prose that follows it rather than reading as just the first paragraph. */
+.marketing-site .marketing-post-overview { background: var(--marketing-soft); border-left: 3px solid var(--marketing-accent); border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; font-size: 1.05rem; color: var(--marketing-ink); margin-bottom: 2rem; }
 .marketing-site .marketing-faq details[open] { border-bottom-color: #8fafba; }
 
 /* Interior pages: generous editorial headings and distinct content surfaces. */
