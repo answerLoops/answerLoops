@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next'
 import { docsSource } from '@/lib/docs/source'
+import { getBlogPosts } from '@/lib/blog/posts'
 import { marketingSiteEnabled, MARKETING_URL } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
@@ -25,7 +26,6 @@ const STATIC_ROUTES: { path: string; priority: number; changeFrequency: ChangeFr
   { path: '/about', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/agentic-support', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/blog', priority: 0.6, changeFrequency: 'weekly' },
-  { path: '/blog/managing-every-community-platform-from-one-place', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/architecture', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/discord-github-support', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/mcp-support-agents', priority: 0.7, changeFrequency: 'monthly' },
@@ -66,5 +66,15 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }))
 
-  return [...staticEntries, ...docsEntries]
+  // Each post is its own MDX file, so this list changes without a code
+  // change — a new post should show up in the sitemap on its own, the same
+  // way a new docs page does above.
+  const blogEntries: MetadataRoute.Sitemap = getBlogPosts().map((post) => ({
+    url: `${BASE_URL}${post.url}`,
+    lastModified: post.data.dateModified ?? post.data.datePublished,
+    changeFrequency: 'monthly' as ChangeFrequency,
+    priority: 0.6,
+  }))
+
+  return [...staticEntries, ...docsEntries, ...blogEntries]
 }

@@ -1,4 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+// app/blog/page imports the Fumadocs blog source to list posts; that drags
+// .mdx through vite and fails to parse under vitest. This test only checks
+// the page's static `metadata` export, not the post list.
+vi.mock('@/lib/blog/posts', () => ({
+  getBlogPosts: () => [],
+}))
+
 import { metadata as about } from '@/app/about/page'
 import { metadata as blog } from '@/app/blog/page'
 import { metadata as alternatives } from '@/app/alternatives/page'
