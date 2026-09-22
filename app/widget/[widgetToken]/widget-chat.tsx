@@ -112,6 +112,11 @@ function WidgetChatBody({
     if (!text || isLoading) return
     setInput('')
     agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: text })
+    // addMessage() only mutates the agent's local message list — our
+    // `messages` state otherwise only updates from server-pushed onEvent
+    // data, so without this the user's own bubble disappears for the whole
+    // request round-trip (reappearing only once the server echoes it back).
+    setMessages([...agent.messages])
     // agent.runAgent() called bare skips CopilotKitCore's forwardedProps merge
     // (that only happens inside copilotkit.runAgent()) — pass widgetToken and
     // visitorId explicitly or the server never sees them.
