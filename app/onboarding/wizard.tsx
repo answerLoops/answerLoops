@@ -2,6 +2,7 @@
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { Logo } from '@/components/logo'
 import { updateWorkspaceNameAction, completeOnboardingAction } from '@/lib/actions/onboarding'
 import { saveDiscordIntegrationAction, saveDiscordGuildChannelsAction, saveSlackChannelsAction } from '@/lib/actions/integrations'
 import { ingestUrlAction } from '@/lib/actions/ingest-url'
@@ -47,14 +48,14 @@ function WidgetIcon({ className }: { className?: string }) {
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">{label}</label>
-      {hint && <p className="text-xs text-gray-400 mb-2">{hint}</p>}
+      <label className="block text-xs font-semibold text-ink-500 mb-1.5 uppercase tracking-wider">{label}</label>
+      {hint && <p className="text-xs text-ink-400 mb-2">{hint}</p>}
       {children}
     </div>
   )
 }
 
-const inputCls = 'w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors'
+const inputCls = 'w-full rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm text-ink-900 placeholder-ink-400 focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors'
 
 function PrimaryButton({ pending, label, pendingLabel, color, type = 'submit', onClick }: {
   pending?: boolean; label: string; pendingLabel?: string
@@ -65,13 +66,13 @@ function PrimaryButton({ pending, label, pendingLabel, color, type = 'submit', o
   const colors =
     color === 'discord'  ? 'bg-[#5865F2] hover:bg-[#4752c4] text-white shadow-[#5865F2]/25' :
     color === 'slack'    ? 'bg-[#4A154B] hover:bg-[#3d1040] text-white shadow-[#4A154B]/25' :
-                           'bg-brand-600 hover:bg-brand-700 text-white shadow-brand-600/25'
+                           'bg-[#082e50] hover:bg-[#0a3a63] text-white shadow-[#082e50]/25'
   return (
     <button
       type={type}
       disabled={pending}
       onClick={onClick}
-      className={`w-full rounded-xl px-4 py-3 text-sm font-semibold shadow-md transition-all disabled:opacity-50 disabled:shadow-none ${colors}`}
+      className={`w-full rounded-lg px-4 py-3 text-sm font-semibold shadow-md transition-all disabled:opacity-50 disabled:shadow-none ${colors}`}
     >
       {pending ? (pendingLabel ?? label) : label}
     </button>
@@ -85,7 +86,7 @@ function PlatformCard({ icon, label, badge, bg, borderColor, onClick }: {
     <button
       type="button"
       onClick={onClick}
-      className={`relative flex flex-col items-center gap-3 rounded-2xl border-2 p-5 text-sm font-semibold text-gray-700 transition-all hover:shadow-md active:scale-[0.98] ${badge ? 'pt-7' : ''} ${bg} ${borderColor}`}
+      className={`relative flex flex-col items-center gap-3 rounded-2xl border-2 p-5 text-sm font-semibold text-ink-700 transition-all hover:shadow-md active:scale-[0.98] ${badge ? 'pt-7' : ''} ${bg} ${borderColor}`}
     >
       {badge && (
         <span className="absolute top-2 right-2 text-[0.5625rem] font-bold uppercase tracking-wider text-white bg-brand-500 rounded-full px-1.5 py-0.5 leading-tight">
@@ -100,7 +101,7 @@ function PlatformCard({ icon, label, badge, bg, borderColor, onClick }: {
 
 function BackButton({ onClick }: { onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="inline-flex items-center gap-1 text-xs font-medium text-gray-400 hover:text-gray-600 transition-colors">
+    <button type="button" onClick={onClick} className="inline-flex items-center gap-1 text-xs font-medium text-ink-400 hover:text-ink-600 transition-colors">
       <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
         <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
@@ -141,8 +142,8 @@ function NameStep({ onDone, initialName }: { onDone: () => void; initialName: st
   return (
     <div className="space-y-8">
       <div className="space-y-1.5">
-        <h2 className="text-xl font-bold text-gray-900">Name your workspace</h2>
-        <p className="text-sm text-gray-500">This is how your team will identify this workspace.</p>
+        <h2 className="text-xl font-bold text-ink-900">Name your workspace</h2>
+        <p className="text-sm text-ink-500">This is how your team will identify this workspace.</p>
       </div>
       <form action={formAction} className="space-y-6">
         <Field label="Workspace name">
@@ -284,24 +285,24 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
         {inviteUrl ? (
           <>
             <div className="space-y-1.5">
-              <p className="text-sm font-semibold text-gray-800">Add answerLoops to your Discord server</p>
-              <p className="text-xs text-gray-500">Click below, pick your server, click Authorize — you'll be brought right back.</p>
+              <p className="text-sm font-semibold text-ink-800">Add answerLoops to your Discord server</p>
+              <p className="text-xs text-ink-500">Click below, pick your server, click Authorize — you'll be brought right back.</p>
             </div>
             <a
               href={inviteUrl}
-              className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#5865F2] hover:bg-[#4752c4] px-4 py-3 text-sm font-semibold text-white transition-all shadow-md shadow-[#5865F2]/25"
+              className="flex items-center justify-center gap-2 w-full rounded-lg bg-[#5865F2] hover:bg-[#4752c4] px-4 py-3 text-sm font-semibold text-white transition-all shadow-md shadow-[#5865F2]/25"
             >
               <DiscordIcon className="h-4 w-4" />
               Add to Discord — 1 click →
             </a>
-            <button type="button" onClick={() => setSubStep('manual')} className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors">
+            <button type="button" onClick={() => setSubStep('manual')} className="w-full text-center text-xs text-ink-400 hover:text-ink-600 transition-colors">
               Already have a bot? Use manual setup instead
             </button>
           </>
         ) : (
           // Platform has no DISCORD_CLIENT_ID — manual flow
           <div className="space-y-4">
-            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700 space-y-1.5">
+            <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700 space-y-1.5">
               <p className="font-semibold">2 things needed from Discord Developer Portal</p>
               <ol className="list-decimal list-inside space-y-1 text-blue-600">
                 <li>Go to <span className="font-mono">discord.com/developers</span> → New Application</li>
@@ -320,7 +321,7 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
               type="button"
               disabled={!clientId.trim() || !botToken.trim()}
               onClick={() => setSubStep('invite')}
-              className="w-full rounded-xl bg-[#5865F2] hover:bg-[#4752c4] disabled:opacity-50 px-4 py-3 text-sm font-semibold text-white transition-all"
+              className="w-full rounded-lg bg-[#5865F2] hover:bg-[#4752c4] disabled:opacity-50 px-4 py-3 text-sm font-semibold text-white transition-all"
             >
               Continue →
             </button>
@@ -334,7 +335,7 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
     return (
       <div className="space-y-4">
         <BackButton onClick={() => setSubStep('choose')} />
-        <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700 space-y-1.5">
+        <div className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs text-blue-700 space-y-1.5">
           <p className="font-semibold">Setup from Discord Developer Portal</p>
           <ol className="list-decimal list-inside space-y-1 text-blue-600">
             <li>Go to <span className="font-mono">discord.com/developers</span> → New Application</li>
@@ -353,7 +354,7 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
           type="button"
           disabled={!clientId.trim() || !botToken.trim()}
           onClick={() => setSubStep('invite')}
-          className="w-full rounded-xl bg-[#5865F2] hover:bg-[#4752c4] disabled:opacity-50 px-4 py-3 text-sm font-semibold text-white transition-all"
+          className="w-full rounded-lg bg-[#5865F2] hover:bg-[#4752c4] disabled:opacity-50 px-4 py-3 text-sm font-semibold text-white transition-all"
         >
           Continue →
         </button>
@@ -366,22 +367,22 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
       <div className="space-y-5">
         <BackButton onClick={() => setSubStep('choose')} />
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-gray-800">Add the bot to your Discord server</p>
-          <p className="text-xs text-gray-500">Click below, pick your server, then come back here.</p>
+          <p className="text-sm font-semibold text-ink-800">Add the bot to your Discord server</p>
+          <p className="text-xs text-ink-500">Click below, pick your server, then come back here.</p>
         </div>
         <a href={manualInviteUrl} target="_blank" rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 w-full rounded-xl bg-[#5865F2] hover:bg-[#4752c4] px-4 py-3 text-sm font-semibold text-white transition-all">
+          className="flex items-center justify-center gap-2 w-full rounded-lg bg-[#5865F2] hover:bg-[#4752c4] px-4 py-3 text-sm font-semibold text-white transition-all">
           <DiscordIcon className="h-4 w-4" />
           Add to Discord →
         </a>
         <div className="relative flex items-center gap-3 py-0.5">
-          <div className="flex-1 h-px bg-gray-100" />
-          <span className="text-[0.6875rem] text-gray-400 font-medium">once you've authorized</span>
-          <div className="flex-1 h-px bg-gray-100" />
+          <div className="flex-1 h-px bg-ink-100" />
+          <span className="text-[0.6875rem] text-ink-400 font-medium">once you've authorized</span>
+          <div className="flex-1 h-px bg-ink-100" />
         </div>
         <button type="button" onClick={() => fetchGuilds(botToken)} disabled={fetching}
-          className="w-full rounded-xl border-2 border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50 px-4 py-2.5 text-sm font-semibold text-gray-700 transition-all flex items-center justify-center gap-2">
-          {fetching && <Spinner className="h-3.5 w-3.5 text-gray-400" />}
+          className="w-full rounded-lg border-2 border-border bg-white hover:bg-surface-muted disabled:opacity-50 px-4 py-2.5 text-sm font-semibold text-ink-700 transition-all flex items-center justify-center gap-2">
+          {fetching && <Spinner className="h-3.5 w-3.5 text-ink-400" />}
           {fetching ? 'Fetching your servers…' : "I've added the bot — fetch my channels"}
         </button>
         {fetchError && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{fetchError}</p>}
@@ -394,17 +395,17 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
     <div className="space-y-5">
       <BackButton onClick={() => (oauthGuildId ? onBack() : setSubStep('invite'))} />
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-gray-800">
+        <p className="text-sm font-semibold text-ink-800">
           {oauthGuildId ? 'Bot added — now pick channels to monitor' : 'Pick channels to monitor'}
         </p>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-ink-500">
           {oauthGuildId
             ? "Discord won't send any messages here until you select at least one channel."
             : 'Messages posted here become support tickets automatically.'}
         </p>
       </div>
       {fetching && guilds.length === 0 && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
+        <div className="flex items-center gap-2.5 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3">
           <Spinner className="h-4 w-4 text-brand-500 shrink-0" />
           <p className="text-xs font-medium text-brand-700">Loading your server's channels…</p>
         </div>
@@ -419,14 +420,14 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
         </Field>
       )}
       {activeGuild && (
-        <div className="rounded-xl border border-gray-200 bg-gray-50 divide-y divide-gray-100 max-h-48 overflow-y-auto">
+        <div className="rounded-lg border border-border bg-surface-muted divide-y divide-border max-h-48 overflow-y-auto">
           {activeGuild.channels.length === 0
-            ? <p className="px-4 py-3 text-xs text-gray-400">No text channels found in this server.</p>
+            ? <p className="px-4 py-3 text-xs text-ink-400">No text channels found in this server.</p>
             : activeGuild.channels.map((ch) => (
               <label key={ch.id} className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-white transition-colors">
                 <input type="checkbox" checked={selectedChannels.has(ch.id)} onChange={() => toggleChannel(ch.id)}
-                  className="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
-                <span className="text-sm text-gray-700"># {ch.name}</span>
+                  className="rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
+                <span className="text-sm text-ink-700"># {ch.name}</span>
               </label>
             ))
           }
@@ -434,7 +435,7 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
       )}
       {saveError && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{saveError}</p>}
       <button type="button" onClick={save} disabled={saving || selectedChannels.size === 0 || !selectedGuild}
-        className="w-full rounded-xl bg-[#5865F2] hover:bg-[#4752c4] disabled:opacity-50 px-4 py-3 text-sm font-semibold text-white transition-all">
+        className="w-full rounded-lg bg-[#5865F2] hover:bg-[#4752c4] disabled:opacity-50 px-4 py-3 text-sm font-semibold text-white transition-all">
         {saving ? 'Connecting…' : `Connect ${selectedChannels.size > 0 ? `${selectedChannels.size} channel${selectedChannels.size > 1 ? 's' : ''}` : 'Discord'}`}
       </button>
     </div>
@@ -468,11 +469,11 @@ export function GitHubFlow({ onDone, onBack, connected }: { onDone: () => void; 
   if (connected) {
     return (
       <div className="space-y-5">
-        <div className="flex items-center gap-2.5 rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+        <div className="flex items-center gap-2.5 rounded-lg border border-border bg-surface-muted px-4 py-3">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-100">
             <CheckIcon className="h-3.5 w-3.5 text-green-600" />
           </div>
-          <p className="text-xs font-medium text-gray-700">GitHub connected — its repos are now watched for Issues and Discussions.</p>
+          <p className="text-xs font-medium text-ink-700">GitHub connected — its repos are now watched for Issues and Discussions.</p>
         </div>
         <PrimaryButton type="button" label="Continue →" onClick={onDone} />
       </div>
@@ -483,8 +484,8 @@ export function GitHubFlow({ onDone, onBack, connected }: { onDone: () => void; 
     <div className="space-y-5">
       <BackButton onClick={onBack} />
       <div className="space-y-1.5">
-        <p className="text-sm font-semibold text-gray-800">Install the answerLoops GitHub App</p>
-        <p className="text-xs text-gray-500">Turn Issues and Discussions into tickets — you'll pick which repos to grant access to on GitHub's install screen.</p>
+        <p className="text-sm font-semibold text-ink-800">Install the answerLoops GitHub App</p>
+        <p className="text-xs text-ink-500">Turn Issues and Discussions into tickets — you'll pick which repos to grant access to on GitHub's install screen.</p>
       </div>
       {error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
       <PrimaryButton type="button" pending={connecting} label="Connect GitHub" pendingLabel="Redirecting…" onClick={handleConnect} />
@@ -522,22 +523,22 @@ export function WidgetFlow({ onDone, onBack }: { onDone: () => void; onBack: () 
     <div className="space-y-5">
       <BackButton onClick={onBack} />
       <div className="space-y-1.5">
-        <p className="text-sm font-semibold text-gray-800">Add the chat widget to your site</p>
-        <p className="text-xs text-gray-500">
+        <p className="text-sm font-semibold text-ink-800">Add the chat widget to your site</p>
+        <p className="text-xs text-ink-500">
           Paste this before <code className="text-brand-600">&lt;/body&gt;</code>. You can restrict which domains it loads on later in Integrations.
         </p>
       </div>
       {loading ? (
-        <p className="text-xs text-gray-400">Loading…</p>
+        <p className="text-xs text-ink-400">Loading…</p>
       ) : error ? (
         <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>
       ) : (
         <div className="relative">
-          <pre className="bg-gray-50 border border-gray-200 rounded-lg p-3 pr-16 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap break-all">{embedCode}</pre>
+          <pre className="bg-surface-muted border border-border rounded-lg p-3 pr-16 text-xs text-ink-700 font-mono overflow-x-auto whitespace-pre-wrap break-all">{embedCode}</pre>
           <button
             type="button"
             onClick={copyEmbed}
-            className="absolute top-2 right-2 rounded px-2 py-1 text-[0.625rem] font-medium bg-white border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
+            className="absolute top-2 right-2 rounded px-2 py-1 text-[0.625rem] font-medium bg-white border border-border text-ink-600 hover:bg-surface-muted transition-colors"
           >
             {copied ? '✓ Copied' : 'Copy'}
           </button>
@@ -558,8 +559,8 @@ function ConnectStep({ onDone, oauthGuildId, slackConnected, githubConnected }: 
   return (
     <div className="space-y-6">
       <div className="space-y-1.5">
-        <h2 className="text-xl font-bold text-gray-900">Connect your community</h2>
-        <p className="text-sm text-gray-500">Choose where your community lives. You can change this later in Integrations.</p>
+        <h2 className="text-xl font-bold text-ink-900">Connect your community</h2>
+        <p className="text-sm text-ink-500">Choose where your community lives. You can change this later in Integrations.</p>
       </div>
 
       {platform === null && (
@@ -570,7 +571,7 @@ function ConnectStep({ onDone, oauthGuildId, slackConnected, githubConnected }: 
               label="Discord"
               badge="1-click"
               bg="hover:bg-brand-50/60 bg-white"
-              borderColor="border-gray-200 hover:border-[#5865F2]/50"
+              borderColor="border-border hover:border-[#5865F2]/50"
               onClick={() => setPlatform('discord')}
             />
             <PlatformCard
@@ -578,26 +579,26 @@ function ConnectStep({ onDone, oauthGuildId, slackConnected, githubConnected }: 
               label="Slack"
               badge="1-click"
               bg="hover:bg-purple-50/60 bg-white"
-              borderColor="border-gray-200 hover:border-purple-400/50"
+              borderColor="border-border hover:border-purple-400/50"
               onClick={() => setPlatform('slack')}
             />
             <PlatformCard
-              icon={<GitHubIcon className="h-7 w-7 text-gray-900" />}
+              icon={<GitHubIcon className="h-7 w-7 text-ink-900" />}
               label="GitHub"
               badge="1-click"
-              bg="hover:bg-gray-50 bg-white"
-              borderColor="border-gray-200 hover:border-gray-400/50"
+              bg="hover:bg-surface-muted bg-white"
+              borderColor="border-border hover:border-ink-400/50"
               onClick={() => setPlatform('github')}
             />
             <PlatformCard
               icon={<WidgetIcon className="h-7 w-7 text-brand-500" />}
               label="Website Widget"
               bg="hover:bg-brand-50/60 bg-white"
-              borderColor="border-gray-200 hover:border-brand-400/50"
+              borderColor="border-border hover:border-brand-400/50"
               onClick={() => setPlatform('widget')}
             />
           </div>
-          <button type="button" onClick={onDone} className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors pt-1">
+          <button type="button" onClick={onDone} className="w-full text-center text-xs text-ink-400 hover:text-ink-600 transition-colors pt-1">
             Skip for now — connect later in Integrations
           </button>
         </>
@@ -688,7 +689,7 @@ function SlackFlow({ onDone, onBack, slackConnected }: { onDone: () => void; onB
     return (
       <div className="space-y-4">
         <BackButton onClick={onBack} />
-        <div className="rounded-xl border border-purple-100 bg-purple-50 px-4 py-3 space-y-1.5">
+        <div className="rounded-lg border border-purple-100 bg-purple-50 px-4 py-3 space-y-1.5">
           <div className="flex items-center gap-2">
             <SlackIcon className="h-4 w-4 text-[#4A154B]" />
             <p className="text-sm font-semibold text-purple-900">Connect Slack in one click</p>
@@ -708,7 +709,7 @@ function SlackFlow({ onDone, onBack, slackConnected }: { onDone: () => void; onB
           color="slack"
           onClick={handleAddToSlack}
         />
-        <button type="button" onClick={onDone} className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors pt-1">
+        <button type="button" onClick={onDone} className="w-full text-center text-xs text-ink-400 hover:text-ink-600 transition-colors pt-1">
           Skip — I&apos;ll connect Slack in Settings
         </button>
       </div>
@@ -721,33 +722,33 @@ function SlackFlow({ onDone, onBack, slackConnected }: { onDone: () => void; onB
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <p className="text-sm font-semibold text-gray-800">Workspace connected — now pick channels to monitor</p>
-        <p className="text-xs text-gray-500">Slack won&apos;t send any messages here until you select at least one channel.</p>
+        <p className="text-sm font-semibold text-ink-800">Workspace connected — now pick channels to monitor</p>
+        <p className="text-xs text-ink-500">Slack won&apos;t send any messages here until you select at least one channel.</p>
       </div>
       {loadingChannels && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-purple-100 bg-purple-50 px-4 py-3">
+        <div className="flex items-center gap-2.5 rounded-lg border border-purple-100 bg-purple-50 px-4 py-3">
           <Spinner className="h-4 w-4 text-purple-500 shrink-0" />
           <p className="text-xs font-medium text-purple-700">Loading your workspace&apos;s channels…</p>
         </div>
       )}
       {fetchError && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{fetchError}</p>}
       {channels.length > 0 && (
-        <div className="rounded-xl border border-gray-200 bg-gray-50 divide-y divide-gray-100 max-h-48 overflow-y-auto">
+        <div className="rounded-lg border border-border bg-surface-muted divide-y divide-border max-h-48 overflow-y-auto">
           {channels.map((ch) => (
             <label key={ch.id} className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-white transition-colors">
               <input type="checkbox" checked={selectedChannels.has(ch.id)} onChange={() => toggleChannel(ch.id)}
-                className="rounded border-gray-300 text-brand-600 focus:ring-brand-500" />
-              <span className="text-sm text-gray-700"># {ch.name}</span>
+                className="rounded border-ink-300 text-brand-600 focus:ring-brand-500" />
+              <span className="text-sm text-ink-700"># {ch.name}</span>
             </label>
           ))}
         </div>
       )}
       {saveError && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{saveError}</p>}
       <button type="button" onClick={save} disabled={saving || selectedChannels.size === 0}
-        className="w-full rounded-xl bg-[#4A154B] hover:bg-[#3d1040] disabled:opacity-50 px-4 py-3 text-sm font-semibold text-white transition-all">
+        className="w-full rounded-lg bg-[#4A154B] hover:bg-[#3d1040] disabled:opacity-50 px-4 py-3 text-sm font-semibold text-white transition-all">
         {saving ? 'Connecting…' : `Connect ${selectedChannels.size > 0 ? `${selectedChannels.size} channel${selectedChannels.size > 1 ? 's' : ''}` : 'channels'}`}
       </button>
-      <button type="button" onClick={onDone} className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors">
+      <button type="button" onClick={onDone} className="w-full text-center text-xs text-ink-400 hover:text-ink-600 transition-colors">
         Skip — I&apos;ll pick channels later in Settings
       </button>
     </div>
@@ -798,32 +799,32 @@ function SeedStep({ onDone }: { onDone: () => void }) {
   return (
     <div className="space-y-6">
       <div className="space-y-1.5">
-        <h2 className="text-xl font-bold text-gray-900">Seed your knowledge base</h2>
-        <p className="text-sm text-gray-500">Give the AI something to work from before any tickets arrive.</p>
+        <h2 className="text-xl font-bold text-ink-900">Seed your knowledge base</h2>
+        <p className="text-sm text-ink-500">Give the AI something to work from before any tickets arrive.</p>
       </div>
 
       {mode === 'choose' && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <button onClick={() => setMode('file')}
-              className="flex flex-col items-center gap-2.5 rounded-2xl border-2 border-gray-200 bg-white p-5 text-sm font-semibold text-gray-700 transition-all hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-md">
+              className="flex flex-col items-center gap-2.5 rounded-2xl border-2 border-border bg-white p-5 text-sm font-semibold text-ink-700 transition-all hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-md">
               <svg className="h-7 w-7 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M12 16V8m0 0l-3 3m3-3l3 3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               Upload file
-              <span className="text-[0.625rem] font-normal text-gray-400">PDF · DOCX · MD · TXT · CSV</span>
+              <span className="text-[0.625rem] font-normal text-ink-400">PDF · DOCX · MD · TXT · CSV</span>
             </button>
             <button onClick={() => setMode('url')}
-              className="flex flex-col items-center gap-2.5 rounded-2xl border-2 border-gray-200 bg-white p-5 text-sm font-semibold text-gray-700 transition-all hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-md">
+              className="flex flex-col items-center gap-2.5 rounded-2xl border-2 border-border bg-white p-5 text-sm font-semibold text-ink-700 transition-all hover:border-brand-300 hover:bg-brand-50/40 hover:shadow-md">
               <svg className="h-7 w-7 text-brand-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               Crawl a URL
-              <span className="text-[0.625rem] font-normal text-gray-400">Docs site · Wiki · Blog</span>
+              <span className="text-[0.625rem] font-normal text-ink-400">Docs site · Wiki · Blog</span>
             </button>
           </div>
           <button type="button" onClick={onDone}
-            className="w-full text-center text-xs text-gray-400 hover:text-gray-600 transition-colors pt-1">
+            className="w-full text-center text-xs text-ink-400 hover:text-ink-600 transition-colors pt-1">
             Skip for now — add content later in the KB page
           </button>
         </div>
@@ -835,7 +836,7 @@ function SeedStep({ onDone }: { onDone: () => void }) {
           <div onDragOver={(e) => e.preventDefault()} onDrop={onDrop}
             onClick={() => !uploading && inputRef.current?.click()}
             className={`flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed px-6 py-10 cursor-pointer transition-colors ${
-              uploading ? 'pointer-events-none opacity-60 border-gray-200' : 'border-gray-200 hover:border-brand-300 hover:bg-brand-50/30'
+              uploading ? 'pointer-events-none opacity-60 border-border' : 'border-border hover:border-brand-300 hover:bg-brand-50/30'
             }`}>
             <input ref={inputRef} type="file" accept=".pdf,.docx,.md,.txt,.csv" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = '' }} />
@@ -850,11 +851,11 @@ function SeedStep({ onDone }: { onDone: () => void }) {
               <p className="text-sm font-medium text-green-700">{uploadResult.created} chunks added from {uploadResult.filename}</p>
               <p className="text-xs text-green-500">Continuing…</p></>
             ) : (
-              <><svg className="h-6 w-6 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <><svg className="h-6 w-6 text-ink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M12 16V8m0 0l-3 3m3-3l3 3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <p className="text-sm text-gray-600"><span className="font-semibold text-brand-600">Click to upload</span> or drag and drop</p>
-              <p className="text-xs text-gray-400">PDF · DOCX · MD · TXT · CSV up to 50 MB</p></>
+              <p className="text-sm text-ink-600"><span className="font-semibold text-brand-600">Click to upload</span> or drag and drop</p>
+              <p className="text-xs text-ink-400">PDF · DOCX · MD · TXT · CSV up to 50 MB</p></>
             )}
           </div>
           {uploadResult?.error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{uploadResult.error}</p>}
@@ -871,14 +872,14 @@ function SeedStep({ onDone }: { onDone: () => void }) {
                 placeholder="https://docs.yourproduct.com" className={inputCls} />
             </Field>
             {urlPending && (
-              <div className="flex items-center gap-2.5 rounded-xl border border-brand-100 bg-brand-50 px-4 py-3">
+              <div className="flex items-center gap-2.5 rounded-lg border border-brand-100 bg-brand-50 px-4 py-3">
                 <Spinner className="h-4 w-4 text-brand-500 shrink-0" />
                 <p className="text-xs font-medium text-brand-700">Crawling and embedding — this can take up to 60 s…</p>
               </div>
             )}
             {urlResult.error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{urlResult.error}</p>}
             {urlResult.created != null && !urlResult.error && (
-              <div className="flex items-center gap-2.5 rounded-xl border border-green-100 bg-green-50 px-4 py-3">
+              <div className="flex items-center gap-2.5 rounded-lg border border-green-100 bg-green-50 px-4 py-3">
                 <CheckIcon className="h-4 w-4 text-green-600 shrink-0" />
                 <p className="text-xs font-medium text-green-700">
                   {urlResult.pages != null
@@ -928,28 +929,28 @@ function DoneStep({ completedSteps }: { completedSteps: Set<string> }) {
             <CheckIcon className="h-8 w-8 text-white" />
           </div>
         </div>
-        <h2 className="text-xl font-bold text-gray-900">You're all set!</h2>
-        <p className="text-sm text-gray-500">Your workspace is ready. Here's what was completed:</p>
+        <h2 className="text-xl font-bold text-ink-900">You're all set!</h2>
+        <p className="text-sm text-ink-500">Your workspace is ready. Here's what was completed:</p>
       </div>
 
       <ul className="space-y-2.5">
         {items.map(({ key, label }) => (
           <li key={key} className="flex items-center gap-3">
-            <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${completedSteps.has(key) ? 'bg-green-100' : 'bg-gray-100'}`}>
+            <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${completedSteps.has(key) ? 'bg-green-100' : 'bg-ink-100'}`}>
               {completedSteps.has(key)
                 ? <CheckIcon className="h-3.5 w-3.5 text-green-600" />
-                : <span className="h-1.5 w-1.5 rounded-full bg-gray-300" />
+                : <span className="h-1.5 w-1.5 rounded-full bg-ink-300" />
               }
             </div>
-            <span className={`text-sm font-medium ${completedSteps.has(key) ? 'text-gray-800' : 'text-gray-400'}`}>{label}</span>
-            {!completedSteps.has(key) && <span className="text-xs text-gray-300">— skipped</span>}
+            <span className={`text-sm font-medium ${completedSteps.has(key) ? 'text-ink-800' : 'text-ink-400'}`}>{label}</span>
+            {!completedSteps.has(key) && <span className="text-xs text-ink-300">— skipped</span>}
           </li>
         ))}
       </ul>
 
-      <div className="rounded-xl border border-gray-100 bg-gray-50 p-4 space-y-2">
-        <p className="font-semibold text-gray-800 text-sm">What's next</p>
-        <ul className="space-y-1.5 text-xs text-gray-500">
+      <div className="rounded-lg border border-border bg-surface-muted p-4 space-y-2">
+        <p className="font-semibold text-ink-800 text-sm">What's next</p>
+        <ul className="space-y-1.5 text-xs text-ink-500">
           <li>• Post a message in your connected channel → it appears as a ticket at <strong>/tickets</strong></li>
           <li>• The AI drafts an answer automatically and routes low-confidence ones to you</li>
           <li>• Add more content to the KB at <strong>/kb</strong> any time</li>
@@ -960,7 +961,7 @@ function DoneStep({ completedSteps }: { completedSteps: Set<string> }) {
       {error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{error}</p>}
 
       <button onClick={handleFinish} disabled={loading}
-        className="w-full rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white hover:bg-brand-700 transition-all disabled:opacity-60 shadow-md shadow-brand-600/25">
+        className="w-full rounded-lg bg-[#082e50] px-4 py-3 text-sm font-semibold text-white hover:bg-[#0a3a63] transition-all disabled:opacity-60 shadow-md shadow-[#082e50]/25">
         {loading ? 'Loading dashboard…' : 'Go to dashboard →'}
       </button>
     </div>
@@ -1042,18 +1043,13 @@ export default function OnboardingWizard({ initialName }: { initialName: string 
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 via-gray-50 to-brand-50/30 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-md">
-        <div className="rounded-3xl border border-gray-200/80 bg-white px-8 py-10 shadow-xl shadow-gray-900/5">
+        <div className="rounded-lg border border-border bg-surface px-8 py-10">
           {/* Header */}
           <div className="mb-8">
-            <div className="flex items-center gap-2.5 mb-7">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-600 shadow-md shadow-brand-600/30">
-                <svg className="h-4.5 w-4.5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm-1 14.5v-9l7 4.5-7 4.5z"/>
-                </svg>
-              </div>
-              <span className="text-sm font-bold text-gray-900 tracking-tight">answerLoops</span>
+            <div className="flex justify-center mb-7">
+              <Logo width={120} />
             </div>
 
             {/* Progress stepper */}
@@ -1063,17 +1059,17 @@ export default function OnboardingWizard({ initialName }: { initialName: string 
                   <div className="flex flex-col items-center gap-1.5">
                     <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold transition-all ${
                       i < stepIndex
-                        ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                        ? 'bg-[#082e50] text-white shadow-md shadow-[#082e50]/30'
                         : i === stepIndex
-                        ? 'border-2 border-brand-600 text-brand-600 bg-white'
-                        : 'border-2 border-gray-200 text-gray-300 bg-white'
+                        ? 'border-2 border-[#082e50] text-[#082e50] bg-white'
+                        : 'border-2 border-border text-ink-300 bg-white'
                     }`}>
                       {i < stepIndex ? <CheckIcon className="h-4 w-4" /> : i + 1}
                     </div>
-                    <span className={`text-[0.625rem] font-semibold whitespace-nowrap tracking-wide ${i === stepIndex ? 'text-brand-600' : 'text-gray-400'}`}>{label}</span>
+                    <span className={`text-[0.625rem] font-semibold whitespace-nowrap tracking-wide ${i === stepIndex ? 'text-[#082e50]' : 'text-ink-400'}`}>{label}</span>
                   </div>
                   {i < STEPS.length - 1 && (
-                    <div className={`flex-1 h-0.5 mx-1.5 mb-5 rounded-full transition-colors ${i < stepIndex ? 'bg-brand-600' : 'bg-gray-200'}`} />
+                    <div className={`flex-1 h-0.5 mx-1.5 mb-5 rounded-full transition-colors ${i < stepIndex ? 'bg-[#082e50]' : 'bg-ink-200'}`} />
                   )}
                 </div>
               ))}

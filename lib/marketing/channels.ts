@@ -20,7 +20,7 @@ export const MARKETED_CHANNELS: readonly MarketedChannel[] = [
     href: '/docs/integrations/google-chat',
     color: '#34a853',
   },
-  { name: 'Website widget', href: '/docs/product/widget', color: '#2563eb' },
+  { name: 'Website widget', href: '/docs/product/chat-widget', color: '#2563eb' },
 ] as const
 
 /** Just the names, in canonical order. */

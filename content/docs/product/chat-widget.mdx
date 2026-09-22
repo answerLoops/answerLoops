@@ -24,6 +24,86 @@ The answerLoops chat widget adds a support chatbot to any website or documentati
 
 Add the website or documentation domain to **Settings → Widget → Allowed domains**, as described below. The chat bubble appears at the bottom right of pages where you install the snippet. Visitors select it to open the chat panel.
 
+## Adding it by platform
+
+Where you paste the snippet depends on how your site is built. Find your platform below.
+
+<Tabs items={['Wix', 'Squarespace', 'Shopify', 'WordPress', 'Webflow', 'Next.js', 'React / Vite', 'Angular']}>
+  <Tab value="Wix">
+    Settings → Custom Code → add code → paste the snippet → set it to load on **all pages**, placement **Body - end**.
+  </Tab>
+  <Tab value="Squarespace">
+    Settings → Advanced → Code Injection → paste the snippet into the **Footer** field → Save.
+  </Tab>
+  <Tab value="Shopify">
+    Online Store → Themes → **Edit code** → open `theme.liquid` → paste the snippet right before `</body>` → Save. One edit covers every page.
+  </Tab>
+  <Tab value="WordPress">
+    Install a header/footer plugin (e.g. "Insert Headers and Footers"), paste the snippet into the **footer** field, and save. Avoids hand-editing `footer.php`, which a theme update can overwrite.
+  </Tab>
+  <Tab value="Webflow">
+    Project Settings → Custom Code → paste the snippet into **Footer Code** → Save → Publish. Custom code only takes effect after a publish, not just a save.
+  </Tab>
+  <Tab value="Next.js">
+    Load it once from the file that wraps every page, using `next/script` so it doesn't block rendering.
+
+    **App Router** — `app/layout.tsx`:
+    ```tsx
+    import Script from 'next/script'
+
+    export default function RootLayout({ children }: { children: React.ReactNode }) {
+      return (
+        <html lang="en">
+          <body>
+            {children}
+            <Script
+              src="https://your-instance.example.com/widget.js"
+              data-widget-id="..."
+              strategy="lazyOnload"
+            />
+          </body>
+        </html>
+      )
+    }
+    ```
+
+    **Pages Router** — `pages/_app.tsx`:
+    ```tsx
+    import Script from 'next/script'
+    import type { AppProps } from 'next/app'
+
+    export default function App({ Component, pageProps }: AppProps) {
+      return (
+        <>
+          <Component {...pageProps} />
+          <Script
+            src="https://your-instance.example.com/widget.js"
+            data-widget-id="..."
+            strategy="lazyOnload"
+          />
+        </>
+      )
+    }
+    ```
+  </Tab>
+  <Tab value="React / Vite">
+    Paste the raw snippet into `public/index.html`, before `</body>` — this is the one file the bundler doesn't compile, so it behaves like a plain static site:
+    ```html
+    <script src="https://your-instance.example.com/widget.js" data-widget-id="..."></script>
+    ```
+  </Tab>
+  <Tab value="Angular">
+    Paste the raw snippet into `src/index.html`, before `</body>` — Angular's static app shell, equivalent to Vite's `index.html`:
+    ```html
+    <script src="https://your-instance.example.com/widget.js" data-widget-id="..."></script>
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  Whichever platform you use, the rule is the same: paste into the **one file or field that wraps every page** (a layout, an app shell, a footer-code field) — never a single page's content, or the widget only loads there.
+</Note>
+
 ## Restricting where the widget works
 
 The `data-widget-id` value is an **embed token**, and it is deliberately public: it ships in the HTML of every page the widget renders on. There is no way to hide it, which means anyone can copy it out of your page source and use it on their own site — putting your knowledge base and your AI spend behind it.
