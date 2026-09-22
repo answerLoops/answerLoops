@@ -3,7 +3,7 @@ import { auth } from '@/auth'
 import { Logo } from '@/components/logo'
 import { getAccountDeletionInfo } from '@/app/actions/account'
 import { logout } from '@/app/actions/auth'
-import { RestoreAccountButton } from '@/components/restore-account-button'
+import { RestoreAccountButton } from '@/components/dashboard/restore-account-button'
 
 export const dynamic = 'force-dynamic'
 

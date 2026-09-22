@@ -3,7 +3,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProofPage } from '@/components/marketing/proof-page'
 import { resolveNavState } from '@/lib/marketing/nav-state'
-import { AnimatedChat } from '@/components/animated-chat'
+import { AnimatedChat } from '@/components/marketing/animated-chat'
 import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'

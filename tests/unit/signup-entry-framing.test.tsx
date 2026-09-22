@@ -8,7 +8,7 @@ import path from 'node:path'
 // runtime. None of that is under test here — the rendered label is.
 vi.mock('@/app/actions/auth', () => ({ loginWithGoogle: vi.fn() }))
 
-import { LoginForm } from '@/components/login-form'
+import { LoginForm } from '@/components/auth/login-form'
 
 /**
  * The front door, for someone who has never been here.
@@ -57,7 +57,7 @@ describe('the login form matches the mode it was opened in', () => {
   it('reports its pending state rather than looking dead on click', () => {
     // The OAuth redirect is a full navigation, so the gap between click and
     // Google's page is long enough to look broken without this.
-    const src = read('components/login-form.tsx')
+    const src = read('components/auth/login-form.tsx')
     expect(src).toContain('Redirecting…')
     expect(src).toContain('disabled={googlePending}')
   })

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { parseBillingInterval } from '@/lib/billing/plans'
-import { LoginForm } from '@/components/login-form'
+import { LoginForm } from '@/components/auth/login-form'
 import { Logo } from '@/components/logo'
 import { TRIAL_DAYS } from '@/lib/billing/plans'
 
