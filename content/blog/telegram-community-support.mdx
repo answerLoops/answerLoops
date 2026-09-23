@@ -1,0 +1,35 @@
+---
+title: Running support in a Telegram group that never sleeps
+subtitle: Connecting your own bot so questions get answered before they scroll off the screen
+description: How to connect a Telegram bot to answerLoops so group chat questions get AI-drafted answers and land in a real ticket queue.
+overview: answerLoops connects to Telegram through a bot you create with @BotFather. Every message sent to the bot in a monitored chat becomes a ticket, and the bot can reply directly in the chat once a drafted answer clears your confidence threshold.
+author: Nathan Tarbert
+datePublished: "2026-09-22"
+category: Integrations
+---
+
+Past a certain size, a Telegram group stops behaving like a conversation and starts behaving like a river. Someone asks a setup question at 2am their time, it gets three replies from other members who half-remember the answer, and by the time anyone with the real answer wakes up, the question is forty messages back and nobody's going to scroll for it. Multiply that by a community spread across five time zones and the same five questions get asked, badly answered, and asked again on a loop.
+
+Telegram doesn't have a native way to fix this. There's no ticket system, no knowledge base, no way to tell who already got a good answer versus who gave up and asked a friend in DMs instead.
+
+## What actually connects
+
+There's no shared answerLoops bot sitting in the middle of every workspace's Telegram — you create your own through [@BotFather](https://t.me/BotFather) inside Telegram itself, get a token, and paste it into **Integrations → Telegram**. That token is stored encrypted per organization; answerLoops never displays it back to you once saved, not even the last few characters. Nothing about your bot is shared with any other org, and self-hosted deployments don't need a platform-wide credential to make any of this work.
+
+Once the token validates, answerLoops calls Telegram's `setWebhook` API for you — no manual webhook wiring, no exposing infrastructure yourself. Add the bot to your group, and by default it listens to every chat it's a member of. If you want it scoped down, @userinfobot will hand you a chat ID (group IDs come back as negative numbers — that's expected, not a bug) and you can paste one or more into **Chat IDs to monitor**.
+
+Every message 10+ characters long, from a real person rather than another bot, becomes a ticket. Under the hood, the same drafting and review pipeline that runs on your other channels runs here too.
+
+## Why the reply behavior matters more in Telegram than most channels
+
+Automatic Deflections is off by default on every channel, but it's worth understanding what "off" means specifically in a fast chat: while it's off, a high-confidence answer still gets drafted and held on the dashboard for a human to Approve, Edit, or Dismiss — but the chat itself gets nothing. No acknowledgment, no placeholder. That's a deliberate tradeoff: a bot that posts "thinking..." into a group doing forty messages a minute just adds noise. You turn on Automatic Deflections per-integration once you've reviewed enough approved drafts to trust what's going out unsupervised, and from that point the bot replies inline, in the same chat, same as any other member would.
+
+## The privacy-mode trap almost everyone hits first
+
+If you connect a bot, add it to a group, and it just sits there silently, this is almost always the reason: Telegram bots run in **privacy mode** by default, which means they physically cannot see most messages in a group. Only messages starting with `/`, mentioning the bot by `@username`, or replying directly to one of the bot's own messages get through. Everything else — the actual question someone typed into the group — never reaches it. Go back to @BotFather, run `/setprivacy` on your bot, and disable it. One-on-one chats with the bot are unaffected either way; the bot always sees those in full.
+
+## Setting an escalation username
+
+You can put a Telegram username (no `@`) into **Escalation username** so that when a message's confidence score comes in under threshold, that person gets tagged instead of the question just sitting in a queue nobody's watching. For a community running across time zones, this is usually the difference between "someone catches it within the hour" and "someone catches it in three days."
+
+[See the Telegram integration docs](/docs/integrations/telegram)

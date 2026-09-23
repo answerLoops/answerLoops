@@ -1,0 +1,93 @@
+---
+title: GitHub support for open source maintainers
+subtitle: Turn Issues, Discussions, and your repo's own docs into one answer, instead of writing it again every few weeks
+description: How the GitHub integration ingests Issues and Discussions as tickets and syncs markdown docs and answered Discussions into a knowledge base, so maintainers stop re-answering the same question.
+overview: The answerLoops GitHub integration turns new Issues and Discussions into tickets, drafts AI replies from your repo's docs and past answered Discussions, and posts them back as comments once a maintainer trusts the confidence threshold — while automatically skipping issues filed by anyone with write access to the repo.
+author: Nathan Tarbert
+datePublished: "2026-09-22"
+category: Integrations
+---
+
+Most maintainers aren't burned out by hard bugs. They're burned out by
+the fifteenth issue this month asking something answered in issue
+#340, six months ago, now three pages deep in closed issues that
+GitHub's default search doesn't even surface. Closed issues drop out
+of the default search results, so the person filing #341 usually
+never saw #340 existed. They're not being lazy. They just can't find
+it.
+
+That's the specific problem the GitHub integration is built around:
+not "AI support for GitHub," but keeping a maintainer from writing
+the same explanation into a comment box for the twentieth time.
+
+## What it actually watches
+
+Connect a repo and answerLoops does three separate things, and you
+can turn each one on or off independently per repo:
+
+**New Issues and Discussions become tickets.** Every new one lands
+in your answerLoops queue the way a Discord message or Slack thread
+would. If a reply clears your confidence threshold and **Automatic
+Deflections** is on for that repo, the AI posts it as a GitHub
+comment. If it's off — the default — the reply sits as a draft on
+your dashboard and the issue gets a brief acknowledgment comment
+instead, so nothing looks abandoned while you review.
+
+One detail that matters more than it sounds like it should:
+answerLoops checks GitHub's `author_association` field and skips
+anything filed by an owner, org member, or collaborator. Your own
+work-tracking issues never get treated as support tickets, and they
+never count against your deflection numbers.
+
+**Markdown in the repo becomes knowledge base content.** Every push
+to the default branch queues a re-embed of your `.md` and `.mdx`
+files — pushes to feature branches, tags, or PR refs don't trigger
+it. There's also a manual **Sync now** if you want to force it
+without waiting for a push.
+
+**Answered Discussions become their own KB articles.** This is the
+part that's easy to undervalue: the discussion title becomes the
+question, the comment a maintainer marked as the accepted answer
+becomes the answer, and it's attributed to whoever answered it. The
+moment someone unmarks an answer, the article disappears with it —
+the knowledge base only holds what your community actually agreed
+was correct. **Sync now** also backfills every discussion that was
+already answered before you connected the integration, so you're not
+starting from zero.
+
+Discussions sync runs independently of whatever you've set for
+**Monitored events** on ticket ingest. A repo can feed the knowledge
+base from Discussions even if you've set ticket ingest to Issues
+only, or turned it off entirely — useful if you want the searchable
+answer archive without routing every Discussion into your ticket
+queue.
+
+## Setup, roughly
+
+You need a GitHub App — your own, created under your account or org,
+not answerLoops's. That means an App ID, a private key (base64-encoded),
+an app slug, and a webhook secret, set as environment variables. The
+permission that trips people up most is **Discussions**: GitHub only
+shows the Discussion-related event checkboxes for permissions you've
+already granted. If you add the permission after the fact, you have
+to save, accept the org re-authorization prompt, and only then will
+the checkboxes for Discussion events actually appear. Skip that
+order and it looks like the option was never there.
+
+Once the app's installed from **Integrations → GitHub → Connect
+GitHub**, your repos are auto-discovered, and each one gets its own
+three switches: which events to monitor, whether replies go out
+automatically, and whether it's a knowledge base source.
+
+## Why this is worth it for a small team
+
+Most open source projects are run by one or two people, and the gap
+between issue volume and available maintainer time is the actual
+crisis — not any single hard bug. Every duplicate issue answered
+manually is a few minutes gone that a growing, well-organized
+knowledge base could have absorbed instead. The GitHub integration
+isn't trying to replace maintainer judgment on real bugs and design
+questions. It's trying to make sure the fortieth "how do I configure
+X" issue never needs a maintainer at all.
+
+[See the GitHub integration docs](/docs/integrations/github)

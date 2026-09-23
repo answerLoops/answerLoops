@@ -1,0 +1,95 @@
+---
+title: Using Notion as your support knowledge base
+subtitle: The docs you already wrote, connected to the channels where people actually ask
+description: How answerLoops syncs Notion pages and databases into its knowledge base, and why the sharing-based scope model keeps drafts out of customer answers until you publish them.
+overview: answerLoops connects to a Notion workspace and imports every page and database that's been explicitly shared with the connection, splitting and embedding the content into the same knowledge base every other source feeds. Notion content stays unpublished — searchable on the dashboard but held back from the widget and customer answers — until you click Publish to widget.
+author: Nathan Tarbert
+datePublished: "2026-09-22"
+category: Integrations
+---
+
+Most teams don't have a documentation problem. They have a Notion
+workspace with three years of setup guides, changelogs, and
+runbooks in it, and a support inbox that keeps answering the same
+questions those pages already cover. The docs exist. They just
+aren't where the question is being asked.
+
+Notion pages also go stale in a specific, quiet way: a page ranks
+fine in Notion's own search a year after the process it describes
+changed, someone follows it, something breaks, and what should have
+been a five-minute doc fix shows up as a support ticket instead.
+Nobody notices until a customer hits the gap.
+
+## What gets imported
+
+In answerLoops, Notion is a knowledge base source, not a chat
+channel — it doesn't produce tickets, it feeds the content the AI
+drafts answers from, alongside URL crawls, file uploads, and a
+GitHub repo sync.
+
+Setup has two separate steps, and both matter:
+
+1. **Create a connection.** In Notion's developer portal, you create
+   an access token scoped to read content only — no update or insert
+   capability, no user information. Paste that token into
+   **Integrations → Notion** in answerLoops.
+2. **Share pages with it.** A fresh connection can see nothing by
+   default. You open each top-level page or section you want synced
+   and add the connection under **••• → Connections**. Sharing a
+   parent page shares everything nested under it, so this is usually
+   a handful of clicks, not one per page.
+
+That second step is the part people miss, and it's also the point:
+there's no page picker inside answerLoops deciding what's in scope.
+You decide, in Notion, by what you share. Nothing syncs beyond that.
+
+## Syncing and what happens to old content
+
+**Sync now** on the Knowledge Base page walks every shared page and
+database, converts it to text, chunks it, and embeds it — the same
+pipeline every other source runs through. It queues as a background
+job now instead of running inside the button click, which used to
+time out on anything past a small workspace.
+
+A re-sync **replaces** the previous Notion import rather than
+merging into it. Unshare a page and re-sync, and it drops out of the
+knowledge base. The replacement only swaps in once the new import
+finishes building successfully — an interrupted sync (a dropped
+connection, a revoked token) leaves the last good import in place
+instead of half-overwriting it.
+
+Formatting conversion is pragmatic, not exact: nested numbered
+lists, multi-column layouts, and embeds don't carry over perfectly,
+and images and files get dropped (captions survive). If a page's
+meaning lives in a diagram or a table, that's worth a plain-text
+summary in Notion — the chunker only needs readable prose to work
+with.
+
+## Why it stays unpublished until you say so
+
+Every other knowledge base source in answerLoops goes live the
+moment it's imported. Notion doesn't, and that's deliberate: a
+workspace built for internal writing has drafts, half-finished
+pages, and notes-to-self mixed in with the pages that are actually
+ready for a customer to read.
+
+After a sync, Notion content shows up as searchable from the
+dashboard — your team can already query it — but it isn't served to
+the widget or used in customer-facing answers until someone clicks
+**Publish to widget** on the Notion panel. Review what imported, fix
+what's wrong, then flip it on. That choice is preserved across
+future re-syncs, so publishing isn't something you redo every time
+someone edits a page.
+
+## The actual value
+
+This isn't about writing more documentation. It's about connecting
+the documentation that already exists — the pages a team already
+maintains for itself — to the support channels where customers are
+asking, and keeping that connection current instead of letting a
+one-time import quietly drift out of date. Every re-sync is a
+chance to catch what changed; every unpublished-until-reviewed
+import is a chance to catch what shouldn't have been there in the
+first place.
+
+[See the Knowledge Base](/docs/product/knowledge-base)

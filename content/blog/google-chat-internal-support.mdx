@@ -1,0 +1,95 @@
+---
+title: Running internal support in Google Chat
+subtitle: A connect code, one shared service account, and no OAuth flow to fight with IT over
+description: How the Google Chat integration pairs a Workspace space to answerLoops with a connect code instead of an OAuth install, and why that fits internal IT support better than a public community bot would.
+overview: answerLoops connects to a Google Chat space with a one-time connect code posted as a message — no OAuth redirect, no per-org bot token. Every message in the paired space becomes a ticket, with thread-aware replies, attachment handling, and escalation to a specific Chat user when AI confidence is low.
+author: Nathan Tarbert
+datePublished: "2026-09-22"
+category: Integrations
+---
+
+If your company runs on Google Workspace, your internal help requests
+already live in Google Chat, not Slack. The IT questions repeat the
+same way they do everywhere else — how do I get VPN access, where's
+the onboarding checklist, why won't SSO let me in — except now
+they're scattered across a dozen Spaces instead of a dozen channels,
+and whoever's on support duty that week is retyping the same answer
+into each one.
+
+Google Chat doesn't have anything like Slack's "Add to Slack" button,
+so we couldn't build an OAuth install for it the way we did for
+Slack or Discord. There's no redirect flow that hands back a space
+id. So the setup works differently, and it's worth explaining exactly
+how, because it's arguably simpler than either of those.
+
+## Pairing a space with a connect code
+
+From **Settings → Integrations → Google Chat**, generating a connect
+code creates a row in the background with `enabled: false` and shows
+you a code shaped like `gc_` followed by 24 hex characters. That part
+takes ten seconds.
+
+The other half happens in Google Chat itself. A Workspace admin adds
+the answerLoops app to the space you want connected — the same app
+every answerLoops org uses, so there's no separate app to register or
+review. Once it's in the space, post `/connect <code>` as a message.
+The webhook matches that exact pattern, looks up the code, and if it
+finds a match it flips the row to `enabled: true` and posts back a
+confirmation in the space. Get the code wrong and it just tells you
+to check Settings for a fresh one — nothing gets written until the
+code actually matches.
+
+The two steps — generating the code and adding the app — don't have
+to happen in order. You can add the app first and paste the code
+later, or generate the code and go add the app after. Pairing only
+locks in once `/connect` actually posts in a space the app has
+already joined. The Settings card polls in the background and flips
+to "Connected" on its own once that happens, so you're not stuck
+refreshing the page.
+
+## What happens after a space is connected
+
+Every message in a paired space becomes a ticket. A few things that
+aren't obvious from that one sentence:
+
+- Replies inside a tracked thread attach to the existing ticket
+  instead of spawning a new one, so a back-and-forth conversation
+  stays as one item in the queue, not five.
+- An attachment with no caption still gets ingested — it's folded
+  into a line noting the file name and URL so it doesn't just vanish
+  from the ticket.
+- Anything under 10 characters with no attachment and no thread
+  context gets dropped as noise. A lone "ok" or a thumbs-up emoji
+  doesn't turn into a ticket.
+- When AI confidence is below your threshold, one specific Chat user
+  gets an escalation mention. Google Chat has no role or group-mention
+  equivalent, so escalation always targets a named person, not a
+  group — worth knowing before you set it up expecting Slack-style
+  usergroup pings.
+
+Automatic Deflections is off for every new connection, same as every
+other channel. Until you turn it on, even a confident answer sits as
+a draft on the dashboard waiting for someone to approve, edit, or
+dismiss it — the space itself just gets a short acknowledgment. Once
+you've watched enough approved drafts to trust the answers, flip the
+toggle in the Google Chat card and it starts replying directly.
+
+## Why this fits internal support specifically
+
+Internal IT and employee support is a different shape of problem than
+public community support. The audience is smaller and known — your
+own employees — but the questions repeat just as hard, especially
+around onboarding, access requests, and the handful of tools every
+new hire has to learn on day one. A connect-code pairing that a
+Workspace admin can do without filing an OAuth review request fits
+that: no security team sign-off for a new external app with broad
+permissions, no bot token to store and rotate per space. One shared
+service account handles every org's outbound replies, so there's
+nothing per-workspace to leak or rotate if someone leaves.
+
+v1 supports one connected space per org. If you've got IT support
+spread across several Spaces, you'll want to consolidate the
+question-asking into the one that's paired — multi-space support may
+follow if enough teams need it.
+
+[See the Google Chat setup guide](/docs/integrations/google-chat)

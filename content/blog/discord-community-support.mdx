@@ -1,0 +1,43 @@
+---
+title: Connecting Discord to answerLoops
+subtitle: Turn text channels and forum posts into a tracked ticket queue, without asking your community to leave Discord
+description: How to connect Discord text and forum channels to answerLoops, what happens to each message, and why it saves moderators from answering the same question fifty times.
+overview: answerLoops connects to Discord in two ways — text channels, where every message becomes a ticket, and forum channels, where each new post starts one via Discord's ThreadCreate event. The bot replies in-thread once its confidence passes your threshold, with automatic replies off by default until you've reviewed enough drafts to trust it. Setup is one click through OAuth on managed cloud, or three environment variables if you self-host.
+author: Nathan Tarbert
+datePublished: "2026-09-22"
+category: Integrations
+---
+
+Every active Discord server has a moderator who has answered the same setup question fifty times this month. Pinned messages get scrolled past. FAQ channels get ignored. The question shows up again in general, or worse, in five different forum threads, and someone has to type the same paragraph again before they've had coffee.
+
+That's the actual problem answerLoops solves for Discord communities, not "AI-powered engagement" — just fewer repeats, and nothing lost when the one moderator who knows the answer is asleep.
+
+## What gets ingested
+
+answerLoops watches two kinds of channels, and they work differently under the hood.
+
+In a **text channel**, every message you select for monitoring is ingested as a ticket. In a **forum channel**, a new post fires Discord's `ThreadCreate` event, and that initial post becomes the ticket body — then every reply inside that thread comes in through `MessageCreate` and attaches to the same ticket, so the whole conversation stays together instead of getting flattened into a stream of unrelated messages.
+
+Both land in the same unified ticket list, tagged with a Discord badge, sitting next to whatever comes in from your other channels.
+
+## Replies stay in-thread, and start out supervised
+
+When the bot has an answer above your confidence threshold, it replies inside the thread — not as a separate DM, not as a top-level post breaking up the channel. Forum replies specifically stay inside the original thread, which matters more than it sounds: a forum channel with the bot posting loose replies at the top level is worse than no bot at all.
+
+Automatic Deflections is off by default on every newly connected server. While it's off, even a confident answer doesn't go out as-is — it sits as a draft on your dashboard for someone to approve, edit, or dismiss, and Discord just gets a short acknowledgment in the meantime. You turn on automatic replies per-server once you've watched enough approved drafts to trust what the bot is producing. That's a deliberate sequencing decision, not a missing feature — a bot that's confidently wrong in public is worse than a bot that's slow.
+
+## Setup
+
+If you're on managed cloud, there's no Discord Developer Portal work at all. Click **Add answerLoops to Discord**, pick your server, approve the permissions, then select which text and forum channels the bot should watch. The bot joins immediately — no token to copy, no manifest to upload. You can come back and add or remove channels later without re-authorizing.
+
+Self-hosting means creating your own Discord application and setting `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, and `DISCORD_CLIENT_SECRET` (plus `DISCORD_APPLICATION_ID` if you want slash commands). One detail that trips people up: `DISCORD_TOKEN` has to be set on the **app** service, not just the bot service — the channel picker calls the Discord API directly and needs it there too.
+
+You're not limited to one server either. Connect as many as you run; each gets its own card, its own channel picker, and its own escalation role, and they come apart independently if you ever need to remove one.
+
+## Slash commands, if you want them
+
+Two commands ship once `DISCORD_APPLICATION_ID` is set and registered: `/ask <question>` queries the knowledge base and answers inline, visible only to whoever asked. `/summarize` catches someone up on a thread or recent channel activity without them scrolling. Neither requires the deflection settings to be on — they work as an opt-in lookup tool even in channels where you'd rather keep automatic replies off.
+
+## Why it actually matters to a community
+
+The value isn't that a bot is watching. It's that the same explanation doesn't have to get retyped by a human every time it's needed, forum threads don't turn into scavenger hunts for the answer buried in reply four, and a question asked at 3am doesn't just sit there until whoever's awake gets to it. The moderators who'd otherwise be typing the same paragraph get their time back for the messages that actually need a person.
