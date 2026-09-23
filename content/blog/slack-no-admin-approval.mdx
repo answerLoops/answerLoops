@@ -1,0 +1,83 @@
+---
+title: Running Slack support automation without admin approval
+subtitle: Two ways into a Slack workspace, and one of them skips the OAuth screen entirely
+description: How the Slack integration works with and without a workspace admin authorizing an OAuth app, including the private-channel limits and reaction-based feedback.
+overview: answerLoops connects to Slack either through 1-click OAuth with real-time Events API delivery, or through polling mode, which needs only a bot token and channel IDs pasted in by hand — no admin authorization, no public webhook, and no security review of an inbound endpoint.
+author: Nathan Tarbert
+datePublished: "2026-09-22"
+category: Integrations
+---
+
+Getting a Slack app authorized is its own project at a lot of companies.
+Someone has to request it, someone in IT or security has to review the
+scopes, and if the workspace has any kind of approval workflow turned on,
+that review can sit in a queue for weeks. None of that has anything to
+do with whether the bot is useful — it's a process problem, and it's the
+reason plenty of teams never get past the "Add to Slack" button.
+
+answerLoops doesn't force you through that path.
+
+## Two independent ways to connect
+
+**OAuth install** is the one-click route. An admin authorizes the app,
+answerLoops requests `channels:history`, `channels:read`,
+`channels:join`, `chat:write`, `reactions:write`, and `users:read`, and
+gets back a bot token. The channel picker loads automatically, pulling
+every public channel through `conversations.list`. Pick the channels,
+save, done. On managed cloud this comes paired with a shared Events API
+webhook, so new messages become tickets instantly.
+
+**Polling mode** skips the authorization screen completely. You paste in
+a bot token, the workspace's Team ID, and the channel IDs you want
+watched — no OAuth app, no admin click, no public URL for Slack to call.
+It's self-hosted only, because managed cloud already has a working
+webhook and never needs the fallback. answerLoops calls
+`conversations.join` on each channel the same way OAuth does, then polls
+`conversations.history` on an interval (`SLACK_POLL_INTERVAL_SECONDS`,
+default 60 seconds).
+
+Polling exists specifically for the workspace where the admin is never
+going to click Authorize — because they've left, because there's a
+freeze on new integrations, or because a security review of an inbound
+webhook endpoint is a bigger ask than anyone wants to make right now.
+With polling, the bot only ever calls out to `slack.com`. There's no
+inbound HTTP from Slack to your servers, no signature verification to
+get right, no new surface for a firewall review to flag. A read-only
+token is enough.
+
+## What connecting actually gets you
+
+Every message in a watched channel becomes a ticket. If the AI's
+confidence clears your threshold (0.8 by default) and Automatic
+Deflections is on, the bot replies in the channel. If it's off — which
+it is for every workspace by default — the answer sits as a draft on
+the dashboard for someone to approve, edit, or dismiss, and Slack just
+gets a short acknowledgment instead. That's deliberate: you get to watch
+a run of drafts before the bot's answers go out on their own.
+
+Feedback comes back through reactions. A 👍 or 👎 on a bot reply counts
+as a vote; a 1️⃣ through 5️⃣ on the CSAT prompt records a rating. Nothing
+else is read — an emoji on the original question does nothing, only a
+reaction on the message answerLoops actually posted counts.
+
+## The one thing polling can't do for you
+
+Private channels are a platform limit, not something either setup path
+gets around. Slack doesn't let any bot self-join a private channel, full
+stop. If you select one during setup, the save will report something
+like "Joined 2/3 channels automatically" and name the one that needs a
+manual `/invite @answerLoops`. That step is the same whether you got
+there through OAuth or polling — there's no way to script past it, because
+Slack itself is the thing blocking it.
+
+For a support team, the practical difference is this: OAuth gets you
+instant delivery and an automatic channel picker, in exchange for someone
+with admin rights signing off. Polling gets you running today, on
+whatever channels you paste in, at the cost of a short delay per message
+and no webhook to fall back on if you outgrow it. Plenty of workspaces
+start on polling because it's the only thing that clears IT this quarter,
+and switch to OAuth later once the review finally comes through — the two
+aren't mutually exclusive, and nothing about the tickets or the knowledge
+base underneath changes when they do.
+
+[See the Slack integration docs](/docs/integrations/slack)

@@ -1,0 +1,39 @@
+---
+title: Turning a support inbox into a ticket queue an AI can actually work
+subtitle: Email is the channel people reach for when they're already annoyed. Answer it fast, in one place, without a mailbox login to babysit.
+description: How answerLoops turns a customer-owned support domain into an AI-triaged ticket queue with managed email receiving, threading, and reply automation.
+overview: answerLoops connects to a support email domain through managed email receiving, not inbox polling. Every inbound message is triaged, matched against your knowledge base, and threaded back to the sender using proper Message-ID headers, so replies land in the same ticket instead of opening a new one.
+author: Nathan Tarbert
+datePublished: "2026-09-22"
+category: Integrations
+---
+
+Email is the channel people fall back to when they didn't want to make an account somewhere else just to ask a question. That also makes it the least forgiving one. Someone who emails `support@` instead of posting in your Discord already left one app to do it — a slow or wrong answer costs more goodwill there than almost anywhere else.
+
+It's also the channel most likely to turn into a single shared inbox that nobody fully owns. The same three questions land in it every week, threads fork when someone replies from a different address, and "did anyone answer this yet" becomes its own recurring question inside the team.
+
+## What actually happens when mail comes in
+
+answerLoops doesn't poll a mailbox. You verify a domain (or subdomain) you own, add the DNS records answerLoops shows you, and inbound mail gets routed through managed email receiving — a signed event lands on answerLoops the moment a message arrives, gets matched to your organization by recipient domain, and goes straight into the same AI pipeline that handles your other channels: triaged, checked against your knowledge base, drafted or answered.
+
+Replies go out with proper `Message-ID`, `In-Reply-To`, and `References` headers, so when a customer hits reply, it lands back in the same ticket instead of opening a new one. Every inbound message is also keyed on its own `Message-ID` — a provider retrying a webhook delivery doesn't create a duplicate ticket, it's just a no-op.
+
+## Setup is two separate decisions
+
+Inbound and outbound are configured independently, which matters because most teams only care about getting one of them right on day one.
+
+**Receiving mail:** pick a domain or support subdomain, add the DKIM, SPF/return-path, and inbound MX records answerLoops displays, and click verify. If your root domain's mail already goes through Google Workspace or Microsoft 365, use a subdomain like `support.yourcompany.com` instead — otherwise you'd redirect your own company's mail off Workspace, which is not what anyone setting this up wants.
+
+**Sending replies:** three options, in order of effort. Do nothing and replies go out from the platform default. Connect Gmail or Outlook (send-only OAuth — answerLoops can never read your inbox, only send as you) and replies inherit that mailbox's sender reputation with no DNS work at all. Or verify your own sending domain for the option that doesn't depend on anyone's login staying active — a password change or long inactivity can silently revoke a connected mailbox, while a verified domain just keeps working. If a mailbox connection does get revoked, answerLoops notices the next send attempt, emails your admins the same day with a reconnect link, and falls back to the platform default in the meantime. Nothing bounces silently.
+
+One caveat worth knowing if you're on Outlook: Microsoft Graph's send API doesn't carry a `References` header, so Outlook-sent replies thread with slightly less context in the customer's own mail client than platform- or Gmail-sent ones do. answerLoops's own internal ticket threading isn't affected either way.
+
+## Why this matters more for email than for chat
+
+A shared support inbox has a specific failure mode chat channels mostly don't: visibility isn't the same as ownership. Everyone can see the inbox, so the default assumption becomes someone else will get to it, and the message nobody claimed sits there until it's a day old and the sender has already emailed a second time. answerLoops removes the "who's grabbing this one" step entirely — every message gets triaged the moment it lands, either answered outright above your confidence threshold or held as a draft for a person to check.
+
+Allowed senders (a list of addresses or domains) lets you filter what reaches the AI at all — useful if the domain also gets sales inquiries or spam you don't want triaged as support. An escalation address gets referenced in plain text when confidence comes back low, since email has no @mention to fall back on the way chat does.
+
+Turn on automatic sending only after you've reviewed enough approved drafts to trust the AI going out unsupervised — it's off by default for every new channel, email included, for exactly that reason.
+
+[See the email integration setup](/docs/integrations/email)
