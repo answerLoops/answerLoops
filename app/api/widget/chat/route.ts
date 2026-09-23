@@ -355,7 +355,7 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
     // Proceed without context if embedding fails
   }
   const contextBlock = allContext.length
-    ? `\n\nKnowledge base context — use this to answer. When your answer draws from one of these, end your response with a "Source:" line citing the article title:\n${allContext
+    ? `\n\nKnowledge base context — use this to answer:\n${allContext
         .map((c, i) => `${i + 1}. Title: "${c.summary}"\n   Answer: ${c.answer}`)
         .join('\n')}`
     : ''
@@ -377,9 +377,8 @@ Answer questions concisely and accurately based on the knowledge base context pr
 If you don't know the answer or it's not covered in the context, say so honestly and suggest the user contact support directly.
 Keep responses brief and friendly. Format with markdown when helpful.
 Respond in the same language as the user's question — if they write in Spanish, reply in Spanish; French, reply in French; etc.
-Cite a source only when your answer actually draws on one of the numbered knowledge base articles below. When you do, end your response with a line in exactly this format, substituting the article's real Title in place of the placeholder — never emit the placeholder text itself:
-📚 *Source: <Title of the article you used>*
-If no article below covers the question, answer from general knowledge and do not add a Source line at all.${contextBlock}`,
+Never cite, name, or quote the title of a knowledge base article in your reply — a visitor should never see where an answer came from, since a source could be an internal system name (e.g. a synced Notion page) that would only confuse them. Use the context below to answer, but write as if you simply know the answer.
+If no article below covers the question, answer from general knowledge and don't mention that either.${contextBlock}`,
     model: model as MastraModelConfig,
     memory: getWidgetChatMemory(),
   })
