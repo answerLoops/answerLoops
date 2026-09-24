@@ -155,15 +155,27 @@
 .marketing-site .pricing-cost-note { background: var(--marketing-sand); border-color: #e5dac6; }
 .marketing-site .marketing-reading { min-width: 0; }
 .marketing-site .marketing-story { border-left: 3px solid #b9e0e5; padding-left: clamp(1rem, 3vw, 2.5rem); }
-.marketing-site .marketing-post-list { display: grid; gap: 2rem; }
-.marketing-site .marketing-post-card { background: #fff; border: 1px solid var(--marketing-border); border-radius: 12px; padding: clamp(1.25rem, 4vw, 2.5rem); }
-.marketing-site .marketing-post-card h2 { margin-top: 0; font-size: clamp(1.5rem, 3vw, 2.25rem); }
-.marketing-site .marketing-post-card > p:not(.marketing-meta) { color: var(--marketing-muted); margin-block: 1rem; }
+.marketing-site .marketing-post-list { display: grid; gap: 2rem; align-items: stretch; }
+.marketing-site .marketing-post-card { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--marketing-border); border-radius: 12px; overflow: hidden; }
+.marketing-site .marketing-post-card-cover { display: block; aspect-ratio: 1200 / 630; overflow: hidden; background: var(--marketing-soft); }
+.marketing-site .marketing-post-card-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.marketing-site .marketing-post-card-body { display: flex; flex-direction: column; flex: 1; padding: clamp(1.25rem, 3vw, 1.75rem); }
+.marketing-site .marketing-post-card h2 { margin-top: 0.5rem; font-size: 1.375rem; line-height: 1.25; }
+.marketing-site .marketing-post-card > .marketing-post-card-body > p:not(.marketing-meta) { color: var(--marketing-muted); margin-block: 0.75rem; flex: 1; }
 .marketing-site .marketing-post-card .marketing-meta { margin-top: 0; }
+.marketing-site .marketing-post-card .marketing-text-link { margin-top: auto; align-self: flex-start; }
 .marketing-site .marketing-post-category { color: var(--marketing-accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.75rem; }
 .marketing-site .marketing-post-subtitle { font-size: clamp(1.05rem, 2vw, 1.3rem); color: var(--marketing-muted); margin-top: 0.75rem; }
 .marketing-site .marketing-post-cover { margin-block: clamp(1.5rem, 4vw, 2.5rem); }
 .marketing-site .marketing-post-cover img { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--marketing-border); }
+.marketing-site .marketing-newsletter { display: grid; gap: 1.5rem; align-items: center; padding: clamp(1.75rem, 4vw, 2.5rem); background: var(--marketing-aqua); border-radius: 16px; }
+.marketing-site .marketing-newsletter h2 { margin: 0; font-size: 1.5rem; }
+.marketing-site .marketing-newsletter > div > p { color: var(--marketing-muted); margin-top: 0.5rem; }
+.marketing-site .marketing-newsletter-form { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+.marketing-site .marketing-newsletter-input { flex: 1; min-width: 12rem; padding: 0.75rem 1rem; border: 1px solid var(--marketing-border); border-radius: 8px; background: #fff; color: var(--marketing-ink); font-size: 0.9375rem; }
+.marketing-site .marketing-newsletter-input:disabled { opacity: 0.6; }
+.marketing-site .marketing-newsletter-error { width: 100%; color: #b3261e; font-size: 0.8125rem; margin: 0; }
+.marketing-site .marketing-newsletter-success { font-weight: 600; color: var(--marketing-navy); margin: 0; }
 /* The "Google overview" block: a short, direct-answer paragraph meant to be
    liftable by featured snippets / AI Overviews, set apart from the article
    prose that follows it rather than reading as just the first paragraph. */
@@ -318,8 +330,10 @@
   color: var(--marketing-link);
   font-size: 0.8125rem;
 }
-.marketing-site .marketing-post-card {
-  border-top: 4px solid #b9e0e5;
+@media (min-width: 640px) {
+  .marketing-site .marketing-newsletter {
+    grid-template-columns: 1.2fr 1fr;
+  }
 }
 @media (min-width: 768px) {
   .marketing-site .marketing-capabilities {
@@ -330,13 +344,15 @@
   }
   .marketing-post-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
   }
 }
 @media (min-width: 1024px) {
   .marketing-hero-split {
     grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
     gap: 4rem;
+  }
+  .marketing-post-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 

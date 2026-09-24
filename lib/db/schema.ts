@@ -643,6 +643,16 @@ export const waitlist = pgTable('waitlist', {
   createdAt: text('created_at').notNull().default(sql`now()`),
 })
 
+// Blog newsletter signups. Separate from `waitlist` on purpose — a waitlist
+// signup means "let me into the product," a newsletter signup means "email
+// me new posts," and conflating the two would put blog subscribers through
+// waitlist-acceptance copy that has nothing to do with why they signed up.
+export const newsletterSubscribers = pgTable('newsletter_subscribers', {
+  id: serial('id').primaryKey(),
+  email: text('email').notNull().unique(),
+  createdAt: text('created_at').notNull().default(sql`now()`),
+})
+
 // Agent/MCP API keys. Only the SHA-256 hash is stored — the plaintext key is
 // shown once at creation time and is not recoverable, same UX precedent as
 // the email integration's one-time webhook secret display.

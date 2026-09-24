@@ -39,6 +39,7 @@ const NAV = [
   ['Integrations', '/#integrations'],
   ['Pricing', PRICING_HREF],
   ['Docs', '/docs'],
+  ['Blog', '/blog'],
   ['About', '/about'],
 ]
 export function Nav({ state }: { state?: NavState }) {
