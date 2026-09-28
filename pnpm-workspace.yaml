@@ -40,12 +40,6 @@ minimumReleaseAgeExclude:
   # Auth.js release, can't wait out the normal 7-day aging window.
   - 'next-auth@5.0.0-beta.32'
   - '@auth/core@0.41.3'
-  # 4 moderate/low Hono advisories (algorithmic-complexity DoS, SSR output
-  # cross-user leak, proxy header handling) fixed only in 4.12.34, published
-  # inside the 7-day window — pulled in transitively via
-  # @mastra/core>@modelcontextprotocol/sdk, not a direct dependency we can
-  # pin to an older patched release instead.
-  - 'hono@4.12.34'
 overrides:
   ws: '>=8.21.0'
   shell-quote: '>=1.8.5'   # GHSA-395f-4hp3-45gv — >=1.8.4 wasn't actually patched, 1.8.4 itself is vulnerable
@@ -56,6 +50,10 @@ overrides:
   '@xmldom/xmldom': '>=0.8.15 <0.9.0'   # disclosure-ok  CVE-2026-83605 / -83607 / -83608 / -83613 / -83614 / -83615 / -83616 / -83619, all fixed in 0.8.15 — reached via mammoth (.docx KB import). Capped below 0.9 (a major with API changes mammoth doesn't declare support for) per the open-range lesson below
   nanoid: '>=3.3.17'   # GHSA-2v37-7h3g-55p8 (custom generators loop indefinitely on size 0) — reached via fumadocs-core/fumadocs-mdx>next>postcss
   esbuild: '>=0.24.3'   # GHSA-67mh-4wv8-2f99 (dev server accepts requests from any origin) — reached via drizzle-kit>@esbuild-kit
-  hono: '>=4.12.34'   # GHSA-8j4g-w8fx-2239, GHSA-f23p-vx2j-j53r, GHSA-54fx-42gc-7vw4, GHSA-79qm-7rj5-m7r9 — reached via @mastra/core>@modelcontextprotocol/sdk
-  '@ai-sdk/provider-utils': '>=3.0.31'   # GHSA-866g-f22w-33x8 (uncontrolled resource consumption) — reached via @mastra/core, which npm-aliases this exact package to a pinned 3.0.30; 3.0.31 is the newest 3.0.x published (no 3.0.98 exists despite the advisory's stated patched range)
+  hono: '>=4.13.5'   # disclosure-ok  GHSA-gqvv-2mrq-wpjv, GHSA-g6gw-c38x-mqfc, GHSA-crvj-82cr-hjcx — reached via @mastra/core>@modelcontextprotocol/sdk. Raised from >=4.12.34, which cleared the prior round of Hono advisories but not this one
+  '@ai-sdk/provider-utils@>=3.0.0 <3.0.28': '3.0.31'   # disclosure-ok  GHSA-866g-f22w-33x8, 3.x range — @copilotkit/runtime requires ^3.x directly; scoped to that range so it never gets force-bumped to a major it doesn't declare support for (that unscoped bump is what broke the widget chat route below)
+  '@ai-sdk/provider-utils@>=4.0.0-beta.10 <4.0.33': '4.0.40'   # disclosure-ok  GHSA-866g-f22w-33x8, 4.x range — separately reached via a plain ^4.x consumer resolving to 4.0.30; scoped the same way as the 3.x entry above so it doesn't touch the 3.x or 5.x resolutions
   fast-uri: '>=3.1.6 <4.0.0'   # four advisories (2026-75899/75931/75975/76172) fixed in 3.1.6 — transitive via @mastra/core / @modelcontextprotocol/sdk > ajv@8.20.0, which declares fast-uri@^3.0.6; capped below 4.x (a major) per the open-range lesson above
+  image-size: '>=2.0.3 <3.0.0'   # disclosure-ok  GHSA-w3rx-r6r6-pgpr (ICNS parser infinite loop DoS) + GHSA-5p2g-fcmc-qvqq — reached via @mastra/memory>probe-image-size. Capped below 3.x per the open-range lesson above
+  qs: '>=6.16.0 <7.0.0'   # disclosure-ok  GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g — transitive, multiple paths. Capped below 7.x per the open-range lesson above
+  baseline-browser-mapping: '>=2.11.0 <3.0.0'   # disclosure-ok  GHSA-w5vr-8v7q-w6rv — transitive via tailwindcss/browserslist tooling. Capped below 3.x per the open-range lesson above
