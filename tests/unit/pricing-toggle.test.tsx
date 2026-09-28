@@ -4,6 +4,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PricingToggle } from '@/components/marketing/pricing-toggle'
 import { ORDERED_PLANS } from '@/lib/billing/plans'
+import { START_HREF } from '@/components/marketing/nav-shared'
 
 const prices = [
   {
@@ -50,7 +51,7 @@ describe('PricingToggle', () => {
       expect(cardElement).not.toHaveTextContent(/\$[\d,]+\.\d{2}/)
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
-      ).toHaveAttribute('href', 'https://dub.sh/start-a-trial')
+      ).toHaveAttribute('href', START_HREF)
       expect(card.getByText(/Card required/)).toHaveTextContent(
         'Cancel before the 14-day trial ends',
       )
@@ -77,7 +78,7 @@ describe('PricingToggle', () => {
       }
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
-      ).toHaveAttribute('href', 'https://dub.sh/start-a-trial')
+      ).toHaveAttribute('href', START_HREF)
       expect(card.getByText(/Card required/)).toHaveTextContent(
         'Cancel before the 14-day trial ends',
       )
@@ -98,7 +99,7 @@ describe('PricingToggle', () => {
       }
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
-      ).toHaveAttribute('href', 'https://dub.sh/start-a-trial')
+      ).toHaveAttribute('href', START_HREF)
     }
   })
 

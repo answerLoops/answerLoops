@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Nav, type NavState } from '@/components/marketing/chrome'
-import { PRICING_HREF } from '@/components/marketing/nav-shared'
+import { PRICING_HREF, SIGNIN_HREF, START_HREF } from '@/components/marketing/nav-shared'
 
 /**
  * The marketing header has two navigation surfaces, and only one of them is
@@ -53,13 +53,13 @@ describe('the drawer is the only navigation a phone gets', () => {
     expect(
       signIn.getAttribute('href'),
       'the drawer must use the sign-in framing, not "Create your account"',
-    ).toBe('https://dub.sh/sign-in-button')
+    ).toBe(SIGNIN_HREF)
 
     const trial = drawer.getByRole('link', { name: /start trial/i })
     expect(
       trial.getAttribute('href'),
       'mobile trial buttons use the same campaign entry point',
-    ).toBe('https://dub.sh/start-a-trial')
+    ).toBe(START_HREF)
   })
 
   it('offers no auth actions to somebody who is already signed in', async () => {
