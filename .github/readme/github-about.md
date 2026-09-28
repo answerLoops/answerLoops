@@ -2,7 +2,7 @@
 
 ## Description
 
-Open-source AI support for your community. Turn docs into reviewed answers in Discord, Slack, GitHub, and website chat. Keep your team in control, connect your own agents through MCP, or self-host with your preferred model.
+Turn your docs into answers for your community. Answer questions in Discord, Slack, GitHub, and website chat with source-backed replies your team can review before sending. Self-host with your preferred model, use the hosted app, or connect your own agents through MCP and the API.
 
 ## Website
 
@@ -16,7 +16,7 @@ agent-skills ai-agent ai-support chatbot community-support customer-support disc
 
 ## Messaging focus
 
-Lead with what the project is: open-source AI support for communities. Follow with the docs-to-answer workflow, human review, and the choice to self-host or connect an agent. Use “Faster answers. More time to create.” as the supporting benefit, matching the website.
+Lead with the outcome: turn your docs into answers for your community. Follow with the channels people use, source-backed replies, and team review before sending. Then explain the choice to self-host, use the hosted app, or connect an agent. The license badge and self-hosting section establish the project's open-source status.
 
 The README's first image is a short capture of the website's example answer loop, labeled as an example. Keep its first frame understandable on its own. Put self-hosting, hosted onboarding, and agent setup links above the fold; keep detailed setup instructions in expandable sections.
 
