@@ -39,3 +39,47 @@ updates:
       github-actions:
         patterns:
           - "*"
+
+  # pnpm workspace deps. This is what actually catches an npm/pnpm CVE and
+  # proposes a fix PR — until this block existed, GitHub's backend still
+  # surfaced Dependabot alerts (visible under Security > Dependabot) but
+  # nothing here acted on them, so they piled up unfixed.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "fix"
+      prefix-development: "chore"
+    labels:
+      - dependencies
+    groups:
+      npm-dependencies:
+        patterns:
+          - "*"
+    # These are pinned in pnpm-workspace.yaml's `overrides`, each to a specific
+    # range chosen for a documented compatibility reason (a version cap that
+    # avoids breaking a consumer pinned to an older major, an npm-alias range
+    # split across two majors of the same package, etc). A Dependabot PR that
+    # bumps one of these the ordinary way — by widening package.json or the
+    # lockfile directly — can silently fight or undo that override. These stay
+    # a manual pnpm-workspace.yaml edit; the rest of the tree updates normally.
+    ignore:
+      - dependency-name: "ws"
+      - dependency-name: "shell-quote"
+      - dependency-name: "undici"
+      - dependency-name: "postcss"
+      - dependency-name: "sharp"
+      - dependency-name: "js-yaml"
+      - dependency-name: "@xmldom/xmldom"
+      - dependency-name: "nanoid"
+      - dependency-name: "esbuild"
+      - dependency-name: "hono"
+      - dependency-name: "@ai-sdk/provider-utils"
+      - dependency-name: "fast-uri"
+      - dependency-name: "image-size"
+      - dependency-name: "qs"
+      - dependency-name: "baseline-browser-mapping"

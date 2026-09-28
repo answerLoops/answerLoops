@@ -43,13 +43,44 @@ describe('.github/dependabot.yml', () => {
 
   it('watches the SHA-pinned GitHub Actions (keeps the trivy-action digest moving)', () => {
     expect(cfg).toContain('package-ecosystem: github-actions')
-    const gha = cfg.slice(cfg.indexOf('package-ecosystem: github-actions'))
+    const gha = cfg.slice(
+      cfg.indexOf('package-ecosystem: github-actions'),
+      cfg.indexOf('package-ecosystem: npm')
+    )
     expect(gha).toMatch(/directory:\s*\/\s*$/m)
   })
 
   it('sets a cooldown on every ecosystem so a freshly published version waits before it is proposed', () => {
     const entries = cfg.split('- package-ecosystem:').slice(1)
-    expect(entries.length).toBe(2)
+    expect(entries.length).toBe(3)
     for (const e of entries) expect(e).toMatch(/cooldown:\s*\n\s*default-days:\s*7/)
+  })
+
+  it('watches npm weekly, grouped into one PR, capped so it cannot flood the queue', () => {
+    expect(cfg).toContain('package-ecosystem: npm')
+    const npm = cfg.slice(cfg.indexOf('package-ecosystem: npm'))
+    expect(npm).toMatch(/directory:\s*\/\s*$/m)
+    expect(npm).toMatch(/interval:\s*weekly/)
+    expect(npm).toMatch(/open-pull-requests-limit:\s*\d+/)
+    expect(npm).toMatch(/groups:\s*\n\s*npm-dependencies:\s*\n\s*patterns:\s*\n\s*-\s*"\*"/)
+  })
+
+  it('ignores every package pinned in pnpm-workspace.yaml overrides, so Dependabot cannot fight a documented compatibility pin', () => {
+    const workspace = read('pnpm-workspace.yaml')
+    const overridesBlock = workspace.slice(workspace.indexOf('\noverrides:'))
+    // Pull the bare package name out of each override key, including the
+    // range-scoped ones (e.g. '@ai-sdk/provider-utils@>=3.0.0 <3.0.28').
+    const overriddenNames = [
+      ...overridesBlock.matchAll(/^ {2}'?(@?[^:'\s@]+(?:\/[^:'\s@]+)?)/gm),
+    ].map((m) => m[1])
+
+    expect(overriddenNames.length).toBeGreaterThan(0)
+
+    const npm = cfg.slice(cfg.indexOf('package-ecosystem: npm'))
+    for (const name of new Set(overriddenNames)) {
+      expect(npm, `expected dependabot.yml to ignore "${name}"`).toContain(
+        `dependency-name: "${name}"`
+      )
+    }
   })
 })
