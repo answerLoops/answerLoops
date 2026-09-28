@@ -51,7 +51,7 @@
     "@stripe/react-stripe-js": "^6.8.1",
     "@stripe/stripe-js": "^9.13.0",
     "ai": "^6.0.153",
-    "csv-parse": "^7.0.0",
+    "csv-parse": "^7.0.2",
     "discord.js": "^14.26.2",
     "drizzle-orm": "^0.45.2",
     "fumadocs-core": "^16.11.5",
@@ -83,7 +83,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
-    "@vitest/coverage-v8": "^4.1.9",
+    "@vitest/coverage-v8": "^4.1.11",
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.1",
@@ -92,6 +92,6 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.11"
   }
 }
