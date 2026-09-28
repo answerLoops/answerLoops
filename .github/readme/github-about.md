@@ -2,7 +2,7 @@
 
 ## Description
 
-Open-source AI support for your community. Turn docs into reviewed answers in Discord, Slack, GitHub, and website chat. Keep your team in control, connect your own agents through MCP, or self-host with your preferred model.
+Turn your docs into answers for your community. Answer questions in Discord, Slack, GitHub, and website chat with source-backed replies your team can review before sending. Self-host with your preferred model, use the hosted app, or connect your own agents through MCP and the API.
 
 ## Website
 

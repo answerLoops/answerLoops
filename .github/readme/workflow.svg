@@ -1,6 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="1120" viewBox="0 0 1100 1120" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="1188" height="1208" viewBox="-44 -44 1188 1208" role="img" aria-labelledby="title desc">
   <title id="title">answerLoops: from first setup to reusable answers</title>
   <desc id="desc">The setup skill helps launch a workspace. The operation skill connects an agent through MCP. Community tickets enter triage, drafting, and confidence review. Agents can search published knowledge, read FAQs and tickets, generate standalone answers, or create tickets for the shared workflow. Teams promote useful resolutions into published knowledge.</desc>
+  <rect x="-44" y="-44" width="1188" height="1208" fill="#d5dbe4"/>
   <defs>
     <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#5d6b7c"/></marker>
     <marker id="blueArrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#168396"/></marker>

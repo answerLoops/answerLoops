@@ -1,17 +1,15 @@
 # answerLoops
 
-### Open-source AI support for your community
+### Turn your docs into answers for your community.
 
-**Faster answers. More time to create.**
+Answer questions in Discord, Slack, GitHub, and website chat—with source-backed replies your team can review before sending.
 
-Turn your docs into answers in Discord, Slack, GitHub, and website chat. answerLoops drafts replies from your knowledge base, checks them against their sources, and keeps your team in control of what gets sent.
-
-Self-host with your preferred AI provider, use the hosted app, or connect your own agents through MCP and the API.
+Self-host with your preferred model, use the hosted app, or connect your own agents through MCP and the API.
 
 [**Self-host →**](#get-started) · [**Try hosted →**](https://app.answerloops.com) · [Connect your agent](#set-up-with-your-agent) · [Docs](https://answerloops.com/docs)
 
 <a href="https://answerloops.com/#main-content">
-  <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="720" />
+  <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="100%" />
 </a>
 
 *Example workflow from the website. Automatic replies are off by default; enable them per channel after reviewing the results. [Explore the interactive example →](https://answerloops.com/#main-content)*
@@ -39,7 +37,7 @@ Use it for a project's support Discord, a course community, or a product's docum
 <details>
 <summary><strong>See the support dashboard</strong></summary>
 <br />
-<img src="./.github/readme/dashboard.png" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
+<img src="./.github/readme/dashboard-framed.svg" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
 </details>
 
 ## Get started
@@ -174,13 +172,13 @@ The workspace includes a unified inbox, reviewed AI drafts, triage, SLA tracking
 <details>
 <summary><strong>See the unified inbox</strong></summary>
 <br />
-<img src="./.github/readme/tickets.png" alt="Unified answerLoops inbox with support tickets from multiple channels" width="100%" />
+<img src="./.github/readme/tickets-framed.svg" alt="Unified answerLoops inbox with support tickets from multiple channels" width="100%" />
 </details>
 
 <details>
 <summary><strong>See confidence review and escalation</strong></summary>
 <br />
-<img src="./.github/readme/ticket-detail.png" alt="answerLoops ticket detail with AI confidence review, evidence, and human escalation" width="100%" />
+<img src="./.github/readme/ticket-detail-framed.svg" alt="answerLoops ticket detail with AI confidence review, evidence, and human escalation" width="100%" />
 </details>
 
 ## For developers
