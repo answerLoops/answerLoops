@@ -84,7 +84,7 @@
     "@types/react-dom": "^19",
     "@types/web-push": "^3.6.4",
     "@vitest/coverage-v8": "^4.1.11",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.5",
     "drizzle-kit": "^0.31.10",
     "esbuild": "^0.28.1",
     "happy-dom": "^20.10.6",
