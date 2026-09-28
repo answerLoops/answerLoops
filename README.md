@@ -14,7 +14,7 @@ Self-host with your preferred AI provider, use the hosted app, or connect your o
   <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="720" />
 </a>
 
-*Example workflow from the website. Automatic replies are off by default; enable them per channel after reviewing the results. [Explore the interactive example →](https://answerloops.com/#main-content)*
+*Automatic replies are off by default; enable them per channel after reviewing the results.*
 
 [![CI](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/security.yml?branch=main&label=security&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/security.yml)
