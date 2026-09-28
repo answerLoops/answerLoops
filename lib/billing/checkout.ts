@@ -247,7 +247,7 @@ export async function createEmbeddedCheckoutSession(
       ...(customerId ? { customer: customerId } : { customer_email: email }),
       mode: 'subscription',
       // 'embedded_page', not 'embedded': the pinned API version
-      // (2026-05-27.dahlia, see lib/billing/stripe.ts) renamed the ui_mode
+      // (2026-08-26.dahlia, see lib/billing/stripe.ts) renamed the ui_mode
       // values, and most documentation and examples still show the old names.
       ui_mode: 'embedded_page',
       line_items: [{ price: priceId, quantity: 1 }],
