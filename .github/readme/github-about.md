@@ -2,7 +2,7 @@
 
 ## Description
 
-Open-source, agent-native AI support for communities. Resolve repeat questions from your docs, give your team time back, and turn solved tickets into reusable knowledge. Agent skills, MCP server, and REST API for your AI agent. Discord, Slack, GitHub, email, and web chat. Self-host or use the hosted app.
+Open-source AI support for your community. Turn docs into reviewed answers in Discord, Slack, GitHub, and website chat. Keep your team in control, connect your own agents through MCP, or self-host with your preferred model.
 
 ## Website
 
@@ -16,6 +16,14 @@ agent-skills ai-agent ai-support chatbot community-support customer-support disc
 
 ## Messaging focus
 
-Lead with faster answers and more time for the team. Follow with the practical agent journey: use a skill to get running, connect through MCP, and put existing knowledge to work. Keep the website link pointed at the product site; the README offers direct paths to hosted onboarding, self-hosting, and agent setup.
+Lead with what the project is: open-source AI support for communities. Follow with the docs-to-answer workflow, human review, and the choice to self-host or connect an agent. Use “Faster answers. More time to create.” as the supporting benefit, matching the website.
+
+The README's first image is a short capture of the website's example answer loop, labeled as an example. Keep its first frame understandable on its own. Put self-hosting, hosted onboarding, and agent setup links above the fold; keep detailed setup instructions in expandable sections.
+
+## Measuring the result
+
+Before publishing, record the repository's current views, unique visitors, clones, and referring sites from GitHub's Traffic view. Compare the same measures over the following two weeks and track stars separately. More visitors with few setup attempts calls for a different response than very few visitors in the first place.
+
+Share the example with communities where maintainers already discuss repetitive support, alongside a concrete account of the problem and how answerLoops handles it. Follow each community's promotion rules and ask for workflow feedback. A clearer README can help visitors evaluate the project; distribution still needs its own work.
 
 These topics describe the product's use cases and agent interfaces. GitHub uses topics to help people discover related repositories; they are not a promise of search-engine ranking or traffic. See [GitHub's topic guidance](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/classifying-your-repository-with-topics).

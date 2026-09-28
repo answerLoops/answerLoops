@@ -1,39 +1,46 @@
-<div align="center">
+# answerLoops
 
-<img src="./.github/readme/hero.svg" alt="answerLoops — agent-native AI support: faster answers for your community, more time for your team" width="100%" />
+### Open-source AI support for your community
 
-<br />
+**Faster answers. More time to create.**
+
+Turn your docs into answers in Discord, Slack, GitHub, and website chat. answerLoops drafts replies from your knowledge base, checks them against their sources, and keeps your team in control of what gets sent.
+
+Self-host with your preferred AI provider, use the hosted app, or connect your own agents through MCP and the API.
+
+[**Self-host →**](#get-started) · [**Try hosted →**](https://app.answerloops.com) · [Connect your agent](#set-up-with-your-agent) · [Docs](https://answerloops.com/docs)
+
+<a href="https://answerloops.com/#main-content">
+  <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="720" />
+</a>
+
+*Example workflow from the website. Automatic replies are off by default; enable them per channel after reviewing the results. [Explore the interactive example →](https://answerloops.com/#main-content)*
 
 [![CI](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/security.yml?branch=main&label=security&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/security.yml)
 [![License](https://img.shields.io/github/license/answerLoops/answerLoops?style=flat-square&label=license&color=082e50)](./LICENSE)
 [![npm](https://img.shields.io/npm/v/%40answerloops%2Fagent-sdk?style=flat-square&label=agent-sdk&logo=npm)](https://www.npmjs.com/package/@answerloops/agent-sdk)
 
-</div>
-
-# answerLoops
-
-### Your knowledge. Your community. Your agents.
-
-answerLoops turns your documentation and resolved support questions into answers for your community. Answer repeat questions, bring your team in when human judgment is needed, and turn each resolution into knowledge for the next person.
-
-Connect your own AI agent through skills, MCP, the REST API, or the TypeScript SDK. Use the hosted app or self-host with your preferred AI provider.
-
-[**Try the hosted app →**](https://app.answerloops.com) · [Documentation](https://answerloops.com/docs) · [Get started](#get-started) · [For developers](#for-developers)
 
 <a id="why-answerloops"></a>
 
-## Built around the answer loop
+## Stop answering the same question from scratch
 
-| Answer | Review | Improve |
-| --- | --- | --- |
-| Ground repeat answers in your docs, connected sources, and resolved tickets. | Keep drafts and escalations in one inbox. Bug reports and feature requests stay human-led. | Turn useful resolutions into articles. Use knowledge gaps to decide what to document next. |
+Your docs already cover setup, troubleshooting, and the questions people ask every week. Put that knowledge to work where the conversation happens.
 
-Agents use the same knowledge: search, generate answers, summarize tickets, and open a ticket when someone needs help.
+- **Answer from your docs.** Import documentation, files, GitHub repositories, and Notion pages. Draft replies with sources attached.
+- **Review before sending.** A second AI agent checks each draft against its sources. Approve replies yourself, or enable automatic replies for qualifying questions.
+- **Keep people in the loop.** Review drafts and escalations in a shared inbox. Questions that need judgment stay with your team.
+- **Make the next answer better.** Save useful resolutions as knowledge-base articles and find the questions your docs don't cover.
+- **Bring your own agents.** Search knowledge, generate answers, and create tickets through MCP, REST, or the TypeScript SDK.
 
-<div align="center">
-  <img src="./.github/readme/dashboard.png" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
-</div>
+Use it for a project's support Discord, a course community, or a product's documentation site. The same knowledge powers community replies, website chat, and your own AI tools.
+
+<details>
+<summary><strong>See the support dashboard</strong></summary>
+<br />
+<img src="./.github/readme/dashboard.png" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
+</details>
 
 ## Get started
 
@@ -50,6 +57,8 @@ npx @answerloops/agent-sdk setup
 ```
 
 The CLI checks prerequisites, clones the repository if needed, generates app secrets, and starts the published image. If configuration is missing, it tells you what to add to `.env`; add it and rerun the command. Setup verifies `/api/health` before finishing.
+
+<a id="set-up-with-your-agent"></a>
 
 <details>
 <summary><strong>Set up with your agent</strong></summary>
@@ -320,6 +329,10 @@ Generating an answer doesn't open a ticket. Creating a ticket sends the question
 [MCP setup and permissions](https://answerloops.com/docs/integrations/mcp) · [Agent API reference](https://answerloops.com/docs/integrations/agent-api) · [SDK installation and usage](./packages/agent-sdk/README.md)
 
 </details>
+
+## Help shape answerLoops
+
+If this is useful for your community, **star the repository** to keep it handy. Tried it with your own docs? [Open an issue](https://github.com/answerLoops/answerLoops/issues) with the workflow you tried, what worked, and where you got stuck. Don't include private support conversations or credentials.
 
 ## Contributing
 
