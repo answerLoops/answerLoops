@@ -1,10 +1,12 @@
 # answerLoops
 
-### Turn your docs into answers for your community.
+### Open-source AI support for your community
 
-Answer questions in Discord, Slack, GitHub, and website chat—with source-backed replies your team can review before sending.
+**Faster answers. More time to create.**
 
-Self-host with your preferred model, use the hosted app, or connect your own agents through MCP and the API.
+Turn your docs into answers in Discord, Slack, GitHub, and website chat. answerLoops drafts replies from your knowledge base, checks them against their sources, and keeps your team in control of what gets sent.
+
+Self-host with your preferred AI provider, use the hosted app, or connect your own agents through MCP and the API.
 
 [**Self-host →**](#get-started) · [**Try hosted →**](https://app.answerloops.com) · [Connect your agent](#set-up-with-your-agent) · [Docs](https://answerloops.com/docs)
 
