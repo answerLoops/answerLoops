@@ -64,7 +64,7 @@ export default async function DualAgentAiSupportPage() {
         {
           question: 'What is dual-agent AI support?',
           answer:
-            'An AI support design where drafting and review are two separate steps run by two separate passes — one agent writes a reply from retrieved documentation, and a different agent checks that reply against the evidence before it’s trusted, rather than one model drafting and scoring its own answer.',
+            'An AI support design where drafting and review are two separate steps run by two separate passes — one agent writes a reply from retrieved documentation, and a different agent checks that reply against the evidence before it’s trusted, rather than one model drafting and scoring its own answer. Sometimes grouped under the broader term multi-agent AI, though dual-agent describes the specific two-role split more precisely than a general multi-agent system with any number of agents.',
         },
         {
           question: 'How is this different from a single AI chatbot answering support tickets?',
