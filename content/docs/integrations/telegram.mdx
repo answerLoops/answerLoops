@@ -68,6 +68,12 @@ If you want a human tagged when the AI isn't confident enough to auto-reply, ent
 
 **Confidence threshold** (0–1, default `0.8`) is the score below which an AI answer is treated as low-confidence — held as a draft (or, with Automatic Deflections on, sent along with the escalation mention instead of posted as a full answer).
 
+### 7. Verify it's working
+
+Message the bot directly (a 1:1 DM skips Telegram's group privacy-mode filtering, so it's the fastest way to confirm the pipeline end to end). The message needs to be **10+ characters** and come from a real account, not another bot.
+
+Within a few seconds a new ticket should appear in the dashboard's **Tickets** list. Since **Automatic Deflections** is off by default, the AI's answer sits there as a draft awaiting Approve/Edit/Dismiss — the Telegram chat itself gets no reply yet, which is expected, not a failure.
+
 ---
 
 ## Environment variables reference
