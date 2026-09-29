@@ -72,11 +72,12 @@ If you want a human tagged when the AI isn't confident enough to auto-reply, ent
 
 ## Environment variables reference
 
-Telegram is configured per-organization through the Settings UI — there's no bot-wide credential required to make it work. Only one variable is relevant, and it's optional.
+Telegram is configured per-organization through the Settings UI — there's no bot-wide credential required to make it work. Both variables below are optional.
 
 | Variable | Required | Description |
 |---|---|---|
 | `TELEGRAM_BOT_TOKEN` | No | Fallback bot token used only when an org hasn't saved its own token in Settings. Useful for single-tenant self-hosted deployments that want to skip the UI setup step. |
+| `TELEGRAM_WEBHOOK_BASE_URL` | No | Overrides `AUTH_URL` for the Telegram webhook only. `AUTH_URL` also drives the OAuth callback host, so the two need different values whenever the app is reached at a different origin than the public tunnel — e.g. developing locally with the app on `localhost` while exposing the webhook through ngrok. Falls back to `AUTH_URL` when unset, which is correct for every normal deployment. |
 
 ---
 
@@ -88,6 +89,8 @@ Telegram is configured per-organization through the Settings UI — there's no b
   </Accordion>
   <Accordion title="Connected, but the webhook didn't register">
     Connecting calls Telegram's `setWebhook` API with your app's public URL. If `AUTH_URL` isn't set to a real, publicly reachable HTTPS URL, Telegram refuses it — `localhost` and private/internal hostnames don't work here. The token is still saved; set `AUTH_URL` to your public app URL and click **Register webhook** on the Telegram card to finish. Until then the bot receives nothing.
+
+    If you're developing locally and need the app itself reachable on `localhost` (e.g. for an OAuth redirect that's only registered against `localhost`) while exposing the webhook through a tunnel like ngrok, don't repoint `AUTH_URL` — that breaks sign-in. Set `TELEGRAM_WEBHOOK_BASE_URL` to the tunnel's HTTPS URL instead; it overrides the webhook's base URL without touching the OAuth callback host.
   </Accordion>
   <Accordion title="Bot is in the group but never responds">
     Telegram bots run in **privacy mode** by default in group chats: they only receive messages that start with `/`, mention the bot by `@username`, or are replies to the bot's own messages — everything else is invisible to the bot even though it's in the group. If you want answerLoops to see all group messages, message @BotFather, send `/setprivacy`, select your bot, and choose **Disable**. This has no effect on 1:1 chats, which the bot always sees in full.
