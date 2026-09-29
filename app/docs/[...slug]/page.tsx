@@ -4,6 +4,7 @@ import type { Metadata } from 'next'
 import { DocsPage, DocsBody, DocsDescription, DocsTitle } from 'fumadocs-ui/page'
 import { docsSource } from '@/lib/docs/source'
 import { getMDXComponents } from '@/mdx-components'
+import { PageSchema } from '@/components/marketing/page-schema'
 
 export default async function DocPage({
   params,
@@ -15,9 +16,16 @@ export default async function DocPage({
   if (!page) notFound()
 
   const MDXContent = page.data.body
+  const description = page.data.description ?? 'Setup and product guides for answerLoops community support.'
 
   return (
     <DocsPage toc={page.data.toc} full={page.data.full}>
+      <PageSchema
+        name={page.data.title}
+        description={description}
+        path={page.url}
+        breadcrumbs={[{ name: 'Docs', path: '/docs' }]}
+      />
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>

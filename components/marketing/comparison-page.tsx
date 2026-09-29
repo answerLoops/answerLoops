@@ -34,6 +34,10 @@ export function ComparisonPage({
         description={intro}
         path={`/vs/${slug}`}
         breadcrumbs={[{ name: 'Comparisons', path: '/alternatives' }]}
+        faq={[
+          { question: `When should I choose answerLoops over ${competitor}?`, answer: bestFor.us },
+          { question: `When should I choose ${competitor} over answerLoops?`, answer: bestFor.them },
+        ]}
       />
       <PageHero
         eyebrow="Product comparison"

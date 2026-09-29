@@ -1,30 +1,18 @@
 ---
 title: Discord Bot Setup
-description: Connect answerLoops to your Discord server — one click on the hosted platform, or full self-hosted control.
+description: Get your Discord bot token (API key) for a self-hosted answerLoops deployment and connect it to a single server.
 ---
 
-## Hosted platform (one-click setup)
-
-On the answerLoops cloud platform, no Discord Developer Portal is required.
-
-1. Go to **Integrations → Discord**
-2. Click **Add answerLoops to Discord**
-3. Pick your server in Discord's authorization screen
-4. Return to Settings — tick the channels you want monitored
-5. Save
-
-The platform bot is already running. Channel picks are saved instantly and hot-reloaded — no restart needed.
-
----
+To connect a self-hosted answerLoops to Discord you need a **bot token** — sometimes called an API key — issued by Discord's Developer Portal. This page covers the direct route: create a Discord application, copy its token, and paste it into answerLoops Settings for a single server. If you're on the managed cloud platform instead, or want one-click OAuth so anyone in your org can connect their own server without touching a token, see the [Discord integration guide](/docs/integrations/discord).
 
 ## Self-hosted setup
 
-### 1. Create a Discord Application
+### 1. Create a Discord Application and copy the bot token
 
 1. Go to [discord.com/developers/applications](https://discord.com/developers/applications)
 2. Click **New Application** → name it (e.g. "answerLoops")
 3. Go to **Bot** tab → **Add Bot**
-4. Under **Token** → **Reset Token** → copy it
+4. Under **Token** → **Reset Token** → copy it — this is your bot token (API key)
 
 ```dotenv
 DISCORD_TOKEN=your_bot_token
@@ -61,21 +49,7 @@ Go to **Integrations → Discord** and enter:
 
 ---
 
-## Platform OAuth env vars (self-hosted multi-tenant)
-
-To enable the one-click OAuth flow on your own deployment, add these env vars:
-
-```dotenv
-DISCORD_CLIENT_ID=your_application_client_id
-DISCORD_CLIENT_SECRET=your_application_client_secret  # OAuth2 → Client Secret
-DISCORD_TOKEN=your_platform_bot_token  # single bot shared across all orgs
-```
-
-The callback URL to register in Discord OAuth2 is:
-
-```
-https://your-domain.com/api/discord/callback
-```
+Want the one-click OAuth flow instead, so anyone in your org can connect their own server without ever seeing a token? That's a different setup — see [Self-hosted setup](/docs/integrations/discord#self-hosted-setup) in the Discord integration guide for the `DISCORD_CLIENT_ID`/`DISCORD_CLIENT_SECRET` OAuth env vars and callback URL registration.
 
 ## Config hot-reload
 
@@ -98,3 +72,22 @@ That connection sends itself a heartbeat query every 4 minutes. On a serverless 
 Once connected, answerLoops registers these slash commands:
 - `/ask [question]` — search the knowledge base and return the best match
 - `/summarize` — summarize the current thread as bullet points
+
+Slash commands require `DISCORD_APPLICATION_ID` to be set — see the [full registration steps](/docs/integrations/discord#slash-commands) in the Discord integration guide.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Invalid token / bot won't log in">
+    Bot tokens are only shown once when generated. If you didn't copy it at creation, go back to the **Bot** tab and click **Reset Token** to generate a new one — the old one stops working immediately. Make sure `DISCORD_TOKEN` has no surrounding quotes or whitespace in your `.env` file.
+  </Accordion>
+  <Accordion title="401 Unauthorized on connect">
+    The token in `DISCORD_TOKEN` doesn't match a live application, or was reset in the Developer Portal after you copied it. Reset the token again, update `DISCORD_TOKEN`, and restart the bot service.
+  </Accordion>
+  <Accordion title="Bot connects but never sees messages">
+    **Message Content Intent** must be enabled under the **Bot** tab's Privileged Gateway Intents — without it, Discord's gateway strips message content before the bot ever receives it, so nothing gets ingested even though the bot appears online.
+  </Accordion>
+  <Accordion title="Bot doesn't appear in the channel picker or can't be invited">
+    Confirm the OAuth2 URL Generator step used both the `bot` and `applications.commands` scopes, and that you opened the generated URL (not just copied it) to complete the invite. A bot that was never invited to the server won't show up anywhere in answerLoops.
+  </Accordion>
+</AccordionGroup>
