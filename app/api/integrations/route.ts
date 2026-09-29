@@ -16,9 +16,11 @@ export async function GET(request: Request) {
     const orgId = session.orgId ?? DEFAULT_ORG_ID
     const rows = await listIntegrations(orgId)
 
-    // Strip bot_token from response — never expose it client-side
-    const safe = rows.map(({ bot_token: _t, ...row }) => ({
+    // Strip bot_token from response — never expose it client-side. Only the
+    // last 4 chars go out, so the UI can confirm which token is saved.
+    const safe = rows.map(({ bot_token: t, ...row }) => ({
       ...row,
+      bot_token_last4: t ? t.slice(-4) : null,
       channel_ids: parseChannelIds(row as Parameters<typeof parseChannelIds>[0]),
     }))
 

@@ -7,7 +7,7 @@ description: Connect a Telegram bot to answerLoops so questions in your group ch
 
 answerLoops connects to Telegram through a bot you create and control — there's no shared platform-wide bot and no OAuth flow. Every message sent to the bot in a monitored chat (10+ characters, from a real user rather than another bot) is ingested as a ticket. The bot replies in the same chat when AI confidence is above your threshold **and Automatic Deflections is turned on**; otherwise the answer is held as a draft on the dashboard and the chat gets no reply.
 
-Because the bot is per-organization, the token you generate with @BotFather is stored encrypted in your answerLoops database — it's never shared with other orgs, and self-hosted deployments don't need a platform-wide credential to make Telegram work. answerLoops never displays a saved token back to you (even the last few characters) — the Bot Token field always shows a masked placeholder confirming one is saved, and typing in it replaces the token rather than editing it.
+Because the bot is per-organization, the token you generate with @BotFather is stored encrypted in your answerLoops database — it's never shared with other orgs, and self-hosted deployments don't need a platform-wide credential to make Telegram work. answerLoops never displays a saved token back to you in full — the Bot Token field shows only the last 4 characters (e.g. `••••wX9k (connected)`) so you can confirm which bot is connected, and typing in it replaces the token rather than editing it.
 
 <Callout type="info">
   **Automatic Deflections** is off by default, same as every other channel. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss, and the Telegram chat gets no automatic reply. Turn it on in **Integrations → Telegram → Edit → Automatic Deflections → Save** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
@@ -25,6 +25,8 @@ Telegram bots are created by talking to Telegram's own bot, [@BotFather](https:/
 2. Send `/newbot`
 3. Choose a display name, then a username ending in `bot` (e.g. `AcmeSupportBot`)
 4. BotFather replies with a token that looks like `123456789:AAHdqTcv...` — copy it
+
+![BotFather's reply after creating a bot, showing the HTTP API token to copy](./telegram-botfather.png)
 
 <Tip>
   Keep this chat open. You'll come back to BotFather later if you need to change the bot's group privacy settings (see Troubleshooting below).
