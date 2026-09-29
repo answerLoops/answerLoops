@@ -106,6 +106,7 @@ const GROUPS = [
     links: [
       ['Documentation', '/docs'],
       ['Architecture', '/architecture'],
+      ['Dual-agent review', '/dual-agent-ai-support'],
       ['Self-hosting', '/self-hosted-ai-support'],
       ['Agent access', '/mcp-support-agents'],
       ['Open-source teams', '/open-source-support'],

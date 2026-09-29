@@ -69,6 +69,10 @@ export default async function AgenticSupportPage() {
           href: '/support-example',
         },
         {
+          label: 'What is dual-agent AI support?',
+          href: '/dual-agent-ai-support',
+        },
+        {
           label: 'Configure answer review',
           href: '/docs/product/ai-deflection',
         },

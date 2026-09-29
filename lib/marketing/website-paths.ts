@@ -38,6 +38,7 @@ export const WEBSITE_PATHS = [
   '/llms-full.txt',
   '/architecture',
   '/discord-github-support',
+  '/dual-agent-ai-support',
   '/mcp-support-agents',
   '/open-source-support',
   '/self-hosted-ai-support',

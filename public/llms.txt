@@ -60,6 +60,7 @@ All hosted plans have a 14-day trial with a card required. A separate one-time a
 - Blog: https://answerloops.com/blog
 - /architecture: https://answerloops.com/architecture
 - /discord-github-support: https://answerloops.com/discord-github-support
+- /dual-agent-ai-support: https://answerloops.com/dual-agent-ai-support
 - /mcp-support-agents: https://answerloops.com/mcp-support-agents
 - /open-source-support: https://answerloops.com/open-source-support
 - Pricing: https://answerloops.com/pricing

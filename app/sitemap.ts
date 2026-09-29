@@ -28,6 +28,7 @@ const STATIC_ROUTES: { path: string; priority: number; changeFrequency: ChangeFr
   { path: '/blog', priority: 0.6, changeFrequency: 'weekly' },
   { path: '/architecture', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/discord-github-support', priority: 0.7, changeFrequency: 'monthly' },
+  { path: '/dual-agent-ai-support', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/mcp-support-agents', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/open-source-support', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/pricing', priority: 0.9, changeFrequency: 'weekly' },

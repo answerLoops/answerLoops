@@ -28,7 +28,7 @@ export function IntentPage({
 }: IntentPageProps) {
   return (
     <MarketingPage navState={navState}>
-      <PageSchema {...schema} />
+      <PageSchema {...schema} faq={comparison} />
       <PageHero
         eyebrow={eyebrow}
         title={title}

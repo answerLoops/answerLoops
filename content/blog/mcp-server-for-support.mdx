@@ -1,0 +1,47 @@
+---
+title: What an MCP server actually buys you that a chat widget doesn't
+subtitle: A widget waits for someone to open it. An MCP server lets an agent reach into your support knowledge on its own.
+description: What answerLoops' MCP server actually lets an agent do — search_kb, get_faq, get_tickets, create_ticket, generate_answer — and what still requires a human review step even when an agent triggers it.
+overview: Most "AI support platform" marketing treats MCP as a checkbox integration. answerLoops' MCP server exposes five real tools — search_kb, get_faq, get_tickets, create_ticket, and generate_answer — that let an agent (Claude, Cursor, an internal bot) query tickets, search your knowledge base, and generate a grounded answer directly, using the same organization-scoped data and dual-agent review pipeline as every other channel. A generated answer still runs through the same draft-and-review confidence check as a Discord reply — an agent calling the server doesn't get to skip the part where a separate AI checks the draft against your actual documentation.
+author: Nathan Tarbert
+datePublished: "2026-09-29"
+category: Integrations
+---
+
+A chat widget is reactive: it sits on your website until a visitor opens it and types a question. An MCP server flips that — it's a standing surface an agent can query on its own, whenever it needs your support knowledge, without a human triggering the request first. That's a meaningfully different capability, and it's worth being specific about what it actually unlocks instead of treating "we support MCP" as a feature checkbox.
+
+## The five tools, and what they're actually for
+
+answerLoops' MCP server exposes five tools at a single endpoint (`POST /api/mcp`, Streamable HTTP, JSON-RPC 2.0), each requiring a scope on the API key that calls it:
+
+```json
+{ "name": "search_kb", "arguments": { "query": "how do I reset my API key", "limit": 5 } }
+```
+
+`search_kb` runs a semantic search over your published knowledge-base articles — the same articles promoted from resolved tickets that back every other channel. An agent debugging a user's problem can pull the relevant doc itself instead of asking a person to go find it.
+
+```json
+{ "name": "create_ticket", "arguments": { "content": "Users report webhook retries are duplicated", "authorName": "Slack bot", "idempotencyKey": "a1b2c3d4" } }
+```
+
+`create_ticket` runs through the exact same category/priority classification and auto-draft pipeline as a message arriving from Discord or Slack — it isn't a lighter-weight "just log this somewhere" endpoint. It can get auto-answered if confidence is high enough, or it queues for human review like anything else. The `idempotencyKey` matters in practice: an agent that retries on a timeout won't accidentally open the same ticket twice and re-run AI triage a second time.
+
+```json
+{ "name": "generate_answer", "arguments": { "question": "What's the rate limit on the widget API?" } }
+```
+
+`generate_answer` is the one that looks the most like "just answer this," and it's the one worth being most precise about: it returns `{ answer, confidence, answered_fully, high_confidence }`, and that confidence number comes from the same [dual-agent review](/docs/product/ai-deflection#dual-agent-review) step every channel uses — a separate check against the retrieved sources, not the drafting model grading itself. An agent calling this tool doesn't get a shortcut around that check; it gets the same standard a Discord reply has to clear.
+
+`get_faq` and `get_tickets` round out the set — read access to the latest FAQ digest and the ticket queue, filterable by status, priority, or category, useful for an agent that needs situational awareness before it acts rather than just an answer to one question.
+
+## What still requires a human
+
+The scoping here is deliberate, not incidental. `create_ticket` is the only tool that writes anything — no tool can modify the knowledge base, change workspace settings, or touch billing. An agent with a `tickets:write` scope can open a ticket; it cannot silently edit what your support team considers ground truth. And a generated answer, however it's triggered, goes through the same confidence gate as everything else: a low-confidence `generate_answer` result is still low-confidence, whether a human typed the question into Discord or an agent called the tool programmatically.
+
+That matters because the interesting failure mode with agent-triggered support tooling isn't "the agent couldn't find an answer" — it's an agent confidently acting on a wrong one. Keeping the review step in the loop regardless of caller means an agent gets the same honesty about uncertainty a person reviewing the dashboard would.
+
+## Where this actually gets used
+
+The practical case isn't a hypothetical autonomous support bot — it's an agent that's already doing something else (triaging incoming GitHub issues, running an internal ops workflow, powering a coding assistant a customer is using) and needs to check "does our documentation already answer this" or "is there an open ticket about this" without a person relaying that question by hand. Connecting through MCP means that check uses the same knowledge base, the same review pipeline, and the same organization-scoped data isolation as every other channel — not a second, thinner integration that drifts out of sync with what your team actually maintains.
+
+[See the full MCP setup guide and tool reference](/docs/integrations/mcp) · [Read why dual-agent review exists](/blog/dual-agent-review)

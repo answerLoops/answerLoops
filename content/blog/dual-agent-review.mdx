@@ -1,0 +1,47 @@
+---
+title: Why we added a second AI to check the first one's work
+subtitle: A single model has no incentive to doubt its own reasoning — so we made a separate one responsible for catching it
+description: Inside answerLoops' dual-agent review pipeline — why a draft-only AI support tool can't catch its own source-misalignment errors, and how a separate review step changes what "confidence" actually means.
+overview: Most AI support tools generate an answer and attach a confidence score to it — but that score comes from the same model that wrote the answer, which has no structural reason to doubt its own reasoning. answerLoops splits the job into two agents instead of one. One agent retrieves your documentation and drafts a reply. A separate agent then checks that draft against the retrieved sources before anything is allowed to post, and the confidence score comes from that second, independent check. We call this dual-agent review, and it's the reason "high confidence" in answerLoops means "a second AI checked this against the evidence," not "the first AI liked its own answer."
+author: Nathan Tarbert
+datePublished: "2026-09-29"
+category: Thought Leadership
+---
+
+Ask most AI support tools how confident they are in an answer, and the honest response would be: "I don't know, I just wrote it." A single model that retrieves some documentation, drafts a reply, and then scores its own draft is grading its own homework. It has no independent vantage point from which to catch a plausible-sounding answer that drifted from what the source material actually says — the same reasoning that produced the drift produced the confidence score.
+
+We built answerLoops around a different assumption: a draft and a review are two different jobs, and they should be two different passes, not one model wearing two hats.
+
+## What actually happens to a question
+
+Every question that reaches answerLoops — through Discord, Slack, Discourse, Circle, GitHub, Telegram, email, the website widget, or an agent calling the MCP server directly — goes through the same pipeline:
+
+1. The question arrives and gets triaged.
+2. answerLoops retrieves the documentation, past resolutions, and connected source material relevant to that specific question.
+3. A drafting step prepares a reply from that retrieved material.
+4. A **separate** review step checks the draft against the evidence it was supposedly grounded in, and assigns a confidence score based on that check — not on how fluent the draft reads.
+5. Your channel settings decide what happens next: a draft that clears your confidence threshold can post automatically if you've turned that on, otherwise every draft — high-confidence or not — waits in your ticket queue for a person to approve.
+
+The default confidence threshold is 0.8 on a 0-to-1 scale, and it's configurable per channel. Raise it and fewer drafts qualify for auto-reply; lower it and more do. Nothing about the threshold guarantees correctness — it's a lever for how selective the review agent has to be before you trust its judgment unsupervised, not a promise.
+
+## Why one model can't do this job by itself
+
+A single-pass system has a specific, structural blind spot: the same weights that generated a plausible-but-wrong inference are the ones being asked to evaluate whether that inference was justified. If a model retrieves a paragraph about your refund policy and drafts an answer that quietly generalizes past what that paragraph actually says, nothing in a single forward pass stops it — the drift and the "confidence" both come from the same reasoning chain.
+
+Splitting drafting and review into two separate steps doesn't eliminate model error, but it changes what the confidence score is actually measuring. Instead of "did this look right to the model that wrote it," it becomes "did an independent check find this draft supported by the retrieved sources." Those are different questions, and only one of them is useful for deciding whether a customer should see the answer unsupervised.
+
+This is also why a high retrieval-similarity score and a high review-confidence score aren't the same thing, and why treating them as interchangeable is a mistake. A close text match tells you the right documentation was found. It doesn't tell you the drafted answer stayed faithful to it. The review step exists specifically to check the second thing.
+
+## A worked example
+
+Say a Discourse member asks: "Can I downgrade my plan mid-cycle and get a prorated refund?" The retrieval step finds your billing docs, which say plans can be downgraded anytime and take effect at the next billing cycle — with no mention of proration for the current cycle. A draft agent under pressure to be helpful might still generate: "Yes, you can downgrade anytime and we'll prorate the difference" — a plausible completion that isn't actually in the source.
+
+The review agent's job is narrower and more mechanical: does the retrieved evidence support this specific claim? "Downgrade anytime" — supported. "Prorated" — not stated anywhere in the retrieved material. That mismatch is exactly what should push the confidence score below the threshold, holding the draft for a human to correct or reject rather than letting a fabricated proration promise reach a paying customer automatically.
+
+## What this means for how you configure it
+
+Automatic replies are off by default for every newly connected channel — a high-confidence draft still requires your team's approval until you turn that setting on. That's deliberate: the value of dual-agent review is that it gives you something worth trusting incrementally, not something you're asked to trust blindly on day one. Watch a batch of drafts, see how the review agent's confidence scores line up with your own judgment on the same questions, and only then decide whether — and for which channels — automatic replies make sense.
+
+The questions the review agent isn't confident about don't disappear; they land in your ticket queue, which is usually a smaller, more interesting set of problems than "answer the same three questions again" — the things your knowledge base genuinely doesn't cover yet, or where getting it wrong actually matters.
+
+[See how the drafting and review pipeline works end to end](/agentic-support) · [Configure answer review and confidence thresholds](/docs/product/ai-deflection)
