@@ -70,9 +70,11 @@ If you want a human tagged when the AI isn't confident enough to auto-reply, ent
 
 ### 7. Verify it's working
 
-Message the bot directly (a 1:1 DM skips Telegram's group privacy-mode filtering, so it's the fastest way to confirm the pipeline end to end). The message needs to be **10+ characters** and come from a real account, not another bot.
+A registered webhook only proves Telegram *can* reach your app — it doesn't prove a message actually turns into a ticket. Group privacy mode, the 10-character filter, and a **Chat IDs to monitor** restriction can all silently swallow a message downstream of a perfectly healthy webhook, so it's worth confirming the full pipeline once rather than assuming setup is done.
 
-Within a few seconds a new ticket should appear in the dashboard's **Tickets** list. Since **Automatic Deflections** is off by default, the AI's answer sits there as a draft awaiting Approve/Edit/Dismiss — the Telegram chat itself gets no reply yet, which is expected, not a failure.
+Message the bot directly — a 1:1 DM skips privacy-mode filtering entirely, so it's the fastest way to rule that variable out. The message needs to be **10+ characters** and come from a real account, not another bot.
+
+Within a few seconds a new ticket should appear in the dashboard's **Tickets** list. Since **Automatic Deflections** is off by default, the AI's answer sits there as a draft awaiting Approve/Edit/Dismiss — the Telegram chat itself gets no reply yet, which is expected, not a failure. If no ticket appears at all, see **Troubleshooting** below.
 
 ---
 
@@ -106,6 +108,9 @@ Telegram is configured per-organization through the Settings UI — there's no b
   </Accordion>
   <Accordion title="Webhook returns 401 Unauthorized">
     Every Telegram webhook call must include the secret token answerLoops registered with `setWebhook`. A 401 means either the secret has drifted out of sync (re-save the integration to generate a fresh one, then re-register the webhook) or something other than Telegram is calling the endpoint directly.
+  </Accordion>
+  <Accordion title="Webhook is registered, message sent, but no ticket appears">
+    Work through this in order: check the app's server logs for a `POST /api/telegram/webhook` call around when you sent the message — no log line means Telegram never reached the endpoint (re-check the webhook is actually registered, and that your tunnel/URL is still live if testing locally). A log line with a 401 means the secret token is out of sync (see below). If the call succeeded (`200`) but no ticket shows, the message was filtered downstream — see **Bot is in the group but never responds** and **Messages are being ignored** above.
   </Accordion>
   <Accordion title="Escalation username isn't getting mentioned">
     The escalation username only fires when a message's AI confidence score is below **Confidence threshold**. If the AI is answering confidently every time, there's nothing to escalate — lower the threshold if you want more messages routed to a human, or check the ticket's confidence score on the dashboard to see where it's landing.
