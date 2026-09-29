@@ -59,7 +59,9 @@ All hosted plans have a 14-day trial with a card required. A separate one-time a
 - Agentic support overview: https://answerloops.com/agentic-support
 - Blog: https://answerloops.com/blog
 - /architecture: https://answerloops.com/architecture
+- /circle-ai-answers: https://answerloops.com/circle-ai-answers
 - /discord-github-support: https://answerloops.com/discord-github-support
+- /discourse-ai-answers: https://answerloops.com/discourse-ai-answers
 - /dual-agent-ai-support: https://answerloops.com/dual-agent-ai-support
 - /mcp-support-agents: https://answerloops.com/mcp-support-agents
 - /open-source-support: https://answerloops.com/open-source-support
@@ -71,8 +73,11 @@ All hosted plans have a 14-day trial with a card required. A separate one-time a
 - /support-example: https://answerloops.com/support-example
 - /support-workflow: https://answerloops.com/support-workflow
 - Terms of service: https://answerloops.com/terms
+- answerLoops vs Bettermode: https://answerloops.com/vs/bettermode
 - answerLoops vs Chatbase: https://answerloops.com/vs/chatbase
-- answerLoops vs Intercom: https://answerloops.com/vs/intercom
+- answerLoops vs Intercom Fin: https://answerloops.com/vs/intercom
+- answerLoops vs Kapa.ai: https://answerloops.com/vs/kapa-ai
+- answerLoops vs Khoros Aurora AI: https://answerloops.com/vs/khoros-aurora-ai
 - answerLoops vs Plain: https://answerloops.com/vs/plain
 - answerLoops vs Pylon: https://answerloops.com/vs/pylon
 - answerLoops vs Zendesk AI: https://answerloops.com/vs/zendesk-ai

@@ -6,9 +6,9 @@ import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
-  title: 'answerLoops vs Intercom',
+  title: 'answerLoops vs Intercom Fin',
   description:
-    'Intercom and answerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself.',
+    'Intercom Fin and answerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself.',
   path: '/vs/intercom',
 })
 export default function Page() {
@@ -18,11 +18,11 @@ export default function Page() {
 
   return (
     <ComparisonPage
-      competitor="Intercom"
+      competitor="Intercom Fin"
       slug="intercom"
       source="https://fin.ai/"
       competitorSummary="Intercom combines a helpdesk with Fin, its AI customer agent. Fin also connects to other helpdesks."
-      intro="Intercom and answerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself."
+      intro="Intercom Fin and answerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself."
       rows={[
         {
           feature: 'Channels',
