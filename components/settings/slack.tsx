@@ -17,6 +17,7 @@ interface SlackIntegration {
   confidence_threshold: number | null
   auto_deflect_enabled: number
   enabled: number
+  bot_token_last4: string | null
 }
 
 
@@ -206,7 +207,10 @@ export function SlackIntegrationCard() {
         {/* Connected summary */}
         {connected && !editingChannels && (
           <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 divide-y divide-gray-100">
-            <ReadOnlyRow label="Bot Token" value="••••••••• (saved)" />
+            <ReadOnlyRow
+              label="Bot Token"
+              value={integration.bot_token_last4 ? `••••${integration.bot_token_last4} (connected)` : '••••••••• (saved)'}
+            />
             {integration.team_id && <ReadOnlyRow label="Team ID" value={integration.team_id} />}
             <ReadOnlyRow label="Channels" value={integration.channel_ids.join(', ') || '— none selected'} />
             {integration.escalation_role_id && (

@@ -17,6 +17,7 @@ interface TelegramIntegration {
   auto_deflect_enabled: number
   enabled: number
   webhook_registered_at: string | null
+  bot_token_last4: string | null
 }
 
 export function TelegramIntegrationCard() {
@@ -113,7 +114,10 @@ export function TelegramIntegrationCard() {
 
         {connected && !editing && (
           <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 divide-y divide-gray-100">
-            <ReadOnlyRow label="Bot Token" value="••••••••• (saved)" />
+            <ReadOnlyRow
+              label="Bot Token"
+              value={integration.bot_token_last4 ? `••••${integration.bot_token_last4} (connected)` : '••••••••• (saved)'}
+            />
             <ReadOnlyRow label="Monitored chats" value={integration.channel_ids.join(', ') || '— (all chats)'} />
             {integration.escalation_role_id && (
               <ReadOnlyRow label="Escalation username" value={integration.escalation_role_id} />

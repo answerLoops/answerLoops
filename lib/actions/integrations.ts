@@ -457,7 +457,7 @@ export async function saveTelegramIntegrationAction(
   // valid and stored); it comes back as a warning the caller can surface,
   // and the manual "Register webhook" button stays as the retry path.
   const effectiveToken = newToken ?? existing?.bot_token ?? null
-  const baseUrl = process.env.AUTH_URL
+  const baseUrl = process.env.TELEGRAM_WEBHOOK_BASE_URL ?? process.env.AUTH_URL
   if (effectiveToken && baseUrl && !MOCK_EXTERNALS) {
     const result = await registerTelegramWebhook(effectiveToken, botSecret, baseUrl)
     if (!result.ok) {
