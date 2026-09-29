@@ -4,7 +4,7 @@
 
 Answer questions in Discord, Slack, GitHub, and website chat—with source-backed replies your team can review before sending.
 
-Self-host with your preferred model, use the hosted app, or connect your own agents through MCP and the API.
+Self-host with your preferred model, use the hosted app, or connect your own agents through **MCP** and the API.
 
 [**Self-host →**](#get-started) · [**Try hosted →**](https://app.answerloops.com) · [Connect your agent](#set-up-with-your-agent) · [Docs](https://answerloops.com/docs)
 
@@ -39,6 +39,16 @@ Use it for a project's support Discord, a course community, or a product's docum
 <br />
 <img src="./.github/readme/dashboard-framed.svg" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
 </details>
+
+## How it compares
+
+| | answerLoops | Chatwoot | Zammad | Kapa.ai |
+| --- | --- | --- | --- | --- |
+| **License (self-hosted)** | AGPL-3.0 | AGPL-3.0 | AGPL-3.0 | No public self-hosted option |
+| **Community channels** | Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, website widget | Website chat, email, WhatsApp, Telegram, Facebook, Instagram, Slack, SMS — no Discord | Email, chat, phone, WhatsApp, Facebook, Telegram — no Discord or Slack | Discord, Slack, website widget — no Telegram, Discourse, Circle, or email |
+| **AI in the self-hosted tier** | Dual-agent draft-and-review pipeline included, no per-call metering | BYOK AI assistant, gated to paid/Enterprise tiers | Paid add-on even when self-hosted — €0.03 per AI call | Not applicable — hosted only |
+
+Sources: [Chatwoot](https://www.chatwoot.com/pricing/self-hosted-plans), [Zammad](https://zammad.com/en/product/artificial-intelligence), [Kapa.ai](https://docs.kapa.ai/overview/showcase). Reviewed 2026-09-29 against each provider's published information — check current plan details before deciding.
 
 ## Get started
 
@@ -328,6 +338,16 @@ Generating an answer doesn't open a ticket. Creating a ticket sends the question
 
 </details>
 
+## FAQ
+
+**Does answerLoops work with Discord and Slack at the same time?** Yes — every connected channel (Discord, Slack, Discourse, Circle, GitHub, Telegram, Google Chat, email, and the website widget) shares the same knowledge base and the same ticket queue.
+
+**Can I run answerLoops fully self-hosted with my own LLM?** Yes. It's AGPL-3.0 and ships as a Docker Compose stack; connect OpenAI, Anthropic, Google Gemini, Groq, Mistral, Ollama, or any OpenAI-compatible endpoint, including a local model.
+
+**Does answerLoops support MCP?** Yes — an MCP server at `/api/mcp` exposes knowledge search, FAQ lookup, ticket listing, ticket creation, and answer generation to any MCP-compatible agent, using the same dual-agent draft-and-review pipeline as every other channel.
+
+**Does an AI-drafted answer get reviewed before it's sent?** Yes, always. A separate review agent checks every draft against its sources and assigns a confidence score. Automatic replies are off by default per channel — even a high-confidence draft waits for a person to approve it until you turn that setting on.
+
 ## Help shape answerLoops
 
 If this is useful for your community, **star the repository** to keep it handy. Tried it with your own docs? [Open an issue](https://github.com/answerLoops/answerLoops/issues) with the workflow you tried, what worked, and where you got stuck. Don't include private support conversations or credentials.
@@ -342,12 +362,16 @@ Contributions are welcome. Open or link an issue to agree on the behavior before
 
 Report security issues privately through [SECURITY.md](./SECURITY.md).
 
-## License
+## License and why self-hosted
 
 [AGPL-3.0](./LICENSE). Read it, change it, run it yourself. If you run a modified version as a network service, the AGPL says you have to make your source available to its users.
+
+Self-hosting means your community's questions and your documentation never leave infrastructure you control, and there's no per-resolution price to negotiate as usage grows. AGPL-3.0 specifically — not a permissive license with paid features held back — means if you or anyone else runs a modified version of answerLoops as a network service, the AGPL requires making that modified source available to its users too. That's a meaningfully stronger guarantee against a silent closed-source fork than MIT or Apache-2.0 give you, and it's why answerLoops ships as AGPL-3.0 rather than an "open core" model with the real functionality gated behind a paid tier.
 
 <div align="center">
 
 [Docs](https://answerloops.com/docs) · [Get started](#get-started) · [Open an issue](https://github.com/answerLoops/answerLoops/issues)
+
+[![Star History Chart](https://api.star-history.com/svg?repos=answerLoops/answerLoops&type=Date)](https://star-history.com/#answerLoops/answerLoops&Date)
 
 </div>
