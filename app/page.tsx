@@ -56,6 +56,10 @@ const FAQ_ITEMS = [
     a: 'Yes. The source is available under AGPL-3.0. You operate the application and storage, configure the connected services, and cover your infrastructure and model costs.',
   },
   {
+    q: 'Is answerLoops a good self-hosted AI support tool?',
+    a: 'It’s one self-hosted option worth evaluating: AGPL-3.0, no subscription fee, a dual-agent draft-and-review pipeline included by default, and one workspace covering Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and your website widget. Compare it against other self-hosted options before deciding.',
+  },
+  {
     q: 'Can I add the chat widget to my website or docs?',
     a: 'Yes. Add the embed snippet to any website or documentation platform that supports custom JavaScript, and configure its allowed domains in Settings. The widget answers from published knowledge-base articles, and visitors do not need an account.',
   },
@@ -131,8 +135,9 @@ export default function LandingPage() {
               Faster answers. More time to create.
             </h1>
             <p className="marketing-intro">
-              Turn your docs into answers wherever your community asks. Keep
-              your team in control, or put your own AI agents to work.
+              Turn your docs into answers wherever your community asks. One AI
+              drafts the reply, a second AI checks it against your docs before
+              it goes out — across Discord, Slack, Discourse, Circle, and more.
             </p>
             <div className="marketing-actions">
               <Link
