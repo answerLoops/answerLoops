@@ -65,6 +65,51 @@ describe('blog cover image route', () => {
     expect(markup).not.toContain('data:image/png;base64,')
   })
 
+  it('selects the connected-knowledge artwork for the published MCP post', async () => {
+    getPage.mockReturnValue(publishedPost('MCP server for support'))
+    const { markup, options } = await renderCover('mcp-server-for-support')
+
+    expect(getPage).toHaveBeenCalledWith(['mcp-server-for-support'])
+    for (const label of ['Your knowledge.', 'Within reach.', 'Your agent', 'Knowledge', 'Tickets', 'Answers', 'Support, connected through MCP.']) {
+      expect(markup).toContain(label)
+    }
+    expect(markup).toContain('data:image/png;base64,')
+    expect(markup).not.toContain('Good answers deserve')
+    expect(markup).not.toContain('BEHIND THE LOOP')
+    expect(options).toEqual({ width: 1200, height: 630 })
+  })
+
+  it.each([
+    ['absent', undefined],
+    ['draft', { data: { ...publishedPost().data, title: 'Unpublished MCP article', draft: true } }],
+  ])('keeps the generic cover when the MCP post is %s', async (_, page) => {
+    getPage.mockReturnValue(page)
+    const { markup } = await renderCover('mcp-server-for-support')
+
+    expect(markup).toContain('Blog')
+    expect(markup).toContain('answerloops.com/blog')
+    expect(markup).not.toContain('Your knowledge.')
+    expect(markup).not.toContain('Within reach.')
+    expect(markup).not.toContain('Unpublished MCP article')
+    expect(markup).not.toContain('data:image/png;base64,')
+  })
+
+  it('gives the MCP cover a distinct gradient while retaining the shared branded frame', async () => {
+    getPage.mockReturnValue(publishedPost())
+    const first = await renderCover('dual-agent-review')
+    const second = await renderCover('mcp-server-for-support')
+    const gradient = (markup: string) => markup.match(/background-image:([^;"]+)/)?.[1]
+
+    expect(gradient(first.markup)).toContain('radial-gradient(')
+    expect(gradient(second.markup)).toContain('radial-gradient(')
+    expect(gradient(second.markup)).not.toBe(gradient(first.markup))
+    for (const { markup } of [first, second]) {
+      expect(markup).toContain('answerloops.com')
+      expect(markup).toContain('data:image/png;base64,')
+      expect(markup).toContain('color:#082e50')
+    }
+  })
+
   it('retains the title and category fallback for posts without bespoke artwork', async () => {
     getPage.mockReturnValue(publishedPost('Support across channels', 'Guides'))
     const { markup } = await renderCover('support-across-channels')
@@ -98,9 +143,9 @@ describe('blog cover image route', () => {
     expect(markup).not.toContain('Good answers deserve')
   })
 
-  it('renders the artwork through the real image engine as a 1200 × 630 PNG', async () => {
+  it.each(['dual-agent-review', 'mcp-server-for-support'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
     getPage.mockReturnValue(publishedPost())
-    const { element, options } = await renderCover('dual-agent-review')
+    const { element, options } = await renderCover(slug)
     const { ImageResponse } = await vi.importActual<typeof import('next/og')>('next/og')
     const response = new ImageResponse(element, options)
     const png = Buffer.from(await response.arrayBuffer())

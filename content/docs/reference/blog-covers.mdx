@@ -18,6 +18,11 @@ The dual-agent review article uses its generated cover at
 Open Graph preview use the same artwork. The illustration shows the draft
 and review steps on an aqua-to-sand gradient.
 
+The MCP support article uses `/blog/mcp-server-for-support/opengraph-image`.
+Its illustration connects an agent to knowledge, tickets, and answers. A teal
+glow at the upper left fades toward warm sand at the lower right, giving this
+cover its own color balance and composition within the same brand palette.
+
 Posts without a selected cover keep their generated title-and-category image
 on the index and in Open Graph previews. Existing integration marks stay intact.
 
@@ -29,6 +34,8 @@ composition inside that frame. The image renderer in
 `app/blog/[slug]/opengraph-image.tsx` selects the artwork for the post.
 
 Use the public site's navy, teal, aqua, and sand palette. Keep the composition
-simple enough to recognize in a small card, and check both the full-size image
+simple enough to recognize in a small card. Vary gradient direction, focal
+placement, and color balance for each article instead of repeating one
+background. Check both the full-size image
 and the blog at a 375px viewport when adding a cover. Cover illustrations are
 introduced one article at a time; adding one doesn't change other posts' art.

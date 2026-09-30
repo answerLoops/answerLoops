@@ -2,7 +2,12 @@ import { ImageResponse } from 'next/og'
 import { getBlogPost } from '@/lib/blog/posts'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { BLOG_COVER_SIZE, DualAgentReviewCover } from '@/lib/blog/cover-art'
+import { BLOG_COVER_SIZE, DualAgentReviewCover, McpSupportCover } from '@/lib/blog/cover-art'
+
+const COVER_ART = new Map([
+  ['dual-agent-review', DualAgentReviewCover],
+  ['mcp-server-for-support', McpSupportCover],
+])
 
 // Auto-generated cover art: a post only needs a `coverImage` in its
 // frontmatter if it wants a specific photo/illustration. Without one, this
@@ -138,10 +143,11 @@ export default async function BlogPostOgImage({
 }) {
   const { slug } = await params
   const post = getBlogPost(slug)
-  if (post && slug === 'dual-agent-review') {
+  const Cover = COVER_ART.get(slug)
+  if (post && Cover) {
     const logo = await readFile(join(process.cwd(), 'public/icon.png'))
     return new ImageResponse(
-      <DualAgentReviewCover logoSrc={`data:image/png;base64,${logo.toString('base64')}`} />,
+      <Cover logoSrc={`data:image/png;base64,${logo.toString('base64')}`} />,
       size,
     )
   }
