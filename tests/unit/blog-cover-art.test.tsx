@@ -110,6 +110,52 @@ describe('blog cover image route', () => {
     }
   })
 
+  it('selects the community question-and-answer artwork for the published Circle post', async () => {
+    getPage.mockReturnValue(publishedPost('Circle community support'))
+    const { markup, options } = await renderCover('circle-community-support')
+
+    expect(getPage).toHaveBeenCalledWith(['circle-community-support'])
+    for (const label of ['More community.', 'Less answering on repeat.', 'A question in Circle', 'Where do I find the course?', 'From your knowledge base', 'Here’s your getting-started guide.']) {
+      expect(markup).toContain(label)
+    }
+    expect(markup).toContain('Helpful answers, right inside your Circle community.')
+    expect(markup).toContain('data:image/png;base64,')
+    expect(markup).not.toContain('Good answers deserve')
+    expect(markup).not.toContain('Within reach.')
+    expect(markup).not.toContain('BEHIND THE LOOP')
+    expect(options).toEqual({ width: 1200, height: 630 })
+  })
+
+  it.each([
+    ['absent', undefined],
+    ['draft', { data: { ...publishedPost().data, title: 'Unpublished Circle article', draft: true } }],
+  ])('keeps the generic cover when the Circle post is %s', async (_, page) => {
+    getPage.mockReturnValue(page)
+    const { markup } = await renderCover('circle-community-support')
+
+    expect(markup).toContain('Blog')
+    expect(markup).toContain('answerloops.com/blog')
+    expect(markup).not.toContain('More community.')
+    expect(markup).not.toContain('Less answering on repeat.')
+    expect(markup).not.toContain('Unpublished Circle article')
+    expect(markup).not.toContain('data:image/png;base64,')
+  })
+
+  it('gives the Circle cover its own gradient while preserving the common brand', async () => {
+    getPage.mockReturnValue(publishedPost())
+    const first = await renderCover('dual-agent-review')
+    const second = await renderCover('mcp-server-for-support')
+    const circle = await renderCover('circle-community-support')
+    const gradient = (markup: string) => markup.match(/background-image:([^;"]+)/)?.[1]
+
+    expect(gradient(circle.markup)).toContain('radial-gradient(')
+    expect(gradient(circle.markup)).not.toBe(gradient(first.markup))
+    expect(gradient(circle.markup)).not.toBe(gradient(second.markup))
+    expect(circle.markup).toContain('answerloops.com')
+    expect(circle.markup).toContain('data:image/png;base64,')
+    expect(circle.markup).toContain('color:#082e50')
+  })
+
   it('retains the title and category fallback for posts without bespoke artwork', async () => {
     getPage.mockReturnValue(publishedPost('Support across channels', 'Guides'))
     const { markup } = await renderCover('support-across-channels')
@@ -125,7 +171,6 @@ describe('blog cover image route', () => {
     ['discord-community-support', '#5865f2'],
     ['slack-no-admin-approval', '#36c5f0'],
     ['discourse-forum-support', '#e4572e'],
-    ['circle-community-support', '#7c3aed'],
     ['google-chat-internal-support', '#34a853'],
     ['telegram-community-support', '#229ed9'],
     ['email-support-automation', '#64748b'],
@@ -143,7 +188,7 @@ describe('blog cover image route', () => {
     expect(markup).not.toContain('Good answers deserve')
   })
 
-  it.each(['dual-agent-review', 'mcp-server-for-support'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
+  it.each(['dual-agent-review', 'mcp-server-for-support', 'circle-community-support'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
     getPage.mockReturnValue(publishedPost())
     const { element, options } = await renderCover(slug)
     const { ImageResponse } = await vi.importActual<typeof import('next/og')>('next/og')

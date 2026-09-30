@@ -49,6 +49,32 @@ export function BlogCoverFrame({
   )
 }
 
+export function CircleSupportCover({ logoSrc }: { logoSrc: string }) {
+  return (
+    <BlogCoverFrame
+      logoSrc={logoSrc}
+      caption="Helpful answers, right inside your Circle community."
+      backgroundImage="radial-gradient(ellipse at 48% 110%, #8bcbd2 0%, rgba(139,203,210,0) 62%), radial-gradient(ellipse at 88% 0%, #f2dfbc 0%, rgba(242,223,188,0) 72%), linear-gradient(180deg, #faf4e8, #eef7f7)"
+    >
+      <div style={{ position: 'absolute', left: 78, top: 136, width: 1044, display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: 58, lineHeight: 1.1, letterSpacing: -2 }}>
+        <span>More community.</span>
+        <span style={{ color: '#168193' }}>Less answering on repeat.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 230, top: 326, width: 458, height: 110, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingLeft: 28, borderRadius: '22px 22px 22px 4px', background: '#ffffffed', border: '2px solid white', transform: 'rotate(-3deg)', boxShadow: '0 12px 30px #082e5009' }}>
+        <span style={{ color: coverPalette.muted, fontSize: 16, marginBottom: 9 }}>A question in Circle</span>
+        <span style={{ fontSize: 24 }}>Where do I find the course?</span>
+      </div>
+      <div style={{ position: 'absolute', left: 512, top: 428, width: 464, height: 112, display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingLeft: 28, borderRadius: '22px 22px 4px 22px', background: coverPalette.navy, transform: 'rotate(2deg)', boxShadow: '0 12px 30px #082e5012' }}>
+        <span style={{ color: coverPalette.aqua, fontSize: 16, marginBottom: 9 }}>From your knowledge base</span>
+        <span style={{ color: 'white', fontSize: 24 }}>Here’s your getting-started guide.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 939, top: 406, width: 56, height: 56, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '50%', background: '#eef7f7', border: '3px solid white' }}>
+        <svg width="26" height="26" viewBox="0 0 26 26"><path d="M4 13L10 19L22 6" fill="none" stroke={coverPalette.teal} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </div>
+    </BlogCoverFrame>
+  )
+}
+
 export function McpSupportCover({ logoSrc }: { logoSrc: string }) {
   return (
     <BlogCoverFrame
