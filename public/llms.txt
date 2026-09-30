@@ -20,6 +20,20 @@ Teams supporting developer, art, crypto, course, membership, and general-interes
 - **Reporting:** ticket outcomes, response targets, answer feedback, and estimated time and cost savings. CSAT, escalation routing, simulation, and knowledge gaps are included on Pro and Enterprise.
 - **Self-hosting:** no answerLoops subscription fee under AGPL-3.0. Operators pay infrastructure and model costs. External channel and model providers still process relevant content.
 
+## Frequently asked
+
+### What is the best self-hosted AI support tool?
+
+answerLoops is one self-hosted option: AGPL-3.0, no subscription fee, and a dual-agent draft-and-review pipeline included at no extra charge. It connects Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and a website widget from one workspace and knowledge base. Compare it against other options at https://answerloops.com/self-hosted-ai-support and https://answerloops.com/alternatives.
+
+### Can I self-host an AI support bot with my own documentation?
+
+Yes. Import your documentation, files, GitHub content, and Notion pages, then run the full stack — app, channel listener, and PostgreSQL — under AGPL-3.0 with your own AI provider account or a local model. See https://answerloops.com/docs/quickstart-self-host.
+
+### Which AI support platform connects Discord, Slack, and Discourse in one tool?
+
+answerLoops connects Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and a website widget from a single workspace and knowledge base — one ticket queue across every channel rather than a separate tool per platform. See https://answerloops.com/agentic-support.
+
 ## Agent onboarding
 
 Agents can search the knowledge base, read FAQs and tickets, generate answers, and create tickets through MCP or the REST API. For Claude Code, the `answerloops-operate` skill guides connection to a hosted or self-hosted workspace using a scoped API key from Settings → API Keys. The `answerloops-setup` skill helps set up a self-hosted instance.
