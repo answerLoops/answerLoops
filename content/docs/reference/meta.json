@@ -5,6 +5,7 @@
     "api",
     "webhooks",
     "data-model",
-    "billing-plans"
+    "billing-plans",
+    "blog-covers"
   ]
 }

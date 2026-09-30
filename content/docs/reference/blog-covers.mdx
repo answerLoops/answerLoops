@@ -1,0 +1,34 @@
+---
+title: Blog cover art
+description: How cover artwork appears on blog cards, articles, and shared links.
+---
+
+Blog cover art uses a consistent **1200 × 630** frame. The blog index presents
+the artwork above the author, publication date, title, and description.
+The article's publication date is displayed without shifting across time zones.
+
+## Cover selection
+
+A post can select its cover through the `coverImage` field in its frontmatter.
+Add `coverImageAlt` to describe the illustration for readers using assistive
+technology. A selected cover also appears above the article body.
+
+The dual-agent review article uses its generated cover at
+`/blog/dual-agent-review/opengraph-image`, so its index card, article, and
+Open Graph preview use the same artwork. The illustration shows the draft
+and review steps on an aqua-to-sand gradient.
+
+Posts without a selected cover keep their generated title-and-category image
+on the index and in Open Graph previews. Existing integration marks stay intact.
+
+## Maintaining the artwork
+
+The shared React frame in `lib/blog/cover-art.tsx` defines the canvas, palette,
+brand mark, and footer. Each illustration supplies its own
+composition inside that frame. The image renderer in
+`app/blog/[slug]/opengraph-image.tsx` selects the artwork for the post.
+
+Use the public site's navy, teal, aqua, and sand palette. Keep the composition
+simple enough to recognize in a small card, and check both the full-size image
+and the blog at a 375px viewport when adding a cover. Cover illustrations are
+introduced one article at a time; adding one doesn't change other posts' art.

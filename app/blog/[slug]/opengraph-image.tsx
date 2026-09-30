@@ -1,5 +1,8 @@
 import { ImageResponse } from 'next/og'
 import { getBlogPost } from '@/lib/blog/posts'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { BLOG_COVER_SIZE, DualAgentReviewCover } from '@/lib/blog/cover-art'
 
 // Auto-generated cover art: a post only needs a `coverImage` in its
 // frontmatter if it wants a specific photo/illustration. Without one, this
@@ -9,7 +12,7 @@ import { getBlogPost } from '@/lib/blog/posts'
 // Integration posts additionally get that platform's own recognizable mark —
 // the branding guide calls out keeping real integration brand colors rather
 // than flattening every channel icon to the site accent.
-export const size = { width: 1200, height: 630 }
+export const size = BLOG_COVER_SIZE
 export const contentType = 'image/png'
 
 // Path data mirrors components/marketing/integration-icon.tsx. Duplicated
@@ -135,6 +138,13 @@ export default async function BlogPostOgImage({
 }) {
   const { slug } = await params
   const post = getBlogPost(slug)
+  if (post && slug === 'dual-agent-review') {
+    const logo = await readFile(join(process.cwd(), 'public/icon.png'))
+    return new ImageResponse(
+      <DualAgentReviewCover logoSrc={`data:image/png;base64,${logo.toString('base64')}`} />,
+      size,
+    )
+  }
   const title = post?.data.title ?? 'answerLoops'
   const category = post?.data.category ?? 'Blog'
   const mark = INTEGRATION_MARKS[slug]
