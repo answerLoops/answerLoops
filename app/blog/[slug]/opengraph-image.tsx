@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 import { getBlogPost } from '@/lib/blog/posts'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseSupportCover, DualAgentReviewCover, McpSupportCover } from '@/lib/blog/cover-art'
+import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseSupportCover, DualAgentReviewCover, EmailSupportCover, McpSupportCover } from '@/lib/blog/cover-art'
 
 const COVER_ART = new Map([
   ['dual-agent-review', DualAgentReviewCover],
@@ -10,6 +10,7 @@ const COVER_ART = new Map([
   ['circle-community-support', CircleSupportCover],
   ['discord-community-support', DiscordSupportCover],
   ['discourse-forum-support', DiscourseSupportCover],
+  ['email-support-automation', EmailSupportCover],
 ])
 
 // Auto-generated cover art: a post only needs a `coverImage` in its

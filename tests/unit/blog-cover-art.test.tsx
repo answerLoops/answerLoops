@@ -251,6 +251,53 @@ describe('blog cover image route', () => {
     expect(discourse.markup).toContain('color:#082e50')
   })
 
+  it('selects the inbox-to-reply artwork for the published email post', async () => {
+    getPage.mockReturnValue(publishedPost('Email support automation'))
+    const { markup, options } = await renderCover('email-support-automation')
+
+    expect(getPage).toHaveBeenCalledWith(['email-support-automation'])
+    for (const label of ['From inbox to', 'answered.', 'Every message. One place to follow through.', 'Reply ready', 'Same conversation.']) {
+      expect(markup).toContain(label)
+    }
+    expect(markup).toContain('Email support, with the whole conversation attached.')
+    expect(markup).toContain('data:image/png;base64,')
+    for (const priorHeadline of ['Good answers deserve', 'Within reach.', 'More community.', 'Discord questions.', 'Old questions.']) {
+      expect(markup).not.toContain(priorHeadline)
+    }
+    expect(markup).not.toContain('BEHIND THE LOOP')
+    expect(options).toEqual({ width: 1200, height: 630 })
+  })
+
+  it.each([
+    ['absent', undefined],
+    ['draft', { data: { ...publishedPost().data, title: 'Unpublished email article', draft: true } }],
+  ])('keeps the generic cover when the email post is %s', async (_, page) => {
+    getPage.mockReturnValue(page)
+    const { markup } = await renderCover('email-support-automation')
+
+    expect(markup).toContain('Blog')
+    expect(markup).toContain('answerloops.com/blog')
+    expect(markup).not.toContain('From inbox to')
+    expect(markup).not.toContain('Reply ready')
+    expect(markup).not.toContain('Unpublished email article')
+    expect(markup).not.toContain('data:image/png;base64,')
+  })
+
+  it('gives the email cover a distinct gradient from all earlier covers', async () => {
+    getPage.mockReturnValue(publishedPost())
+    const email = await renderCover('email-support-automation')
+    const gradient = (markup: string) => markup.match(/background-image:([^;"]+)/)?.[1]
+
+    expect(gradient(email.markup)).toContain('radial-gradient(')
+    for (const slug of ['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support']) {
+      const previous = await renderCover(slug)
+      expect(gradient(email.markup)).not.toBe(gradient(previous.markup))
+    }
+    expect(email.markup).toContain('answerloops.com')
+    expect(email.markup).toContain('data:image/png;base64,')
+    expect(email.markup).toContain('color:#082e50')
+  })
+
   it('retains the title and category fallback for posts without bespoke artwork', async () => {
     getPage.mockReturnValue(publishedPost('Support across channels', 'Guides'))
     const { markup } = await renderCover('support-across-channels')
@@ -266,7 +313,6 @@ describe('blog cover image route', () => {
     ['slack-no-admin-approval', '#36c5f0'],
     ['google-chat-internal-support', '#34a853'],
     ['telegram-community-support', '#229ed9'],
-    ['email-support-automation', '#64748b'],
     ['github-open-source-support', '#24292f'],
     ['notion-knowledge-base-sync', '#000000'],
   ])('preserves the integration mark on %s', async (slug, brandColor) => {
@@ -281,7 +327,7 @@ describe('blog cover image route', () => {
     expect(markup).not.toContain('Good answers deserve')
   })
 
-  it.each(['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
+  it.each(['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
     getPage.mockReturnValue(publishedPost())
     const { element, options } = await renderCover(slug)
     const { ImageResponse } = await vi.importActual<typeof import('next/og')>('next/og')
