@@ -4,5 +4,5 @@
 # pulled whatever PyPI had latest — no reproducibility, no changelog, and a bad
 # release could break CI with nothing to point at. Pinned here so Dependabot
 # (see .github/dependabot.yml, pip ecosystem) opens a PR per bump instead.
-semgrep==1.177.0
+semgrep==1.178.0
 zizmor==1.30.1
