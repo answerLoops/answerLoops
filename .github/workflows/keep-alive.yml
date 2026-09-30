@@ -1,0 +1,24 @@
+name: Keep-alive ping
+
+# Prod runs on Supabase's free tier, which auto-pauses a project after 7 days
+# with no database activity. /api/health issues a real query (see its
+# comment), so hitting it on a schedule keeps the project active without
+# needing a paid plan.
+on:
+  schedule:
+    - cron: '0 12 */3 * *'
+  workflow_dispatch: {}
+
+jobs:
+  ping:
+    name: Ping production health endpoint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Curl /api/health
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' https://app.answerloops.com/api/health)
+          echo "Health endpoint responded with status $status"
+          if [ "$status" -ne 200 ]; then
+            exit 1
+          fi
