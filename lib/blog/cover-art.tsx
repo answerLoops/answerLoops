@@ -49,6 +49,42 @@ export function BlogCoverFrame({
   )
 }
 
+export function GitHubSupportCover({ logoSrc }: { logoSrc: string }) {
+  return (
+    <BlogCoverFrame
+      logoSrc={logoSrc}
+      caption="Help your community. Keep building your project."
+      backgroundImage="radial-gradient(ellipse at 18% 0%, #d8c7f2 0%, rgba(216,199,242,0) 62%), radial-gradient(ellipse at 90% 68%, #b9e0e5 0%, rgba(185,224,229,0) 62%), linear-gradient(165deg, #f3eef9, #faf4e8)"
+    >
+      <div style={{ position: 'absolute', left: 78, top: 212, display: 'flex', flexDirection: 'column', fontSize: 58, lineHeight: 1.12, letterSpacing: -2 }}>
+        <span>More building.</span>
+        <span style={{ color: '#168193' }}>Less repeating.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 80, top: 373, display: 'flex', fontSize: 22, color: '#496575' }}>GitHub Issues + Discussions</div>
+      <div style={{ position: 'absolute', left: 630, top: 155, width: 296, height: 270, display: 'flex', flexDirection: 'column', padding: 26, borderRadius: 18, background: coverPalette.navy, color: 'white', transform: 'rotate(-8deg)', boxShadow: '0 14px 30px #082e5010' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, fontSize: 21 }}>
+          <span>README.md</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 15, marginTop: 32 }}>
+          <div style={{ width: 204, height: 8, borderRadius: 4, background: '#b9e0e5' }} />
+          <div style={{ width: 166, height: 8, borderRadius: 4, background: '#568195' }} />
+          <div style={{ width: 188, height: 8, borderRadius: 4, background: '#568195' }} />
+        </div>
+      </div>
+      <div style={{ position: 'absolute', left: 742, top: 296, width: 368, height: 224, display: 'flex', flexDirection: 'column', padding: 26, borderRadius: 20, background: '#fffffff5', border: '2px solid white', boxShadow: '0 16px 36px #082e5012', transform: 'rotate(4deg)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: coverPalette.muted, fontSize: 16 }}>
+          <span>A community question</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 17, fontSize: 25, lineHeight: 1.2 }}><span>How do I</span><span>configure this?</span></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 22, paddingTop: 17, borderTop: '1px solid #dce2e9', color: '#168193', fontSize: 18 }}>
+          <svg width="21" height="21" viewBox="0 0 24 24"><path d="M4 12L9 17L21 5" fill="none" stroke={coverPalette.teal} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <span>Answered from your docs</span>
+        </div>
+      </div>
+    </BlogCoverFrame>
+  )
+}
+
 export function EmailSupportCover({ logoSrc }: { logoSrc: string }) {
   return (
     <BlogCoverFrame
