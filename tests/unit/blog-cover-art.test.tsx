@@ -298,6 +298,53 @@ describe('blog cover image route', () => {
     expect(email.markup).toContain('color:#082e50')
   })
 
+  it('selects the docs-and-question artwork for the published GitHub post', async () => {
+    getPage.mockReturnValue(publishedPost('GitHub open source support'))
+    const { markup, options } = await renderCover('github-open-source-support')
+
+    expect(getPage).toHaveBeenCalledWith(['github-open-source-support'])
+    for (const label of ['More building.', 'Less repeating.', 'GitHub Issues + Discussions', 'README.md', 'A community question', 'configure this?', 'Answered from your docs']) {
+      expect(markup).toContain(label)
+    }
+    expect(markup).toContain('Help your community. Keep building your project.')
+    expect(markup).toContain('data:image/png;base64,')
+    for (const priorHeadline of ['Good answers deserve', 'Within reach.', 'More community.', 'Discord questions.', 'Old questions.', 'From inbox to']) {
+      expect(markup).not.toContain(priorHeadline)
+    }
+    expect(markup).not.toContain('BEHIND THE LOOP')
+    expect(options).toEqual({ width: 1200, height: 630 })
+  })
+
+  it.each([
+    ['absent', undefined],
+    ['draft', { data: { ...publishedPost().data, title: 'Unpublished GitHub article', draft: true } }],
+  ])('keeps the generic cover when the GitHub post is %s', async (_, page) => {
+    getPage.mockReturnValue(page)
+    const { markup } = await renderCover('github-open-source-support')
+
+    expect(markup).toContain('Blog')
+    expect(markup).toContain('answerloops.com/blog')
+    expect(markup).not.toContain('More building.')
+    expect(markup).not.toContain('Less repeating.')
+    expect(markup).not.toContain('Unpublished GitHub article')
+    expect(markup).not.toContain('data:image/png;base64,')
+  })
+
+  it('gives the GitHub cover a distinct gradient from all earlier covers', async () => {
+    getPage.mockReturnValue(publishedPost())
+    const github = await renderCover('github-open-source-support')
+    const gradient = (markup: string) => markup.match(/background-image:([^;"]+)/)?.[1]
+
+    expect(gradient(github.markup)).toContain('radial-gradient(')
+    for (const slug of ['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation']) {
+      const previous = await renderCover(slug)
+      expect(gradient(github.markup)).not.toBe(gradient(previous.markup))
+    }
+    expect(github.markup).toContain('answerloops.com')
+    expect(github.markup).toContain('data:image/png;base64,')
+    expect(github.markup).toContain('color:#082e50')
+  })
+
   it('retains the title and category fallback for posts without bespoke artwork', async () => {
     getPage.mockReturnValue(publishedPost('Support across channels', 'Guides'))
     const { markup } = await renderCover('support-across-channels')
@@ -313,7 +360,6 @@ describe('blog cover image route', () => {
     ['slack-no-admin-approval', '#36c5f0'],
     ['google-chat-internal-support', '#34a853'],
     ['telegram-community-support', '#229ed9'],
-    ['github-open-source-support', '#24292f'],
     ['notion-knowledge-base-sync', '#000000'],
   ])('preserves the integration mark on %s', async (slug, brandColor) => {
     getPage.mockReturnValue(publishedPost('Integration guide', 'Integrations'))
@@ -327,7 +373,7 @@ describe('blog cover image route', () => {
     expect(markup).not.toContain('Good answers deserve')
   })
 
-  it.each(['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
+  it.each(['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation', 'github-open-source-support'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
     getPage.mockReturnValue(publishedPost())
     const { element, options } = await renderCover(slug)
     const { ImageResponse } = await vi.importActual<typeof import('next/og')>('next/og')
