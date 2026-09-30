@@ -49,6 +49,44 @@ export function BlogCoverFrame({
   )
 }
 
+export function DiscordSupportCover({ logoSrc }: { logoSrc: string }) {
+  return (
+    <BlogCoverFrame
+      logoSrc={logoSrc}
+      caption="Support that stays with the conversation."
+      backgroundImage="radial-gradient(ellipse at 8% 100%, #f2dfbc 0%, rgba(242,223,188,0) 52%), radial-gradient(ellipse at 100% 20%, #90becb 0%, rgba(144,190,203,0) 75%), linear-gradient(105deg, #eef7f7, #dceff0)"
+    >
+      <div style={{ position: 'absolute', left: 78, top: 210, display: 'flex', flexDirection: 'column', fontSize: 56, lineHeight: 1.12, letterSpacing: -2 }}>
+        <span>Discord questions.</span>
+        <span style={{ color: '#168193' }}>Answered</span>
+        <span style={{ color: '#168193' }}>in context.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 80, top: 435, display: 'flex', fontSize: 22, color: '#496575' }}>Text channels + forum threads</div>
+      <div style={{ position: 'absolute', left: 748, top: 145, display: 'flex', alignItems: 'center', gap: 15, width: 324, height: 65, paddingLeft: 24, borderRadius: 16, background: '#dceff0', border: '2px solid #ffffffaa', transform: 'rotate(7deg)', color: '#315e81', fontSize: 23 }}>
+        <span style={{ fontSize: 30 }}>#</span><span>getting-started</span>
+      </div>
+      <div style={{ position: 'absolute', left: 642, top: 225, display: 'flex', flexDirection: 'column', width: 460, height: 240, padding: 28, borderRadius: 22, background: '#fffffff2', border: '2px solid white', boxShadow: '0 16px 36px #082e5010' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 26, paddingBottom: 20, borderBottom: '1px solid #dce2e9' }}><span style={{ fontSize: 32, color: coverPalette.teal }}>#</span><span>support</span></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 22 }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#dce2e9' }} />
+          <span style={{ fontSize: 22 }}>How do I get started?</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 20 }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: coverPalette.aqua }} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+            <div style={{ width: 272, height: 8, borderRadius: 4, background: '#b9e0e5' }} />
+            <div style={{ width: 205, height: 8, borderRadius: 4, background: '#dceff0' }} />
+          </div>
+        </div>
+      </div>
+      <div style={{ position: 'absolute', left: 600, top: 445, display: 'flex', alignItems: 'center', gap: 16, padding: '20px 26px', borderRadius: 16, background: coverPalette.navy, color: 'white', fontSize: 23, transform: 'rotate(-4deg)', boxShadow: '0 12px 26px #082e5014' }}>
+        <svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 12L9 17L21 5" fill="none" stroke="#b9e0e5" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <span>Reply in the same thread</span>
+      </div>
+    </BlogCoverFrame>
+  )
+}
+
 export function CircleSupportCover({ logoSrc }: { logoSrc: string }) {
   return (
     <BlogCoverFrame
