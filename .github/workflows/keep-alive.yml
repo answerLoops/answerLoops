@@ -13,6 +13,8 @@ jobs:
   ping:
     name: Ping production health endpoint
     runs-on: ubuntu-latest
+    # No checkout, no GITHUB_TOKEN use — just an outbound curl.
+    permissions: {}
 
     steps:
       - name: Curl /api/health
