@@ -37,7 +37,7 @@ export function PageHero({
   children,
   aside,
 }: {
-  eyebrow: string
+  eyebrow?: string
   title: string
   children?: ReactNode
   aside?: ReactNode
@@ -48,7 +48,7 @@ export function PageHero({
         className={`marketing-container${aside ? ' marketing-hero-split' : ''}`}
       >
         <div className="marketing-hero-copy">
-          <p className="marketing-eyebrow">{eyebrow}</p>
+          {eyebrow && <p className="marketing-eyebrow">{eyebrow}</p>}
           <h1>{title}</h1>
           {children && <div className="marketing-intro">{children}</div>}
         </div>

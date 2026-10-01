@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'answerLoops blog',
   description:
-    'Notes on community support, integrations, and building answerLoops.',
+    'Architecture notes, integration guides, and benchmarks from the team building answerLoops.',
   path: '/blog',
 })
 
@@ -23,22 +23,61 @@ export default function BlogIndexPage() {
   if (!marketingSiteEnabled()) notFound()
 
   const posts = getBlogPosts()
+  const [featuredPost, ...restPosts] = posts
 
   return (
     <MarketingPage>
       <PageSchema
         name="answerLoops blog"
-        description="Notes on community support, integrations, and building answerLoops."
+        description="Architecture notes, integration guides, and benchmarks from the team building answerLoops."
         path="/blog"
         type="CollectionPage"
       />
-      <PageHero eyebrow="Blog" title="Notes on community support">
+      <PageHero title="Engineering the support layer">
         <p>
-          Thought leadership, integration guides, and comparisons from the
+          Architecture notes, integration guides, and benchmarks from the
           team building answerLoops.
         </p>
       </PageHero>
-      <section className="marketing-section">
+      <section className="marketing-section marketing-post-top">
+        {featuredPost && (
+          <div className="marketing-container">
+            <article className="marketing-post-featured">
+              <div className="marketing-post-featured-body">
+                <p className="marketing-meta">
+                  <span className="block">{featuredPost.data.author}</span>
+                  <time className="block" dateTime={featuredPost.data.datePublished}>
+                    {formatPostDate(featuredPost.data.datePublished)}
+                  </time>
+                </p>
+                <h2>
+                  <Link className="hover:text-blue-700" href={featuredPost.url}>
+                    {featuredPost.data.title}
+                  </Link>
+                </h2>
+                <p>{featuredPost.data.description}</p>
+                <Link className="marketing-text-link" href={featuredPost.url}>
+                  Read the article
+                </Link>
+              </div>
+              <Link
+                href={featuredPost.url}
+                className="marketing-post-featured-cover"
+                tabIndex={-1}
+                aria-hidden="true"
+              >
+                <Image
+                  src={featuredPost.data.coverImage ?? `${featuredPost.url}/opengraph-image`}
+                  alt=""
+                  width={1200}
+                  height={630}
+                  unoptimized
+                  priority
+                />
+              </Link>
+            </article>
+          </div>
+        )}
         <div className="marketing-container marketing-newsletter">
           <div>
             <h2>Get new posts by email</h2>
@@ -53,7 +92,7 @@ export default function BlogIndexPage() {
       </section>
       <section className="marketing-section marketing-soft">
         <div className="marketing-container marketing-post-list">
-          {posts.map((post) => (
+          {restPosts.map((post) => (
             <article className="marketing-post-card" key={post.url}>
               <Link
                 href={post.url}

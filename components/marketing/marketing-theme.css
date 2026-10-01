@@ -121,6 +121,7 @@
   .marketing-home-hero h1 { font-size: clamp(2.5rem, 10.5vw, 3.25rem); }
   .marketing-home-grid { gap: 2rem; }
   .marketing-home-hero .marketing-actions { flex-direction: column; align-items: stretch; }
+  .marketing-site .marketing-post-top { gap: 3rem; }
 }
 
 /* Secondary pages use the same surfaces and hierarchy as the homepage. */
@@ -155,6 +156,14 @@
 .marketing-site .pricing-cost-note { background: var(--marketing-sand); border-color: #e5dac6; }
 .marketing-site .marketing-reading { min-width: 0; }
 .marketing-site .marketing-story { border-left: 3px solid #b9e0e5; padding-left: clamp(1rem, 3vw, 2.5rem); }
+.marketing-site .marketing-post-top { display: flex; flex-direction: column; gap: 6.5rem; }
+.marketing-site .marketing-post-featured { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2rem; align-items: center; background: #fff; border: 1px solid var(--marketing-border); border-radius: 16px; overflow: hidden; }
+.marketing-site .marketing-post-featured-body { padding: clamp(1.75rem, 4vw, 3rem); }
+.marketing-site .marketing-post-featured-body h2 { margin-top: 0.625rem; font-size: clamp(1.5rem, 3vw, 2rem); line-height: 1.2; }
+.marketing-site .marketing-post-featured-body > p:not(.marketing-meta) { color: var(--marketing-muted); margin-block: 0.75rem; }
+.marketing-site .marketing-post-featured-cover { display: block; aspect-ratio: 1200 / 630; overflow: hidden; background: var(--marketing-soft); }
+.marketing-site .marketing-post-featured-cover img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.marketing-site .marketing-container.marketing-post-list { width: min(100% - 2.5rem, 90rem); }
 .marketing-site .marketing-post-list { display: grid; gap: 2.5rem; align-items: stretch; }
 .marketing-site .marketing-post-card { display: flex; flex-direction: column; background: #fff; border: 1px solid var(--marketing-border); border-radius: 12px; overflow: hidden; }
 .marketing-site .marketing-post-card-cover { display: block; aspect-ratio: 1200 / 630; overflow: hidden; background: var(--marketing-soft); }
@@ -168,7 +177,7 @@
 .marketing-site .marketing-post-subtitle { font-size: clamp(1.05rem, 2vw, 1.3rem); color: var(--marketing-muted); margin-top: 0.75rem; }
 .marketing-site .marketing-post-cover { margin-block: clamp(1.5rem, 4vw, 2.5rem); }
 .marketing-site .marketing-post-cover img { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--marketing-border); }
-.marketing-site .marketing-newsletter { display: grid; gap: 1.5rem; align-items: center; padding: clamp(1.75rem, 4vw, 2.5rem); background: var(--marketing-aqua); border-radius: 16px; }
+.marketing-site .marketing-newsletter { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: center; padding: clamp(1.75rem, 4vw, 2.5rem); background: var(--marketing-aqua); border-radius: 16px; }
 .marketing-site .marketing-newsletter h2 { margin: 0; font-size: 1.5rem; }
 .marketing-site .marketing-newsletter > div > p { color: var(--marketing-muted); margin-top: 0.5rem; }
 .marketing-site .marketing-newsletter-form { display: flex; flex-wrap: wrap; gap: 0.75rem; }
@@ -336,6 +345,9 @@
   }
 }
 @media (min-width: 768px) {
+  .marketing-site .marketing-post-featured {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
   .marketing-site .marketing-capabilities {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -352,7 +364,7 @@
     gap: 4rem;
   }
   .marketing-post-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
