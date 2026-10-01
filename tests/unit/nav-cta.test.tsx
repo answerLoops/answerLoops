@@ -2,6 +2,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, waitFor, cleanup } from '@testing-library/react'
 import { NavCta } from '@/components/marketing/nav-cta'
+import { SIGNIN_HREF, START_HREF } from '@/components/marketing/nav-shared'
 
 /**
  * NavCta is the client island that restores the personalized header/drawer CTA
@@ -152,10 +153,10 @@ describe('NavCta — drawer variant only renders for the anonymous state', () =>
     render(<NavCta variant="drawer" initialState="anonymous" />)
 
     const signIn = screen.getByRole('link', { name: /^log in$/i })
-    expect(signIn.getAttribute('href')).toBe('https://dub.sh/sign-in-button')
+    expect(signIn.getAttribute('href')).toBe(SIGNIN_HREF)
 
     const trial = screen.getByRole('link', { name: /start trial/i })
-    expect(trial.getAttribute('href')).toBe('https://dub.sh/start-a-trial')
+    expect(trial.getAttribute('href')).toBe(START_HREF)
   })
 
   it('renders nothing when the fetch reports a non-anonymous state', async () => {

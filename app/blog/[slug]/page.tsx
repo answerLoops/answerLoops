@@ -81,8 +81,8 @@ export default async function BlogPostPage({
       <PageHero eyebrow={category} title={title}>
         <p className="marketing-post-subtitle">{subtitle}</p>
         <p className="marketing-meta">
-          <time dateTime={datePublished}>{formatPostDate(datePublished)}</time>{' '}
-          · <Link href="/about">{author}</Link>
+          <Link href="/about">{author}</Link>{' '}
+          · <time dateTime={datePublished}>{formatPostDate(datePublished)}</time>
         </p>
       </PageHero>
       {coverImage && (

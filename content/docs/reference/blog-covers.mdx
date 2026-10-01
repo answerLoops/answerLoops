@@ -1,0 +1,72 @@
+---
+title: Blog cover art
+description: How cover artwork appears on blog cards, articles, and shared links.
+---
+
+Blog cover art uses a consistent **1200 × 630** frame. The blog index presents
+the artwork above the author, publication date, title, and description.
+The article's publication date is displayed without shifting across time zones.
+
+## Cover selection
+
+A post can select its cover through the `coverImage` field in its frontmatter.
+Add `coverImageAlt` to describe the illustration for readers using assistive
+technology. A selected cover also appears above the article body.
+
+The dual-agent review article uses its generated cover at
+`/blog/dual-agent-review/opengraph-image`, so its index card, article, and
+Open Graph preview use the same artwork. The illustration shows the draft
+and review steps on an aqua-to-sand gradient.
+
+The MCP support article uses `/blog/mcp-server-for-support/opengraph-image`.
+Its illustration connects an agent to knowledge, tickets, and answers. A teal
+glow at the upper left fades toward warm sand at the lower right, giving this
+cover its own color balance and composition within the same brand palette.
+
+The Circle article uses `/blog/circle-community-support/opengraph-image`.
+A centered headline and overlapping conversation bubbles illustrate a member's
+question and a reply grounded in the community's knowledge base. Warm sand at
+the top fades into a teal glow beneath the conversation.
+
+The Discord article uses `/blog/discord-community-support/opengraph-image`.
+Its channel illustration keeps the question and reply together, with a floating
+thread label. A cool blue-teal gradient on the right balances a small sand glow
+at the lower left.
+
+The Discourse article uses `/blog/discourse-forum-support/opengraph-image`.
+Layered knowledge cards sit behind a new forum topic to show how existing
+knowledge informs fresh answers. A light lavender glow adds variety alongside
+the shared aqua, sand, and navy colors.
+
+The email article uses `/blog/email-support-automation/opengraph-image`.
+A navy envelope leads to a prepared reply in the same conversation. Lavender
+at the lower left and aqua at the upper right frame a warm, open center.
+
+The GitHub article uses `/blog/github-open-source-support/opengraph-image`.
+A repository README sits behind a community question answered from the docs.
+Lavender at the upper left fades toward aqua on the right and sand below.
+
+The Google Chat article uses `/blog/google-chat-internal-support/opengraph-image`.
+A team help space answers an onboarding question from the team knowledge base.
+Aqua above and lavender below frame a simple, upright conversation window.
+
+The Notion article uses `/blog/notion-knowledge-base-sync/opengraph-image`.
+A shared guide passes through a published step before becoming a support answer.
+Lavender on the left, a warm center, and aqua on the right frame the flow.
+
+Posts without a selected cover keep their generated title-and-category image
+on the index and in Open Graph previews. Existing integration marks stay intact.
+
+## Maintaining the artwork
+
+The shared React frame in `lib/blog/cover-art.tsx` defines the canvas, palette,
+brand mark, and footer. Each illustration supplies its own
+composition inside that frame. The image renderer in
+`app/blog/[slug]/opengraph-image.tsx` selects the artwork for the post.
+
+Use the public site's navy, teal, aqua, and sand palette. Keep the composition
+simple enough to recognize in a small card. Vary gradient direction, focal
+placement, and color balance for each article instead of repeating one
+background. Check both the full-size image
+and the blog at a 375px viewport when adding a cover. Cover illustrations are
+introduced one article at a time; adding one doesn't change other posts' art.

@@ -58,11 +58,10 @@ export default function BlogIndexPage() {
               </Link>
               <div className="marketing-post-card-body">
                 <p className="marketing-meta">
-                  <span className="marketing-post-category">{post.data.category}</span>{' '}
-                  · <time dateTime={post.data.datePublished}>
+                  <span className="block">{post.data.author}</span>
+                  <time className="block" dateTime={post.data.datePublished}>
                     {formatPostDate(post.data.datePublished)}
-                  </time>{' '}
-                  · {post.data.author}
+                  </time>
                 </p>
                 <h2>
                   <Link className="hover:text-blue-700" href={post.url}>

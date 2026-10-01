@@ -14,15 +14,17 @@ export async function GET() {
     const config = await getOrgAIConfig(access.orgId)
     if (!config) return Response.json(null)
 
-    // Never expose raw API keys to the client — return masked presence only
+    // Never expose raw API keys to the client — only presence + last 4 chars
     return Response.json({
       chat_provider: config.chat_provider,
       chat_model: config.chat_model,
       chat_api_key_set: !!config.chat_api_key,
+      chat_api_key_last4: config.chat_api_key ? config.chat_api_key.slice(-4) : null,
       chat_base_url: config.chat_base_url,
       embedding_provider: config.embedding_provider,
       embedding_model: config.embedding_model,
       embedding_api_key_set: !!config.embedding_api_key,
+      embedding_api_key_last4: config.embedding_api_key ? config.embedding_api_key.slice(-4) : null,
       embedding_base_url: config.embedding_base_url,
     })
   } catch (err) {

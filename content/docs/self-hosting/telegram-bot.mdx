@@ -1,63 +1,17 @@
 ---
 title: Telegram Bot Setup
-description: Connect answerLoops to a Telegram group or supergroup.
+description: Get a Telegram bot token from @BotFather and connect it to a self-hosted answerLoops deployment.
 ---
 
-## How it works
+Connecting Telegram works the same way on a self-hosted deployment as on managed cloud — there's no separate self-hosting flow. Create a bot with [@BotFather](https://t.me/BotFather), copy the token it gives you, and paste it into **Integrations → Telegram**. See the [full Telegram setup guide](/docs/integrations/telegram) for the step-by-step walkthrough, chat ID lookup, and troubleshooting.
 
-answerLoops uses Telegram's **webhook API** — no persistent process required. Telegram pushes updates to your answerLoops instance via `POST /api/telegram/webhook`. The platform triage, embeds, and AI answer the question, then replies in the same chat.
+## Self-hosting-specific env var
 
-## 1. Create a bot with BotFather
-
-1. Open Telegram and search for **@BotFather**
-2. Send `/newbot` and follow the prompts
-3. Copy the bot token — format: `123456789:AAHdqTcv...`
-
-## 2. Configure in answerLoops Settings
-
-Go to **Integrations → Telegram** and enter:
-
-- **Bot Token** — from BotFather
-- **Chat IDs** (optional) — group/supergroup IDs to monitor. Leave blank to monitor all chats the bot is added to. Group chat IDs are negative numbers (e.g. `-1001234567890`). Forward a message to [@userinfobot](https://t.me/userinfobot) to get the chat ID.
-- **Escalation username** (optional) — @mentioned when AI confidence is below threshold
-- **Confidence threshold** — 0–1, default 0.8
-
-Click **Connect** to save.
-
-## 3. Add the bot to your group
-
-In Telegram, add your bot to the group or supergroup you want to monitor. The bot needs permission to read messages.
-
-For a supergroup: go to Group Info → Edit → Administrators → Add Administrator → search your bot name.
-
-## 4. Register the webhook
-
-After saving the token, click **Register webhook** in Settings. This calls Telegram's `setWebhook` API and points it at your answerLoops instance.
-
-You can also call this endpoint directly:
-
-```bash
-POST /api/telegram/register
-```
-
-Requires an active session (dashboard login).
-
-## 5. Verify
-
-Send a message in your monitored group. A new ticket should appear in `/tickets` within a few seconds.
-
-## Environment variables
-
-No additional env vars are required beyond the token saved in Settings. For a platform default (before any org configures their own token):
+One optional environment variable matters only for self-hosted deployments — everything else is configured per-organization through the Settings UI:
 
 ```dotenv
-TELEGRAM_BOT_TOKEN=123456789:AAHdqTcv...
+TELEGRAM_BOT_TOKEN=123456789:AAHdqTcv...  # optional fallback token, skips per-org setup for a single-tenant deployment
+TELEGRAM_WEBHOOK_BASE_URL=https://your-tunnel.example.com  # optional, overrides AUTH_URL for the webhook only — see the integration guide's troubleshooting for when you need this
 ```
 
-## Notes
-
-- Telegram group chats IDs are negative integers. Supergroup IDs start with `-100`.
-- The bot only processes text messages. Stickers, photos, and media are silently ignored.
-- Messages under 10 characters are ignored (too short to be a support question).
-- The webhook secret is auto-generated per org and verified on every incoming update — Telegram cannot spoof messages.
-- Unlike Discord (persistent gateway), Telegram is fully stateless — webhook delivery is Telegram's responsibility.
+For everything else — creating the bot, finding a chat ID, registering the webhook, and diagnosing a bot that connects but never replies — see [Telegram](/docs/integrations/telegram).

@@ -24,7 +24,12 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'Bot secret missing — re-save the integration' }, { status: 400 })
     }
 
-    const baseUrl = process.env.AUTH_URL ?? `${req.nextUrl.protocol}//${req.nextUrl.host}`
+    // TELEGRAM_WEBHOOK_BASE_URL lets a self-hosted dev setup point Telegram's
+    // webhook at a tunnel (ngrok, etc.) independently of AUTH_URL, which also
+    // drives the OAuth callback host — the two need different values whenever
+    // the app itself is reached at a different origin than the public
+    // tunnel, e.g. testing locally over HTTPS while signing in on localhost.
+    const baseUrl = process.env.TELEGRAM_WEBHOOK_BASE_URL ?? process.env.AUTH_URL ?? `${req.nextUrl.protocol}//${req.nextUrl.host}`
     const result = await registerTelegramWebhook(integration.bot_token, integration.bot_secret, baseUrl)
 
     if (!result.ok) {

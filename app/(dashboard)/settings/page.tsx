@@ -384,10 +384,12 @@ interface AIConfig {
   chat_provider: string
   chat_model: string
   chat_api_key_set: boolean
+  chat_api_key_last4: string | null
   chat_base_url: string | null
   embedding_provider: string
   embedding_model: string
   embedding_api_key_set: boolean
+  embedding_api_key_last4: string | null
   embedding_base_url: string | null
 }
 
@@ -545,11 +547,19 @@ export function AIModelSection() {
           <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 divide-y divide-gray-100">
             <ReadOnlyRow label="Chat provider" value={chatMeta.label} />
             <ReadOnlyRow label="Model" value={config.chat_model} />
-            <ReadOnlyRow label="Chat API key" value={config.chat_api_key_set ? '••••••••• (saved)' : 'Not set'} />
+            <ReadOnlyRow
+              label="Chat API key"
+              value={config.chat_api_key_set ? (config.chat_api_key_last4 ? `••••${config.chat_api_key_last4} (connected)` : '••••••••• (saved)') : 'Not set'}
+            />
             {config.chat_base_url && <ReadOnlyRow label="Base URL" value={config.chat_base_url} />}
             <ReadOnlyRow label="Embedding provider" value={EMBEDDING_PROVIDERS.find(p => p.value === config.embedding_provider)?.label ?? config.embedding_provider} />
             <ReadOnlyRow label="Embedding model" value={config.embedding_model} />
-            {config.embedding_api_key_set && <ReadOnlyRow label="Embedding API key" value="••••••••• (saved)" />}
+            {config.embedding_api_key_set && (
+              <ReadOnlyRow
+                label="Embedding API key"
+                value={config.embedding_api_key_last4 ? `••••${config.embedding_api_key_last4} (connected)` : '••••••••• (saved)'}
+              />
+            )}
           </div>
         )}
 

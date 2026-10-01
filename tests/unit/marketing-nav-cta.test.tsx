@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { Nav, navState } from '@/components/marketing/chrome'
+import { SIGNIN_HREF, START_HREF } from '@/components/marketing/nav-shared'
 
 /**
  * The marketing header used to decide its call to action from authentication
@@ -87,13 +88,13 @@ describe('the header CTA matches what the visitor can actually do', () => {
     expect(
       trial.getAttribute('href'),
       'trial buttons use the shared campaign entry point',
-    ).toBe('https://dub.sh/start-a-trial')
+    ).toBe(START_HREF)
 
     const signIn = screen.getByRole('link', { name: /^log in$/i })
     expect(
       signIn.getAttribute('href'),
       'returning users must land on the sign-in framing, not "Create your account"',
-    ).toBe('https://dub.sh/sign-in-button')
+    ).toBe(SIGNIN_HREF)
 
     expect(screen.queryByRole('link', { name: /go to dashboard/i })).toBeNull()
   })

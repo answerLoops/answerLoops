@@ -5,6 +5,10 @@ description: Configure answer review and automatic replies for connected channel
 
 An automated answer is called a **deflection** in the dashboard. It uses two AI steps: a draft based on retrieved knowledge, followed by a separate review against the available evidence.
 
+## Dual-agent review
+
+We call this two-step design **dual-agent review**: one agent retrieves your documentation and drafts a reply, and a separate agent checks that draft against the retrieved sources before assigning a confidence score. The score reflects whether the review agent found the draft supported by the evidence — not how confident the drafting agent was in its own output. See [why we built it this way](/blog/dual-agent-review) for the reasoning.
+
 ## How an answer is prepared
 
 1. A question arrives through a connected channel.

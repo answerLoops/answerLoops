@@ -3,7 +3,7 @@ title: MCP Server
 description: Give any AI agent (Claude, Cursor, your own bot) direct access to your knowledge base, FAQ, and tickets via the Model Context Protocol.
 ---
 
-answerLoops ships an [MCP](https://modelcontextprotocol.io) server so any MCP-compatible agent can search your knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline that powers Discord, Slack, and email.
+An MCP server for customer support means an agent — Claude, Cursor, a custom internal bot, anything that speaks [MCP](https://modelcontextprotocol.io) — can search your knowledge base, read tickets, and generate a source-grounded answer directly, without a human opening a chat widget first. answerLoops ships one: any MCP-compatible agent can search your knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline that powers Discord, Slack, and email.
 
 <Tip>
   This is what makes answerLoops agent-first: the tools below aren't a separate integration bolted on top, they call the exact same triage/answer pipeline every other channel uses, including deflection-limit metering and org-scoped data isolation.
@@ -115,6 +115,24 @@ The second exists because only high-confidence answers are billed as deflections
 - Each key is further limited to the scopes it was granted, checked before the call does any work
 - Revoked and expired keys are rejected before any tool runs
 - Usage is recorded against the specific key that made the call, so a suspected leak can be traced to one credential instead of forcing a blanket rotation
+
+## FAQ
+
+### Does an agent use separate knowledge from the dashboard?
+
+No. Agent requests use the knowledge in the workspace associated with the API key — the same knowledge base, FAQ digest, and tickets your team sees in the dashboard.
+
+### Does a generated answer go through the same review as a Discord or Slack reply?
+
+Yes. `generate_answer` and the auto-triage path in `create_ticket` run through the same drafting and [dual-agent review](/docs/product/ai-deflection#dual-agent-review) steps as every other channel — a separate agent checks the draft against retrieved sources before a confidence score is assigned.
+
+### Do generated answers count toward my plan's usage?
+
+High-confidence standalone answers from `generate_answer` count toward the monthly automated-answer allowance, pooled with auto-deflected tickets from every other channel. A separate, higher ceiling applies to total `generate_answer` calls regardless of confidence — see [Tools](#tools) above for the exact limits.
+
+### Can I use this without an MCP-native client?
+
+Yes. The [Agent API](/docs/integrations/agent-api) exposes the same operations as plain REST + OpenAPI for frameworks that don't speak MCP's JSON-RPC transport, using the same API key.
 
 ### Treat tool output as data, not instructions
 

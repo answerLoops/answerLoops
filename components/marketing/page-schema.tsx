@@ -12,9 +12,11 @@ export interface PageSchemaProps {
   path: string
   breadcrumbs?: Breadcrumb[]
   type?: 'WebPage' | 'CollectionPage'
+  /** Rendered as FAQPage schema when a page already shows this content as visible Q&A — never invent questions the page doesn't ask. */
+  faq?: Array<{ question: string; answer: string }>
 }
 
-export function PageSchema({ name, description, path, breadcrumbs = [], type = 'WebPage' }: PageSchemaProps) {
+export function PageSchema({ name, description, path, breadcrumbs = [], type = 'WebPage', faq = [] }: PageSchemaProps) {
   const url = `https://answerloops.com${path}`
   const items = [{ name: 'answerLoops', path: '/' }, ...breadcrumbs, { name, path }]
     .filter((item, index, all) => all.findIndex((candidate) => candidate.path === item.path) === index)
@@ -42,6 +44,19 @@ export function PageSchema({ name, description, path, breadcrumbs = [], type = '
           item: `https://answerloops.com${item.path}`,
         })),
       },
+      ...(faq.length > 0
+        ? [
+            {
+              '@type': 'FAQPage',
+              '@id': `${url}#faq`,
+              mainEntity: faq.map((item) => ({
+                '@type': 'Question',
+                name: item.question,
+                acceptedAnswer: { '@type': 'Answer', text: item.answer },
+              })),
+            },
+          ]
+        : []),
     ],
   }
 

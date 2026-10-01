@@ -85,6 +85,31 @@ export async function runMigrations() {
     console.log(`[migrate] ${file} done`)
   }
 
+  // Enables row-level security on every table in public that doesn't have it
+  // yet, run after migrations so newly-created tables are covered too. The
+  // app connects as a role that may not own every table (managed Postgres
+  // sometimes provisions tables under a separate admin role) — skip a table
+  // the connected role can't alter instead of failing startup. This only
+  // flips the switch; it defines no policies and does not FORCE row
+  // security on the table owner, so those stay the app's responsibility.
+  await db.execute(sql`
+    DO $$
+    DECLARE
+      r RECORD;
+    BEGIN
+      FOR r IN
+        SELECT tablename FROM pg_tables
+        WHERE schemaname = 'public' AND NOT rowsecurity
+      LOOP
+        BEGIN
+          EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', r.tablename);
+        EXCEPTION WHEN insufficient_privilege THEN
+          CONTINUE;
+        END;
+      END LOOP;
+    END $$;
+  `)
+
   // Idempotent trigger: fires pg_notify('config_changed') whenever the
   // integrations table is written. The bot LISTENs on this channel and
   // hot-swaps its config without polling.

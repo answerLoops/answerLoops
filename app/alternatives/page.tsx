@@ -13,15 +13,33 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'Compare answerLoops',
   description:
-    'Compare answerLoops with Intercom, Chatbase, Plain, Pylon, and Zendesk AI.',
+    'Compare answerLoops with Intercom Fin, Khoros Aurora AI, Bettermode, Kapa.ai, Chatbase, Plain, Pylon, and Zendesk AI.',
   path: '/alternatives',
 })
 const COMPARISONS = [
   {
     slug: 'intercom',
-    name: 'Intercom',
+    name: 'Intercom Fin',
     summary:
       'Intercom combines a helpdesk with Fin, its AI customer agent. Fin also connects to other helpdesks.',
+  },
+  {
+    slug: 'khoros-aurora-ai',
+    name: 'Khoros Aurora AI',
+    summary:
+      'Aurora AI layers grounded answers, moderation, and workflow automation onto the Khoros enterprise community platform.',
+  },
+  {
+    slug: 'bettermode',
+    name: 'Bettermode',
+    summary:
+      'Bettermode is a hosted community platform with AI search available on its Growth plan and up.',
+  },
+  {
+    slug: 'kapa-ai',
+    name: 'Kapa.ai',
+    summary:
+      'Kapa.ai is a hosted answer bot for technical documentation, built for Discord, Slack, and a website widget.',
   },
   {
     slug: 'chatbase',

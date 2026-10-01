@@ -9,12 +9,21 @@ export function navState(loggedIn: boolean, hasAccess: boolean): NavState {
   return hasAccess ? 'active' : 'no-plan'
 }
 
-// Returning users enter through the shared sign-in campaign link.
-export const SIGNIN_HREF = 'https://dub.sh/sign-in-button'
+// Returning users enter through the shared sign-in campaign link in
+// production, tracked by Dub. In local/dev builds NEXT_PUBLIC_APP_URL is
+// unset, so fall back to the in-app route directly — the campaign link
+// always 302s to the production dashboard and can't reach a dev host.
+export const SIGNIN_HREF = process.env.NEXT_PUBLIC_APP_URL
+  ? 'https://dub.sh/sign-in-button'
+  : '/login'
 
 // Public trial buttons share the same campaign entry point.
-export const START_HREF = 'https://dub.sh/start-a-trial'
-export const PRICING_HREF = 'https://dub.sh/pricing-page'
+export const START_HREF = process.env.NEXT_PUBLIC_APP_URL
+  ? 'https://dub.sh/start-a-trial'
+  : '/start-trial'
+export const PRICING_HREF = process.env.NEXT_PUBLIC_APP_URL
+  ? 'https://dub.sh/pricing-page'
+  : '/pricing'
 
 // Keep the trial and sign-in labels consistent across desktop and mobile.
 export const START_LABEL = 'Start trial'
