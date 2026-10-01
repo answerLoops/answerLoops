@@ -38,6 +38,19 @@ export default function BlogIndexPage() {
           team building answerLoops.
         </p>
       </PageHero>
+      <section className="marketing-section">
+        <div className="marketing-container marketing-newsletter">
+          <div>
+            <h2>Get new posts by email</h2>
+            <p>
+              Integration guides and notes on building answerLoops, sent
+              when there&apos;s something worth reading. No spam, unsubscribe
+              anytime.
+            </p>
+          </div>
+          <NewsletterForm />
+        </div>
+      </section>
       <section className="marketing-section marketing-soft">
         <div className="marketing-container marketing-post-list">
           {posts.map((post) => (
@@ -75,19 +88,6 @@ export default function BlogIndexPage() {
               </div>
             </article>
           ))}
-        </div>
-      </section>
-      <section className="marketing-section">
-        <div className="marketing-container marketing-newsletter">
-          <div>
-            <h2>Get new posts by email</h2>
-            <p>
-              Integration guides and notes on building answerLoops, sent
-              when there&apos;s something worth reading. No spam, unsubscribe
-              anytime.
-            </p>
-          </div>
-          <NewsletterForm />
         </div>
       </section>
     </MarketingPage>
