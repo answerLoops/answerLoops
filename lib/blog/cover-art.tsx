@@ -49,6 +49,34 @@ export function BlogCoverFrame({
   )
 }
 
+export function GoogleChatSupportCover({ logoSrc }: { logoSrc: string }) {
+  return (
+    <BlogCoverFrame
+      logoSrc={logoSrc}
+      caption="Internal support, right where your team talks."
+      backgroundImage="radial-gradient(ellipse at 48% -18%, #a6dfe0 0%, rgba(166,223,224,0) 70%), radial-gradient(ellipse at 100% 110%, #d8cef1 0%, rgba(216,206,241,0) 65%), linear-gradient(155deg, #eef7f7, #faf4e8)"
+    >
+      <div style={{ position: 'absolute', left: 78, top: 190, display: 'flex', flexDirection: 'column', fontSize: 60, lineHeight: 1.12, letterSpacing: -2 }}>
+        <span>Team questions.</span>
+        <span style={{ color: '#168193' }}>One helpful space.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 80, top: 358, display: 'flex', fontSize: 23, color: '#496575' }}>Internal support in Google Chat</div>
+      <div style={{ position: 'absolute', left: 642, top: 143, width: 460, height: 344, borderRadius: 24, background: '#fffffff2', border: '2px solid white', display: 'flex', flexDirection: 'column', boxShadow: '0 16px 38px #082e5010' }}>
+        <div style={{ height: 77, padding: '0 26px', borderBottom: '1px solid #dce8e9', display: 'flex', alignItems: 'center', gap: 14, fontSize: 24 }}>
+          <svg width="34" height="34" viewBox="0 0 24 24"><path d="M4 3h16v13H9l-5 5V3Z" fill="#34a853" /><path d="M4 3h16v4H4Z" fill="#a8dab5" /><path d="M8 9h8v2H8zm0 4h5v2H8z" fill="white" /></svg>
+          <span>Team help</span>
+        </div>
+        <div style={{ margin: '25px 26px 0', padding: '17px 20px', borderRadius: '16px 16px 16px 3px', background: '#eef5f6', fontSize: 23, display: 'flex' }}>Where do I start?</div>
+        <div style={{ margin: '17px 26px 0 54px', padding: '17px 20px', borderRadius: '16px 16px 3px 16px', background: coverPalette.navy, color: 'white', fontSize: 23, display: 'flex' }}>Here’s your onboarding guide.</div>
+      </div>
+      <div style={{ position: 'absolute', left: 729, top: 451, width: 286, height: 76, borderRadius: 16, border: '2px solid white', background: '#eee9f7', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 13, fontSize: 21, boxShadow: '0 10px 24px #082e5008' }}>
+        <svg width="25" height="28" viewBox="0 0 25 28"><path d="M5 2h11l5 5v19H5V2Z" fill="white" stroke="#8f83ae" strokeWidth="1.5" /><path d="M9 11h8M9 16h8M9 21h5" stroke="#8f83ae" strokeWidth="1.5" /></svg>
+        <span>Your team’s knowledge</span>
+      </div>
+    </BlogCoverFrame>
+  )
+}
+
 export function GitHubSupportCover({ logoSrc }: { logoSrc: string }) {
   return (
     <BlogCoverFrame
