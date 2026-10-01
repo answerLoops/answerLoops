@@ -49,6 +49,43 @@ export function BlogCoverFrame({
   )
 }
 
+export function NotionKnowledgeCover({ logoSrc }: { logoSrc: string }) {
+  return (
+    <BlogCoverFrame
+      logoSrc={logoSrc}
+      caption="The pages you maintain. The answers people need."
+      backgroundImage="radial-gradient(ellipse at 0% 70%, #d5c9ec 0%, rgba(213,201,236,0) 58%), radial-gradient(ellipse at 100% 25%, #b9e0e5 0%, rgba(185,224,229,0) 58%), linear-gradient(105deg, #f4eff8, #faf4e8 60%, #eef7f7)"
+    >
+      <div style={{ position: 'absolute', left: 78, right: 78, top: 139, display: 'flex', justifyContent: 'center', fontSize: 58, letterSpacing: -2 }}>
+        <span>Your docs.</span><span style={{ color: '#168193', marginLeft: 16 }}>Put to work.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 78, right: 78, top: 215, display: 'flex', justifyContent: 'center', fontSize: 23, color: '#496575' }}>From Notion pages to helpful support answers</div>
+      <div style={{ position: 'absolute', left: 128, top: 296, width: 310, height: 215, padding: 25, borderRadius: 18, background: '#fffffff2', border: '2px solid white', display: 'flex', flexDirection: 'column', boxShadow: '0 14px 30px #082e500a' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 13, fontSize: 23 }}>
+          <div style={{ width: 34, height: 36, border: '2px solid #202020', borderRadius: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#202020', fontSize: 26, fontWeight: 700 }}>N</div>
+          <span>Getting started</span>
+        </div>
+        <div style={{ marginTop: 25, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ height: 7, width: 230, borderRadius: 4, background: '#d7dfE5' }} />
+          <div style={{ height: 7, width: 196, borderRadius: 4, background: '#d7dfE5' }} />
+          <div style={{ height: 7, width: 213, borderRadius: 4, background: '#d7dfE5' }} />
+        </div>
+        <span style={{ marginTop: 23, fontSize: 17, color: '#496575' }}>Shared from Notion</span>
+      </div>
+      <svg width="304" height="30" viewBox="0 0 304 30" style={{ position: 'absolute', left: 448, top: 384 }}><path d="M0 15H296M286 5l10 10-10 10" fill="none" stroke="#168fa3" strokeWidth="2" /></svg>
+      <div style={{ position: 'absolute', left: 512, top: 358, width: 174, height: 82, borderRadius: 41, background: '#e3f1ef', border: '2px solid white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+        <svg width="21" height="21" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" fill="none" stroke="#168193" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        <span style={{ fontSize: 20, color: '#176c74' }}>Published</span>
+      </div>
+      <div style={{ position: 'absolute', left: 763, top: 310, width: 310, height: 195, padding: 27, borderRadius: '20px 20px 20px 4px', background: coverPalette.navy, color: 'white', display: 'flex', flexDirection: 'column', boxShadow: '0 14px 30px #082e5010' }}>
+        <span style={{ color: '#b9e0e5', fontSize: 17 }}>A helpful answer</span>
+        <span style={{ marginTop: 18, fontSize: 29, lineHeight: 1.2 }}>Here’s how to get started.</span>
+        <span style={{ marginTop: 20, fontSize: 17, color: '#b9e0e5' }}>From your knowledge base</span>
+      </div>
+    </BlogCoverFrame>
+  )
+}
+
 export function GoogleChatSupportCover({ logoSrc }: { logoSrc: string }) {
   return (
     <BlogCoverFrame
