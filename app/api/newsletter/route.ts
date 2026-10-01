@@ -1,12 +1,12 @@
+import crypto from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import { getDb } from '@/lib/db/drizzle'
-import { newsletterSubscribers } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
+import { getSubscriberByEmail, createSubscriber, resubscribe } from '@/lib/db/queries/newsletter'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clientIp } from '@/lib/http/client-ip'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
+import { sendNewsletterConfirmation } from '@/lib/email/send'
 
 const MOD = 'api/newsletter'
 
@@ -54,22 +54,35 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
   }
 
+  let unsubscribeToken: string
   try {
-    const db = await getDb()
-
-    const existing = await db
-      .select()
-      .from(newsletterSubscribers)
-      .where(eq(newsletterSubscribers.email, normalized))
-      .limit(1)
-    if (existing.length > 0) {
+    const existing = await getSubscriberByEmail(normalized)
+    if (existing && !existing.unsubscribed_at) {
+      // Already subscribed — no error, no repeat confirmation email.
       return NextResponse.json({ ok: true, already: true })
     }
 
-    await db.insert(newsletterSubscribers).values({ email: normalized })
+    unsubscribeToken = crypto.randomBytes(32).toString('hex')
+    if (existing) {
+      await resubscribe(normalized, unsubscribeToken)
+    } else {
+      await createSubscriber({ email: normalized, unsubscribeToken })
+    }
   } catch (err) {
     logger.error('newsletter signup failed', { module: MOD, requestId: getRequestId(req), error: err })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+
+  try {
+    await sendNewsletterConfirmation(normalized, unsubscribeToken)
+  } catch (err) {
+    // The subscriber row is already committed — a mail provider hiccup here
+    // is not a reason to tell them the signup failed.
+    logger.error('newsletter confirmation email failed', {
+      module: MOD,
+      requestId: getRequestId(req),
+      error: err,
+    })
   }
 
   return NextResponse.json({ ok: true })

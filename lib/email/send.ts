@@ -160,6 +160,50 @@ export async function sendWaitlistConfirmation(email: string): Promise<void> {
  * failing is not a reason to fail somebody's signup — they would be left with
  * an account they cannot get into because a mail provider had a bad minute.
  */
+/**
+ * Sent once per blog newsletter signup (and again on a resubscribe). Signed
+ * personally from Nathan rather than the product's transactional voice —
+ * this is a blog subscription, not an account notification, so it reads like
+ * a founder writing to someone who just signed up, not a system email.
+ */
+export async function sendNewsletterConfirmation(
+  email: string,
+  unsubscribeToken: string
+): Promise<void> {
+  if (MOCK_EXTERNALS || !process.env.RESEND_API_KEY) return
+
+  const fromAddress =
+    process.env.RESEND_NEWSLETTER_FROM ??
+    process.env.RESEND_FROM ??
+    'Nathan from answerLoops <nathan@answerloops.com>'
+  const base = appOrigin() ?? 'https://answerloops.com'
+  const unsubscribeUrl = `${base}/unsubscribe?token=${unsubscribeToken}`
+
+  await client().emails.send({
+    from: fromAddress,
+    to: [email],
+    replyTo: SUPPORT_EMAIL,
+    subject: 'Thanks for signing up for the answerLoops newsletter',
+    html: `
+      <div style="${BASE_STYLE}">
+        <p style="${MUTED};margin-bottom:16px">Hey,</p>
+        <p style="${MUTED};margin-bottom:16px">
+          Thank you for signing up for the answerLoops newsletter. We've added you to
+          our newsletter list — you'll hear from us when there's an integration guide
+          or something else worth reading, and not before.
+        </p>
+        <p style="${MUTED};margin-bottom:24px">
+          — Nathan, Founder of answerLoops
+        </p>
+        <p style="color:#9ca3af;font-size:12px;margin-top:24px">
+          Didn't mean to sign up, or changed your mind?
+          <a href="${unsubscribeUrl}" style="color:#6b7280">Unsubscribe</a>.
+        </p>
+      </div>
+    `,
+  })
+}
+
 export async function sendWelcomeEmail(email: string, name: string | null): Promise<void> {
   if (MOCK_EXTERNALS || !process.env.RESEND_API_KEY) return
 

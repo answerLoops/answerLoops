@@ -47,6 +47,17 @@ describe('drizzle/0044_newsletter_subscribers.sql', () => {
   })
 })
 
+describe('drizzle/0045_newsletter_unsubscribe.sql', () => {
+  const file = path.join(ROOT, 'drizzle/0045_newsletter_unsubscribe.sql')
+
+  it('exists and adds the unsubscribe token + unsubscribed_at columns', () => {
+    expect(fs.existsSync(file)).toBe(true)
+    const sql = fs.readFileSync(file, 'utf-8')
+    expect(sql).toMatch(/ADD COLUMN IF NOT EXISTS unsubscribe_token/i)
+    expect(sql).toMatch(/ADD COLUMN IF NOT EXISTS unsubscribed_at/i)
+  })
+})
+
 describe('lib/db/schema.ts: newsletterSubscribers', () => {
   it('exports a newsletterSubscribers table distinct from waitlist', async () => {
     const schema = await import('../../lib/db/schema')
@@ -57,12 +68,29 @@ describe('lib/db/schema.ts: newsletterSubscribers', () => {
 
   it('maps to the newsletter_subscribers table with an email column', () => {
     const schemaSrc = read('lib/db/schema.ts')
-    const tableIdx = schemaSrc.indexOf("pgTable('newsletter_subscribers'")
+    const tableIdx = schemaSrc.indexOf("pgTable(\n  'newsletter_subscribers'")
     expect(tableIdx).toBeGreaterThan(-1)
     // The waitlist table definition must be a separate block, not reused.
     const waitlistIdx = schemaSrc.indexOf("pgTable('waitlist'")
     expect(waitlistIdx).toBeGreaterThan(-1)
     expect(tableIdx).not.toBe(waitlistIdx)
+  })
+
+  it('carries an unsubscribe token distinct from the email column', () => {
+    const schemaSrc = read('lib/db/schema.ts')
+    expect(schemaSrc).toContain("unsubscribeToken: text('unsubscribe_token')")
+    expect(schemaSrc).toContain("unsubscribedAt: text('unsubscribed_at')")
+  })
+})
+
+describe('lib/db/queries/newsletter.ts', () => {
+  it('exposes signup, resubscribe, and unsubscribe-by-token helpers', async () => {
+    const queries = await import('../../lib/db/queries/newsletter')
+    expect(queries).toHaveProperty('getSubscriberByEmail')
+    expect(queries).toHaveProperty('createSubscriber')
+    expect(queries).toHaveProperty('resubscribe')
+    expect(queries).toHaveProperty('getSubscriberByUnsubscribeToken')
+    expect(queries).toHaveProperty('unsubscribeByToken')
   })
 })
 
@@ -100,9 +128,9 @@ describe('newsletter route carries the same abuse controls as waitlist', () => {
 
   it('checks for an existing subscriber before inserting and returns already:true instead of a duplicate insert', () => {
     const src = read('app/api/newsletter/route.ts')
-    const existingIdx = src.indexOf('.where(eq(newsletterSubscribers.email, normalized))')
+    const existingIdx = src.indexOf('getSubscriberByEmail(normalized)')
     const alreadyIdx = src.indexOf('{ ok: true, already: true }')
-    const insertIdx = src.indexOf('db.insert(newsletterSubscribers)')
+    const insertIdx = src.indexOf('createSubscriber({ email: normalized')
     expect(existingIdx).toBeGreaterThan(-1)
     expect(alreadyIdx).toBeGreaterThan(-1)
     expect(insertIdx).toBeGreaterThan(-1)
@@ -110,10 +138,27 @@ describe('newsletter route carries the same abuse controls as waitlist', () => {
     expect(alreadyIdx).toBeLessThan(insertIdx)
   })
 
-  it('inserts into newsletterSubscribers and returns ok:true on success', () => {
+  it('resubscribes an unsubscribed row instead of erroring on the unique email', () => {
     const src = read('app/api/newsletter/route.ts')
-    expect(src).toContain('await db.insert(newsletterSubscribers).values({ email: normalized })')
+    expect(src).toContain('!existing.unsubscribed_at')
+    expect(src).toContain('await resubscribe(normalized, unsubscribeToken)')
+  })
+
+  it('creates a subscriber with a fresh unsubscribe token and returns ok:true on success', () => {
+    const src = read('app/api/newsletter/route.ts')
+    expect(src).toContain("unsubscribeToken = crypto.randomBytes(32).toString('hex')")
     expect(src).toContain('return NextResponse.json({ ok: true })')
+  })
+
+  it('sends a confirmation email but never fails the signup if it throws', () => {
+    const src = read('app/api/newsletter/route.ts')
+    expect(src).toContain("import { sendNewsletterConfirmation } from '@/lib/email/send'")
+    const sendIdx = src.indexOf('await sendNewsletterConfirmation(normalized, unsubscribeToken)')
+    const catchIdx = src.indexOf('newsletter confirmation email failed')
+    const finalOkIdx = src.lastIndexOf('return NextResponse.json({ ok: true })')
+    expect(sendIdx).toBeGreaterThan(-1)
+    expect(catchIdx).toBeGreaterThan(sendIdx)
+    expect(finalOkIdx).toBeGreaterThan(sendIdx)
   })
 
   it('returns 400 for a non-string or malformed email, and 500 on a DB failure', () => {
@@ -124,12 +169,52 @@ describe('newsletter route carries the same abuse controls as waitlist', () => {
   })
 })
 
-describe('auth.ts PUBLIC_PATHS includes /api/newsletter', () => {
-  it('is present in the PUBLIC_PATHS allowlist', () => {
+describe('auth.ts PUBLIC_PATHS includes /api/newsletter and /unsubscribe', () => {
+  it('are both present in the PUBLIC_PATHS allowlist', () => {
     const authSrc = read('auth.ts')
     const match = authSrc.match(/const PUBLIC_PATHS = \[([\s\S]*?)\]/)
     expect(match, 'Could not find PUBLIC_PATHS in auth.ts').not.toBeNull()
     const publicPaths = match![1].split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean)
     expect(publicPaths).toContain('/api/newsletter')
+    expect(publicPaths).toContain('/unsubscribe')
+  })
+})
+
+describe('lib/marketing/website-paths.ts WEBSITE_PATHS includes /unsubscribe', () => {
+  it('is present so the unsubscribe page stays on the marketing host instead of 307ing to /login on the app subdomain', () => {
+    const websitePathsSrc = read('lib/marketing/website-paths.ts')
+    const match = websitePathsSrc.match(/export const WEBSITE_PATHS = \[([\s\S]*?)\] as const/)
+    expect(match, 'Could not find WEBSITE_PATHS in lib/marketing/website-paths.ts').not.toBeNull()
+    const websitePaths = match![1].split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean)
+    expect(websitePaths).toContain('/unsubscribe')
+  })
+})
+
+describe('app/unsubscribe/page.tsx', () => {
+  it('awaits the token search param and unsubscribes by token', () => {
+    const src = read('app/unsubscribe/page.tsx')
+    expect(src).toContain("import { unsubscribeByToken } from '@/lib/db/queries/newsletter'")
+    expect(src).toContain('searchParams: Promise<{ token?: string }>')
+    expect(src).toContain('await searchParams')
+    expect(src).toContain('unsubscribeByToken(token)')
+  })
+})
+
+describe('lib/email/send.ts: sendNewsletterConfirmation', () => {
+  it('is signed from Nathan and links to the unsubscribe page with the token', () => {
+    const src = read('lib/email/send.ts')
+    const fnIdx = src.indexOf('export async function sendNewsletterConfirmation')
+    expect(fnIdx).toBeGreaterThan(-1)
+    const fnSrc = src.slice(fnIdx, src.indexOf('\n}', fnIdx))
+    expect(fnSrc).toContain('Nathan, Founder of answerLoops')
+    expect(fnSrc).toContain('/unsubscribe?token=')
+    expect(fnSrc).toContain('RESEND_NEWSLETTER_FROM')
+  })
+
+  it('is a no-op without a Resend API key, same as the other transactional emails', () => {
+    const src = read('lib/email/send.ts')
+    const fnIdx = src.indexOf('export async function sendNewsletterConfirmation')
+    const fnSrc = src.slice(fnIdx, src.indexOf('\n}', fnIdx))
+    expect(fnSrc).toContain('if (MOCK_EXTERNALS || !process.env.RESEND_API_KEY) return')
   })
 })

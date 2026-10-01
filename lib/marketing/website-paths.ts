@@ -29,6 +29,7 @@ export const WEBSITE_PATHS = [
   '/alternatives',
   '/about',
   '/blog',
+  '/unsubscribe',
   '/docs',
   '/privacy',
   '/terms',
