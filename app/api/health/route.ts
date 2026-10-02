@@ -7,8 +7,8 @@ export const dynamic = 'force-dynamic'
 // Railway's deploy healthcheck and the Docker HEALTHCHECK both probe this
 // path (see railway.toml, docker-compose.prod.yml), and .github/workflows/
 // keep-alive.yml probes it on a schedule. The DB query is intentional here:
-// prod runs on the database host's free tier, which auto-pauses a project
-// after 7 days with no activity, so this endpoint needs to touch the
+// prod runs on the database which can auto-pauses a project
+// so to ensure it stays healthy, an endpoint needs to touch the
 // database, not just report the process is up.
 export async function GET() {
   await getDb().execute(sql`select 1`)
