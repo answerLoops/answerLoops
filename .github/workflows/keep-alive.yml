@@ -1,9 +1,6 @@
 name: Keep-alive ping
 
-# Prod runs on Supabase's free tier, which auto-pauses a project after 7 days
-# with no database activity. /api/health issues a real query (see its
-# comment), so hitting it on a schedule keeps the project active without
-# needing a paid plan.
+# Prod runs on the database and it should have a weekly health check
 on:
   schedule:
     - cron: '0 12 */3 * *'
