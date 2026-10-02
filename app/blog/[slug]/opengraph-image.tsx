@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 import { getBlogPost } from '@/lib/blog/posts'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseSupportCover, DualAgentReviewCover, EmailSupportCover, GitHubSupportCover, GoogleChatSupportCover, McpSupportCover, NotionKnowledgeCover, SlackSupportCover, TelegramSupportCover } from '@/lib/blog/cover-art'
+import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseSupportCover, DualAgentReviewCover, EmailSupportCover, GitHubSupportCover, GoogleChatSupportCover, McpSupportCover, NotionKnowledgeCover, SlackSupportCover, TelegramSupportCover, MultiplatformSupportCover } from '@/lib/blog/cover-art'
 
 const COVER_ART = new Map([
   ['dual-agent-review', DualAgentReviewCover],
@@ -16,6 +16,7 @@ const COVER_ART = new Map([
   ['notion-knowledge-base-sync', NotionKnowledgeCover],
   ['slack-no-admin-approval', SlackSupportCover],
   ['telegram-community-support', TelegramSupportCover],
+  ['managing-every-community-platform-from-one-place', MultiplatformSupportCover],
 ])
 
 // Auto-generated cover art: a post only needs a `coverImage` in its

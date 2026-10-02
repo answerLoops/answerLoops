@@ -49,6 +49,44 @@ export function BlogCoverFrame({
   )
 }
 
+export function MultiplatformSupportCover({ logoSrc }: { logoSrc: string }) {
+  return (
+    <BlogCoverFrame
+      logoSrc={logoSrc}
+      caption="One knowledge base. Helpful answers across your community."
+      backgroundImage="radial-gradient(ellipse at 50% 100%, #a8dcd8 0%, rgba(168,220,216,0) 65%), radial-gradient(ellipse at 100% 0%, #e0d4ef 0%, rgba(224,212,239,0) 58%), linear-gradient(170deg, #faf4e8, #f2f7f4)"
+    >
+      <div style={{ position: 'absolute', left: 78, right: 78, top: 131, display: 'flex', justifyContent: 'center', fontSize: 57, letterSpacing: -2 }}>
+        <span>Many channels.</span><span style={{ color: '#168193', marginLeft: 16 }}>One place to help.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 78, right: 78, top: 206, display: 'flex', justifyContent: 'center', fontSize: 23, color: '#496575' }}>Bring your community’s questions together.</div>
+      <svg width="1020" height="290" viewBox="0 0 1020 290" style={{ position: 'absolute', left: 90, top: 263 }}>
+        <path d="M235 56H309Q339 56 339 86V124H360M235 191H309Q339 191 339 161V124H360M785 56H711Q681 56 681 86V124H660M785 191H711Q681 191 681 161V124H660M510 205V229" fill="none" stroke="#65a8ae" strokeWidth="2" />
+      </svg>
+      <div style={{ position: 'absolute', left: 107, top: 281, width: 218, height: 77, borderRadius: 18, background: '#fffffff0', border: '2px solid white', display: 'flex', alignItems: 'center', padding: '0 25px', gap: 15, fontSize: 25 }}>
+        <span style={{ color: '#5865f2', fontSize: 34 }}>#</span><span>Discord</span>
+      </div>
+      <div style={{ position: 'absolute', left: 107, top: 416, width: 218, height: 77, borderRadius: 18, background: '#fffffff0', border: '2px solid white', display: 'flex', alignItems: 'center', padding: '0 25px', gap: 15, fontSize: 25 }}>
+        <span style={{ color: '#7d4a79', fontSize: 34 }}>#</span><span>Slack</span>
+      </div>
+      <div style={{ position: 'absolute', left: 875, top: 281, width: 218, height: 77, borderRadius: 18, background: '#fffffff0', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 25 }}>GitHub</div>
+      <div style={{ position: 'absolute', left: 875, top: 416, width: 218, height: 77, borderRadius: 18, background: '#fffffff0', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 15, fontSize: 25 }}>
+        <svg width="28" height="24" viewBox="0 0 28 24"><rect x="2" y="3" width="24" height="18" rx="3" fill="none" stroke="#496575" strokeWidth="2" /><path d="m3 5 11 8L25 5" fill="none" stroke="#496575" strokeWidth="2" /></svg><span>Email</span>
+      </div>
+      <div style={{ position: 'absolute', left: 450, top: 295, width: 300, height: 173, borderRadius: 22, padding: 26, background: coverPalette.navy, color: 'white', display: 'flex', flexDirection: 'column', boxShadow: '0 18px 32px #082e5012' }}>
+        <span style={{ fontSize: 29 }}>One shared inbox</span>
+        <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#a8dcd8' }} /><div style={{ width: 199, height: 7, borderRadius: 4, background: '#8cb6c5' }} />
+        </div>
+        <div style={{ marginTop: 15, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 9, height: 9, borderRadius: '50%', background: '#e0d4ef' }} /><div style={{ width: 153, height: 7, borderRadius: 4, background: '#8cb6c5' }} />
+        </div>
+      </div>
+      <div style={{ position: 'absolute', left: 466, top: 492, width: 268, height: 49, borderRadius: 25, background: '#ffffffe6', border: '2px solid white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, color: '#176c74' }}>Your knowledge base</div>
+    </BlogCoverFrame>
+  )
+}
+
 export function TelegramSupportCover({ logoSrc }: { logoSrc: string }) {
   return (
     <BlogCoverFrame

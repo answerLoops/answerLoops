@@ -533,6 +533,53 @@ describe('blog cover image route', () => {
     expect(telegram.markup).toContain('color:#082e50')
   })
 
+  it('selects the shared-inbox artwork for the published Multi-platform post', async () => {
+    getPage.mockReturnValue(publishedPost('Multi-platform open source support'))
+    const { markup, options } = await renderCover('managing-every-community-platform-from-one-place')
+
+    expect(getPage).toHaveBeenCalledWith(['managing-every-community-platform-from-one-place'])
+    for (const label of ['Many channels.', 'One place to help.', 'Discord', 'Slack', 'GitHub', 'Email', 'One shared inbox', 'Your knowledge base']) {
+      expect(markup).toContain(label)
+    }
+    expect(markup).toContain('One knowledge base. Helpful answers across your community.')
+    expect(markup).toContain('data:image/png;base64,')
+    for (const priorHeadline of ['Good answers deserve', 'Within reach.', 'More community.', 'Discord questions.', 'Old questions.', 'From inbox to']) {
+      expect(markup).not.toContain(priorHeadline)
+    }
+    expect(markup).not.toContain('BEHIND THE LOOP')
+    expect(options).toEqual({ width: 1200, height: 630 })
+  })
+
+  it.each([
+    ['absent', undefined],
+    ['draft', { data: { ...publishedPost().data, title: 'Unpublished Multi-platform article', draft: true } }],
+  ])('keeps the generic cover when the Multi-platform post is %s', async (_, page) => {
+    getPage.mockReturnValue(page)
+    const { markup } = await renderCover('managing-every-community-platform-from-one-place')
+
+    expect(markup).toContain('Blog')
+    expect(markup).toContain('answerloops.com/blog')
+    expect(markup).not.toContain('Many channels.')
+    expect(markup).not.toContain('One place to help.')
+    expect(markup).not.toContain('Unpublished Multi-platform article')
+    expect(markup).not.toContain('data:image/png;base64,')
+  })
+
+  it('gives the Multi-platform cover a distinct gradient from all earlier covers', async () => {
+    getPage.mockReturnValue(publishedPost())
+    const multiplatform = await renderCover('managing-every-community-platform-from-one-place')
+    const gradient = (markup: string) => markup.match(/background-image:([^;"]+)/)?.[1]
+
+    expect(gradient(multiplatform.markup)).toContain('radial-gradient(')
+    for (const slug of ['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation', 'github-open-source-support', 'google-chat-internal-support', 'notion-knowledge-base-sync', 'slack-no-admin-approval', 'telegram-community-support']) {
+      const previous = await renderCover(slug)
+      expect(gradient(multiplatform.markup)).not.toBe(gradient(previous.markup))
+    }
+    expect(multiplatform.markup).toContain('answerloops.com')
+    expect(multiplatform.markup).toContain('data:image/png;base64,')
+    expect(multiplatform.markup).toContain('color:#082e50')
+  })
+
   it('retains the title and category fallback for posts without bespoke artwork', async () => {
     getPage.mockReturnValue(publishedPost('Support across channels', 'Guides'))
     const { markup } = await renderCover('support-across-channels')
@@ -557,7 +604,7 @@ describe('blog cover image route', () => {
     expect(markup).not.toContain('Good answers deserve')
   })
 
-  it.each(['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation', 'github-open-source-support', 'google-chat-internal-support', 'notion-knowledge-base-sync', 'slack-no-admin-approval', 'telegram-community-support'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
+  it.each(['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation', 'github-open-source-support', 'google-chat-internal-support', 'notion-knowledge-base-sync', 'slack-no-admin-approval', 'telegram-community-support', 'managing-every-community-platform-from-one-place'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
     getPage.mockReturnValue(publishedPost())
     const { element, options } = await renderCover(slug)
     const { ImageResponse } = await vi.importActual<typeof import('next/og')>('next/og')
