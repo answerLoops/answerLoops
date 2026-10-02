@@ -49,6 +49,39 @@ export function BlogCoverFrame({
   )
 }
 
+export function SlackSupportCover({ logoSrc }: { logoSrc: string }) {
+  return (
+    <BlogCoverFrame
+      logoSrc={logoSrc}
+      caption="Helpful answers, in the channels your team already uses."
+      backgroundImage="radial-gradient(ellipse at 5% 95%, #f2dfb9 0%, rgba(242,223,185,0) 64%), radial-gradient(ellipse at 95% 10%, #cec4ed 0%, rgba(206,196,237,0) 68%), linear-gradient(120deg, #faf4e8, #eef7f7)"
+    >
+      <div style={{ position: 'absolute', left: 78, top: 186, display: 'flex', flexDirection: 'column', fontSize: 60, lineHeight: 1.13, letterSpacing: -2 }}>
+        <span>Less searching.</span>
+        <span style={{ color: '#168193' }}>More answering.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 80, top: 354, display: 'flex', fontSize: 24, color: '#496575' }}>Bring your knowledge into Slack.</div>
+      <div style={{ position: 'absolute', left: 670, top: 146, width: 384, height: 91, display: 'flex', alignItems: 'center', padding: '0 26px', gap: 16, borderRadius: 18, background: '#fffffff0', border: '2px solid white' }}>
+        <svg width="36" height="36" viewBox="0 0 24 24">
+          <path d="M9.1 2.5a2.1 2.1 0 1 0 0 4.2h2.1V4.6a2.1 2.1 0 0 0-2.1-2.1Zm0 6.3H4.6a2.1 2.1 0 1 0 0 4.2h4.5a2.1 2.1 0 1 0 0-4.2Z" fill="#36c5f0" />
+          <path d="M21.5 9.1a2.1 2.1 0 1 0-4.2 0v2.1h2.1a2.1 2.1 0 0 0 2.1-2.1Zm-6.3 0v4.5a2.1 2.1 0 1 0 4.2 0V9.1a2.1 2.1 0 0 0-4.2 0Z" fill="#2eb67d" />
+          <path d="M14.9 21.5a2.1 2.1 0 1 0 0-4.2h-2.1v2.1a2.1 2.1 0 0 0 2.1 2.1Zm0-6.3h4.5a2.1 2.1 0 1 0 0-4.2h-4.5a2.1 2.1 0 0 0 0 4.2Z" fill="#ecb22e" />
+          <path d="M2.5 14.9a2.1 2.1 0 1 0 4.2 0v-2.1H4.6a2.1 2.1 0 0 0-2.1 2.1Zm6.3 0v-4.5a2.1 2.1 0 1 0-4.2 0v4.5a2.1 2.1 0 0 0 4.2 0Z" fill="#e01e5a" />
+        </svg>
+        <span style={{ fontSize: 28 }}># ask-the-team</span>
+      </div>
+      <div style={{ position: 'absolute', left: 702, top: 238, height: 238, width: 2, background: '#99bfc5' }} />
+      <div style={{ position: 'absolute', left: 727, top: 267, width: 362, padding: '20px 24px', display: 'flex', borderRadius: '16px 16px 16px 3px', fontSize: 25, background: '#ffffffed' }}>Where’s the setup guide?</div>
+      <div style={{ position: 'absolute', left: 727, top: 357, width: 362, height: 151, padding: '24px', display: 'flex', flexDirection: 'column', borderRadius: '16px 16px 16px 3px', background: coverPalette.navy, color: 'white', boxShadow: '0 16px 32px #082e5012' }}>
+        <span style={{ color: '#b9e0e5', fontSize: 17 }}>From your knowledge base</span>
+        <span style={{ marginTop: 16, fontSize: 28 }}>Right here. Let’s get started.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 690, top: 291, width: 26, height: 26, borderRadius: '50%', background: '#b9e0e5', border: '4px solid #eef7f7' }} />
+      <div style={{ position: 'absolute', left: 690, top: 380, width: 26, height: 26, borderRadius: '50%', background: '#168fa3', border: '4px solid #eef7f7' }} />
+    </BlogCoverFrame>
+  )
+}
+
 export function NotionKnowledgeCover({ logoSrc }: { logoSrc: string }) {
   return (
     <BlogCoverFrame
