@@ -14,9 +14,11 @@ export interface PageSchemaProps {
   type?: 'WebPage' | 'CollectionPage'
   /** Rendered as FAQPage schema when a page already shows this content as visible Q&A — never invent questions the page doesn't ask. */
   faq?: Array<{ question: string; answer: string }>
+  /** Adds a TechArticle node (linked via mainEntityOfPage) for long-form technical/product docs content. */
+  article?: boolean
 }
 
-export function PageSchema({ name, description, path, breadcrumbs = [], type = 'WebPage', faq = [] }: PageSchemaProps) {
+export function PageSchema({ name, description, path, breadcrumbs = [], type = 'WebPage', faq = [], article = false }: PageSchemaProps) {
   const url = `https://answerloops.com${path}`
   const items = [{ name: 'answerLoops', path: '/' }, ...breadcrumbs, { name, path }]
     .filter((item, index, all) => all.findIndex((candidate) => candidate.path === item.path) === index)
@@ -54,6 +56,21 @@ export function PageSchema({ name, description, path, breadcrumbs = [], type = '
                 name: item.question,
                 acceptedAnswer: { '@type': 'Answer', text: item.answer },
               })),
+            },
+          ]
+        : []),
+      ...(article
+        ? [
+            {
+              '@type': 'TechArticle',
+              '@id': `${url}#article`,
+              headline: name,
+              description,
+              url,
+              isPartOf: { '@id': WEBSITE_ID },
+              author: { '@id': ORGANIZATION_ID },
+              publisher: { '@id': ORGANIZATION_ID },
+              mainEntityOfPage: { '@id': `${url}#webpage` },
             },
           ]
         : []),

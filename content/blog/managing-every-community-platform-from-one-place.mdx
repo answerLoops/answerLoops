@@ -1,7 +1,7 @@
 ---
 title: Managing support across community platforms
 subtitle: One ticket queue and one knowledge base, however many channels your community actually uses
-description: How a shared ticket queue and maintained knowledge base help a team answer questions across its community channels.
+description: A before/after routing table showing how answerLoops handles the same confidence threshold, escalation, and draft-review behavior across every connected channel.
 overview: answerLoops turns questions from Discord, Slack, GitHub, and email into a single ticket queue backed by one knowledge base, so a team answers each question once instead of re-explaining it separately on every channel.
 author: Nathan Tarbert
 datePublished: "2026-09-10"
@@ -10,44 +10,46 @@ coverImage: /blog/managing-every-community-platform-from-one-place/opengraph-ima
 coverImageAlt: Discord, Slack, GitHub, and email connect to one shared inbox backed by a knowledge base.
 ---
 
-A community can have several places to ask for help: Discord for
-conversation, a forum for longer discussions, GitHub for project
-issues, and email for people who do not use the other channels. The
-support team still has to recognize when two questions need the same
-answer.
+Before answerLoops, a community with <ChannelList /> means a support
+team juggling as many separate inboxes, each with its own idea of
+"confidence" and its own escalation path — if it has one at all. A
+question answered on Discord yesterday gets re-answered from scratch
+on Slack today, because nothing connects the two.
 
-We encountered this while running our own communities. The difficult
-part was keeping track of what had already been answered and whether
-that explanation was still correct.
+After connecting all of them to answerLoops, every channel runs
+through the same pipeline — triage, retrieval against one knowledge
+base, an AI confidence score, then either a reply or a hold for
+review — with only the escalation mechanism changing to fit what
+each platform actually supports:
 
-## Keep questions in one queue
+| Channel | How a question becomes a ticket | Escalation target | What happens below the confidence threshold (default `0.8`) |
+|---|---|---|---|
+| Discord | Message in a monitored channel | `@role` mention | Held as a draft; acknowledgment reaction/reply sent instead |
+| Slack | Message in a monitored channel (OAuth or polling) | User group or user ID mention | Held as a draft; brief acknowledgment reply sent |
+| Discourse | New topic or post in a chosen category | Mentioned user | Held as a draft, or posted with the escalation mention if Automatic Deflections is on |
+| Circle | New post or comment | Mentioned user | Flagged low-confidence on the ticket for review |
+| GitHub | New Issue or Discussion (skips anything filed by a repo collaborator) | N/A — stays in the queue | Held as a draft; brief acknowledgment comment posted |
+| Telegram | Message in a monitored chat (10+ characters, from a real user) | Escalation username | Held as a draft; no automatic reply sent |
+| Email | Inbound email matching sender filters | Escalation address, named in plain text | Routed to a human instead of sending automatically |
+| Google Chat | Message in a paired space | One specific user (no group-mention equivalent) | Held as a draft; brief acknowledgment sent |
+| Website widget | Visitor message in the embedded chat panel | N/A — anonymous, no queue hold | Answers only from published knowledge-base articles; no ticket or escalation path |
 
-answerLoops connects to <ChannelList />. Questions become tickets with
-their source attached, so the team can review requests together and
-reply in the conversation where each one started.
+Three things hold across every row except the widget:
 
-## Maintain the knowledge behind the answers
+- **Automatic Deflections is off by default on every channel.** Until you turn it on, even a confidence score above threshold doesn't trigger an automatic reply — it holds the draft on the dashboard for Approve/Edit/Dismiss, and the channel gets a brief acknowledgment instead of the real answer.
+- **The confidence threshold is the same 0–1 scale everywhere**, defaulting to `0.8`. Whether a low-confidence answer gets held, flagged, or sent alongside an escalation mention depends on the channel and Automatic Deflections, not the scoring itself.
+- **Escalation is the one thing that's genuinely different per platform**, because each platform has a different idea of "notify someone": Discord and Slack can @mention a role or group, Telegram and Google Chat can only target one specific user, email has no mention concept at all so the address is just named in the reply text, and GitHub has no escalation target — a low-confidence ticket just stays in the queue.
 
-The drafting step searches the workspace knowledge base. A separate
-AI review compares the draft with the available sources. Better
-documentation gives both steps more useful material, so importing
-the docs is only the beginning: someone still needs to correct
-outdated instructions and fill gaps.
+The website widget is the deliberate exception to all of it: it has no ticket queue, no escalation, and no draft-review hold, because it answers every visitor directly from published knowledge-base articles rather than from resolved tickets written for one specific person.
 
-When a resolved ticket contains an explanation other users will
-need, the team can promote it into the knowledge base. That makes
-the answer available to future questions across connected channels.
+## One knowledge base behind every row
 
-## Choose when replies can be automatic
+The retrieval step in that pipeline — and therefore the quality of every draft — pulls from one workspace knowledge base shared across all nine channels, not nine separate ones. The drafting step searches it, a separate AI review agent compares the draft against what retrieval actually returned, and the resulting confidence score is what the table above routes on. Better documentation makes every channel's answers better at once; a gap in the knowledge base shows up as a low-confidence hold everywhere a question about that gap gets asked, not just on whichever channel happened to surface it first.
 
-Automatic replies are off by default. We recommend reviewing
-representative drafts before enabling them for a channel. A
-qualifying reply needs to meet the configured confidence threshold;
-other drafts remain in the queue for a person to check and send.
+When a resolved ticket contains an explanation future questions will need, promoting it into the knowledge base is what makes it available to every other channel — including the widget, which can't draw on raw ticket history at all.
 
-This gives the team a specific maintenance routine: review the
-tickets that need attention, inspect answer feedback, and improve
-the underlying articles. The quality of the source material remains
-part of the work.
+## Turning a channel on deliberately
+
+Because Automatic Deflections defaults to off, connecting a new channel never means the AI starts replying unsupervised on day one. The practical rollout for each channel is the same: connect it, review the drafts it produces against real questions, adjust the confidence threshold if the default `0.8` is too strict or too loose for that community, then switch Automatic Deflections on once the approved drafts have earned that trust.
 
 [See the support workflow](/support-workflow)

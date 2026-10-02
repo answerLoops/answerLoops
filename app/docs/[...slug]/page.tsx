@@ -25,6 +25,7 @@ export default async function DocPage({
         description={description}
         path={page.url}
         breadcrumbs={[{ name: 'Docs', path: '/docs' }]}
+        article
       />
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>

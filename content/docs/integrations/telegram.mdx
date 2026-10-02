@@ -3,6 +3,8 @@ title: Telegram
 description: Connect a Telegram bot to answerLoops so questions in your group chats get AI-drafted answers and show up in your ticket list.
 ---
 
+To connect Telegram to answerLoops you need a **bot token**, issued by [@BotFather](https://t.me/BotFather) when you create your bot — paste it into **Integrations → Telegram** and answerLoops handles the rest, no OAuth and no platform-wide credential required.
+
 ## Overview
 
 answerLoops connects to Telegram through a bot you create and control — there's no shared platform-wide bot and no OAuth flow. Every message sent to the bot in a monitored chat (10+ characters, from a real user rather than another bot) is ingested as a ticket. The bot replies in the same chat when AI confidence is above your threshold **and Automatic Deflections is turned on**; otherwise the answer is held as a draft on the dashboard and the chat gets no reply.
