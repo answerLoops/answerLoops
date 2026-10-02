@@ -49,6 +49,36 @@ export function BlogCoverFrame({
   )
 }
 
+export function TelegramSupportCover({ logoSrc }: { logoSrc: string }) {
+  return (
+    <BlogCoverFrame
+      logoSrc={logoSrc}
+      caption="Keep helpful answers close, even when the chat moves fast."
+      backgroundImage="radial-gradient(ellipse at 70% 85%, #a5dbe8 0%, rgba(165,219,232,0) 65%), radial-gradient(ellipse at 5% 0%, #ded6f0 0%, rgba(222,214,240,0) 54%), linear-gradient(155deg, #f5f4fa, #edf8f8 55%, #dceff3)"
+    >
+      <div style={{ position: 'absolute', left: 78, top: 184, display: 'flex', flexDirection: 'column', fontSize: 59, lineHeight: 1.13, letterSpacing: -2 }}>
+        <span>Fast-moving chats.</span>
+        <span style={{ color: '#168193' }}>Answers that land.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 80, top: 352, display: 'flex', fontSize: 24, color: '#496575' }}>Community support in Telegram</div>
+      <svg width="470" height="340" viewBox="0 0 470 340" style={{ position: 'absolute', left: 650, top: 164 }}>
+        <path d="M65 285C-20 145 255 285 228 142C213 72 111 73 139 143C163 206 311 132 355 58" fill="none" stroke="#65aebe" strokeWidth="2" strokeDasharray="7 9" />
+      </svg>
+      <div style={{ position: 'absolute', left: 927, top: 151, width: 130, height: 130, display: 'flex', justifyContent: 'center', alignItems: 'center', borderRadius: '50%', background: '#229ed9', border: '8px solid #ffffffb3', boxShadow: '0 14px 30px #082e5010' }}>
+        <svg width="66" height="66" viewBox="0 0 24 24"><path d="M21.7 3.3 18.5 20c-.24 1.18-.87 1.47-1.77.92l-4.86-3.58-2.35 2.26c-.26.26-.48.48-.98.48l.35-4.96 9.03-8.16c.39-.35-.09-.55-.6-.2L6.16 13.5 1.4 12.01c-1.04-.33-1.06-1.04.22-1.54L20.2 3.1c.88-.32 1.65.2 1.5.2Z" fill="white" /></svg>
+      </div>
+      <div style={{ position: 'absolute', left: 647, top: 382, width: 440, height: 144, padding: '22px 26px', display: 'flex', flexDirection: 'column', borderRadius: '20px 20px 20px 4px', background: '#fffffff2', border: '2px solid white', boxShadow: '0 14px 32px #082e5010' }}>
+        <span style={{ fontSize: 18, color: '#496575' }}>A question in your group</span>
+        <span style={{ marginTop: 12, fontSize: 27 }}>How do I get started?</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 14, fontSize: 18, color: '#168193' }}>
+          <svg width="19" height="19" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6" fill="none" stroke="#168193" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <span>Reply from your knowledge base</span>
+        </div>
+      </div>
+    </BlogCoverFrame>
+  )
+}
+
 export function SlackSupportCover({ logoSrc }: { logoSrc: string }) {
   return (
     <BlogCoverFrame
