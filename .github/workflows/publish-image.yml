@@ -86,7 +86,7 @@ jobs:
       # image is not less serious for carrying a lower rule severity, and this
       # is the last point at which it can still be caught.
       - name: Refuse to publish an image containing secrets
-        uses: aquasecurity/trivy-action@d2a0b60797ff03db6132bd4e2b293f9b37081297 # master 2026-07-01
+        uses: aquasecurity/trivy-action@c03d123cb480c08c69b054af418ea5e69fe6e57e # master 2026-07-01
         with:
           scan-type: image
           image-ref: scan-candidate:${{ matrix.suffix }}
@@ -105,7 +105,7 @@ jobs:
       #
       # The secret scan above is deliberately NOT scoped: it stays whole-image.
       - name: Refuse to publish known-vulnerable dependencies
-        uses: aquasecurity/trivy-action@d2a0b60797ff03db6132bd4e2b293f9b37081297 # master 2026-07-01
+        uses: aquasecurity/trivy-action@c03d123cb480c08c69b054af418ea5e69fe6e57e # master 2026-07-01
         with:
           scan-type: image
           image-ref: scan-candidate:${{ matrix.suffix }}
