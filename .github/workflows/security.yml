@@ -34,7 +34,7 @@ jobs:
       # Nothing gitignored exists in a CI checkout, so unlike the local hook
       # this sees exactly the files the repository actually contains.
       - name: Run Trivy (secrets)
-        uses: aquasecurity/trivy-action@d2a0b60797ff03db6132bd4e2b293f9b37081297  # master 2026-07-01
+        uses: aquasecurity/trivy-action@c03d123cb480c08c69b054af418ea5e69fe6e57e  # master 2026-07-01
         with:
           scan-type: fs
           scan-ref: .
@@ -44,7 +44,7 @@ jobs:
           skip-dirs: .pnpm-store,node_modules/.cache
 
       - name: Run Trivy (filesystem scan)
-        uses: aquasecurity/trivy-action@d2a0b60797ff03db6132bd4e2b293f9b37081297  # master 2026-07-01
+        uses: aquasecurity/trivy-action@c03d123cb480c08c69b054af418ea5e69fe6e57e  # master 2026-07-01
         with:
           scan-type: fs
           scan-ref: .
