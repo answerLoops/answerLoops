@@ -84,3 +84,4 @@ updates:
       - dependency-name: "qs"
       - dependency-name: "baseline-browser-mapping"
       - dependency-name: "axios"
+      - dependency-name: "probe-image-size"

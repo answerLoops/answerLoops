@@ -58,3 +58,4 @@ overrides:
   qs: '>=6.16.0 <7.0.0'   # disclosure-ok  GHSA-x5fp-wj9c-mxmx, GHSA-4mjr-xmp4-gh2g — transitive, multiple paths. Capped below 7.x per the open-range lesson above
   baseline-browser-mapping: '>=2.11.0 <3.0.0'   # disclosure-ok  GHSA-w5vr-8v7q-w6rv — transitive via tailwindcss/browserslist tooling. Capped below 3.x per the open-range lesson above
   axios: '>=1.20.0 <2.0.0'   # disclosure-ok  CVE-2026-101898/101901/101903/101905/101906/101907/101909, all fixed in 1.20.0 — reached via @mendable/firecrawl-js and @slack/bolt's web-api client, both pinned below the range a plain caret bump could reach. Capped below 2.x per the open-range lesson above
+  probe-image-size: '>=7.4.0 <8.0.0'   # disclosure-ok  CVE-2026-104861 (crafted-SVG denial of service), fixed in 7.4.0 — reached via @mastra/memory. Capped below 8.x per the open-range lesson above

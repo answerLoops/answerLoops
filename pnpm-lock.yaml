@@ -22,6 +22,7 @@ overrides:
   qs: '>=6.16.0 <7.0.0'
   baseline-browser-mapping: '>=2.11.0 <3.0.0'
   axios: '>=1.20.0 <2.0.0'
+  probe-image-size: '>=7.4.0 <8.0.0'
 
 importers:
 
@@ -6338,8 +6339,8 @@ packages:
     resolution: {integrity: sha512-gjVS5hOP+M3wMm5nmNOucbIrqudzs9v/57bWRHQWLYklXqoXKrVfYW2W9+glfGsqtPgpiz5WwyEEB+ksXIx3gQ==}
     engines: {node: '>=18'}
 
-  probe-image-size@7.3.0:
-    resolution: {integrity: sha512-7CaDeBwiAbh6ohXsvLbAZhO7wzsZAmaevfxe39qvCwRh8LyaZfDlBGGLU1CCTgrTLtCOdwBBhjOrIHaIIimHfQ==}
+  probe-image-size@7.4.0:
+    resolution: {integrity: sha512-cdEprVtZxV+awMde9X+4jILBFYh4CARxVrQaMl4wY4YcPWbul9jntXrIW95NInBDyJwcVUP3U0T6yukN8rMBaQ==}
 
   process-nextick-args@2.0.1:
     resolution: {integrity: sha512-3ouUOpQhtgrbOa17J7+uxOTpITYWaGP7/AhoR3+A+/1e9skrzelGi/dXzEYyvbxubEF6Wn2ypscTKiKJFFn1ag==}
@@ -8910,7 +8911,7 @@ snapshots:
       image-size: 2.0.4
       json-schema: 0.4.0
       lru-cache: 11.5.2
-      probe-image-size: 7.3.0
+      probe-image-size: 7.4.0
       tokenx: 1.6.0
       xxhash-wasm: 1.1.0
       zod: 4.4.3
@@ -14324,7 +14325,7 @@ snapshots:
     dependencies:
       parse-ms: 4.0.0
 
-  probe-image-size@7.3.0:
+  probe-image-size@7.4.0:
     dependencies:
       lodash.merge: 4.6.2
       needle: 2.9.1
