@@ -118,7 +118,6 @@ These are platform-wide defaults. Individual orgs can override the AI model in *
 |---|---|
 | `RESEND_API_KEY` | Resend API key — used for both outbound transactional email and the email ingest channel |
 | `RESEND_FROM` | Default sender address for transactional emails, e.g. `support@answerloops.com` |
-| `RESEND_WAITLIST_FROM` | Sender address for waitlist emails (can be the same as `RESEND_FROM`) |
 | `RESEND_NEWSLETTER_FROM` | Sender address for blog newsletter signup confirmations (can be the same as `RESEND_FROM`) |
 | `RESEND_WEBHOOK_SECRET` | Svix signing secret (`whsec_...`) for Resend's outbound delivery-status webhooks (bounces/complaints) — bounce/complaint tracking is unavailable without it, sending and inbound ingest still work |
 | `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | Google Cloud OAuth client for the "Connect Gmail" send-only integration — optional, without it that feature is unavailable |

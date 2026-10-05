@@ -1,16 +1,15 @@
 import type { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { removeRepo } from '@/lib/db/queries/github'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
 const MOD = 'api/github/repos/[id]'
 
 export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess()
+  if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+  const orgId = access.orgId
 
   const { id } = await ctx.params
 

@@ -637,16 +637,11 @@ export const csatRatings = pgTable(
   ]
 )
 
-export const waitlist = pgTable('waitlist', {
-  id: serial('id').primaryKey(),
-  email: text('email').notNull().unique(),
-  createdAt: text('created_at').notNull().default(sql`now()`),
-})
-
-// Blog newsletter signups. Separate from `waitlist` on purpose — a waitlist
-// signup means "let me into the product," a newsletter signup means "email
-// me new posts," and conflating the two would put blog subscribers through
-// waitlist-acceptance copy that has nothing to do with why they signed up.
+// Blog newsletter signups. The product previously also had a `waitlist` table
+// for pre-launch signups (removed along with the early-access gate once the
+// product shipped) — kept distinct on purpose while both existed, since a
+// waitlist signup meant "let me into the product" and a newsletter signup
+// means "email me new posts."
 export const newsletterSubscribers = pgTable(
   'newsletter_subscribers',
   {

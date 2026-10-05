@@ -1,7 +1,6 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { getIntegration } from '@/lib/db/queries/integrations'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { discourseFetch, normalizeSiteUrl } from '@/lib/discourse/client'
 import { logger } from '@/lib/logger'
 
@@ -11,10 +10,10 @@ interface EventType { id: number; name: string }
 interface WebHook { id: number; payload_url: string }
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const access = await requireOrgAccess()
+  if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
 
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const orgId = access.orgId
   const integration = await getIntegration(orgId, 'discourse')
 
   if (!integration?.bot_token || !integration.bot_username) {

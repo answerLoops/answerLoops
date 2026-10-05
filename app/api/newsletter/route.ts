@@ -10,9 +10,10 @@ import { sendNewsletterConfirmation } from '@/lib/email/send'
 
 const MOD = 'api/newsletter'
 
-// Public, unauthenticated, pre-auth endpoint — same abuse class as the
-// waitlist signup box, so it carries the same controls: per-IP rate limit, a
-// body cap, and a length-bounded email check.
+// Public, unauthenticated, pre-auth endpoint that sends an outbound email per
+// call, so it carries the same controls as every other route in that class
+// (see app/api/widget/lead/route.ts): per-IP rate limit, a body cap, and a
+// length-bounded email check.
 const IP_MAX = 5
 const IP_WINDOW_MS = 60_000
 

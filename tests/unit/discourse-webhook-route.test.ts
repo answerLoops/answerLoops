@@ -53,7 +53,7 @@ describe('Discourse webhook register route', () => {
   })
 
   it('is auth-gated', () => {
-    expect(src).toContain('auth()')
+    expect(src).toContain('requireOrgAccess()')
   })
 
   it('calls the Discourse admin web_hooks API via discourseFetch', () => {

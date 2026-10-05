@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { stripeConfigured } from '@/lib/billing/plans'
 import { createCheckoutSession } from '@/lib/billing/checkout'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -12,13 +12,16 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  const access = await requireOrgAccess()
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: 401 })
+
   // Self-hosted deployments aren't metered and have no billing to check out
   // into — the UI already hides this path, this is the API-level backstop.
   if (!stripeConfigured()) {
     return NextResponse.json({ error: 'Billing is not available on this deployment' }, { status: 400 })
   }
 
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const orgId = access.orgId
 
   try {
     const { planId } = (await req.json()) as { planId: string }

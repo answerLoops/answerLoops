@@ -3,11 +3,11 @@ import fs from 'fs'
 import path from 'path'
 
 // The blog newsletter signup endpoint is public, unauthenticated, and writes
-// a caller-supplied email address straight into a new table. Same abuse class
-// as the waitlist signup box, so it carries the same controls: a per-IP rate
-// limit via lib/ratelimit's rateLimitShared, a capped body read via
-// readBodyCapped, and a length-bounded, shape-checked address — see
-// tests/unit/waitlist-abuse-hardening.test.ts, which this mirrors.
+// a caller-supplied email address straight into a new table — the same abuse
+// class as any public pre-auth endpoint that sends an outbound email per call
+// (see app/api/widget/lead/route.ts), so it carries the same controls: a
+// per-IP rate limit via lib/ratelimit's rateLimitShared, a capped body read
+// via readBodyCapped, and a length-bounded, shape-checked address.
 //
 // Next.js route modules cannot be imported in vitest (same constraint noted
 // in tests/unit/circle-webhook-route.test.ts and
@@ -59,21 +59,15 @@ describe('drizzle/0045_newsletter_unsubscribe.sql', () => {
 })
 
 describe('lib/db/schema.ts: newsletterSubscribers', () => {
-  it('exports a newsletterSubscribers table distinct from waitlist', async () => {
+  it('exports a newsletterSubscribers table', async () => {
     const schema = await import('../../lib/db/schema')
     expect(schema).toHaveProperty('newsletterSubscribers')
-    expect(schema).toHaveProperty('waitlist')
-    expect(schema.newsletterSubscribers).not.toBe(schema.waitlist as unknown as typeof schema.newsletterSubscribers)
   })
 
   it('maps to the newsletter_subscribers table with an email column', () => {
     const schemaSrc = read('lib/db/schema.ts')
     const tableIdx = schemaSrc.indexOf("pgTable(\n  'newsletter_subscribers'")
     expect(tableIdx).toBeGreaterThan(-1)
-    // The waitlist table definition must be a separate block, not reused.
-    const waitlistIdx = schemaSrc.indexOf("pgTable('waitlist'")
-    expect(waitlistIdx).toBeGreaterThan(-1)
-    expect(tableIdx).not.toBe(waitlistIdx)
   })
 
   it('carries an unsubscribe token distinct from the email column', () => {
@@ -94,7 +88,7 @@ describe('lib/db/queries/newsletter.ts', () => {
   })
 })
 
-describe('newsletter route carries the same abuse controls as waitlist', () => {
+describe('newsletter route carries the standard public-endpoint abuse controls', () => {
   it('uses the shared limiter and capped body reader instead of no controls', () => {
     const src = read('app/api/newsletter/route.ts')
     expect(src).toContain("import { rateLimitShared } from '@/lib/ratelimit'")

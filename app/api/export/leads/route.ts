@@ -1,6 +1,5 @@
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { listWidgetLeads } from '@/lib/db/queries/widget-leads'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { escapeCSV } from '@/lib/csv'
 import { logger } from '@/lib/logger'
@@ -11,10 +10,10 @@ export const dynamic = 'force-dynamic'
 const MOD = 'api/export/leads'
 
 export async function GET(req: Request) {
-  const session = await auth()
-  if (!session?.user) return new Response('Unauthorized', { status: 401 })
+  const access = await requireOrgAccess()
+  if (!access.ok) return new Response(access.error, { status: 401 })
 
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const orgId = access.orgId
 
   try {
     if (!(await orgHasFeature(orgId, 'csv_export'))) {

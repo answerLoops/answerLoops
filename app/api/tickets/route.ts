@@ -1,6 +1,5 @@
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { getTickets } from '@/lib/db/queries/tickets'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import type { TicketStatus, Priority, TicketCategory } from '@/types'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
@@ -10,9 +9,9 @@ const MOD = 'api/tickets'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess()
+  if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+  const orgId = access.orgId
 
   try {
     const url = new URL(request.url)

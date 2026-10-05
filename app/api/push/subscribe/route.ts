@@ -1,7 +1,7 @@
 import { z } from 'zod'
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { getDb } from '@/lib/db/drizzle'
-import { pushSubscriptions, DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { pushSubscriptions } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -17,9 +17,9 @@ const SubSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    const orgId = session.orgId ?? DEFAULT_ORG_ID
+    const access = await requireOrgAccess()
+    if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+    const orgId = access.orgId
 
     const body = await request.json()
     const parsed = SubSchema.safeParse(body)

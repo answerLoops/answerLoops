@@ -1,18 +1,17 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { getIntegration, markTelegramWebhookRegistered } from '@/lib/db/queries/integrations'
 import { registerTelegramWebhook } from '@/lib/telegram/webhook'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
 const MOD = 'api/telegram/register'
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const access = await requireOrgAccess()
+  if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
 
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const orgId = access.orgId
 
   try {
     const integration = await getIntegration(orgId, 'telegram')

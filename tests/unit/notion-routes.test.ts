@@ -62,7 +62,7 @@ describe('app/api/kb/sources/[id]/route.ts — publish toggle', () => {
 
   it('exports a PATCH handler that is auth-gated', () => {
     expect(src).toContain('export async function PATCH')
-    expect(src).toContain('auth()')
+    expect(src).toContain('requireOrgAccess()')
   })
 
   it('rejects any published value that is not exactly 0 or 1', () => {

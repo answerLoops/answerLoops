@@ -134,9 +134,9 @@ describe('server actions + routes: Gmail connect/disconnect flow', () => {
 })
 
 describe('API route: app/api/email-oauth/route.ts', () => {
-  it('requires auth and never returns access_token/refresh_token to the client', () => {
+  it('requires auth (via requireOrgAccess) and never returns access_token/refresh_token to the client', () => {
     const src = readSrc('app/api/email-oauth/route.ts')
-    expect(src).toContain('await auth()')
+    expect(src).toContain('await requireOrgAccess()')
     expect(src).toContain('_at, refresh_token: _rt')
   })
 })

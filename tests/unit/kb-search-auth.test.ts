@@ -8,17 +8,21 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  * didn't, which meant an unauthenticated caller got live vector search
  * results — and triggered a billed embedText call — against the default
  * org's knowledge base, with nothing but request shape standing in the way.
+ *
+ * Now resolves the org via requireOrgAccess() (Known Issue 124), which
+ * re-verifies a real membership row rather than trusting the session claim
+ * alone — mocked directly here rather than @/auth underneath it.
  */
 
 const h = vi.hoisted(() => ({
-  auth: vi.fn(),
+  requireOrgAccess: vi.fn(),
   embedText: vi.fn(),
   searchArticles: vi.fn(),
   textSearchArticles: vi.fn(),
   rateLimit: vi.fn(),
 }))
 
-vi.mock('@/auth', () => ({ auth: h.auth }))
+vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
 vi.mock('@/lib/ai/embed', () => ({ embedText: h.embedText }))
 vi.mock('@/lib/db/queries/kb', () => ({
   searchArticles: h.searchArticles,
@@ -39,7 +43,7 @@ beforeEach(() => {
 
 describe('app/api/kb/search/route.ts: GET', () => {
   it('returns 401 for an unauthenticated caller, like every sibling KB route', async () => {
-    h.auth.mockResolvedValue(null)
+    h.requireOrgAccess.mockResolvedValue({ ok: false, error: 'Unauthorized' })
     const { GET } = await import('@/app/api/kb/search/route')
     const res = await GET(req())
     expect(res.status).toBe(401)
@@ -47,15 +51,15 @@ describe('app/api/kb/search/route.ts: GET', () => {
     expect(h.searchArticles).not.toHaveBeenCalled()
   })
 
-  it('does not fall back to DEFAULT_ORG_ID when there is no session', async () => {
-    h.auth.mockResolvedValue(null)
+  it('does not fall back to DEFAULT_ORG_ID when there is no real membership', async () => {
+    h.requireOrgAccess.mockResolvedValue({ ok: false, error: 'Unauthorized' })
     const { GET } = await import('@/app/api/kb/search/route')
     await GET(req())
     expect(h.embedText).not.toHaveBeenCalled()
   })
 
   it('searches the caller\'s own org when authenticated', async () => {
-    h.auth.mockResolvedValue({ user: { id: '1' }, orgId: 42 })
+    h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 42, userId: 1, role: 'member' })
     const { GET } = await import('@/app/api/kb/search/route')
     const res = await GET(req())
     expect(res.status).toBe(200)
@@ -64,7 +68,7 @@ describe('app/api/kb/search/route.ts: GET', () => {
   })
 
   it('rate-limits per org before doing any billed work', async () => {
-    h.auth.mockResolvedValue({ user: { id: '1' }, orgId: 42 })
+    h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 42, userId: 1, role: 'member' })
     h.rateLimit.mockReturnValue({ ok: false, retryAfterMs: 1000 })
     const { GET } = await import('@/app/api/kb/search/route')
     const res = await GET(req())
@@ -73,7 +77,7 @@ describe('app/api/kb/search/route.ts: GET', () => {
   })
 
   it('still returns [] for a blank query once authenticated', async () => {
-    h.auth.mockResolvedValue({ user: { id: '1' }, orgId: 42 })
+    h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 42, userId: 1, role: 'member' })
     const { GET } = await import('@/app/api/kb/search/route')
     const res = await GET(req(''))
     expect(await res.json()).toEqual([])
