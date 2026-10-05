@@ -7,6 +7,7 @@ import {
   parseAllowedOrigins,
   resolveEmbedOrigin,
 } from '@/lib/widget/origin'
+import { mintRenderToken } from '@/lib/widget/render-token'
 import { WidgetChat } from './widget-chat'
 import { EmbedRefused } from './embed-refused'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
@@ -54,9 +55,15 @@ export default async function WidgetPage({ params }: Props) {
   // handling in app/api/widget/chat/route.ts).
   const isSelfPreview = embedOrigin !== null && embedOrigin === selfHost
 
+  // Minted only now that isEmbedAllowed() has passed, and required by the
+  // chat/lead endpoints on every call — see lib/widget/render-token.ts for
+  // why the allowlist above otherwise gates nothing but this page's own render.
+  const renderToken = mintRenderToken(widgetToken)
+
   return (
     <WidgetChat
       widgetToken={widgetToken}
+      renderToken={renderToken}
       orgName={org.name}
       showBranding={!whiteLabel}
       isSelfPreview={isSelfPreview}

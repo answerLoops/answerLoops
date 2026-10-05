@@ -46,6 +46,9 @@ vi.mock('@/lib/billing/usage', () => ({
 vi.mock('@/lib/db/queries/widgets', () => ({ getOrgByWidgetToken: h.getOrgByWidgetToken }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: vi.fn(async () => ({ ok: true })) }))
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
+// This suite exercises what context reaches the model, not the render-token
+// binding (covered by widget-render-token.test.ts).
+vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: () => true }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
 vi.mock('@/lib/ai/embed', () => ({ embedText: vi.fn(async () => [0.1]) }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))

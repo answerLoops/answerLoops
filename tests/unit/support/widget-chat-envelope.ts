@@ -14,10 +14,12 @@ export const assistantMsg = (content: string) => ({ id: `a${msgSeq++}`, role: 'a
 
 export function widgetChatRequest({
   widgetToken,
+  renderToken,
   visitorId,
   messages,
 }: {
   widgetToken?: unknown
+  renderToken?: unknown
   visitorId?: unknown
   messages?: unknown
 }): Request {
@@ -30,7 +32,7 @@ export function widgetChatRequest({
       tools: [],
       context: [],
       messages,
-      forwardedProps: { widgetToken, visitorId },
+      forwardedProps: { widgetToken, renderToken, visitorId },
     },
   }
   return new Request('https://app.test/api/widget/chat', {

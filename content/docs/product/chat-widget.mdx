@@ -123,9 +123,7 @@ Subdomains of a listed domain are included, so `example.com` also covers `suppor
 
 ### How to think about the allowlist
 
-The allowlist controls **where your widget renders**. If someone copies your embed snippet out of your page source and drops it on their own site, that embed is refused.
-
-Treat it as a scoping control rather than as authentication. Your embed token is a public identifier — it appears in your page HTML by design, the same as any embedded widget — so the allowlist is what keeps it useful only where you intend, not a secret that proves who is calling. Usage limits apply independently of it.
+The allowlist controls **where your widget renders**. If someone copies your embed snippet out of your page source and drops it on their own site, that embed is refused — and so is any direct call to the chat or lead-capture endpoints that didn't come from a render the allowlist approved. Your embed token is a public identifier — it appears in your page HTML by design, the same as any embedded widget — but a copied token alone cannot drive chat or lead-capture traffic from anywhere else. Usage limits still apply on top of this, independently.
 
 Only workspace owners and admins can change the allowed domains or regenerate the token. Members can see the embed snippet but not alter where it works.
 

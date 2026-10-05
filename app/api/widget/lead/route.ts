@@ -4,6 +4,7 @@ import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
+import { verifyRenderToken } from '@/lib/widget/render-token'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -47,16 +48,22 @@ export async function POST(request: Request) {
   const raw = await readBodyCapped(request, MAX_BODY_BYTES)
   if (raw === null) return new Response('Request body too large', { status: 413 })
 
-  let body: { widgetToken?: string; email?: string }
+  let body: { widgetToken?: string; renderToken?: string; email?: string }
   try {
     body = JSON.parse(raw || '{}')
   } catch {
     return new Response('Invalid JSON', { status: 400 })
   }
 
-  const { widgetToken, email } = body
+  const { widgetToken, renderToken, email } = body
   if (!widgetToken || typeof widgetToken !== 'string' || !WIDGET_TOKEN_PATTERN.test(widgetToken)) {
     return new Response('Missing widgetToken', { status: 400 })
+  }
+  // See app/api/widget/chat/route.ts and lib/widget/render-token.ts — same
+  // binding to a render that passed the origin allowlist, same reason
+  // (Known Issue 114).
+  if (!verifyRenderToken(renderToken, widgetToken)) {
+    return new Response('Forbidden', { status: 403 })
   }
 
   // Rate limit before resolving the token so an invalid-token flood costs a
@@ -80,12 +87,6 @@ export async function POST(request: Request) {
   try {
     const org = await getOrgByWidgetToken(widgetToken)
     if (!org) return new Response('Invalid widget token', { status: 404 })
-
-    // No origin allowlist here by design. This request is made from inside our
-    // own iframe, so it is same-origin to us and its Origin header is our
-    // hostname — the embedding page's identity is not present on it. The
-    // allowlist is enforced at the iframe navigation instead (see
-    // app/widget/[widgetToken]/page.tsx).
 
     await saveWidgetLead(org.id, widgetToken, normalized)
     return Response.json({ ok: true })

@@ -8,11 +8,14 @@
  * request is then made from inside that iframe, so it is same-origin to us —
  * its `Origin` header is our own hostname, never the customer's.
  *
- * That means an allowlist cannot be enforced at `/api/widget/chat`: the parent
- * page's identity is simply not present on that request. The only point where
- * it is visible is the **iframe navigation**, where the browser sends the
- * embedding page as `Referer`, reduced to a bare origin cross-site by this
- * app's `Referrer-Policy`.
+ * That means the allowlist decision itself cannot be made at `/api/widget/chat`:
+ * the parent page's identity is simply not present on that request. The only
+ * point where it is visible is the **iframe navigation**, where the browser
+ * sends the embedding page as `Referer`, reduced to a bare origin cross-site
+ * by this app's `Referrer-Policy`. The decision made here is carried forward
+ * to the chat/lead endpoints via a short-lived signed token minted only on an
+ * allowed render — see lib/widget/render-token.ts — so a caller who never
+ * passed this check has nothing valid to present there.
  *
  * `Referer` is the only signal used, and deliberately so: it is the one value
  * on this request the embedding page does not author. Inputs that the caller

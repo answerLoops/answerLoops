@@ -74,7 +74,9 @@ vi.mock('@copilotkit/react-core/v2/headless', () => ({
 async function renderWidget(fake: ReturnType<typeof makeFakeAgent>) {
   h2.current = fake
   const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
-  return render(<WidgetChat widgetToken={'a'.repeat(48)} orgName="Acme" showBranding isSelfPreview={false} />)
+  return render(
+    <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} />
+  )
 }
 
 beforeEach(() => {
@@ -106,7 +108,11 @@ describe('WidgetChat: email gate', () => {
       '/api/widget/lead',
       expect.objectContaining({
         method: 'POST',
-        body: JSON.stringify({ widgetToken: 'a'.repeat(48), email: 'visitor@example.com' }),
+        body: JSON.stringify({
+          widgetToken: 'a'.repeat(48),
+          renderToken: 'test-render-token',
+          email: 'visitor@example.com',
+        }),
       })
     )
   })
@@ -222,7 +228,9 @@ describe('WidgetChat: branding', () => {
   it('shows the "Powered by" line when showBranding is true', async () => {
     h2.current = makeFakeAgent()
     const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
-    render(<WidgetChat widgetToken={'a'.repeat(48)} orgName="Acme" showBranding isSelfPreview={false} />)
+    render(
+      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} />
+    )
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Skip' }))
 
@@ -232,7 +240,9 @@ describe('WidgetChat: branding', () => {
   it('hides the "Powered by" line when showBranding is false', async () => {
     h2.current = makeFakeAgent()
     const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
-    render(<WidgetChat widgetToken={'a'.repeat(48)} orgName="Acme" showBranding={false} isSelfPreview={false} />)
+    render(
+      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding={false} isSelfPreview={false} />
+    )
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Skip' }))
 
