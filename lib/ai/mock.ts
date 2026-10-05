@@ -93,11 +93,12 @@ function mockFaq(text: string): string {
 function generateMockText(prompt: unknown): string {
   const text = promptToText(prompt)
   if (/support triage assistant/i.test(text)) {
-    return mockTriage(text.split(/Message:\s*/i).pop() ?? '')
+    const match = text.match(/<<<BEGIN UNTRUSTED MESSAGE>>>\s*([\s\S]*?)\s*<<<END UNTRUSTED MESSAGE>>>/i)
+    return mockTriage(match?.[1] ?? '')
   }
   if (/strict reviewer grading/i.test(text)) {
-    const answer = (text.split(/Proposed answer:\s*/i)[1] ?? '').split(/Grade the answer:/i)[0]
-    return mockAssess(answer)
+    const match = text.match(/<<<BEGIN UNTRUSTED ANSWER>>>\s*([\s\S]*?)\s*<<<END UNTRUSTED ANSWER>>>/i)
+    return mockAssess(match?.[1] ?? '')
   }
   if (/technical writer creating a community faq/i.test(text)) return mockFaq(text)
   if (/technical support agent/i.test(text)) return mockAgentAnswer(text)
