@@ -1,18 +1,27 @@
-# answerLoops
+<p align="center">
+  <a href="https://answerloops.com">
+    <img src="./.github/readme/logo.svg" alt="answerLoops logo" width="120" height="120" />
+  </a>
+</p>
 
-### Turn your docs into answers for your community.
+<h1 align="center">answerLoops</h1>
 
-Answer questions in Discord, Slack, GitHub, and website chat—with source-backed replies your team can review before sending.
+<p align="center"><strong>Turn your docs into answers for your community.</strong></p>
 
-Self-host with your preferred model, use the hosted app, or connect your own agents through **MCP** and the API.
+<p align="center">Source-backed replies, checked by a second AI and ready for your team to review.<br />Self-host with your preferred model, use the hosted app, or connect your own agents.</p>
 
-[**Self-host →**](#get-started) · [**Try hosted →**](https://app.answerloops.com) · [Connect your agent](#set-up-with-your-agent) · [Docs](https://answerloops.com/docs)
+<p align="center">
+  <a href="#get-started"><strong>Self-host →</strong></a> ·
+  <a href="https://app.answerloops.com"><strong>Try hosted →</strong></a> ·
+  <a href="#set-up-with-your-agent">Connect your agent</a> ·
+  <a href="https://answerloops.com/docs">Docs</a>
+</p>
 
-<a href="https://answerloops.com/#main-content">
-  <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="100%" />
-</a>
+<p align="center">
+  <img src="./.github/readme/overview.svg" alt="A question becomes a source-backed draft, checked by a second AI, then approved by your team or sent automatically when enabled. Useful resolutions become knowledge. Works with Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and website chat." width="100%" />
+</p>
 
-*-> Question from your community -> answered from your knowledge source -> resolved tickets upgraded as content *
+<p align="center"><strong>Knowledge:</strong> your docs, files, GitHub, and Notion · <strong>Agents:</strong> MCP, REST, and TypeScript SDK</p>
 
 [![CI](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/security.yml?branch=main&label=security&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/security.yml)
@@ -33,6 +42,14 @@ Your docs already cover setup, troubleshooting, and the questions people ask eve
 - **Bring your own agents.** Search knowledge, generate answers, and create tickets through MCP, REST, or the TypeScript SDK.
 
 Use it for a project's support Discord, a course community, or a product's documentation site. The same knowledge powers community replies, website chat, and your own AI tools.
+
+<details>
+<summary><strong>Watch the answer loop demo</strong></summary>
+<br />
+<a href="https://answerloops.com/#main-content">
+  <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="100%" />
+</a>
+</details>
 
 <details>
 <summary><strong>See the support dashboard</strong></summary>
