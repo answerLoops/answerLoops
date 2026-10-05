@@ -4,6 +4,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { notFound } from 'next/navigation'
 import { MarketingPage, PageHero, TrialCta } from '@/components/marketing/layout'
+import { NewsletterForm } from '@/components/marketing/newsletter-form'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/site-identity'
 import { getBlogPost, formatPostDate } from '@/lib/blog/posts'
@@ -109,6 +110,28 @@ export default async function BlogPostPage({
           <article className="space-y-6">
             <MDXContent components={getMDXComponents()} />
           </article>
+        </div>
+      </section>
+      <section className="marketing-section">
+        <div className="marketing-container marketing-newsletter">
+          <div>
+            <h2>Get new posts by email</h2>
+            <p>
+              Integration guides and notes on building answerLoops, sent
+              when there&apos;s something worth reading. No spam, unsubscribe
+              anytime.
+            </p>
+          </div>
+          <NewsletterForm />
+        </div>
+        <div className="marketing-container marketing-post-call">
+          <p>
+            If you have any questions, meet with us. We&apos;d be glad to
+            answer them.
+          </p>
+          <a className="marketing-button" href="https://dub.sh/talk-to-us">
+            Book a call
+          </a>
         </div>
       </section>
       <TrialCta />

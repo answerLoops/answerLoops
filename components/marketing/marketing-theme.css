@@ -185,6 +185,8 @@
 .marketing-site .marketing-newsletter-input:disabled { opacity: 0.6; }
 .marketing-site .marketing-newsletter-error { width: 100%; color: #b3261e; font-size: 0.8125rem; margin: 0; }
 .marketing-site .marketing-newsletter-success { font-weight: 600; color: var(--marketing-navy); margin: 0; }
+.marketing-site .marketing-post-call { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 2rem; }
+.marketing-site .marketing-post-call p { margin: 0; color: var(--marketing-ink); font-weight: 600; }
 /* The "Google overview" block: a short, direct-answer paragraph meant to be
    liftable by featured snippets / AI Overviews, set apart from the article
    prose that follows it rather than reading as just the first paragraph. */
