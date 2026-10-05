@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { getStripe } from './stripe'
+import { CHECKOUT_BRANDING } from './branding'
 import { getPlan, stripePriceFor, TRIAL_DAYS, type BillingInterval, type Plan } from './plans'
 import { getSubscription } from '@/lib/db/queries/billing'
 import { getDb } from '@/lib/db/drizzle'
@@ -147,6 +148,7 @@ export async function createCheckoutSession(
         metadata: { org_id: String(orgId), plan_id: plan.id },
       },
       allow_promotion_codes: true,
+      branding_settings: CHECKOUT_BRANDING,
       // Stripe shows the trial dates on its own, but not in words. Saying it
       // plainly at the submit button is the difference between "why does this
       // want my card" and a understood commitment — and it is the single
@@ -258,6 +260,7 @@ export async function createEmbeddedCheckoutSession(
         metadata: { org_id: String(orgId), plan_id: plan.id },
       },
       allow_promotion_codes: true,
+      branding_settings: CHECKOUT_BRANDING,
     }, { idempotencyKey: checkoutIdempotencyKey(orgId, plan.id, interval) })
 
     if (!checkoutSession.client_secret) {
