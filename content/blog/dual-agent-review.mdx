@@ -1,5 +1,5 @@
 ---
-title: Why we added a second AI to check the first one's work
+title: Why we added a 2nd AI agent to check the first one's work
 subtitle: A single model has no incentive to doubt its own reasoning — so we made a separate one responsible for catching it
 description: Inside answerLoops' dual-agent review pipeline — why a draft-only AI support tool can't catch its own source-misalignment errors, and how a separate review step changes what "confidence" actually means.
 overview: Most AI support tools generate an answer and attach a confidence score to it — but that score comes from the same model that wrote the answer, which has no structural reason to doubt its own reasoning. answerLoops splits the job into two agents instead of one. One agent retrieves your documentation and drafts a reply. A separate agent then checks that draft against the retrieved sources before anything is allowed to post, and the confidence score comes from that second, independent check. We call this dual-agent review, and it's the reason "high confidence" in answerLoops means "a second AI checked this against the evidence," not "the first AI liked its own answer."
