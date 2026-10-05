@@ -8,6 +8,7 @@ import Image from 'next/image'
 
 interface WidgetChatProps {
   widgetToken: string
+  renderToken: string
   orgName: string
   showBranding: boolean
   isSelfPreview: boolean
@@ -33,7 +34,7 @@ function getOrCreateVisitorId(): string {
   }
 }
 
-export function WidgetChat({ widgetToken, orgName, showBranding, isSelfPreview }: WidgetChatProps) {
+export function WidgetChat({ widgetToken, renderToken, orgName, showBranding, isSelfPreview }: WidgetChatProps) {
   const visitorId = useMemo(() => getOrCreateVisitorId(), [])
 
   return (
@@ -41,10 +42,11 @@ export function WidgetChat({ widgetToken, orgName, showBranding, isSelfPreview }
       runtimeUrl="/api/widget/chat"
       enableInspector={false}
       useSingleEndpoint
-      properties={{ widgetToken, visitorId, isSelfPreview }}
+      properties={{ widgetToken, renderToken, visitorId, isSelfPreview }}
     >
       <WidgetChatBody
         widgetToken={widgetToken}
+        renderToken={renderToken}
         orgName={orgName}
         showBranding={showBranding}
         visitorId={visitorId}
@@ -56,12 +58,14 @@ export function WidgetChat({ widgetToken, orgName, showBranding, isSelfPreview }
 
 function WidgetChatBody({
   widgetToken,
+  renderToken,
   orgName,
   showBranding,
   visitorId,
   isSelfPreview,
 }: {
   widgetToken: string
+  renderToken: string
   orgName: string
   showBranding: boolean
   visitorId: string
@@ -120,7 +124,7 @@ function WidgetChatBody({
     // agent.runAgent() called bare skips CopilotKitCore's forwardedProps merge
     // (that only happens inside copilotkit.runAgent()) — pass widgetToken and
     // visitorId explicitly or the server never sees them.
-    void agent.runAgent({ forwardedProps: { widgetToken, visitorId, isSelfPreview } })
+    void agent.runAgent({ forwardedProps: { widgetToken, renderToken, visitorId, isSelfPreview } })
   }
 
   async function handleEmailSubmit(e: React.FormEvent) {
@@ -132,7 +136,7 @@ function WidgetChatBody({
       await fetch('/api/widget/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ widgetToken, email: email.trim() }),
+        body: JSON.stringify({ widgetToken, renderToken, email: email.trim() }),
       })
     } catch {
       // non-blocking — still let them in

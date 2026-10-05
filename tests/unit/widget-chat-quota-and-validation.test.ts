@@ -57,6 +57,9 @@ vi.mock('@/lib/ai/models', () => ({
   NoAIProviderConfiguredError: FakeNoProviderError,
 }))
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
+// This suite exercises request validation, not the render-token binding
+// (covered by widget-render-token.test.ts and widget-surface-hardening.test.ts).
+vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: () => true }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.7' }))
 vi.mock('@/lib/ai/embed', () => ({ embedText: vi.fn(async () => [0.1]) }))
 vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: vi.fn(async () => []) }))

@@ -14,6 +14,7 @@ import { getWidgetChatMemory } from '@/lib/ai/memory'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
+import { verifyRenderToken } from '@/lib/widget/render-token'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { reserveGeneration, commitDeflection, releaseGeneration } from '@/lib/billing/usage'
 import { logger } from '@/lib/logger'
@@ -125,6 +126,7 @@ interface RunAgentInputLike {
   messages?: { role?: string; content?: string }[]
   forwardedProps?: {
     widgetToken?: string
+    renderToken?: string
     visitorId?: string
     requestId?: string
     isSelfPreview?: boolean
@@ -198,6 +200,13 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   if (!widgetToken || typeof widgetToken !== 'string' || !WIDGET_TOKEN_PATTERN.test(widgetToken)) {
     return new Response('Missing widgetToken', { status: 400 })
   }
+  // Proves this call followed a page render that passed the origin allowlist
+  // (lib/widget/origin.ts) — the token itself is public in page source, so
+  // without this any caller who extracts it can spend against the org's
+  // quota from anywhere, bypassing the allowlist entirely. See Known Issue 114.
+  if (!verifyRenderToken(body?.forwardedProps?.renderToken, widgetToken)) {
+    return new Response('Forbidden', { status: 403 })
+  }
   if (!visitorId || typeof visitorId !== 'string' || visitorId.length > MAX_VISITOR_ID_LEN) {
     return new Response('Missing visitorId', { status: 400 })
   }
@@ -245,11 +254,13 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   // so trusting it here is an acceptable tradeoff for a real error message.
   const isSelfPreview = body?.forwardedProps?.isSelfPreview === true
 
-  // No origin allowlist here by design. This request is made from inside our
-  // own iframe, so it is same-origin to us and its Origin header is our own
-  // hostname — the embedding page's identity is not present on it. The
-  // allowlist is enforced at the iframe navigation instead (see
-  // app/widget/[widgetToken]/page.tsx).
+  // No Origin header check here: this request is made from inside our own
+  // iframe, so it is same-origin to us and its Origin header is our own
+  // hostname — the embedding page's identity is never present on it. The
+  // origin allowlist is enforced at the iframe navigation instead (see
+  // app/widget/[widgetToken]/page.tsx) and carried forward to this call via
+  // the renderToken check above, which only a render that passed the
+  // allowlist can have produced.
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
   const query = lastUserMsg?.content ?? ''

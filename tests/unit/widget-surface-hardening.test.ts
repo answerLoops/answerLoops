@@ -119,13 +119,16 @@ describe('widget lead endpoint carries the standard abuse controls', () => {
     expect(s).not.toContain("email.includes('@')")
   })
 
-  it('does not pretend to enforce the allowlist, which is not observable here', () => {
+  it('does not check Origin directly, but requires a render token bound to the allowlist check', () => {
     const s = src()
     // This request is same-origin to us, so its Origin header is our own
-    // hostname. A check here would be inert at best and would break the
-    // legitimate widget once an org configured domains.
+    // hostname — a direct check here would be inert at best. Instead it
+    // requires verifyRenderToken, which only a render that passed
+    // isEmbedAllowed() (app/widget/[widgetToken]/page.tsx) could have minted.
+    // See Known Issue 114 / lib/widget/render-token.ts.
     expect(s).not.toContain('isOriginAllowed')
-    expect(s).toContain('allowlist is enforced at the iframe navigation')
+    expect(s).toContain("import { verifyRenderToken } from '@/lib/widget/render-token'")
+    expect(s).toContain('verifyRenderToken(renderToken, widgetToken)')
   })
 })
 
@@ -145,10 +148,11 @@ describe('widget chat endpoint hardening', () => {
     expect(s).not.toContain('await request.json()')
   })
 
-  it('does not pretend to enforce the allowlist, which is not observable here', () => {
+  it('does not check Origin directly, but requires a render token bound to the allowlist check', () => {
     const s = src()
     expect(s).not.toContain('isOriginAllowed')
-    expect(s).toContain('allowlist is enforced at the iframe navigation')
+    expect(s).toContain("import { verifyRenderToken } from '@/lib/widget/render-token'")
+    expect(s).toContain('verifyRenderToken(body?.forwardedProps?.renderToken, widgetToken)')
   })
 
   it('resolves the client IP through the trusted-proxy chain', () => {
