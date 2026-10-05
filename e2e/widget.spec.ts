@@ -1,6 +1,14 @@
 import fs from 'fs'
 import { test, expect } from '@playwright/test'
 import { WIDGET_TOKEN_FILE } from './global-setup'
+import { mintRenderToken } from '../lib/widget/render-token'
+
+// Known Issue 114: chat/lead now require a renderToken minted only after a
+// page render passes the origin allowlist (lib/widget/render-token.ts). These
+// tests hit the API directly, bypassing that render, so each one mints its
+// own token here — AUTH_SECRET is pinned identically for this process and the
+// webServer (see playwright.config.ts), so a token minted here verifies
+// against the real running server.
 
 // Widget: API-level tests for /api/widget/chat and /api/widget/lead.
 // Uses the token seeded in global-setup. The chat response is a stream;
@@ -28,10 +36,12 @@ function chatMsg(content: string) {
 
 function chatEnvelope({
   widgetToken,
+  renderToken,
   visitorId,
   messages,
 }: {
   widgetToken?: string
+  renderToken?: string
   visitorId?: string
   messages: unknown
 }) {
@@ -44,7 +54,7 @@ function chatEnvelope({
       tools: [],
       context: [],
       messages,
-      forwardedProps: { widgetToken, visitorId },
+      forwardedProps: { widgetToken, renderToken, visitorId },
     },
   }
 }
@@ -60,7 +70,12 @@ test.describe('widget: /api/widget/chat', () => {
   test('returns 400 for missing messages', async ({ request }) => {
     const token = getToken()
     const res = await request.post('/api/widget/chat', {
-      data: chatEnvelope({ widgetToken: token, visitorId: 'e2e-visitor-no-messages', messages: [] }),
+      data: chatEnvelope({
+        widgetToken: token,
+        renderToken: mintRenderToken(token),
+        visitorId: 'e2e-visitor-no-messages',
+        messages: [],
+      }),
     })
     expect(res.status()).toBe(400)
   })
@@ -68,7 +83,7 @@ test.describe('widget: /api/widget/chat', () => {
   test('returns 400 for missing visitorId', async ({ request }) => {
     const token = getToken()
     const res = await request.post('/api/widget/chat', {
-      data: chatEnvelope({ widgetToken: token, messages: [chatMsg('hello')] }),
+      data: chatEnvelope({ widgetToken: token, renderToken: mintRenderToken(token), messages: [chatMsg('hello')] }),
     })
     expect(res.status()).toBe(400)
   })
@@ -76,10 +91,13 @@ test.describe('widget: /api/widget/chat', () => {
   test('returns 404 for invalid widget token', async ({ request }) => {
     // Well-formed (48 hex chars, matches WIDGET_TOKEN_PATTERN) but not one
     // any org has — a malformed token is rejected as 400 before the DB
-    // lookup that would return 404 ever runs.
+    // lookup that would return 404 ever runs. Its renderToken just needs to
+    // match this same fake widgetToken, not belong to a real org.
+    const fakeToken = 'f'.repeat(48)
     const res = await request.post('/api/widget/chat', {
       data: chatEnvelope({
-        widgetToken: 'f'.repeat(48),
+        widgetToken: fakeToken,
+        renderToken: mintRenderToken(fakeToken),
         visitorId: 'e2e-visitor-invalid-token',
         messages: [chatMsg('hello')],
       }),
@@ -92,6 +110,7 @@ test.describe('widget: /api/widget/chat', () => {
     const res = await request.post('/api/widget/chat', {
       data: chatEnvelope({
         widgetToken: token,
+        renderToken: mintRenderToken(token),
         visitorId: 'e2e-visitor-stream',
         messages: [chatMsg('How do I configure the client?')],
       }),
@@ -104,7 +123,12 @@ test.describe('widget: /api/widget/chat', () => {
     const token = getToken()
     const tooLong = 'a'.repeat(4_001)
     const res = await request.post('/api/widget/chat', {
-      data: chatEnvelope({ widgetToken: token, visitorId: 'e2e-visitor-char-cap', messages: [chatMsg(tooLong)] }),
+      data: chatEnvelope({
+        widgetToken: token,
+        renderToken: mintRenderToken(token),
+        visitorId: 'e2e-visitor-char-cap',
+        messages: [chatMsg(tooLong)],
+      }),
     })
     expect(res.status()).toBe(400)
   })
@@ -113,7 +137,7 @@ test.describe('widget: /api/widget/chat', () => {
     const token = getToken()
     const messages = Array.from({ length: 51 }, () => chatMsg('hi'))
     const res = await request.post('/api/widget/chat', {
-      data: chatEnvelope({ widgetToken: token, visitorId: 'e2e-visitor-message-cap', messages }),
+      data: chatEnvelope({ widgetToken: token, renderToken: mintRenderToken(token), visitorId: 'e2e-visitor-message-cap', messages }),
       headers: { 'x-forwarded-for': 'test-ip-message-cap' },
     })
     expect(res.status()).toBe(400)
@@ -124,6 +148,7 @@ test.describe('widget: /api/widget/chat', () => {
     const ip = 'test-ip-rate-limit-unique'
     const payload = chatEnvelope({
       widgetToken: token,
+      renderToken: mintRenderToken(token),
       visitorId: 'e2e-visitor-rate-limit',
       messages: [chatMsg('hi')],
     })
@@ -168,16 +193,17 @@ test.describe('widget: /api/widget/lead', () => {
   test('returns 400 for invalid email', async ({ request }) => {
     const token = getToken()
     const res = await request.post('/api/widget/lead', {
-      data: { widgetToken: token, email: 'not-an-email' },
+      data: { widgetToken: token, renderToken: mintRenderToken(token), email: 'not-an-email' },
     })
     expect(res.status()).toBe(400)
   })
 
   test('returns 404 for invalid widget token', async ({ request }) => {
     // Same reasoning as the /chat variant above: needs to pass the
-    // well-formed-token check to reach the DB lookup that 404s.
+    // well-formed-token and renderToken checks to reach the DB lookup that 404s.
+    const fakeToken = 'f'.repeat(48)
     const res = await request.post('/api/widget/lead', {
-      data: { widgetToken: 'f'.repeat(48), email: 'user@example.com' },
+      data: { widgetToken: fakeToken, renderToken: mintRenderToken(fakeToken), email: 'user@example.com' },
     })
     expect(res.status()).toBe(404)
   })
@@ -185,7 +211,7 @@ test.describe('widget: /api/widget/lead', () => {
   test('captures a lead for valid token + email', async ({ request }) => {
     const token = getToken()
     const res = await request.post('/api/widget/lead', {
-      data: { widgetToken: token, email: 'lead@example.com' },
+      data: { widgetToken: token, renderToken: mintRenderToken(token), email: 'lead@example.com' },
     })
     expect(res.ok()).toBeTruthy()
     expect((await res.json()).ok).toBe(true)
@@ -194,9 +220,10 @@ test.describe('widget: /api/widget/lead', () => {
   test('deduplicates the same lead (upsert)', async ({ request }) => {
     const token = getToken()
     const email = 'dup-lead@example.com'
-    const first = await request.post('/api/widget/lead', { data: { widgetToken: token, email } })
+    const data = { widgetToken: token, renderToken: mintRenderToken(token), email }
+    const first = await request.post('/api/widget/lead', { data })
     expect(first.ok()).toBeTruthy()
-    const second = await request.post('/api/widget/lead', { data: { widgetToken: token, email } })
+    const second = await request.post('/api/widget/lead', { data })
     expect(second.ok()).toBeTruthy()
   })
 })
