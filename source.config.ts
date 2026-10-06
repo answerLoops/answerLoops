@@ -50,6 +50,13 @@ export const blog = defineDocs({
       // page on the site gets from publicPageMetadata).
       canonicalUrl: z.string().url().optional(),
       draft: z.boolean().optional(),
+      // Free-form topic tags, finer-grained than `category` — drives the
+      // "Related articles" matching in lib/blog/posts.ts (shared tags, not
+      // just same category). Keep these consistent across posts covering the
+      // same theme (e.g. "confidence-review", "knowledge-base") so the
+      // overlap actually finds related posts instead of each post minting
+      // its own one-off tag.
+      tags: z.array(z.string()).optional(),
     }),
   },
 })

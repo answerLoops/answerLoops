@@ -7,7 +7,7 @@ import { MarketingPage, PageHero, TrialCta } from '@/components/marketing/layout
 import { NewsletterForm } from '@/components/marketing/newsletter-form'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/site-identity'
-import { getBlogPost, formatPostDate } from '@/lib/blog/posts'
+import { getBlogPost, getRelatedPosts, formatPostDate } from '@/lib/blog/posts'
 import { getMDXComponents } from '@/mdx-components'
 import { marketingSiteEnabled, MARKETING_URL } from '@/lib/site'
 
@@ -49,6 +49,7 @@ export default async function BlogPostPage({
   if (!post) notFound()
 
   const { title, subtitle, overview, description, author, datePublished, dateModified, category, coverImage, coverImageAlt } = post.data
+  const relatedPosts = getRelatedPosts(slug)
   const url = `${MARKETING_URL}/blog/${slug}`
   const imageUrl = coverImage ?? `${MARKETING_URL}/blog/${slug}/opengraph-image`
   const MDXContent = post.data.body
@@ -112,6 +113,21 @@ export default async function BlogPostPage({
           </article>
         </div>
       </section>
+      {relatedPosts.length > 0 && (
+        <section className="marketing-section">
+          <div className="marketing-container marketing-related-posts">
+            <h2>Related articles</h2>
+            <ul>
+              {relatedPosts.map((related) => (
+                <li key={related.slugs[0]}>
+                  <Link href={`/blog/${related.slugs[0]}`}>{related.data.title}</Link>
+                  <p>{related.data.subtitle}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
       <section className="marketing-section">
         <div className="marketing-container marketing-newsletter">
           <div>
