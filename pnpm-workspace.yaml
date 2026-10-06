@@ -40,6 +40,10 @@ minimumReleaseAgeExclude:
   # Auth.js release, can't wait out the normal 7-day aging window.
   - 'next-auth@5.0.0-beta.32'
   - '@auth/core@0.41.3'
+  # disclosure-ok  High-severity event-loop DoS (CVE-2026-93749), fixed only
+  # in 1.2.2 — released 2026-09-30, inside the 7-day aging window as of this
+  # fix. Trivy gates CI on it now, so excluded rather than waiting the window out.
+  - 'source-map-js@1.2.2'
 overrides:
   ws: '>=8.21.0'
   shell-quote: '>=1.8.5'   # GHSA-395f-4hp3-45gv — >=1.8.4 wasn't actually patched, 1.8.4 itself is vulnerable
@@ -59,3 +63,9 @@ overrides:
   baseline-browser-mapping: '>=2.11.0 <3.0.0'   # disclosure-ok  GHSA-w5vr-8v7q-w6rv — transitive via tailwindcss/browserslist tooling. Capped below 3.x per the open-range lesson above
   axios: '>=1.20.0 <2.0.0'   # disclosure-ok  CVE-2026-101898/101901/101903/101905/101906/101907/101909, all fixed in 1.20.0 — reached via @mendable/firecrawl-js and @slack/bolt's web-api client, both pinned below the range a plain caret bump could reach. Capped below 2.x per the open-range lesson above
   probe-image-size: '>=7.4.0 <8.0.0'   # disclosure-ok  CVE-2026-104861 (crafted-SVG denial of service), fixed in 7.4.0 — reached via @mastra/memory. Capped below 8.x per the open-range lesson above
+  proxy-addr: '>=2.0.8 <3.0.0'   # disclosure-ok  CVE-2026-90711 (IP-spoofing via IPv4-mapped IPv6 trust-subnet bypass), fixed in 2.0.8 — reached via express (both the 4.x and 5.x lines in the tree pull it directly). Capped below 3.x per the open-range lesson above
+  source-map-js: '>=1.2.2 <2.0.0'   # disclosure-ok  CVE-2026-93749 (event-loop denial of service via malformed indexed source-map sections), fixed in 1.2.2 — transitive via @tailwindcss/node and the jsdom>vitest toolchain. Capped below 2.x per the open-range lesson above
+  '@graphql-tools/utils': '>=12.0.1 <13.0.0'   # disclosure-ok  prototype pollution in mergeDeep, fixed in 12.0.1 — reached via graphql-yoga (CopilotKit's GraphQL runtime). No patched 11.x release exists (11.2.2 is the last one published), and graphql-yoga still declares ^11.2.0 as of its latest stable (5.24.2) — this override forces it a major past what it declares support for, same open-range risk flagged above, but there is no in-range fix available. Verified against e2e/widget.spec.ts (CopilotKit's full chat path) before merging; re-check that suite if this ever needs bumping further.
+  dompurify: '>=3.4.16 <4.0.0'   # disclosure-ok  two DOMPurify advisories (detached-subtree XSS via IN_PLACE's afterSanitize hook; forced HTML reparse via a force-removed rawtext root), both fixed in 3.4.16 — reached via mermaid, which declares ^3.3.3 (satisfied). Capped below 4.x per the open-range lesson above
+  katex: '>=0.18.2 <0.19.0'   # disclosure-ok  prototype pollution bypassing trust restrictions, fixed in 0.18.2 — reached via CopilotKit/streamdown/remark-math/rehype-katex, all of which declare ^0.16.x. No patched 0.16.x release exists, so this forces every consumer past its declared range (0.x treats the middle number as breaking) — same risk as the graphql-tools entry above, no in-range fix available
+  ip-address: '>=10.7.1 <11.0.0'   # disclosure-ok  four advisories (two SSRF/trust-boundary bypasses via incomplete link-local/NAT64 range classification, a cross-family address-comparison bypass, and an unbounded parse-diagnostic DoS), fixed across 10.5.1/10.7.1 — reached via express-rate-limit, which declares ^10.2.0 (satisfied). Capped below 11.x per the open-range lesson above
