@@ -87,6 +87,7 @@ updates:
       - dependency-name: "probe-image-size"
       - dependency-name: "proxy-addr"
       - dependency-name: "source-map-js"
+      - dependency-name: "@modelcontextprotocol/sdk"
       - dependency-name: "@graphql-tools/utils"
       - dependency-name: "dompurify"
       - dependency-name: "katex"
