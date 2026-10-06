@@ -172,6 +172,34 @@ export interface TicketCursor {
   id: number
 }
 
+/** Opaque, URL-safe encoding of a TicketCursor — shared by the Agent API and the dashboard. */
+export function encodeTicketCursor(cursor: TicketCursor): string {
+  return Buffer.from(`${cursor.createdAt}|${cursor.id}`, 'utf8').toString('base64url')
+}
+
+/**
+ * Returns `undefined` when the caller omitted a cursor (first page), `null`
+ * when they sent one that doesn't decode to a valid cursor — callers
+ * distinguish "no cursor" from "bad cursor" (e.g. lib/agent/core.ts's
+ * parseEnumArg follows the same convention).
+ */
+export function decodeTicketCursor(value: unknown): TicketCursor | null | undefined {
+  if (value === undefined) return undefined
+  if (typeof value !== 'string' || !value) return null
+  let decoded: string
+  try {
+    decoded = Buffer.from(value, 'base64url').toString('utf8')
+  } catch {
+    return null
+  }
+  const sep = decoded.lastIndexOf('|')
+  if (sep === -1) return null
+  const createdAt = decoded.slice(0, sep)
+  const id = Number(decoded.slice(sep + 1))
+  if (!createdAt || !Number.isInteger(id)) return null
+  return { createdAt, id }
+}
+
 export async function getTickets(
   filters: TicketFilters = {},
   orgId: number,

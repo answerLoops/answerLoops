@@ -20,7 +20,7 @@ export default async function DashboardPage() {
   const [stats, breachedTickets, recentTickets] = await Promise.all([
     getTicketStats(orgId),
     getSLABreachedTickets(orgId),
-    getTickets({ status: 'open' }, orgId).then((t) => t.slice(0, 6)),
+    getTickets({ status: 'open' }, orgId, 6),
   ])
 
   const firstName = session?.user?.name?.split(' ')[0] ?? 'there'

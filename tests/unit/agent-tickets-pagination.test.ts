@@ -17,7 +17,10 @@ type FakeTicket = {
 
 const { getTicketsMock } = vi.hoisted(() => ({ getTicketsMock: vi.fn() }))
 
-vi.mock('@/lib/db/queries/tickets', () => ({ getTickets: getTicketsMock }))
+vi.mock('@/lib/db/queries/tickets', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/db/queries/tickets')>()
+  return { ...actual, getTickets: getTicketsMock }
+})
 
 const { getTicketsCore } = await import('@/lib/agent/core')
 
