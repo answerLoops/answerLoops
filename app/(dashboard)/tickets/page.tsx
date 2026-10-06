@@ -1,4 +1,4 @@
-import { getTickets } from '@/lib/db/queries/tickets'
+import { getTickets, encodeTicketCursor, decodeTicketCursor } from '@/lib/db/queries/tickets'
 import { TicketList } from '@/components/tickets/ticket-list'
 import { auth } from '@/auth'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
@@ -13,18 +13,39 @@ interface SearchParams {
   status?: string
   priority?: string
   category?: string
+  cursor?: string
 }
+
+// Known Issue 128: this page used to load the org's entire ticket history on
+// every render, every column, with no limit at all — the query grew heavier
+// as an org aged, with no ceiling. Paginated the same way the Agent API's
+// get_tickets already was: fetch one row past the page to know whether
+// another page follows, without a second round trip or a COUNT query.
+const PAGE_SIZE = 50
 
 export default async function TicketsPage(props: { searchParams: Promise<SearchParams> }) {
   const searchParams = await props.searchParams
   const session = await auth()
   const orgId = session?.orgId ?? DEFAULT_ORG_ID
   const canExportCsv = await orgHasFeature(orgId, 'csv_export')
-  const tickets = await getTickets({
+
+  const cursor = decodeTicketCursor(searchParams.cursor)
+  const filters = {
     status: searchParams.status as TicketStatus | undefined,
     priority: searchParams.priority as Priority | undefined,
     category: searchParams.category as TicketCategory | undefined,
-  }, orgId)
+  }
+  const rows = await getTickets(filters, orgId, PAGE_SIZE + 1, cursor ?? undefined)
+  const hasMore = rows.length > PAGE_SIZE
+  const tickets = hasMore ? rows.slice(0, PAGE_SIZE) : rows
+  const last = tickets[tickets.length - 1]
+  const nextCursor = hasMore && last ? encodeTicketCursor({ createdAt: last.created_at, id: last.id }) : null
+
+  const loadMoreParams = new URLSearchParams()
+  if (filters.status) loadMoreParams.set('status', filters.status)
+  if (filters.priority) loadMoreParams.set('priority', filters.priority)
+  if (filters.category) loadMoreParams.set('category', filters.category)
+  if (nextCursor) loadMoreParams.set('cursor', nextCursor)
 
   return (
     <div className="dashboard-page max-w-7xl space-y-6">
@@ -35,7 +56,10 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
             Unified inbox
           </div>
           <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Tickets</h1>
-          <p className="mt-1 text-sm text-slate-500">{tickets.length} conversation{tickets.length !== 1 ? 's' : ''} across every connected channel.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            {tickets.length} conversation{tickets.length !== 1 ? 's' : ''} across every connected channel
+            {hasMore || cursor ? ' (showing the most recent page)' : ''}.
+          </p>
         </div>
 
         {/* Filter bar */}
@@ -86,6 +110,17 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
       </div>
 
       <TicketList tickets={tickets} />
+
+      {nextCursor && (
+        <div className="flex justify-center">
+          <Link
+            href={`/tickets?${loadMoreParams.toString()}`}
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+          >
+            Load more
+          </Link>
+        </div>
+      )}
     </div>
   )
 }

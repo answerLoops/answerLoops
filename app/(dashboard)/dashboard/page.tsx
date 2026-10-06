@@ -20,7 +20,7 @@ export default async function DashboardPage() {
   const [stats, breachedTickets, recentTickets] = await Promise.all([
     getTicketStats(orgId),
     getSLABreachedTickets(orgId),
-    getTickets({ status: 'open' }, orgId).then((t) => t.slice(0, 6)),
+    getTickets({ status: 'open' }, orgId, 6),
   ])
 
   const firstName = session?.user?.name?.split(' ')[0] ?? 'there'
@@ -62,7 +62,7 @@ export default async function DashboardPage() {
               <h2 className="text-sm font-semibold text-slate-950">Open tickets</h2>
               <p className="mt-0.5 text-xs text-slate-500">Oldest unresolved questions</p>
             </div>
-            <Link href="/tickets" className="text-xs text-brand-600 hover:text-brand-700 font-medium">
+            <Link href="/tickets?status=open" className="text-xs text-brand-600 hover:text-brand-700 font-medium">
               View all →
             </Link>
           </div>

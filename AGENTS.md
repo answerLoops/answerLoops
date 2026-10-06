@@ -175,6 +175,16 @@ On any PR that adds/removes a page under `content/docs/integrations/**`, adds/re
 
 Skip for wording/typo fixes or troubleshooting-section additions that don't change what the product does or where things live.
 
+# Release-notes skill — builder-facing notes on every release
+
+Before cutting any release (a `v*` tag or a GitHub release), run `/project:release-notes` to draft the notes. Do not use bare auto-generated notes or write them by hand.
+
+The skill reads every merged PR since the previous `v*` tag and writes notes for builders: breaking changes and upgrade steps first, then new features, improvements, fixes described by the symptom builders saw, Agent SDK changes, new env vars and migrations, and contributors. It keeps GitHub's own "New Contributors" and "Full Changelog" sections verbatim.
+
+It follows the security-disclosure rule: a security fix is one sentence ("This release includes security fixes.") and nothing more. It shows the draft and publishes only after the user explicitly approves the release.
+
+Skip for `agent-sdk-v*` tags unless the user asks; those releases are described in the SDK's own changelog entry.
+
 # Subagent concurrency limit
 
 **Maximum 4 subagents running at any given time.** No exceptions.
@@ -196,6 +206,7 @@ Before opening any PR, re-read this file (`AGENTS.md`) and verify all rules are 
 6. If UI changed: `/project:mobile-check` ran and orchestrator signed off
 7. If a component with real logic changed: `/project:component-test` ran and orchestrator signed off
 8. If integration pages or top-level capabilities changed in `content/docs/`: `/project:update-llms-txt` ran
+9. If cutting a release: `/project:release-notes` ran and the user approved the draft
 
 # Placeholder format — HARD RULE
 
