@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 interface StatsCardsProps {
   total: number
   open: number
@@ -39,6 +41,7 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
     },
     {
       label: 'Open',
+      href: '/tickets?status=open',
       display: String(open),
       icon: (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -108,40 +111,48 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
         const featured = 'featured' in card ? card.featured : undefined
         const isDark = featured === 'dark'
         const isBlue = featured === 'blue'
-        return (
-        <div
-          key={card.label}
-          className={`group relative overflow-hidden rounded-2xl border p-4 transition duration-200 hover:-translate-y-0.5 ${
+        const className = `group relative overflow-hidden rounded-2xl border p-4 transition duration-200 hover:-translate-y-0.5 ${
             isDark
               ? 'border-[#082e50] bg-[#082e50] text-white shadow-none'
               : isBlue
                 ? 'border-[#c4dfe2] bg-[#dceff0] text-[#082e50] shadow-none'
                 : 'border-slate-200/80 bg-white/90 shadow-[0_12px_32px_rgba(30,64,175,0.05)] hover:shadow-[0_16px_40px_rgba(30,64,175,0.09)]'
-          }`}
-        >
-          {(isDark || isBlue) && <div className="landing-grid pointer-events-none absolute inset-0 opacity-25" />}
-          <div className="relative mb-4 flex items-center justify-between">
-            <p className={`text-[0.6875rem] font-semibold ${isDark || isBlue ? 'text-white/65' : 'text-slate-500'}`}>{card.label}</p>
-            <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-              isDark || isBlue
-                ? 'border border-white/10 bg-white/[0.08] text-cyan-200'
-                : card.accent
-                  ? 'bg-blue-50 text-blue-600'
-                  : 'bg-slate-100 text-slate-400'
-            }`}>
-              {card.icon}
+          }`
+        const content = (
+          <>
+            {(isDark || isBlue) && <div className="landing-grid pointer-events-none absolute inset-0 opacity-25" />}
+            <div className="relative mb-4 flex items-center justify-between">
+              <p className={`text-[0.6875rem] font-semibold ${isDark || isBlue ? 'text-white/65' : 'text-slate-500'}`}>{card.label}</p>
+              <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${
+                isDark || isBlue
+                  ? 'border border-white/10 bg-white/[0.08] text-cyan-200'
+                  : card.accent
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'bg-slate-100 text-slate-400'
+              }`}>
+                {card.icon}
+              </div>
             </div>
+            <p className={`relative text-3xl font-semibold tracking-[-0.045em] ${
+              isDark || isBlue ? 'text-white' : card.accent && card.accentClass ? card.accentClass : 'text-slate-950'
+            }`}>
+              {card.display}
+            </p>
+            <div className={`relative mt-3 h-0.5 overflow-hidden rounded-full ${isDark || isBlue ? 'bg-white/10' : 'bg-slate-100'}`}>
+              <div className={`h-full rounded-full ${index < 2 ? 'w-3/4 bg-cyan-300' : 'w-1/3 bg-blue-400/55'}`} />
+            </div>
+          </>
+        )
+        return 'href' in card && card.href ? (
+          <Link key={card.label} href={card.href} className={className}>
+            {content}
+          </Link>
+        ) : (
+          <div key={card.label} className={className}>
+            {content}
           </div>
-          <p className={`relative text-3xl font-semibold tracking-[-0.045em] ${
-            isDark || isBlue ? 'text-white' : card.accent && card.accentClass ? card.accentClass : 'text-slate-950'
-          }`}>
-            {card.display}
-          </p>
-          <div className={`relative mt-3 h-0.5 overflow-hidden rounded-full ${isDark || isBlue ? 'bg-white/10' : 'bg-slate-100'}`}>
-            <div className={`h-full rounded-full ${index < 2 ? 'w-3/4 bg-cyan-300' : 'w-1/3 bg-blue-400/55'}`} />
-          </div>
-        </div>
-      )})}
+        )
+      })}
     </div>
   )
 }
