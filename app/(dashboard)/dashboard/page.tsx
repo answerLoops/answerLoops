@@ -62,7 +62,7 @@ export default async function DashboardPage() {
               <h2 className="text-sm font-semibold text-slate-950">Open tickets</h2>
               <p className="mt-0.5 text-xs text-slate-500">Oldest unresolved questions</p>
             </div>
-            <Link href="/tickets" className="text-xs text-brand-600 hover:text-brand-700 font-medium">
+            <Link href="/tickets?status=open" className="text-xs text-brand-600 hover:text-brand-700 font-medium">
               View all →
             </Link>
           </div>
