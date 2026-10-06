@@ -38,7 +38,6 @@
     "@ai-sdk/groq": "^3.0.42",
     "@ai-sdk/mistral": "^3.0.40",
     "@ai-sdk/openai": "^3.0.52",
-    "@ai-sdk/react": "^3.0.209",
     "@copilotkit/react-core": "1.75.0",
     "@copilotkit/runtime": "1.75.0",
     "@mastra/core": "^1.55.0",
