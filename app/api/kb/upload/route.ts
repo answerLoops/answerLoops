@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { detectFileType, parseFile } from '@/lib/ingest/file-parsers'
 import { chunkMarkdown } from '@/lib/ingest/url'
 import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
@@ -15,9 +14,9 @@ const MAX_ARTICLES_PER_ORG = 2000
 const MAX_CHUNKS_PER_FILE = 200
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess()
+  if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+  const orgId = access.orgId
 
   const limit = rateLimit(`kb-upload:${orgId}`, 10, 10 * 60_000)
   if (!limit.ok) {

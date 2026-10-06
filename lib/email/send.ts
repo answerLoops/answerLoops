@@ -3,7 +3,7 @@ import { getOrgMembers } from '@/lib/db/queries/members'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import type { Ticket } from '@/types'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
-import { GITHUB_URL, appOrigin } from '@/lib/site'
+import { appOrigin } from '@/lib/site'
 
 function client() {
   return new Resend(process.env.RESEND_API_KEY)
@@ -109,41 +109,6 @@ export async function sendTicketResolvedEmail(
           View ticket
         </a>
         <p style="color:#9ca3af;font-size:12px;margin-top:24px">${url}</p>
-      </div>
-    `,
-  })
-}
-
-export async function sendWaitlistConfirmation(email: string): Promise<void> {
-  if (!process.env.RESEND_API_KEY) return
-
-  const from = process.env.RESEND_WAITLIST_FROM ?? process.env.RESEND_FROM ?? 'hello@answerloops.com'
-
-  const result = await client().emails.send({
-    from,
-    to: [email],
-    subject: "You're on the answerLoops waitlist",
-    html: `
-      <div style="${BASE_STYLE}">
-        <img src="https://answerloops.com/logo.png" alt="answerLoops" style="height:48px;margin-bottom:24px" />
-        <h2 style="font-size:20px;font-weight:700;color:#111827;margin-bottom:8px">
-          You're on the list.
-        </h2>
-        <p style="${MUTED};margin-bottom:16px">
-          Thanks for your interest in answerLoops — AI support that lives in your community.
-          We'll email you the moment we open early access.
-        </p>
-        <p style="${MUTED};margin-bottom:24px">
-          In the meantime, you can self-host the open-source version right now:
-        </p>
-        <a href="${GITHUB_URL}"
-           style="display:inline-block;background:#111827;color:#fff;font-size:14px;font-weight:500;padding:10px 20px;border-radius:8px;text-decoration:none">
-          View on GitHub
-        </a>
-        <p style="color:#9ca3af;font-size:12px;margin-top:32px">
-          You're receiving this because you signed up at answerloops.com.
-          No further emails until we launch.
-        </p>
       </div>
     `,
   })

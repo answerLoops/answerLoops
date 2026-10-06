@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { deleteArticle } from '@/lib/db/queries/kb'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
@@ -12,9 +11,9 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth()
-    if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    const orgId = session.orgId ?? DEFAULT_ORG_ID
+    const access = await requireOrgAccess()
+    if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+    const orgId = access.orgId
     const { id } = await ctx.params
     const articleId = Number(id)
     if (!Number.isInteger(articleId)) return Response.json({ error: 'Invalid ID' }, { status: 400 })

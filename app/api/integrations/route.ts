@@ -1,6 +1,5 @@
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { listIntegrations, parseChannelIds } from '@/lib/db/queries/integrations'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -10,10 +9,10 @@ const MOD = 'api/integrations'
 
 export async function GET(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user) return new Response('Unauthorized', { status: 401 })
+    const access = await requireOrgAccess()
+    if (!access.ok) return new Response(access.error, { status: 401 })
 
-    const orgId = session.orgId ?? DEFAULT_ORG_ID
+    const orgId = access.orgId
     const rows = await listIntegrations(orgId)
 
     // Strip bot_token from response — never expose it client-side. Only the

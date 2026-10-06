@@ -1,6 +1,5 @@
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { getEmailDomain } from '@/lib/db/queries/email-domains'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -8,10 +7,10 @@ export const dynamic = 'force-dynamic'
 const MOD = 'api/email-domain'
 
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) return new Response('Unauthorized', { status: 401 })
+  const access = await requireOrgAccess()
+  if (!access.ok) return new Response(access.error, { status: 401 })
 
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const orgId = access.orgId
 
   try {
     const row = await getEmailDomain(orgId)

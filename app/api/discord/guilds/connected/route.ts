@@ -1,6 +1,5 @@
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { listDiscordGuilds, parseDiscordGuildChannelIds } from '@/lib/db/queries/discord-guilds'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -11,10 +10,10 @@ const MOD = 'api/discord/guilds/connected'
 // connected via OAuth. Distinct from GET /api/discord/guilds?guild_id=,
 // which fetches a single guild's channel list from the Discord API.
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) return new Response('Unauthorized', { status: 401 })
+  const access = await requireOrgAccess()
+  if (!access.ok) return new Response(access.error, { status: 401 })
 
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const orgId = access.orgId
 
   try {
     const rows = await listDiscordGuilds(orgId)

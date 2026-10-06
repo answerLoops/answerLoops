@@ -8,8 +8,7 @@ import {
 import { getDeflectionAccuracyByCategory } from '@/lib/db/queries/feedback'
 import { getCsatStats } from '@/lib/db/queries/csat'
 import { computeSavings, deflectionRate } from '@/lib/analytics/roi'
-import { auth } from '@/auth'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { logger } from '@/lib/logger'
 
@@ -19,9 +18,9 @@ const MOD = 'api/analytics'
 
 // ROI bundle: the numbers that prove the platform's value over time.
 export async function GET() {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess()
+  if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+  const orgId = access.orgId
 
   try {
     const stats = await getDeflectionStats(orgId)

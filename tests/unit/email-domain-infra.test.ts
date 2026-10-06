@@ -163,9 +163,9 @@ describe('server actions: domain verification flow', () => {
 })
 
 describe('API route: app/api/email-domain/route.ts', () => {
-  it('requires auth and returns the org-scoped domain row', () => {
+  it('requires auth (via requireOrgAccess) and returns the org-scoped domain row', () => {
     const src = readSrc('app/api/email-domain/route.ts')
-    expect(src).toContain('await auth()')
+    expect(src).toContain('await requireOrgAccess()')
     expect(src).toContain('getEmailDomain(orgId)')
   })
 })

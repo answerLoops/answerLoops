@@ -25,15 +25,15 @@ function read(relPath: string): string {
 }
 
 describe('GET /api/analytics authenticates and scopes every query by session org', () => {
-  it('authenticates via auth() and returns 401 without a session', () => {
+  it('authenticates via requireOrgAccess() and returns 401 without a real membership', () => {
     const src = read('app/api/analytics/route.ts')
-    expect(src).toContain('await auth()')
-    expect(src).toMatch(/if \(!session\?\.user\) return Response\.json\(\{ error: 'Unauthorized' \}, \{ status: 401 \}\)/)
+    expect(src).toContain('await requireOrgAccess()')
+    expect(src).toMatch(/if \(!access\.ok\) return Response\.json\(\{ error: access\.error \}, \{ status: 401 \}\)/)
   })
 
-  it('resolves orgId from the session before querying', () => {
+  it('resolves orgId from a verified membership before querying', () => {
     const src = read('app/api/analytics/route.ts')
-    expect(src).toContain('const orgId = session.orgId ?? DEFAULT_ORG_ID')
+    expect(src).toContain('const orgId = access.orgId')
   })
 
   it('passes orgId to all eight analytics queries', () => {
@@ -51,24 +51,24 @@ describe('GET /api/analytics authenticates and scopes every query by session org
 })
 
 describe('GET /api/faq authenticates and scopes by session org', () => {
-  it('authenticates via auth() and returns 401 without a session', () => {
+  it('authenticates via requireOrgAccess() and returns 401 without a real membership', () => {
     const src = read('app/api/faq/route.ts')
-    expect(src).toContain('await auth()')
-    expect(src).toMatch(/if \(!session\?\.user\) return Response\.json\(\{ error: 'Unauthorized' \}, \{ status: 401 \}\)/)
+    expect(src).toContain('await requireOrgAccess()')
+    expect(src).toMatch(/if \(!access\.ok\) return Response\.json\(\{ error: access\.error \}, \{ status: 401 \}\)/)
   })
 
-  it('passes the session org to getLatestFAQ', () => {
+  it('passes the verified org to getLatestFAQ', () => {
     const src = read('app/api/faq/route.ts')
-    expect(src).toContain('getLatestFAQ(session.orgId ?? DEFAULT_ORG_ID)')
+    expect(src).toContain('getLatestFAQ(access.orgId)')
     expect(src).not.toMatch(/getLatestFAQ\(\)/)
   })
 })
 
 describe('POST /api/faq/generate threads the session org through generation', () => {
-  it('authenticates, 401s without a session, and scopes the ticket read', () => {
+  it('authenticates, 401s without a real membership, and scopes the ticket read', () => {
     const src = read('app/api/faq/generate/route.ts')
-    expect(src).toContain('await auth()')
-    expect(src).toMatch(/if \(!session\?\.user\) return Response\.json\(\{ error: 'Unauthorized' \}, \{ status: 401 \}\)/)
+    expect(src).toContain('await requireOrgAccess()')
+    expect(src).toMatch(/if \(!access\.ok\) return Response\.json\(\{ error: access\.error \}, \{ status: 401 \}\)/)
     expect(src).toContain('getResolvedTicketsThisWeek(orgId)')
   })
 
@@ -79,15 +79,15 @@ describe('POST /api/faq/generate threads the session org through generation', ()
 })
 
 describe('GET /api/tickets authenticates and scopes by session org', () => {
-  it('authenticates via auth() and returns 401 without a session', () => {
+  it('authenticates via requireOrgAccess() and returns 401 without a real membership', () => {
     const src = read('app/api/tickets/route.ts')
-    expect(src).toContain('await auth()')
-    expect(src).toMatch(/if \(!session\?\.user\) return Response\.json\(\{ error: 'Unauthorized' \}, \{ status: 401 \}\)/)
+    expect(src).toContain('await requireOrgAccess()')
+    expect(src).toMatch(/if \(!access\.ok\) return Response\.json\(\{ error: access\.error \}, \{ status: 401 \}\)/)
   })
 
-  it('passes the session orgId to getTickets', () => {
+  it('passes the verified orgId to getTickets', () => {
     const src = read('app/api/tickets/route.ts')
-    expect(src).toContain('const orgId = session.orgId ?? DEFAULT_ORG_ID')
+    expect(src).toContain('const orgId = access.orgId')
     expect(src).toMatch(/getTickets\(\{[\s\S]*?\}, orgId\)/)
   })
 })

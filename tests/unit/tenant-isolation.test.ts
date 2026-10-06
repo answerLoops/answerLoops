@@ -73,13 +73,13 @@ describe('GitHub app + agent tools thread orgId', () => {
 describe('GitHub repo API routes enforce session org', () => {
   it('GET /api/github/repos authenticates and scopes by session org', () => {
     const src = read('app/api/github/repos/route.ts')
-    expect(src).toContain('await auth()')
+    expect(src).toContain('await requireOrgAccess()')
     expect(src).toContain('getRepos(orgId)')
   })
 
   it('DELETE /api/github/repos/[id] authenticates, awaits, and scopes the delete', () => {
     const src = read('app/api/github/repos/[id]/route.ts')
-    expect(src).toContain('await auth()')
+    expect(src).toContain('await requireOrgAccess()')
     expect(src).toContain('await removeRepo(Number(id), orgId)')
   })
 
@@ -89,7 +89,7 @@ describe('GitHub repo API routes enforce session org', () => {
     expect(connectSrc).toMatch(/await addRepo\([^)]*orgId\)/)
 
     const removeSrc = read('app/api/github/repos/[id]/route.ts')
-    expect(removeSrc).toContain('await auth()')
+    expect(removeSrc).toContain('await requireOrgAccess()')
     expect(removeSrc).toMatch(/await removeRepo\(Number\(id\), orgId\)/)
   })
 
@@ -107,9 +107,9 @@ describe('Push notifications are org-scoped', () => {
     expect(src).toContain('eq(pushSubscriptions.orgId, orgId)')
   })
 
-  it('subscribe route stamps the session org onto the subscription', () => {
+  it('subscribe route stamps the verified org onto the subscription', () => {
     const src = read('app/api/push/subscribe/route.ts')
-    expect(src).toContain('await auth()')
+    expect(src).toContain('await requireOrgAccess()')
     expect(src).toMatch(/values\(\{ orgId,/)
   })
 
@@ -155,7 +155,9 @@ describe('Ticket queries are org-scoped at boundaries', () => {
     const src = read('app/api/tickets/[id]/route.ts')
     const gets = src.match(/getTicketById\(ticketId, orgId\)/g) ?? []
     expect(gets.length).toBe(2)
-    expect(src).toContain('getOrgMembers(orgId)')
+    // DELETE requires the owner role via the central helper (requireOrgAccess),
+    // rather than re-implementing the membership/role lookup inline.
+    expect(src).toContain("requireOrgAccess(['owner'])")
   })
 
   it('ticket server actions verify org ownership before mutating', () => {

@@ -1,7 +1,6 @@
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { embedText } from '@/lib/ai/embed'
 import { searchArticles, textSearchArticles } from '@/lib/db/queries/kb'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { rateLimit } from '@/lib/ratelimit'
 import { logger } from '@/lib/logger'
 
@@ -15,9 +14,9 @@ const SEARCH_MAX = 60
 const SEARCH_WINDOW_MS = 60_000
 
 export async function GET(request: Request) {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess()
+  if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+  const orgId = access.orgId
 
   const limit = rateLimit(`kb-search:${orgId}`, SEARCH_MAX, SEARCH_WINDOW_MS)
   if (!limit.ok) {
