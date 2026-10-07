@@ -51,13 +51,13 @@ const STALE_MS = 70_000
 const WATCHDOG_MS = 15_000
 
 /** Server events that carry meaning, plus the synthetic reopen signal. */
-export type LiveEvent = 'data_changed' | 'member_joined' | 'resync'
+export type LiveEvent = 'data_changed' | 'member_joined' | 'feedback_changed' | 'resync'
 
 /** Server events that only reset the staleness clock. `connected` is handled
  *  separately in openStream(), since a repeat of it also signals a reconnect. */
 const KEEPALIVE_EVENTS = ['ping', 'cycle'] as const
 
-const DATA_EVENTS = ['data_changed', 'member_joined'] as const
+const DATA_EVENTS = ['data_changed', 'member_joined', 'feedback_changed'] as const
 
 type Subscriber = {
   events: ReadonlySet<LiveEvent>

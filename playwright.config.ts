@@ -42,6 +42,11 @@ function resolveTestDatabaseUrl(): string {
 
 export const TEST_ENV = {
   DATABASE_URL: resolveTestDatabaseUrl(),
+  // The live-update stream LISTENs on DIRECT_DATABASE_URL when it is set
+  // (lib/db/direct-url.ts). Left unpinned, a developer's real .env value would
+  // leak into the spawned server and it would LISTEN on that database while
+  // every write lands in the test one — live updates silently never arrive.
+  DIRECT_DATABASE_URL: resolveTestDatabaseUrl(),
   // Pinned for the same reason AUTH_SECRET/BOT_SECRET are pinned below: Next
   // only fills a var from .env when it's not already in the spawned process's
   // env, so leaving this unset lets a developer's real .env (DEPLOYMENT_MODE=
@@ -50,6 +55,9 @@ export const TEST_ENV = {
   // global-setup.ts seeds no `subscriptions` row, the whole suite gets
   // redirected to /checkout/start-trial instead of testing the app.
   DEPLOYMENT_MODE: 'self-hosted',
+  // The feedback board is off unless enabled (see lib/product-feedback/enabled.ts);
+  // product-feedback.spec.ts exercises it.
+  FEEDBACK_WIDGET_ENABLED: '1',
   MOCK_EXTERNALS: '1',
   BOT_SECRET: 'test-bot-secret',
   AUTH_SECRET: 'test-auth-secret',

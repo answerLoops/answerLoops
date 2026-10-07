@@ -654,6 +654,47 @@ export const newsletterSubscribers = pgTable(
   (t) => [index('idx_newsletter_subscribers_token').on(t.unsubscribeToken)]
 )
 
+// In-app product feedback board, shown to every signed-in user in every org by
+// the dashboard feedback widget. Moderated: other users only see a row once an
+// operator approves it (see migration 0046). org_id is the author's workspace,
+// kept for display and audit — never a read filter, the board is shared.
+export const productFeedback = pgTable(
+  'product_feedback',
+  {
+    id: serial('id').primaryKey(),
+    // NULL org/user only for seeded example rows, which have no real author.
+    orgId: integer('org_id').references(() => orgs.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'cascade' }),
+    authorLabel: text('author_label'),
+    body: text('body').notNull(),
+    anonymous: integer('anonymous').notNull().default(0),
+    status: text('status').notNull().default('pending'), // 'pending' | 'approved' | 'rejected'
+    approvedAt: text('approved_at'),
+    replyBody: text('reply_body'),
+    replyTag: text('reply_tag'),
+    repliedAt: text('replied_at'),
+    createdAt: text('created_at').notNull().default(now),
+  },
+  (t) => [
+    index('idx_product_feedback_status').on(t.status, t.createdAt),
+    index('idx_product_feedback_user').on(t.userId),
+  ]
+)
+
+// Operator-authored "what's new" feed, the widget's Updates tab.
+export const productUpdates = pgTable(
+  'product_updates',
+  {
+    id: serial('id').primaryKey(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    publishedAt: text('published_at').notNull().default(now),
+    createdAt: text('created_at').notNull().default(now),
+  },
+  (t) => [index('idx_product_updates_published').on(t.publishedAt)]
+)
+
 // Agent/MCP API keys. Only the SHA-256 hash is stored — the plaintext key is
 // shown once at creation time and is not recoverable, same UX precedent as
 // the email integration's one-time webhook secret display.

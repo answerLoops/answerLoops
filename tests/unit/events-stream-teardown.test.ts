@@ -162,7 +162,12 @@ describe('GET /api/events/stream — connection teardown', () => {
 
     // Same instance as the LISTENs, which is the entire point — a heartbeat on
     // any other socket would keep resolving while the subscription was dead.
-    expect(conn().queries).toEqual(['LISTEN data_changed', 'LISTEN member_joined', 'SELECT 1'])
+    expect(conn().queries).toEqual([
+      'LISTEN data_changed',
+      'LISTEN member_joined',
+      'LISTEN product_feedback_changed',
+      'SELECT 1',
+    ])
 
     await vi.advanceTimersByTimeAsync(4 * 60 * 1000)
     expect(conn().queries.filter((q) => q === 'SELECT 1')).toHaveLength(2)

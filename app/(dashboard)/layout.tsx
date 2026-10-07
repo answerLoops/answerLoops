@@ -6,6 +6,8 @@ import { NotificationBell } from '@/components/notifications/notification-bell'
 import { DashboardLive } from '@/components/dashboard/dashboard-live'
 import { SidebarNav } from '@/components/dashboard/sidebar-nav'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
+import { FeedbackWidget } from '@/components/feedback/feedback-widget'
+import { isFeedbackWidgetEnabled } from '@/lib/product-feedback/enabled'
 import { AITrialBanner } from '@/components/dashboard/ai-trial-banner'
 import { DeflectionStatusBanner } from '@/components/dashboard/deflection-status-banner'
 import { logout } from '@/lib/actions/auth'
@@ -71,6 +73,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="dashboard-shell dashboard-theme brand-system flex h-dvh bg-[#e9eef3]">
       <DashboardLive />
+      {isFeedbackWidgetEnabled() && <FeedbackWidget />}
       {/* Sidebar — desktop only */}
       <aside className="dashboard-sidebar hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
         {sidebarContent}

@@ -36,6 +36,15 @@ This reference describes the main records used by answerLoops. The schema defini
 | `ticket_embeddings` | Search representations associated with tickets. |
 | `faq_snapshots` | Generated FAQ content. |
 
+## Product feedback
+
+| Table | Contents |
+|---|---|
+| `product_feedback` | Feedback entries from the in-app widget: vote, text, moderation status, and the team's reply. Shared across workspaces; each row records its author's workspace for display. |
+| `product_updates` | The "what's new" feed shown on the widget's Updates tab. |
+
+Changes to the feedback and updates tables notify connected dashboards so the widget updates live.
+
 ## Configuration and billing
 
 Integration records store channel configuration. `ai_configs` stores workspace model settings. `sla_configs` stores response and resolution targets. `subscriptions` records hosted-plan state, and `api_generations` records standalone answer generation for usage accounting.

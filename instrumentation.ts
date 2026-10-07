@@ -10,6 +10,11 @@ export async function register() {
     await import('./sentry.server.config')
     const { runMigrations } = await import('@/lib/db/migrate')
     await runMigrations()
+    const { isFeedbackWidgetEnabled } = await import('@/lib/product-feedback/enabled')
+    if (isFeedbackWidgetEnabled()) {
+      const { seedProductFeedbackIfEmpty } = await import('@/lib/db/queries/product-feedback')
+      await seedProductFeedbackIfEmpty()
+    }
   } else if (process.env.NEXT_RUNTIME === 'edge') {
     await import('./sentry.edge.config')
   }

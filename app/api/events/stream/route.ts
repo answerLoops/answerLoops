@@ -2,6 +2,7 @@ import { auth } from '@/auth'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { getDirectDatabaseUrl } from '@/lib/db/direct-url'
 import { logger } from '@/lib/logger'
+import { isFeedbackWidgetEnabled } from '@/lib/product-feedback/enabled'
 import postgres from 'postgres'
 import type { NextRequest } from 'next/server'
 
@@ -65,6 +66,12 @@ export async function GET(_request: NextRequest) {
       const channels: Record<string, (payload: string) => void> = {
         data_changed: forOrg('data_changed'),
         member_joined: forOrg('member_joined'),
+        // The feedback board is shared across every workspace, so unlike the
+        // org-scoped channels above this one is forwarded to every stream.
+        // The payload is empty; clients re-fetch their own per-viewer snapshot.
+        product_feedback_changed: () => {
+          if (isFeedbackWidgetEnabled()) send('feedback_changed')
+        },
       }
 
       // Dedicated connection: a NOTIFY arrives on whichever backend Postgres
@@ -153,6 +160,7 @@ export async function GET(_request: NextRequest) {
       try {
         await listener.unsafe('LISTEN data_changed')
         await listener.unsafe('LISTEN member_joined')
+        await listener.unsafe('LISTEN product_feedback_changed')
         send('connected')
       } catch (err) {
         logger.warn('SSE listen setup failed', {
