@@ -45,7 +45,6 @@ function resolvedVersions(name: string): string[] {
 
 describe('dependency floors from pnpm-workspace.yaml overrides stay resolved', () => {
   it.each([
-    ['image-size', '2.0.3'],
     ['hono', '4.13.5'],
     ['qs', '6.16.0'],
     ['baseline-browser-mapping', '2.11.0'],
@@ -54,6 +53,15 @@ describe('dependency floors from pnpm-workspace.yaml overrides stay resolved', (
     expect(versions.length, `no resolved instance of ${name} found in pnpm-lock.yaml`).toBeGreaterThan(0)
     const below = versions.filter((v) => !isAtLeast(v, floor))
     expect(below, `${name} instances below the patched floor: ${below.join(', ')}`).toEqual([])
+  })
+
+  // image-size was only reached through a dependency that newer releases of
+  // the agent framework no longer have, so it can be absent from the lockfile
+  // entirely. The override stays in place so the floor applies if it returns;
+  // the check below only fails when an instance IS resolved below the floor.
+  it('image-size, when resolved, is >= 2.0.3', () => {
+    const below = resolvedVersions('image-size').filter((v) => !isAtLeast(v, '2.0.3'))
+    expect(below, `image-size instances below the patched floor: ${below.join(', ')}`).toEqual([])
   })
 
   // @ai-sdk/provider-utils is pinned across two majors (3.x and 4.x, both
