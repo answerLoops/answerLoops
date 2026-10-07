@@ -1,6 +1,6 @@
 import type { NextConfig } from "next";
 import { createMDX } from "fumadocs-mdx/next";
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import docsNav from "./docs/docs.json" with { type: "json" };
 import { MARKETING_PAGE_PATHS } from "./lib/marketing/website-paths";
 
@@ -187,6 +187,10 @@ export default withSentryConfig(withMDX(nextConfig), {
   project: process.env.SENTRY_PROJECT,
   silent: true,
   widenClientFileUpload: true,
-  disableLogger: true,
-  automaticVercelMonitors: false,
+  webpack: {
+    treeshake: {
+      removeDebugLogging: true,
+    },
+    automaticVercelMonitors: false,
+  },
 });
