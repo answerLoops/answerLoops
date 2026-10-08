@@ -145,6 +145,20 @@ Tokens expire after **90 days**. Settings warns you as the date approaches, and 
   Regenerating takes effect immediately and invalidates the old token. Every page still using the old snippet stops working until you update it. Rotate when you are able to update your site, not before.
 </Warning>
 
+## Rich answer cards
+
+Besides text, the assistant can answer with a small set of prebuilt cards when one is clearer than a paragraph:
+
+- **Steps** — a numbered how-to for setup and troubleshooting sequences.
+- **Quick replies** — tappable options when a question is ambiguous. Tapping one sends it as the visitor's next message.
+- **Callout** — a highlighted tip, warning or confirmation.
+- **Link card** — a card pointing to a page from your knowledge base.
+- **Contact options** — email, phone or support-page buttons when a visitor needs a person.
+
+The assistant only fills in the content of these cards; it never produces markup or code, and the widget draws every card with its own components, so cards match the widget's look and work on mobile. Links and contact details only appear in a card when they are written in your knowledge base articles — the assistant can't invent a URL, email address or phone number. Links must be `https`, and they open in a new tab. If a card's content doesn't pass those checks, the widget shows nothing for it and the text answer stands on its own.
+
+To get contact or link cards, put the addresses and URLs you want visitors to see in your knowledge base articles. There is nothing to configure.
+
 ## Rate limits & input caps
 
 The widget chat endpoint is public (no login required), so it enforces limits to protect your AI provider bill from abuse:

@@ -62,13 +62,21 @@ function makeFakeAgent(initialMessages: Message[] = []) {
   }
 }
 
-const h2 = vi.hoisted(() => ({ current: null as ReturnType<typeof makeFakeAgent> | null }))
+const h2 = vi.hoisted(() => ({
+  current: null as ReturnType<typeof makeFakeAgent> | null,
+  renderToolCall: vi.fn((_: unknown): unknown => null),
+  registered: [] as string[],
+}))
 
 vi.mock('@copilotkit/react-core/v2', () => ({
   CopilotKitProvider: ({ children }: { children: React.ReactNode }) => children,
 }))
 vi.mock('@copilotkit/react-core/v2/headless', () => ({
   useAgent: () => ({ agent: h2.current!.agent, isReady: true }),
+  useRenderTool: (cfg: { name: string }) => {
+    h2.registered.push(cfg.name)
+  },
+  useRenderToolCall: () => h2.renderToolCall,
 }))
 
 async function renderWidget(fake: ReturnType<typeof makeFakeAgent>) {
@@ -83,6 +91,8 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.resetModules()
   localStorage.clear()
+  h2.renderToolCall.mockImplementation(() => null)
+  h2.registered.length = 0
 })
 
 describe('WidgetChat: email gate', () => {
@@ -247,5 +257,86 @@ describe('WidgetChat: branding', () => {
     await user.click(screen.getByRole('button', { name: 'Skip' }))
 
     expect(screen.queryByText('Powered by answerLoops')).toBeNull()
+  })
+})
+
+
+describe('WidgetChat: rich cards', () => {
+  async function openThread(fake: ReturnType<typeof makeFakeAgent>) {
+    await renderWidget(fake)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Skip' }))
+  }
+
+  it('registers renderers for the whole card catalog and a silent fallback for anything else', async () => {
+    await renderWidget(makeFakeAgent())
+    expect(new Set(h2.registered)).toEqual(
+      new Set(['show_steps', 'show_choices', 'show_callout', 'show_link_card', 'show_contact_options', '*'])
+    )
+  })
+
+  it('renders an assistant tool call through the card renderer, passing its result', async () => {
+    h2.renderToolCall.mockImplementation((arg: unknown) => {
+      const { toolCall, toolMessage } = arg as { toolCall: { id: string }; toolMessage?: { content: string } }
+      return <div data-testid="card">{`${toolCall.id}:${toolMessage?.content ?? 'pending'}`}</div>
+    })
+    const fake = makeFakeAgent()
+    await openThread(fake)
+    await fake.emit.event([
+      { id: 'u1', role: 'user', content: 'how?' },
+      {
+        id: 'a1',
+        role: 'assistant',
+        content: 'Here you go.',
+        toolCalls: [{ id: 'tc1', type: 'function', function: { name: 'show_steps', arguments: '{}' } }],
+      },
+      { id: 't1', role: 'tool', toolCallId: 'tc1', content: '{"ok":true}' },
+    ] as Message[])
+
+    expect(screen.getByText('Here you go.')).toBeTruthy()
+    expect(screen.getByTestId('card').textContent).toBe('tc1:{"ok":true}')
+  })
+
+  it('shows a card with no text, and never draws a bubble for the tool-result message', async () => {
+    h2.renderToolCall.mockImplementation(() => <div data-testid="card">card</div>)
+    const fake = makeFakeAgent()
+    await openThread(fake)
+    await fake.emit.event([
+      { id: 'u1', role: 'user', content: 'q' },
+      {
+        id: 'a1',
+        role: 'assistant',
+        content: '',
+        toolCalls: [{ id: 'tc1', type: 'function', function: { name: 'show_callout', arguments: '{}' } }],
+      },
+      { id: 't1', role: 'tool', toolCallId: 'tc1', content: 'RAW-TOOL-RESULT-JSON' },
+    ] as Message[])
+
+    expect(screen.getByTestId('card')).toBeTruthy()
+    expect(screen.queryByText('RAW-TOOL-RESULT-JSON')).toBeNull()
+  })
+
+  it('draws nothing for an assistant message with neither text nor a rendered card', async () => {
+    const fake = makeFakeAgent()
+    await openThread(fake)
+    await fake.emit.event([
+      { id: 'u1', role: 'user', content: 'q' },
+      { id: 'a1', role: 'assistant', content: '' },
+    ] as Message[])
+    expect(document.querySelectorAll('.bg-gray-100').length).toBe(0)
+  })
+
+  it('keeps the typing dots until the reply starts, then lets the streaming message stand in', async () => {
+    const fake = makeFakeAgent()
+    await openThread(fake)
+    await fake.emit.runInitialized()
+    await fake.emit.event([{ id: 'u1', role: 'user', content: 'q' }] as Message[])
+    expect(document.querySelector('.animate-bounce')).not.toBeNull()
+
+    await fake.emit.event([
+      { id: 'u1', role: 'user', content: 'q' },
+      { id: 'a1', role: 'assistant', content: 'Partial' },
+    ] as Message[])
+    expect(document.querySelector('.animate-bounce')).toBeNull()
+    expect(screen.getByText('Partial')).toBeTruthy()
   })
 })

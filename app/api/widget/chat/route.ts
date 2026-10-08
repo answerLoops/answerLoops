@@ -7,7 +7,9 @@ type AgentFactoryContext = Parameters<BuiltInAgentAISDKFactoryConfig['factory']>
 import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
 import { chatModel, DEFAULT_FAST_MODEL, NoAIProviderConfiguredError } from '@/lib/ai/models'
-import { embedText } from '@/lib/ai/embed'
+import { embedQueryCached } from '@/lib/widget/embed-cache'
+import { buildGenuiTools } from '@/lib/widget/genui-tools'
+import { flattenMastraStream } from '@/lib/widget/mastra-stream'
 import { getKBContext } from '@/lib/db/queries/kb'
 import { getOrgByWidgetToken } from '@/lib/db/queries/widgets'
 import { getWidgetChatMemory } from '@/lib/ai/memory'
@@ -68,12 +70,31 @@ const WIDGET_TOKEN_PATTERN = /^[0-9a-f]{48}$/
 // whole-message cap.
 const MAX_QUERY_CHARS = MAX_MESSAGE_CHARS
 
+type KBContext = { summary: string; answer: string }[]
+
 export interface PendingRun {
   org: { id: number; name: string }
   model: Awaited<ReturnType<typeof chatModel>>
   query: string
   visitorId: string
   reservationId: number
+  // Knowledge-base retrieval, started in the onRequest hook so it overlaps
+  // model resolution instead of queuing behind it. Never rejects. Absent when
+  // a caller stashes a run without one (the factory then retrieves itself).
+  context?: Promise<KBContext>
+  // performance.now() at request arrival, for the timing log line.
+  startedAt?: number
+}
+
+// Retrieval is best-effort: an embedding or search failure means the model
+// answers without context rather than the visitor seeing an error.
+async function retrieveContext(query: string, orgId: number): Promise<KBContext> {
+  try {
+    const vector = await embedQueryCached(query, orgId)
+    return await getKBContext(vector, MAX_CONTEXT_ARTICLES, orgId)
+  } catch {
+    return []
+  }
 }
 
 // Validated request context, handed from the `onRequest` hook to the AI SDK
@@ -152,6 +173,7 @@ function rebuildRequest(request: Request, bodyText: string): Request {
 }
 
 async function validateAndPrepare(request: Request): Promise<Response | Request> {
+  const startedAt = performance.now()
   // Rejects requests that bypassed our edge proxy, before clientIp() below
   // trusts the proxy-supplied client-IP header — see lib/http/origin-guard.ts.
   // No-op until ORIGIN_VERIFY_SECRET is set.
@@ -231,11 +253,15 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     return new Response('Message too long', { status: 400 })
   }
 
-  const tokenLimit = await rateLimitShared(`widget-token:${widgetToken}`, TOKEN_MAX, TOKEN_WINDOW_MS)
+  // Independent counters, so checked concurrently — both are always charged,
+  // which can only make the limits stricter, never looser.
+  const [tokenLimit, ipLimit] = await Promise.all([
+    rateLimitShared(`widget-token:${widgetToken}`, TOKEN_MAX, TOKEN_WINDOW_MS),
+    rateLimitShared(`widget-ip:${widgetToken}:${ip}`, IP_TOKEN_MAX, IP_TOKEN_WINDOW_MS),
+  ])
   if (!tokenLimit.ok) {
     return new Response('Too many requests', { status: 429 })
   }
-  const ipLimit = await rateLimitShared(`widget-ip:${widgetToken}:${ip}`, IP_TOKEN_MAX, IP_TOKEN_WINDOW_MS)
   if (!ipLimit.ok) {
     return new Response('Too many requests', { status: 429 })
   }
@@ -280,6 +306,12 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     return new Response('Monthly usage limit reached', { status: 402 })
   }
 
+  // Retrieval starts only now that the quota slot is granted, so a request
+  // that would be refused never spends an embedding call. It runs alongside
+  // model resolution: the two are independent and both sit before the first
+  // token.
+  const context = retrieveContext(query, org.id)
+
   let model: Awaited<ReturnType<typeof chatModel>>
   try {
     model = await chatModel(DEFAULT_FAST_MODEL, org.id)
@@ -303,7 +335,15 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     throw e
   }
 
-  const requestId = stashPendingRun({ org, model, query, visitorId, reservationId: reservation.generationId })
+  const requestId = stashPendingRun({
+    org,
+    model,
+    query,
+    visitorId,
+    reservationId: reservation.generationId,
+    context,
+    startedAt,
+  })
 
   const rewritten: SingleRouteEnvelope = {
     ...envelope,
@@ -313,30 +353,6 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     },
   }
   return rebuildRequest(request, JSON.stringify(rewritten))
-}
-
-// Mastra's Agent.stream().fullStream wraps every chunk in its own envelope —
-// `{ type: 'text-delta', payload: { text, id }, runId, from: 'AGENT' }` — not
-// the flat AI SDK v5-style shape (`{ type: 'text-delta', text }`) that
-// CopilotKit's BuiltInAgent 'aisdk' factory reads (see
-// @copilotkit/runtime's agent/converters/aisdk.mjs, which does
-// `"text" in p ? p.text : ""` — `text` never exists at the top level of a
-// Mastra chunk, only nested under `.payload`). Without this, every delta the
-// factory emits is silently `""`: the run completes cleanly with the right
-// event count, just with no visible content — indistinguishable from a
-// misconfigured provider until you inspect the raw stream. Spreading
-// `payload` onto the chunk gives the converter the flat shape it expects.
-async function* flattenMastraStream(stream: AsyncIterable<unknown>): AsyncIterable<unknown> {
-  for await (const chunk of stream) {
-    if (chunk && typeof chunk === 'object' && 'payload' in chunk) {
-      const payload = (chunk as { payload?: unknown }).payload
-      if (payload && typeof payload === 'object') {
-        yield { ...chunk, ...payload }
-        continue
-      }
-    }
-    yield chunk
-  }
 }
 
 // Published knowledge-base articles only.
@@ -358,13 +374,7 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   }
   const { org, model, query, visitorId, reservationId } = run
 
-  let allContext: { summary: string; answer: string }[] = []
-  try {
-    const vector = await embedText(query, org.id)
-    allContext = await getKBContext(vector, MAX_CONTEXT_ARTICLES, org.id)
-  } catch {
-    // Proceed without context if embedding fails
-  }
+  const allContext = await (run.context ?? retrieveContext(query, org.id))
   const contextBlock = allContext.length
     ? `\n\nKnowledge base context — use this to answer:\n${allContext
         .map((c, i) => `${i + 1}. Title: "${c.summary}"\n   Answer: ${c.answer}`)
@@ -387,13 +397,19 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
 Answer questions concisely and accurately based on the knowledge base context provided.
 If you don't know the answer or it's not covered in the context, say so honestly and suggest the user contact support directly.
 Keep responses brief and friendly. Format with markdown when helpful.
+You can also show a rich card with a tool: show_steps for a how-to sequence, show_choices for quick-reply buttons when a question is ambiguous, show_callout for an important warning or tip, show_link_card for a page that appears in the context below, and show_contact_options when the visitor needs a human. Only use a card when it is clearly clearer than text, never more than one per reply, never number the steps in show_steps (the card numbers them itself), and never put a URL, email or phone number in a card unless it appears in the context below. When you use a card, don't repeat its contents in text — add at most one short sentence.
 Respond in the same language as the user's question — if they write in Spanish, reply in Spanish; French, reply in French; etc.
 Never cite, name, or quote the title of a knowledge base article in your reply — a visitor should never see where an answer came from, since a source could be an internal system name (e.g. a synced Notion page) that would only confuse them. Use the context below to answer, but write as if you simply know the answer.
 If no article below covers the question, answer from general knowledge and don't mention that either.${contextBlock}`,
     model: model as MastraModelConfig,
     memory: getWidgetChatMemory(),
+    tools: buildGenuiTools(contextBlock),
   })
 
+  // How long the request spent in validation, quota, model and retrieval
+  // before the model was even called — the part of latency the visitor can't
+  // see progress on.
+  const streamStartedAt = performance.now()
   const result = await widgetAgent.stream(query, {
     memory: { thread: resourceId, resource: resourceId },
     modelSettings: { maxOutputTokens: 600 },
@@ -411,7 +427,16 @@ If no article below covers the question, answer from general knowledge and don't
   // not the DOM lib global the factory's return type expects — same
   // structurally-identical-but-nominally-distinct type gap the old route had
   // at its createTextStreamResponse boundary. Cast at this one boundary.
-  return { fullStream: flattenMastraStream(result.fullStream as unknown as AsyncIterable<unknown>) }
+  const onFirstText = () => {
+    if (run.startedAt === undefined) return
+    logger.info('widget chat timing', {
+      module: MOD,
+      orgId: org.id,
+      prepMs: Math.round(streamStartedAt - run.startedAt),
+      ttftMs: Math.round(performance.now() - run.startedAt),
+    })
+  }
+  return { fullStream: flattenMastraStream(result.fullStream as unknown as AsyncIterable<unknown>, onFirstText) }
 }
 
 const runtime = new CopilotRuntime({

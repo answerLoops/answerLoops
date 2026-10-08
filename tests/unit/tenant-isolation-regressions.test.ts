@@ -53,11 +53,14 @@ describe('Widget chat route authenticates by widget token and scopes by org', ()
 
   it('threads org.id into every lookup it makes', () => {
     const src = read('app/api/widget/chat/route.ts')
-    expect(src).toContain('embedText(query, org.id)')
+    // Retrieval is one helper taking the org id; both the embedding (cached per
+    // org — see lib/widget/embed-cache.ts) and the KB search are scoped by it.
+    expect(src).toContain('retrieveContext(query, org.id)')
+    expect(src).toContain('embedQueryCached(query, orgId)')
     // The article count is a named constant rather than a literal now, so this
     // asserts the org argument is threaded rather than pinning the number —
     // the org scoping is the property under test, the budget is not.
-    expect(src).toMatch(/getKBContext\(vector, [A-Z_]+, org\.id\)/)
+    expect(src).toMatch(/getKBContext\(vector, [A-Z_]+, orgId\)/)
     expect(src).toContain("chatModel(DEFAULT_FAST_MODEL, org.id)")
     // The prior-answer lookup used to be asserted here. The widget no longer
     // reads ticket-derived context at all (see tests/unit/widget-kb-only-context
