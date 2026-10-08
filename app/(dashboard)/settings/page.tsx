@@ -114,6 +114,14 @@ function TransferOwnershipModal({
   )
 }
 
+async function fetchTeam(): Promise<{ members: Member[]; invites: PendingInvite[] }> {
+  const [members, invites] = await Promise.all([
+    fetch('/api/team/members').then((r) => r.json()),
+    fetch('/api/team/invites').then((r) => r.json()),
+  ])
+  return { members, invites }
+}
+
 export function TeamSection() {
   const [members, setMembers] = useState<Member[]>([])
   const [invites, setInvites] = useState<PendingInvite[]>([])
@@ -130,6 +138,12 @@ export function TeamSection() {
 
   const [inviteCopied, setInviteCopied] = useState(false)
 
+  const reload = async () => {
+    const team = await fetchTeam()
+    setMembers(team.members)
+    setInvites(team.invites)
+  }
+
   const [inviteState, inviteFormAction, invitePending] = useActionState(
     async (prev: unknown, fd: FormData) => {
       const result = await sendInviteAction(prev, fd)
@@ -144,16 +158,15 @@ export function TeamSection() {
     null
   )
 
-  const reload = async () => {
-    const [m, i] = await Promise.all([
-      fetch('/api/team/members').then((r) => r.json()),
-      fetch('/api/team/invites').then((r) => r.json()),
-    ])
-    setMembers(m)
-    setInvites(i)
-  }
-
-  useEffect(() => { reload() }, [])
+  useEffect(() => {
+    let cancelled = false
+    fetchTeam().then((team) => {
+      if (cancelled) return
+      setMembers(team.members)
+      setInvites(team.invites)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   // Live-update when a team member accepts an invite — no polling needed.
   // This rides the tab's shared SSE stream rather than opening a second one:
@@ -832,19 +845,6 @@ function WidgetSection() {
   const [savingOrigins, setSavingOrigins] = useState(false)
   const [originsMsg, setOriginsMsg] = useState<string | null>(null)
 
-  async function loadToken() {
-    setLoading(true)
-    const result = await getWidgetTokenAction()
-    if (result.token) {
-      setToken(result.token)
-      setExpiresAt(result.expiresAt ?? null)
-      setCanManage(result.canManage === true)
-      setOrigins(result.allowedOrigins ?? '')
-      setSavedOrigins(result.allowedOrigins ?? '')
-    }
-    setLoading(false)
-  }
-
   async function saveOrigins() {
     setSavingOrigins(true)
     setOriginsMsg(null)
@@ -866,7 +866,21 @@ function WidgetSection() {
     setSavingOrigins(false)
   }
 
-  useEffect(() => { loadToken() }, [])
+  useEffect(() => {
+    let cancelled = false
+    getWidgetTokenAction().then((result) => {
+      if (cancelled) return
+      if (result.token) {
+        setToken(result.token)
+        setExpiresAt(result.expiresAt ?? null)
+        setCanManage(result.canManage === true)
+        setOrigins(result.allowedOrigins ?? '')
+        setSavedOrigins(result.allowedOrigins ?? '')
+      }
+      setLoading(false)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   async function regenerate() {
     setRotating(true)
@@ -881,8 +895,11 @@ function WidgetSection() {
     ? `<script src="${baseUrl}/widget.js" data-widget-id="${token}"></script>`
     : ''
 
+  // Read once on mount so rendering stays pure; the count only needs to be
+  // right as of when the page was opened.
+  const [now] = useState(() => Date.now())
   const daysLeft = expiresAt
-    ? Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86_400_000)
+    ? Math.ceil((new Date(expiresAt).getTime() - now) / 86_400_000)
     : null
 
   const expiringSoon = daysLeft !== null && daysLeft <= 14
@@ -1023,6 +1040,13 @@ interface ApiKeyRow {
   revoked_at: string | null
 }
 
+async function fetchApiKeys(): Promise<{ keys: ApiKeyRow[]; canManage: boolean } | null> {
+  const res = await fetch('/api/api-keys')
+  if (!res.ok) return null
+  const data = await res.json()
+  return { keys: data.keys, canManage: data.can_manage === true }
+}
+
 export function ApiKeysSection() {
   const [keys, setKeys] = useState<ApiKeyRow[] | null>(null)
   // Whether this member may mint/revoke keys. The server action is the
@@ -1039,14 +1063,25 @@ export function ApiKeysSection() {
   const [, startTransition] = useTransition()
 
   const loadKeys = useCallback(async () => {
-    const res = await fetch('/api/api-keys')
-    if (!res.ok) return
-    const data = await res.json()
+    const data = await fetchApiKeys()
+    if (!data) return
     setKeys(data.keys)
-    setCanManage(data.can_manage === true)
+    setCanManage(data.canManage)
   }, [])
 
-  useEffect(() => { loadKeys() }, [loadKeys])
+  useEffect(() => {
+    let cancelled = false
+    fetchApiKeys().then((data) => {
+      if (cancelled || !data) return
+      setKeys(data.keys)
+      setCanManage(data.canManage)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  // Read once on mount so rendering stays pure; key expiry only needs to be
+  // right as of when the page was opened.
+  const [now] = useState(() => Date.now())
 
   const [createState, createAction, creating] = useActionState(
     async (prev: unknown, fd: FormData) => {
@@ -1222,7 +1257,7 @@ export function ApiKeysSection() {
           <p className="text-sm text-gray-400 p-4">No API keys yet.</p>
         ) : (
           keys.map((k) => {
-            const expired = !!k.expires_at && new Date(k.expires_at) < new Date()
+            const expired = !!k.expires_at && new Date(k.expires_at).getTime() < now
             return (
               <div key={k.id} className={`flex flex-col items-start gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between ${expired ? 'opacity-50' : ''}`}>
                 <div className="min-w-0">
@@ -1408,10 +1443,17 @@ const INTEGRATION_TAB_IDS = new Set([
   'discord', 'slack', 'google-chat', 'telegram', 'discourse', 'circle', 'email', 'github', 'notion',
 ])
 
+const DEFAULT_SLA_CONFIGS: SLAConfig[] = [
+  { id: 1, priority: 'critical', response_hours: 1, resolve_hours: 4, updated_at: '' },
+  { id: 2, priority: 'high', response_hours: 4, resolve_hours: 24, updated_at: '' },
+  { id: 3, priority: 'medium', response_hours: 24, resolve_hours: 72, updated_at: '' },
+  { id: 4, priority: 'low', response_hours: 72, resolve_hours: 168, updated_at: '' },
+]
+
 export default function SettingsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const [slaConfigs, setSlaConfigs] = useState<SLAConfig[]>([])
+  const slaConfigs = DEFAULT_SLA_CONFIGS
 
   const tabParam = searchParams.get('tab')
   const activeTab = (tabParam as TabId) ?? 'general'
@@ -1427,15 +1469,6 @@ export default function SettingsPage() {
       router.replace(`/integrations?tab=${tabParam}`)
     }
   }, [tabParam, router])
-
-  useEffect(() => {
-    setSlaConfigs([
-      { id: 1, priority: 'critical', response_hours: 1, resolve_hours: 4, updated_at: '' },
-      { id: 2, priority: 'high', response_hours: 4, resolve_hours: 24, updated_at: '' },
-      { id: 3, priority: 'medium', response_hours: 24, resolve_hours: 72, updated_at: '' },
-      { id: 4, priority: 'low', response_hours: 72, resolve_hours: 168, updated_at: '' },
-    ])
-  }, [])
 
   if (tabParam && INTEGRATION_TAB_IDS.has(tabParam)) return null
 

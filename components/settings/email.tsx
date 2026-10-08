@@ -489,6 +489,33 @@ function MethodCard({
   )
 }
 
+async function fetchEmailIntegration(): Promise<EmailIntegration | null> {
+  const data: EmailIntegration[] = await fetch('/api/integrations').then((r) => r.json())
+  return data.find((i) => i.platform === 'email') ?? null
+}
+
+// A verified domain or a live mailbox is the only evidence we have that mail
+// can reach us. The webhook path leaves no trace to check — a provider is
+// either posting to the endpoint or it is not — so it is deliberately not
+// inferred here rather than guessed at.
+async function fetchConfiguredMethod(): Promise<{ method: 'domain' | 'mailbox' | null; live: boolean }> {
+  const [domain, oauth] = await Promise.all([
+    fetch('/api/email-domain').then((r) => r.json()).catch(() => null),
+    fetch('/api/email-oauth').then((r) => r.json()).catch(() => null),
+  ])
+  const domainLive = domain?.status === 'verified'
+  const oauthLive = oauth?.status === 'connected'
+
+  // A live method always wins so a stale row from an earlier setup attempt
+  // can't hide a channel that's actually working. Only fall back to
+  // whichever row merely exists when neither is live.
+  if (domainLive) return { method: 'domain', live: true }
+  if (oauthLive) return { method: 'mailbox', live: true }
+  if (domain) return { method: 'domain', live: false }
+  if (oauth) return { method: 'mailbox', live: false }
+  return { method: null, live: false }
+}
+
 export function EmailIntegrationCard() {
   const [integration, setIntegration] = useState<EmailIntegration | null | undefined>(undefined)
   const [editing, setEditing] = useState(false)
@@ -527,44 +554,25 @@ export function EmailIntegrationCard() {
   )
 
   async function reloadIntegration() {
-    const data: EmailIntegration[] = await fetch('/api/integrations').then((r) => r.json())
-    setIntegration(data.find((i) => i.platform === 'email') ?? null)
+    setIntegration(await fetchEmailIntegration())
   }
 
-  // A verified domain or a live mailbox is the only evidence we have that mail
-  // can reach us. The webhook path leaves no trace to check — a provider is
-  // either posting to the endpoint or it is not — so it is deliberately not
-  // inferred here rather than guessed at.
   async function reloadConfiguredMethod() {
-    const [domain, oauth] = await Promise.all([
-      fetch('/api/email-domain').then((r) => r.json()).catch(() => null),
-      fetch('/api/email-oauth').then((r) => r.json()).catch(() => null),
-    ])
-    const domainLive = domain?.status === 'verified'
-    const oauthLive = oauth?.status === 'connected'
-
-    // A live method always wins so a stale row from an earlier setup attempt
-    // can't hide a channel that's actually working. Only fall back to
-    // whichever row merely exists when neither is live.
-    if (domainLive) {
-      setConfiguredMethod('domain')
-      setConfiguredLive(true)
-    } else if (oauthLive) {
-      setConfiguredMethod('mailbox')
-      setConfiguredLive(true)
-    } else if (domain) {
-      setConfiguredMethod('domain')
-      setConfiguredLive(false)
-    } else if (oauth) {
-      setConfiguredMethod('mailbox')
-      setConfiguredLive(false)
-    } else {
-      setConfiguredMethod(null)
-      setConfiguredLive(false)
-    }
+    const { method, live } = await fetchConfiguredMethod()
+    setConfiguredMethod(method)
+    setConfiguredLive(live)
   }
 
-  useEffect(() => { reloadIntegration(); reloadConfiguredMethod() }, [])
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([fetchEmailIntegration(), fetchConfiguredMethod()]).then(([row, { method, live }]) => {
+      if (cancelled) return
+      setIntegration(row)
+      setConfiguredMethod(method)
+      setConfiguredLive(live)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   if (integration === undefined) return <p className="text-sm text-gray-400">Loading…</p>
 

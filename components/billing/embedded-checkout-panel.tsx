@@ -62,8 +62,19 @@ export function EmbeddedCheckoutPanel({
 }: Props) {
   const [planId, setPlanId] = useState(initialPlanId)
   const [interval, setInterval] = useState<BillingInterval>(initialInterval)
-  const [clientSecret, setClientSecret] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // The last checkout response, tagged with the selection it was made for. Only
+  // a response that matches the current selection is shown, so switching plan
+  // or interval hides the previous session straight away (no effect has to
+  // clear it) and a late response for a deselected plan can never be mounted.
+  const [session, setSession] = useState<{
+    planId: string
+    interval: BillingInterval
+    clientSecret: string | null
+    error: string | null
+  } | null>(null)
+  const current = session && session.planId === planId && session.interval === interval ? session : null
+  const clientSecret = current?.clientSecret ?? null
+  const error = current?.error ?? null
 
   // The prefix is checked, not just presence. Stripe.js rejects a secret
   // (`sk_`) or restricted (`rk_`) key by throwing inside a promise it owns — so
@@ -86,9 +97,6 @@ export function EmbeddedCheckoutPanel({
     // never be wrong, since it decides what the card is charged for.
     let cancelled = false
 
-    setClientSecret(null)
-    setError(null)
-
     fetch('/api/billing/checkout/embedded', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -98,13 +106,20 @@ export function EmbeddedCheckoutPanel({
       .then((data) => {
         if (cancelled) return
         if (data.error) {
-          setError(data.error)
+          setSession({ planId, interval, clientSecret: null, error: data.error })
           return
         }
-        if (data.clientSecret) setClientSecret(data.clientSecret)
+        if (data.clientSecret) setSession({ planId, interval, clientSecret: data.clientSecret, error: null })
       })
       .catch(() => {
-        if (!cancelled) setError('Could not reach checkout. Check your connection and try again.')
+        if (!cancelled) {
+          setSession({
+            planId,
+            interval,
+            clientSecret: null,
+            error: 'Could not reach checkout. Check your connection and try again.',
+          })
+        }
       })
 
     return () => {

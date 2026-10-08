@@ -6,6 +6,19 @@ import { Button } from '@/components/ui/button'
 import type { KBSource } from '@/types'
 import { runKbSync, pollKbSyncJob, type KbSyncJobStatus } from '@/lib/kb/sync-client'
 
+interface NotionKbState {
+  conn: { connection?: { workspace_name?: string | null; kb_last_synced?: string | null; kb_chunk_count?: number | null } | null }
+  sources: unknown
+}
+
+async function fetchNotionKbState(): Promise<NotionKbState> {
+  const [conn, sources] = await Promise.all([
+    fetch('/api/notion').then((r) => (r.ok ? r.json() : { connection: null })).catch(() => ({ connection: null })),
+    fetch('/api/kb/sources').then((r) => (r.ok ? r.json() : [])).catch(() => []),
+  ])
+  return { conn, sources }
+}
+
 export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [workspace, setWorkspace] = useState<string | null>(null)
@@ -20,27 +33,33 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   const [truncated, setTruncated] = useState(false)
 
   useEffect(() => {
-    if (!syncing) { setSyncElapsed(0); return }
+    if (!syncing) return
     const t = setInterval(() => setSyncElapsed((s) => s + 1), 1000)
     return () => clearInterval(t)
   }, [syncing])
 
-  const loadState = useCallback(async () => {
-    const [conn, sources] = await Promise.all([
-      fetch('/api/notion').then((r) => (r.ok ? r.json() : { connection: null })).catch(() => ({ connection: null })),
-      fetch('/api/kb/sources').then((r) => (r.ok ? r.json() : [])).catch(() => []),
-    ])
-    setConnected(!!conn.connection)
-    setWorkspace(conn.connection?.workspace_name ?? null)
-    setLastSynced(conn.connection?.kb_last_synced ?? null)
-    setChunkCount(conn.connection?.kb_chunk_count ?? 0)
-    setSource((sources as KBSource[]).find((s) => s.file_type === 'notion') ?? null)
+  const applyState = useCallback((state: NotionKbState) => {
+    setConnected(!!state.conn.connection)
+    setWorkspace(state.conn.connection?.workspace_name ?? null)
+    setLastSynced(state.conn.connection?.kb_last_synced ?? null)
+    setChunkCount(state.conn.connection?.kb_chunk_count ?? 0)
+    setSource((state.sources as KBSource[]).find((s) => s.file_type === 'notion') ?? null)
   }, [])
 
-  useEffect(() => { loadState() }, [loadState])
+  const loadState = useCallback(async () => {
+    applyState(await fetchNotionKbState())
+  }, [applyState])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchNotionKbState().then((state) => {
+      if (!cancelled) applyState(state)
+    })
+    return () => { cancelled = true }
+  }, [applyState])
 
   const onSyncedRef = useRef(onSynced)
-  onSyncedRef.current = onSynced
+  useEffect(() => { onSyncedRef.current = onSynced })
 
   // Stops an in-flight poll on unmount — checked by pollKbSyncJob before
   // every request. The `cancelled` flag below only gated the state updates
@@ -60,6 +79,7 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
         if (cancelled || !job || (job.status !== 'queued' && job.status !== 'running')) return
         stoppedRef.current = false
         setSyncing(true)
+        setSyncElapsed(0)
         setSyncLabel(job.status === 'running' ? 'Syncing…' : 'Queued…')
         pollKbSyncJob('/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current).then((result) => {
           if (cancelled) return
@@ -76,6 +96,7 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   const sync = async () => {
     stoppedRef.current = false
     setSyncing(true)
+    setSyncElapsed(0)
     setTruncated(false)
     setSyncLabel('Queued…')
     const result = await runKbSync('/api/notion/sync-kb', '/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current)

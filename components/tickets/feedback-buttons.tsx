@@ -9,36 +9,50 @@ interface FeedbackButtonsProps {
   summary: FeedbackSummary
 }
 
+function VoteButton({
+  vote,
+  label,
+  ticketId,
+  activeVote,
+  isPending,
+  formAction,
+}: {
+  vote: FeedbackVote
+  label: string
+  ticketId: number
+  activeVote: FeedbackVote | null | undefined
+  isPending: boolean
+  formAction: (payload: FormData) => void
+}) {
+  const active = activeVote === vote
+  return (
+    <form action={formAction}>
+      <input type="hidden" name="ticketId" value={ticketId} />
+      <input type="hidden" name="vote" value={vote} />
+      <button
+        type="submit"
+        disabled={isPending}
+        className={`rounded-md border px-2.5 py-1 text-sm transition-colors disabled:opacity-50 ${
+          active
+            ? vote === 'up'
+              ? 'border-green-300 bg-green-50 text-green-700'
+              : 'border-red-300 bg-red-50 text-red-700'
+            : 'border-gray-200 text-gray-500 hover:bg-gray-50'
+        }`}
+      >
+        {label}
+      </button>
+    </form>
+  )
+}
+
 export function FeedbackButtons({ ticketId, summary }: FeedbackButtonsProps) {
   const [state, formAction, isPending] = useActionState(submitFeedbackAction, null)
 
-  const VoteButton = ({ vote, label }: { vote: FeedbackVote; label: string }) => {
-    const active = summary.staffVote === vote
-    return (
-      <form action={formAction}>
-        <input type="hidden" name="ticketId" value={ticketId} />
-        <input type="hidden" name="vote" value={vote} />
-        <button
-          type="submit"
-          disabled={isPending}
-          className={`rounded-md border px-2.5 py-1 text-sm transition-colors disabled:opacity-50 ${
-            active
-              ? vote === 'up'
-                ? 'border-green-300 bg-green-50 text-green-700'
-                : 'border-red-300 bg-red-50 text-red-700'
-              : 'border-gray-200 text-gray-500 hover:bg-gray-50'
-          }`}
-        >
-          {label}
-        </button>
-      </form>
-    )
-  }
-
   return (
     <div className="flex items-center gap-2">
-      <VoteButton vote="up" label="👍" />
-      <VoteButton vote="down" label="👎" />
+      <VoteButton vote="up" label="👍" ticketId={ticketId} activeVote={summary.staffVote} isPending={isPending} formAction={formAction} />
+      <VoteButton vote="down" label="👎" ticketId={ticketId} activeVote={summary.staffVote} isPending={isPending} formAction={formAction} />
       <span className="text-xs text-gray-400">
         {summary.up} up · {summary.down} down
         {summary.staffVote && ' · your vote counted'}

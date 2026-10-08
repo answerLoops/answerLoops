@@ -21,6 +21,24 @@ interface GoogleChatIntegration {
   enabled: number
 }
 
+async function loadGoogleChatIntegration(): Promise<GoogleChatIntegration | null> {
+  const data: GoogleChatIntegration[] = await fetch('/api/integrations').then((r) => r.json())
+  return data.find((i) => i.platform === 'google_chat') ?? null
+}
+
+// Rehydrate an outstanding connect code so it survives a reload — it's
+// stored on the row (bot_secret) from the moment it's generated, but
+// was previously only kept in component state and lost on refresh,
+// which pushed users to regenerate and silently invalidate the code
+// they'd already posted in a space. Returns the code to show, null to clear
+// it, or undefined to leave whatever is currently shown alone.
+function pendingCodeFor(row: GoogleChatIntegration | null): string | null | undefined {
+  if (row && row.enabled !== 1 && typeof row.bot_secret === 'string' && row.bot_secret.startsWith('gc_')) {
+    return row.bot_secret
+  }
+  if (!row || row.enabled === 1) return null
+  return undefined
+}
 
 export function GoogleChatIntegrationCard() {
   const [integration, setIntegration] = useState<GoogleChatIntegration | null | undefined>(undefined)
@@ -37,19 +55,10 @@ export function GoogleChatIntegrationCard() {
   // once it does (the on→off→on flash the Google Chat toggle showed, unlike
   // Discord/Slack/Email's save handlers which already await their reload).
   async function reload() {
-    const data: GoogleChatIntegration[] = await fetch('/api/integrations').then((r) => r.json())
-    const row = data.find((i) => i.platform === 'google_chat') ?? null
+    const row = await loadGoogleChatIntegration()
     setIntegration(row)
-    // Rehydrate an outstanding connect code so it survives a reload — it's
-    // stored on the row (bot_secret) from the moment it's generated, but
-    // was previously only kept in component state and lost on refresh,
-    // which pushed users to regenerate and silently invalidate the code
-    // they'd already posted in a space.
-    if (row && row.enabled !== 1 && typeof row.bot_secret === 'string' && row.bot_secret.startsWith('gc_')) {
-      setPendingCode(row.bot_secret)
-    } else if (!row || row.enabled === 1) {
-      setPendingCode(null)
-    }
+    const code = pendingCodeFor(row)
+    if (code !== undefined) setPendingCode(code)
   }
 
   const [connectState, connectAction, connectPending] = useActionState(
@@ -91,7 +100,16 @@ export function GoogleChatIntegrationCard() {
     null
   )
 
-  useEffect(() => { reload() }, [])
+  useEffect(() => {
+    let cancelled = false
+    loadGoogleChatIntegration().then((row) => {
+      if (cancelled) return
+      setIntegration(row)
+      const code = pendingCodeFor(row)
+      if (code !== undefined) setPendingCode(code)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   // While a code is outstanding, poll for the pairing so the user doesn't have
   // to sit on "Check connection status". Stops as soon as the space pairs.

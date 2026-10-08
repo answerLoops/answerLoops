@@ -42,14 +42,13 @@ describe('onboarding wizard routes 1-click Discord connects to the channel picke
   it('no longer marks connect done and jumps straight to seed on discord_connected=1', () => {
     const src = read('app/onboarding/wizard.tsx')
     // The old bug: 'connect' was added to completed and step jumped to 'seed'
-    // in the same effect that reads discord_connected, with no channel step.
-    const effectBody = src.slice(
-      src.indexOf("discord_connected") ,
-      src.indexOf('}, [searchParams])')
-    )
-    expect(effectBody).not.toMatch(/new Set\(\[\.\.\.prev, 'name', 'connect'\]\)/)
-    expect(effectBody).not.toContain("setStep('seed')")
-    expect(effectBody).toContain("setStep('connect')")
+    // when discord_connected was set, with no channel step. Returning from
+    // OAuth must now start on the Connect step with only 'name' completed.
+    expect(src).toContain("searchParams.get('discord_connected') === '1'")
+    expect(src).toContain("useState<Step>(returnedFromOAuth ? 'connect' : 'name')")
+    expect(src).toContain("new Set(returnedFromOAuth ? ['name'] : [])")
+    expect(src).not.toMatch(/new Set\(\[\.\.\.prev, 'name', 'connect'\]\)/)
+    expect(src).not.toContain("setStep('seed')")
   })
 
   it('captures guild_id from the callback redirect into state', () => {
@@ -124,13 +123,11 @@ describe('Slack OAuth callback returns to onboarding when the flow started there
 describe('onboarding wizard routes 1-click Slack connects to the channel picker', () => {
   it('does not skip past the Connect step to seed on slack_connected=1', () => {
     const src = read('app/onboarding/wizard.tsx')
-    const effectBody = src.slice(
-      src.indexOf("searchParams.get('slack_connected')"),
-      src.indexOf('}, [searchParams])', src.indexOf("searchParams.get('slack_connected')"))
-    )
-    expect(effectBody).not.toContain("setStep('seed')")
-    expect(effectBody).toContain("setStep('connect')")
-    expect(effectBody).toContain('setSlackConnected(true)')
+    expect(src).toContain("searchParams.get('slack_connected') === '1'")
+    expect(src).toContain("useState<Step>(returnedFromOAuth ? 'connect' : 'name')")
+    expect(src).not.toContain("setStep('seed')")
+    // The return flag reaches SlackFlow as state, so it survives the URL cleanup.
+    expect(src).toContain('const [slackConnected] = useState(returnedFromSlack)')
   })
 
   it('SlackFlow fetches channels via the org-scoped endpoint once connected', () => {
