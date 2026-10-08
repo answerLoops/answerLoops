@@ -258,7 +258,9 @@ function WidgetChatBody({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    setMessages([...agent.messages])
+    // `messages` starts as agent.messages (see the useState above) and every
+    // later change arrives through this subscription, so there is nothing to
+    // copy in here.
     const { unsubscribe } = agent.subscribe({
       onEvent: ({ messages: current }) => setMessages([...current]),
       onRunInitialized: () => {

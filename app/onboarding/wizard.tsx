@@ -179,14 +179,18 @@ const BOT_PERMISSIONS = '85056'
 function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onBack: () => void; oauthGuildId?: string }) {
   const [subStep, setSubStep] = useState<DiscordSubStep>(oauthGuildId ? 'channels' : 'choose')
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
-  const [loadingUrl, setLoadingUrl] = useState(false)
+  // The URL lookup starts on mount unless we just returned from Discord OAuth,
+  // so it is already "loading" on the first render.
+  const [loadingUrl, setLoadingUrl] = useState(!oauthGuildId)
   // manual flow state
   const [clientId, setClientId] = useState('')
   const [botToken, setBotToken] = useState('')
   const [guilds, setGuilds] = useState<Guild[]>([])
   const [selectedGuild, setSelectedGuild] = useState('')
   const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set())
-  const [fetching, setFetching] = useState(false)
+  // Already fetching on the first render when we just returned from OAuth
+  // (the effect below starts that request).
+  const [fetching, setFetching] = useState(!!oauthGuildId)
   const [fetchError, setFetchError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -194,7 +198,6 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
   // Check if platform has DISCORD_CLIENT_ID configured (1-click mode)
   useEffect(() => {
     if (oauthGuildId) return
-    setLoadingUrl(true)
     fetch('/api/discord/invite-url?from=onboarding')
       .then((r) => r.json())
       .then((data: { url?: string; error?: string }) => {
@@ -211,8 +214,6 @@ function DiscordFlow({ onDone, onBack, oauthGuildId }: { onDone: () => void; onB
   // zero channels monitored.
   useEffect(() => {
     if (!oauthGuildId) return
-    setFetching(true)
-    setFetchError('')
     fetch(`/api/discord/guilds?guild_id=${oauthGuildId}`)
       .then((r) => r.json())
       .then((data: { guildId?: string; channels?: GuildChannel[]; error?: string }) => {
@@ -628,7 +629,9 @@ function SlackFlow({ onDone, onBack, slackConnected }: { onDone: () => void; onB
   const [connectError, setConnectError] = useState<string | null>(null)
   const [channels, setChannels] = useState<{ id: string; name: string }[]>([])
   const [selectedChannels, setSelectedChannels] = useState<Set<string>>(new Set())
-  const [loadingChannels, setLoadingChannels] = useState(false)
+  // Already loading on the first render when we just returned from OAuth (the
+  // effect below starts that request).
+  const [loadingChannels, setLoadingChannels] = useState(!!slackConnected)
   const [fetchError, setFetchError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
@@ -639,8 +642,6 @@ function SlackFlow({ onDone, onBack, slackConnected }: { onDone: () => void; onB
   // channels ingesting anything.
   useEffect(() => {
     if (!slackConnected) return
-    setLoadingChannels(true)
-    setFetchError('')
     fetch('/api/slack/channels')
       .then((r) => r.json())
       .then((data: { id: string; name: string }[] | { error: string }) => {
@@ -981,58 +982,40 @@ const STEPS: { key: Step; label: string }[] = [
 
 export default function OnboardingWizard({ initialName }: { initialName: string }) {
   const searchParams = useSearchParams()
-  const [step, setStep] = useState<Step>('name')
-  const [completed, setCompleted] = useState<Set<string>>(new Set())
-  const [discordOAuthGuildId, setDiscordOAuthGuildId] = useState<string | undefined>()
-  const [slackConnected, setSlackConnected] = useState(false)
-  const [githubConnected, setGithubConnected] = useState(false)
+  // Coming back from an OAuth install is a full page load, so the return flags
+  // are read once as initial state. After Discord/Slack/GitHub authorizes us,
+  // land on the Connect step (channel picker for Discord and Slack, the
+  // confirmation for GitHub) instead of skipping straight to Seed KB, or
+  // messages posted before the user finds Settings -> Integrations would
+  // silently never become tickets.
+  const returnedFromDiscord = searchParams.get('discord_connected') === '1'
+  const returnedFromSlack = searchParams.get('slack_connected') === '1'
+  const returnedFromGithub = searchParams.get('github_connected') === '1'
+  const returnedFromOAuth = returnedFromDiscord || returnedFromSlack || returnedFromGithub
 
-  // After Discord OAuth callback the bot has joined the server, but no
-  // channels are monitored yet — land on the channel picker (Connect step)
-  // instead of skipping straight to Seed KB, or messages posted before the
-  // user finds Settings → Integrations would silently never become tickets.
+  const [step, setStep] = useState<Step>(returnedFromOAuth ? 'connect' : 'name')
+  const [completed, setCompleted] = useState<Set<string>>(() => new Set(returnedFromOAuth ? ['name'] : []))
+  const [discordOAuthGuildId] = useState<string | undefined>(() =>
+    returnedFromDiscord ? (searchParams.get('guild_id') ?? undefined) : undefined,
+  )
+  const [slackConnected] = useState(returnedFromSlack)
+  const [githubConnected] = useState(returnedFromGithub)
+
+  // Clean the OAuth return params out of the address bar without a full reload.
   useEffect(() => {
-    if (searchParams.get('discord_connected') === '1') {
-      const guildId = searchParams.get('guild_id') ?? undefined
-      setCompleted((prev) => new Set([...prev, 'name']))
-      setStep('connect')
-      setDiscordOAuthGuildId(guildId)
-      // Clean the query params without a full reload
-      const url = new URL(window.location.href)
+    if (!returnedFromDiscord && !returnedFromSlack && !returnedFromGithub) return
+    const url = new URL(window.location.href)
+    if (returnedFromDiscord) {
       url.searchParams.delete('discord_connected')
       url.searchParams.delete('guild_id')
-      window.history.replaceState({}, '', url.toString())
     }
-  }, [searchParams])
-
-  // Same reasoning as Discord above: the workspace is authorized but no
-  // channels are monitored yet — land on the channel picker (Connect step)
-  // instead of silently completing with zero channels ingesting anything.
-  useEffect(() => {
-    if (searchParams.get('slack_connected') === '1') {
-      setCompleted((prev) => new Set([...prev, 'name']))
-      setStep('connect')
-      setSlackConnected(true)
-      const url = new URL(window.location.href)
+    if (returnedFromSlack) {
       url.searchParams.delete('slack_connected')
       url.searchParams.delete('slack_team')
-      window.history.replaceState({}, '', url.toString())
     }
-  }, [searchParams])
-
-  // Just returned from installing the GitHub App — every granted repo is
-  // already watched, so land on Connect only to show that confirmation
-  // before advancing, same as Discord/Slack above.
-  useEffect(() => {
-    if (searchParams.get('github_connected') === '1') {
-      setCompleted((prev) => new Set([...prev, 'name']))
-      setStep('connect')
-      setGithubConnected(true)
-      const url = new URL(window.location.href)
-      url.searchParams.delete('github_connected')
-      window.history.replaceState({}, '', url.toString())
-    }
-  }, [searchParams])
+    if (returnedFromGithub) url.searchParams.delete('github_connected')
+    window.history.replaceState({}, '', url.toString())
+  }, [returnedFromDiscord, returnedFromSlack, returnedFromGithub])
 
   const stepIndex = STEPS.findIndex((s) => s.key === step)
 

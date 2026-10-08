@@ -41,6 +41,11 @@ function FileTypeIcon({ type }: { type: string }) {
   )
 }
 
+async function fetchKbSources(): Promise<KBSource[] | null> {
+  const res = await fetch('/api/kb/sources')
+  return res.ok ? ((await res.json()) as KBSource[]) : null
+}
+
 function SourcesList({ onDeleted }: { onDeleted: () => void }) {
   const [sources, setSources] = useState<KBSource[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -48,15 +53,22 @@ function SourcesList({ onDeleted }: { onDeleted: () => void }) {
   const [confirmBulk, setConfirmBulk] = useState(false)
 
   async function load() {
-    const res = await fetch('/api/kb/sources')
-    if (res.ok) {
-      const data = (await res.json()) as KBSource[]
+    const data = await fetchKbSources()
+    if (data) {
       setSources(data)
       setSelected(new Set())
     }
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    let cancelled = false
+    fetchKbSources().then((data) => {
+      if (cancelled || !data) return
+      setSources(data)
+      setSelected(new Set())
+    })
+    return () => { cancelled = true }
+  }, [])
 
   const allChecked = sources.length > 0 && selected.size === sources.length
   const someChecked = selected.size > 0
@@ -341,9 +353,12 @@ const INGEST_PHASES = [
 function useIngestProgress(pending: boolean) {
   const [elapsed, setElapsed] = useState(0)
   useEffect(() => {
-    if (!pending) { setElapsed(0); return }
+    if (!pending) return
     const t = setInterval(() => setElapsed(s => s + 1), 1000)
-    return () => clearInterval(t)
+    return () => {
+      clearInterval(t)
+      setElapsed(0)
+    }
   }, [pending])
   const phase = [...INGEST_PHASES].reverse().find(p => elapsed >= p.after) ?? INGEST_PHASES[0]
   return { elapsed, phase }
@@ -539,6 +554,12 @@ const KB_TABS = [
 ] as const
 type KBTabId = (typeof KB_TABS)[number]['id']
 
+async function fetchKbArticles(): Promise<KBArticle[]> {
+  const res = await fetch('/api/kb')
+  const data = await res.json()
+  return Array.isArray(data) ? (data as KBArticle[]) : []
+}
+
 export default function KBPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -561,9 +582,7 @@ export default function KBPage() {
   async function loadAll() {
     setLoading(true)
     try {
-      const res = await fetch('/api/kb')
-      const data = await res.json()
-      setArticles(Array.isArray(data) ? (data as KBArticle[]) : [])
+      setArticles(await fetchKbArticles())
     } finally {
       setLoading(false)
     }
@@ -574,7 +593,16 @@ export default function KBPage() {
   }
 
   useEffect(() => {
-    loadAll()
+    let cancelled = false
+    fetchKbArticles()
+      .then((data) => {
+        if (!cancelled) setArticles(data)
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => { cancelled = true }
   }, [])
 
   const [searchError, setSearchError] = useState<string | null>(null)

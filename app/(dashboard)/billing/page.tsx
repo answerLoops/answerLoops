@@ -288,7 +288,10 @@ export default function BillingPage() {
   const [loading, setLoading] = useState(true)
   const { upgrade, pending: upgradePending, error: upgradeError } = useUpgrade()
   const [portalPending, startPortal] = useTransition()
-  const [error, setError] = useState<string | null>(null)
+  const [portalError, setPortalError] = useState<string | null>(null)
+  // A portal failure wins, otherwise the upgrade hook's own error. Derived
+  // during render instead of being copied into state from an effect.
+  const error = portalError ?? upgradeError
 
   useEffect(() => {
     fetch('/api/billing/status')
@@ -297,16 +300,12 @@ export default function BillingPage() {
       .catch(() => setLoading(false))
   }, [])
 
-  useEffect(() => {
-    if (upgradeError) setError(upgradeError)
-  }, [upgradeError])
-
   function openPortal() {
     startPortal(async () => {
-      setError(null)
+      setPortalError(null)
       const r = await fetch('/api/billing/portal', { method: 'POST' })
       const { url, error: err } = await r.json() as { url?: string; error?: string }
-      if (err) { setError(err); return }
+      if (err) { setPortalError(err); return }
       if (url) window.location.href = url
     })
   }

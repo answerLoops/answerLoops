@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { subscribeLiveEvents } from '@/lib/live-events'
 import type { BoardSnapshot } from '@/lib/product-feedback/validation'
 import { LogoMark } from '@/components/logo'
@@ -15,20 +15,54 @@ const SEEN_KEY = 'answerloops:feedback:last-seen-update'
 
 // Per-browser convenience only: losing it just shows the dot again. Every
 // access is guarded because storage can be blocked or throw (private windows).
+// Storage is the source of truth; only when a write fails is the id kept in
+// memory instead, so the dot still clears after viewing the Updates tab.
+let memorySeenUpdateId = 0
+const seenUpdateListeners = new Set<() => void>()
+
 function readSeenUpdateId(): number {
+  let stored = 0
   try {
     const n = Number(window.localStorage.getItem(SEEN_KEY))
-    return Number.isInteger(n) && n > 0 ? n : 0
+    stored = Number.isInteger(n) && n > 0 ? n : 0
   } catch {
-    return 0
+    // ignore
   }
+  return Math.max(stored, memorySeenUpdateId)
 }
 
 function writeSeenUpdateId(id: number) {
   try {
     window.localStorage.setItem(SEEN_KEY, String(id))
+    memorySeenUpdateId = 0
   } catch {
-    // ignore
+    memorySeenUpdateId = Math.max(memorySeenUpdateId, id)
+  }
+  seenUpdateListeners.forEach((notify) => notify())
+}
+
+function subscribeSeenUpdateId(notify: () => void) {
+  seenUpdateListeners.add(notify)
+  // Another tab marking updates as seen should clear the dot here too.
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === SEEN_KEY || e.key === null) notify()
+  }
+  window.addEventListener('storage', onStorage)
+  return () => {
+    seenUpdateListeners.delete(notify)
+    window.removeEventListener('storage', onStorage)
+  }
+}
+
+async function fetchSnapshot(signal?: AbortSignal): Promise<BoardSnapshot | null> {
+  try {
+    const res = await fetch('/api/product-feedback', { cache: 'no-store', signal })
+    if (!res.ok) return null
+    return (await res.json()) as BoardSnapshot
+  } catch {
+    // Network blip or abort: the caller keeps showing the last snapshot. The
+    // next live event or resync tries again.
+    return null
   }
 }
 
@@ -56,23 +90,21 @@ export function FeedbackWidget() {
   // Listeners only run while the panel is open; the pill needs none.
   const viewport = useVisualViewport(open)
   // null until storage has been read, so the dot never flashes on first paint.
-  const [seenUpdateId, setSeenUpdateId] = useState<number | null>(null)
+  // The server snapshot is null, so the first client paint matches the server
+  // and the real value arrives right after hydration.
+  const seenUpdateId = useSyncExternalStore<number | null>(subscribeSeenUpdateId, readSeenUpdateId, () => null)
 
   const load = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const res = await fetch('/api/product-feedback', { cache: 'no-store', signal })
-      if (!res.ok) return
-      setSnapshot((await res.json()) as BoardSnapshot)
-    } catch {
-      // Network blip or abort: keep showing the last snapshot. The next live
-      // event or resync tries again.
-    }
+    const next = await fetchSnapshot(signal)
+    if (next) setSnapshot(next)
   }, [])
 
   useEffect(() => {
     const controller = new AbortController()
     let debounce: ReturnType<typeof setTimeout> | undefined
-    void load(controller.signal)
+    fetchSnapshot(controller.signal).then((next) => {
+      if (next && !controller.signal.aborted) setSnapshot(next)
+    })
 
     const unsubscribe = subscribeLiveEvents(['feedback_changed', 'resync'], (event) => {
       clearTimeout(debounce)
@@ -90,10 +122,6 @@ export function FeedbackWidget() {
     }
   }, [load])
 
-  useEffect(() => {
-    setSeenUpdateId(readSeenUpdateId())
-  }, [])
-
   const newestUpdateId = snapshot?.updates.reduce((max, u) => Math.max(max, u.id), 0) ?? 0
 
   // Viewing the Updates tab marks everything posted so far as seen — including
@@ -101,7 +129,6 @@ export function FeedbackWidget() {
   useEffect(() => {
     if (open && tab === 'updates' && newestUpdateId > 0) {
       writeSeenUpdateId(newestUpdateId)
-      setSeenUpdateId(newestUpdateId)
     }
   }, [open, tab, newestUpdateId])
 

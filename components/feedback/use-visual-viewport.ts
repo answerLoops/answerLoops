@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useRef, useSyncExternalStore } from 'react'
 
 export type VisualViewportMetrics = {
   /** Height of the area actually visible to the user (shrinks for the on-screen keyboard). */
@@ -23,23 +23,36 @@ function measure(vv: VisualViewport): VisualViewportMetrics {
  * or while `enabled` is false — in which case no listeners are attached.
  */
 export function useVisualViewport(enabled = true): VisualViewportMetrics | null {
-  const [metrics, setMetrics] = useState<VisualViewportMetrics | null>(null)
+  const last = useRef<VisualViewportMetrics | null>(null)
 
-  useEffect(() => {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      const vv = typeof window === 'undefined' ? undefined : window.visualViewport
+      if (!enabled || !vv) return () => {}
+      vv.addEventListener('resize', onChange)
+      vv.addEventListener('scroll', onChange)
+      return () => {
+        vv.removeEventListener('resize', onChange)
+        vv.removeEventListener('scroll', onChange)
+      }
+    },
+    [enabled],
+  )
+
+  // useSyncExternalStore needs a referentially stable snapshot between
+  // changes, so reuse the previous object while the numbers are the same.
+  const getSnapshot = useCallback((): VisualViewportMetrics | null => {
     const vv = typeof window === 'undefined' ? undefined : window.visualViewport
     if (!enabled || !vv) {
-      setMetrics(null)
-      return
+      last.current = null
+      return null
     }
-    const update = () => setMetrics(measure(vv))
-    update()
-    vv.addEventListener('resize', update)
-    vv.addEventListener('scroll', update)
-    return () => {
-      vv.removeEventListener('resize', update)
-      vv.removeEventListener('scroll', update)
-    }
+    const next = measure(vv)
+    const prev = last.current
+    if (prev && prev.height === next.height && prev.bottomInset === next.bottomInset) return prev
+    last.current = next
+    return next
   }, [enabled])
 
-  return metrics
+  return useSyncExternalStore(subscribe, getSnapshot, () => null)
 }

@@ -21,6 +21,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   expired: 'This invite link has expired. Ask the workspace admin to send a new one.',
 }
 
+// The clock read lives in a helper so the page body stays a pure function of
+// the invitation it loaded.
+function isPast(isoTimestamp: string): boolean {
+  return isoTimestamp < new Date().toISOString()
+}
+
 export default async function InvitePage({ params, searchParams }: Props) {
   const { token } = await params
   const { error, email } = await searchParams
@@ -56,7 +62,7 @@ export default async function InvitePage({ params, searchParams }: Props) {
     return <InviteShell><ErrorCard message={ERROR_MESSAGES.invalid} /></InviteShell>
   }
 
-  if (invite.expires_at < new Date().toISOString()) {
+  if (isPast(invite.expires_at)) {
     return <InviteShell><ErrorCard message={ERROR_MESSAGES.expired} /></InviteShell>
   }
 

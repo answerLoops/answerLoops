@@ -8,6 +8,10 @@ import type { NotionConnection } from '@/types'
 import { Button } from '@/components/ui/button'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
 
+async function fetchNotionConnection(): Promise<{ connection?: NotionConnection | null }> {
+  return fetch('/api/notion').then((r) => r.json()).catch(() => ({ connection: null }))
+}
+
 export function NotionIntegrationCard() {
   const [connection, setConnection] = useState<NotionConnection | null | undefined>(undefined)
   const [editing, setEditing] = useState(false)
@@ -16,7 +20,7 @@ export function NotionIntegrationCard() {
   const [syncElapsed, setSyncElapsed] = useState(0)
   const { toastMessage, toastKind, showToast } = useToast()
   const showToastRef = useRef(showToast)
-  showToastRef.current = showToast
+  useEffect(() => { showToastRef.current = showToast })
   // Stops any in-flight sync poll — set on unmount and on a successful
   // Disconnect, checked by pollKbSyncJob before every request. Without this,
   // disconnecting mid-sync left the poll loop running forever in the
@@ -29,19 +33,23 @@ export function NotionIntegrationCard() {
   const router = useRouter()
 
   useEffect(() => {
-    if (!syncing) { setSyncElapsed(0); return }
+    if (!syncing) return
     const t = setInterval(() => setSyncElapsed((s) => s + 1), 1000)
     return () => clearInterval(t)
   }, [syncing])
 
   const reload = useCallback(async () => {
-    const data = await fetch('/api/notion').then((r) => r.json()).catch(() => ({ connection: null }))
+    const data = await fetchNotionConnection()
     setConnection(data.connection ?? null)
   }, [])
 
   useEffect(() => {
-    reload()
-  }, [reload])
+    let cancelled = false
+    fetchNotionConnection().then((data) => {
+      if (!cancelled) setConnection(data.connection ?? null)
+    })
+    return () => { cancelled = true }
+  }, [])
 
   // Resume the progress display if a sync is already in flight — e.g. the
   // user started it from the Knowledge Base page, or is just revisiting this
@@ -56,6 +64,7 @@ export function NotionIntegrationCard() {
         if (cancelled || !job || (job.status !== 'queued' && job.status !== 'running')) return
         stoppedRef.current = false
         setSyncing(true)
+        setSyncElapsed(0)
         setSyncLabel(job.status === 'running' ? 'Syncing…' : 'Queued…')
         pollKbSyncJob('/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current).then((result) => {
           if (cancelled) return
@@ -95,6 +104,7 @@ export function NotionIntegrationCard() {
   async function handleSync() {
     stoppedRef.current = false
     setSyncing(true)
+    setSyncElapsed(0)
     setSyncLabel('Queued…')
     try {
       const result = await runKbSync('/api/notion/sync-kb', '/api/kb/sync-jobs?kind=notion', setSyncLabel, () => stoppedRef.current)
