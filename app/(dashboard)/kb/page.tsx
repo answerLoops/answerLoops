@@ -534,7 +534,7 @@ function ArticlesList({ articles, onDeleted }: { articles: (Article | KBSearchRe
 }
 
 const KB_TABS = [
-  { id: 'manage', label: 'Sources & articles' },
+  { id: 'manage', label: 'Manage' },
   { id: 'coverage', label: 'Knowledge coverage' },
 ] as const
 type KBTabId = (typeof KB_TABS)[number]['id']
