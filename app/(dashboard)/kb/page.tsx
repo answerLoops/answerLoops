@@ -2,12 +2,14 @@
 
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import type { KBArticle, KBSearchResult, KBSource, GitHubRepo } from '@/types'
 import { ingestUrlAction } from '@/lib/actions/ingest-url'
 import type { IngestUrlResult } from '@/lib/actions/ingest-url'
 import { runKbSync } from '@/lib/kb/sync-client'
 import { NotionKBSection } from '@/components/dashboard/notion-kb-section'
+import { CoverageTab } from './coverage-tab'
 
 type Article = KBArticle | KBSearchResult
 
@@ -531,7 +533,25 @@ function ArticlesList({ articles, onDeleted }: { articles: (Article | KBSearchRe
   )
 }
 
+const KB_TABS = [
+  { id: 'manage', label: 'Sources & articles' },
+  { id: 'coverage', label: 'Knowledge coverage' },
+] as const
+type KBTabId = (typeof KB_TABS)[number]['id']
+
 export default function KBPage() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const activeTab: KBTabId = searchParams.get('tab') === 'coverage' ? 'coverage' : 'manage'
+
+  function setTab(id: KBTabId) {
+    const params = new URLSearchParams(searchParams.toString())
+    if (id === 'manage') params.delete('tab')
+    else params.set('tab', id)
+    const qs = params.toString()
+    router.replace(qs ? `/kb?${qs}` : '/kb', { scroll: false })
+  }
+
   const [articles, setArticles] = useState<Article[]>([])
   const [query, setQuery] = useState('')
   const [searching, setSearching] = useState(false)
@@ -603,6 +623,31 @@ export default function KBPage() {
         <p className="mt-1 text-sm text-slate-500">Give every channel one current, searchable source of truth.</p>
       </div>
 
+      <div className="dashboard-tabs flex min-w-0 gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2" role="tablist">
+        {KB_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            onClick={() => setTab(tab.id)}
+            className={[
+              'shrink-0 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+              activeTab === tab.id
+                ? 'bg-[#082e50] text-white shadow-none'
+                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
+            ].join(' ')}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'coverage' ? (
+        <CoverageTab />
+      ) : (
+        <>
+
       <GitHubKBSection onSynced={loadAll} />
       <NotionKBSection onSynced={() => { loadAll(); refreshSources() }} />
       <FileUploadSection onImported={() => { loadAll(); refreshSources() }} />
@@ -664,6 +709,8 @@ export default function KBPage() {
         </p>
       ) : (
         <ArticlesList articles={articles} onDeleted={loadAll} />
+      )}
+        </>
       )}
     </div>
   )

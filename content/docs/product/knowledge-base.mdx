@@ -77,7 +77,7 @@ The token is stored encrypted (set `ENCRYPTION_KEY` before connecting in any rea
 
 ## Sources list
 
-The **Sources** tab on the Knowledge Base page lists every imported source. Each row shows:
+The **Sources & articles** tab on the Knowledge Base page lists every imported source. Each row shows:
 
 | Column | Description |
 |---|---|
@@ -109,6 +109,17 @@ Use the search bar at the top of the Knowledge Base page to find articles.
 **Keyword fallback** (when no AI key is configured): falls back to exact text matching. An amber warning banner appears at the top of the KB page to indicate that semantic search is unavailable.
 
 To clear a search and return to the full article list, click the **×** inside the search field or the **Clear** button.
+
+## Knowledge coverage
+
+The **Knowledge coverage** tab shows exactly what your chat assistant is able to answer from, so nobody is surprised by what it does or doesn't know. You can also reach it from **Settings → Widget**.
+
+- **Counts.** Live articles, sources, and any articles the assistant can't use.
+- **Titles by source.** Every article title, grouped by where it came from: each uploaded file or imported page, synced sources, tickets you promoted, and articles added by hand.
+- **Status per article.** An article is **live** when it is published and searchable. **Unpublished** articles are kept private and are not used by the assistant unless you publish them. This is the right state for internal documents, such as a Notion workspace you only want your team to see. **Not searchable** articles have no search index entry (usually because embedding failed during import), so the assistant can never find them. Re-import the source to fix it.
+- **Try a customer question.** Type a question and the tab runs the same lookup the chat widget uses. It shows which articles the assistant would draw on, with a match score, or tells you that nothing covers the question. If semantic search is unavailable, it says so instead of guessing.
+
+If a question doesn't closely match any live article, the assistant answers from general knowledge instead, and that answer can be wrong. Use the tab to find those gaps before your customers do, then add or edit an article to cover them. The tab is available on every plan.
 
 ## Data persistence
 

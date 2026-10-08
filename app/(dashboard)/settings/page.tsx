@@ -900,6 +900,15 @@ function WidgetSection() {
         Add a chat widget to any website. Visitors can ask questions and get answers from your knowledge base automatically.
       </p>
 
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-blue-100 bg-blue-50/60 px-3 py-2">
+        <p className="min-w-0 flex-1 text-xs text-gray-700">
+          The widget only answers from your published articles. See exactly what it can and can&apos;t answer, and test a question.
+        </p>
+        <a href="/kb?tab=coverage" className="shrink-0 text-xs font-medium text-brand-600 hover:underline">
+          See what the assistant knows →
+        </a>
+      </div>
+
       {loading ? (
         <p className="text-sm text-gray-400">Loading…</p>
       ) : !token ? (
