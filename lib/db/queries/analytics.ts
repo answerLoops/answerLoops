@@ -10,24 +10,23 @@ export interface DeflectionStats {
 export async function getDeflectionStats(orgId: number): Promise<DeflectionStats> {
   const db = getDb()
 
-  // Bug reports are never KB-deflectable — the pipeline correctly declines to
-  // auto-answer them, so they must not count against the deflection metric's
-  // denominator. Excluded here rather than at the answered/deflected
-  // sub-queries because bug tickets never get an ai_assessments row anyway
-  // (runAIAgent skips assessAnswer/shouldAutoDeflect for that category).
+  // Bug reports and feature requests are routed to human review rather than
+  // auto-deflected, so neither should count against the deflection metric.
+  // Feature requests may have assessments, so keep the exclusion consistent
+  // across the denominator and both assessed-ticket sub-queries.
   const [totRow] = await db.execute(sql`
     SELECT COUNT(*)::int AS n FROM tickets
-    WHERE org_id = ${orgId} AND status != 'duplicate' AND (category IS NULL OR category != 'bug')
+    WHERE org_id = ${orgId} AND status != 'duplicate' AND (category IS NULL OR category NOT IN ('bug', 'feature_request'))
   `)
   const [ansRow] = await db.execute(sql`
     SELECT COUNT(*)::int AS n FROM ai_assessments a
     JOIN tickets t ON t.id = a.ticket_id
-    WHERE t.org_id = ${orgId} AND t.status != 'duplicate' AND (t.category IS NULL OR t.category != 'bug')
+    WHERE t.org_id = ${orgId} AND t.status != 'duplicate' AND (t.category IS NULL OR t.category NOT IN ('bug', 'feature_request'))
   `)
   const [defRow] = await db.execute(sql`
     SELECT COUNT(*)::int AS n FROM ai_assessments a
     JOIN tickets t ON t.id = a.ticket_id
-    WHERE a.auto_deflected = 1 AND t.org_id = ${orgId} AND t.status != 'duplicate' AND (t.category IS NULL OR t.category != 'bug')
+    WHERE a.auto_deflected = 1 AND t.org_id = ${orgId} AND t.status != 'duplicate' AND (t.category IS NULL OR t.category NOT IN ('bug', 'feature_request'))
   `)
 
   return {
@@ -53,7 +52,7 @@ export async function getDeflectionTrend(days = 14, orgId: number): Promise<Tren
     WHERE a.created_at >= (NOW() - (${days - 1} || ' days')::interval)::text
       AND t.org_id = ${orgId}
       AND t.status != 'duplicate'
-      AND (t.category IS NULL OR t.category != 'bug')
+      AND (t.category IS NULL OR t.category NOT IN ('bug', 'feature_request'))
     GROUP BY LEFT(a.created_at, 10)
     ORDER BY LEFT(a.created_at, 10)
   `)
