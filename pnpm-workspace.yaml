@@ -46,7 +46,7 @@ minimumReleaseAgeExclude:
   - 'source-map-js@1.2.2'
 overrides:
   ws: '>=8.21.0'
-  shell-quote: '>=1.8.5'   # GHSA-395f-4hp3-45gv — >=1.8.4 wasn't actually patched, 1.8.4 itself is vulnerable
+  shell-quote: '>=1.11.0'   # keep on a patched release
   undici: '>=6.28.0 <7.0.0'   # GHSA-8xcm-r25x-g524 (response desync via retry interceptor) — raised from ^6.27.0, reached via discord.js. Capped below 7.x after an open range let a newer transitive demand (added by @mastra/pg/@mastra/memory) drag discord.js's pinned undici@6.24.1 up to 8.9.0 — 3 majors past what discord.js@14.26.4/@discordjs/rest@2.6.1 actually declare and are built against, breaking their Headers construction at runtime (bot crash-looped on every Discord REST call). Same failure mode already caught once below for js-yaml's <4.0.0 cap — apply the same defensive bound to every open-ended override, not just the one that already broke.
   postcss: '>=8.5.23'   # GHSA-fxqj-rqcc-2cmp (incomplete fix of GHSA-6g55-p6wh-862q, arbitrary .map disclosure) — raised from >=8.5.18, which the newer advisory outgrew
   sharp: '>=0.35.5 <0.36.0'   # disclosure-ok  GHSA-f88m-g3jw-g9cj (inherited libvips CVEs 2026-33327/33328/35590/35591) + GHSA-rgj7-g3m4-5g8c (inherited libheif GHSA-g89c-p67h-r497 / GHSA-2jg2-4ch7-h545), both fixed in 0.35.4; pulled in by next and next-auth>next. Capped below 0.36 (a major) per the open-range lesson below
