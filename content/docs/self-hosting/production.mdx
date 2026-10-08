@@ -10,7 +10,7 @@ This assumes you've already worked through the [self-host quickstart](/docs/quic
 - **Server**: Any Linux VPS (Ubuntu 22.04+)
 - **Reverse proxy**: Caddy (auto SSL) or nginx
 - **Process**: Docker Compose
-- **Database**: Docker Postgres with named volume, or managed Postgres (Neon, Supabase, Railway)
+- **Database**: Docker Postgres with named volume, or a managed Postgres service
 
 ## Get the code onto the server
 
@@ -85,4 +85,4 @@ curl https://app.yourdomain.com/api/health
 
 ## Alternative: Railway or another PaaS
 
-If you'd rather not manage a VPS, reverse proxy, and TLS certs yourself, push the repo to Railway (or another PaaS) — Railway reads the committed `railway.toml` / `railway.bot.toml`, builds each service with Nixpacks, handles HTTPS automatically, and you skip the Caddy/nginx section above entirely. You'll still need to set the same environment variables, and a managed Postgres (Neon, Railway's own Postgres) instead of the Docker-volume one.
+If you'd rather not manage a VPS, reverse proxy, and TLS certs yourself, push the repo to Railway (or another PaaS) — Railway reads the committed `railway.toml` / `railway.bot.toml`, builds each service with Nixpacks, handles HTTPS automatically, and you skip the Caddy/nginx section above entirely. You'll still need to set the same environment variables, and a managed Postgres (for example Railway's own Postgres) instead of the Docker-volume one.

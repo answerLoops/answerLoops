@@ -30,7 +30,7 @@ The scanners themselves — Trivy (dependencies, secrets, image), Semgrep (SAST)
     `GITHUB_WEBHOOK_SECRET`, `SLACK_SIGNING_SECRET`, `RESEND_WEBHOOK_SECRET`, and `BOT_SECRET` all guard inbound webhook endpoints against forged requests. Treat them the same as API keys — never commit them, never log them.
   </Step>
   <Step title="Restrict database access">
-    Postgres should not be reachable from the public internet. If you're using Neon, Railway, or a managed provider, this is the default — if you're self-managing Postgres, firewall it to only the app and bot services.
+    Postgres should not be reachable from the public internet. If you're using a managed Postgres provider, this is usually the default — if you're self-managing Postgres, firewall it to only the app and bot services.
   </Step>
 </Steps>
 

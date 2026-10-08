@@ -8,7 +8,7 @@ import path from 'node:path'
 // pg_notify('kb_sync_job_queued', id) via two triggers, which the bot's
 // generalized watchNotifications() dispatches to startKbSyncSweep().trigger(),
 // with a coarse 5-minute interval left only as a safety net. The previous
-// 15-second unconditional interval kept a Neon-style serverless Postgres
+// 15-second unconditional interval kept a serverless Postgres
 // compute from ever autosuspending, running up billing for no work being
 // done — see the removed KB_SYNC_SWEEP_INTERVAL_MS and its replacement,
 // KB_SYNC_SAFETY_SWEEP_INTERVAL_MS, below.

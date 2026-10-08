@@ -9,7 +9,7 @@
  *      plan's ceiling (`orgRateLimitPerMinute`) — no double-admits under
  *      real concurrency.
  *   2. Latency and error rate at and above that ceiling, so a breaking point
- *      in the current Neon + Railway setup (DB pool `max: 10` in
+ *      in the current managed-Postgres + Railway setup (DB pool `max: 10` in
  *      lib/db/drizzle.ts, connection ceiling, instance count) shows up as
  *      data instead of a guess.
  *
@@ -113,8 +113,8 @@ async function main(): Promise<void> {
   console.log('⚠️  This drives real concurrent load against a real DB and creates real rows.')
   console.log(`    Target: ${args.url}`)
   console.log(`    Orgs per tier: ${args.orgsPerTier} · Duration: ${args.durationSec}s · Overshoot: ${args.overshoot}x ceiling`)
-  console.log('    If this app is pointed at a Neon project near its compute-time quota,')
-  console.log('    this WILL burn more of it — check Neon usage before a large run.\n')
+  console.log('    If this app is pointed at a database near its compute-time quota,')
+  console.log('    this WILL burn more of it — check your database usage before a large run.\n')
 
   const { getDb } = await import('@/lib/db/drizzle')
   const { orgs, apiKeys, subscriptions } = await import('@/lib/db/schema')

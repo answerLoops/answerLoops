@@ -30,6 +30,10 @@ services:
         required: false
     environment:
       - DATABASE_URL=postgres://community:community@postgres:5432/community
+      # Also overridden: .env may set it to a hosted database, and the LISTEN
+      # connection reads it ahead of DATABASE_URL — without this the dev stack's
+      # live-update connection would leave the local Postgres.
+      - DIRECT_DATABASE_URL=postgres://community:community@postgres:5432/community
       - NEXT_TELEMETRY_DISABLED=1
     volumes:
       - .:/app
@@ -49,6 +53,7 @@ services:
     environment:
       - BOT_TARGET_URL=http://app:3000
       - DATABASE_URL=postgres://community:community@postgres:5432/community
+      - DIRECT_DATABASE_URL=postgres://community:community@postgres:5432/community
     volumes:
       - .:/app
       - bot_node_modules:/app/node_modules

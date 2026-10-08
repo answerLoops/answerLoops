@@ -221,7 +221,7 @@ export async function runMigrations() {
   // The bot LISTENs on this channel (same connection as config_changed/
   // member_joined/data_changed) and claims the job immediately, replacing an
   // unconditional 15-second poll that ran forever regardless of whether any
-  // job existed — on Neon-style serverless Postgres that kept the database
+  // job existed — on serverless Postgres that kept the database
   // compute from ever autosuspending. A coarse periodic sweep remains as a
   // safety net for a missed NOTIFY or a job stuck in `running`.
   await db.execute(sql`

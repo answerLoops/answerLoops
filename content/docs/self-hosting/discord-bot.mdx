@@ -65,7 +65,7 @@ Both `integrations` (bot token, single-org channel config) and `discord_guilds` 
 The bot maintains one dedicated Postgres connection for `LISTEN`. This is separate from the connection pool and is closed cleanly on `SIGTERM`/`SIGINT`.
 </Note>
 
-That connection sends itself a heartbeat query every 4 minutes. On a serverless Postgres provider (e.g. Neon) an idle compute can auto-suspend, silently killing every connection on it — LISTEN included — with no clean disconnect for the bot to react to; a long-idle TCP connection can also get dropped by an intermediate network proxy the same way. The heartbeat keeps the compute active and detects a dead connection quickly. If a heartbeat fails, the LISTEN connection closes, or the initial `LISTEN` fails, the bot reconnects and re-subscribes automatically after a short delay — no manual restart needed to recover config hot-reload.
+That connection sends itself a heartbeat query every 4 minutes. On a serverless Postgres provider an idle compute can auto-suspend, silently killing every connection on it — LISTEN included — with no clean disconnect for the bot to react to; a long-idle TCP connection can also get dropped by an intermediate network proxy the same way. The heartbeat keeps the compute active and detects a dead connection quickly. If a heartbeat fails, the LISTEN connection closes, or the initial `LISTEN` fails, the bot reconnects and re-subscribes automatically after a short delay — no manual restart needed to recover config hot-reload.
 
 ## Slash commands
 

@@ -83,7 +83,7 @@ Every tenant-data query requires an explicit `org_id` — there is no silent def
 | Service | Used for | Required? |
 |---|---|---|
 | AI provider (per org) | triage, answer drafting, confidence grading, widget chat | at least one, env fallback or per-org key |
-| Postgres (Neon in production) | all persistent state | yes |
+| Postgres (managed, with pgvector) | all persistent state | yes |
 | Discord / Slack / GitHub / Telegram / Resend (email) | ingest channels | each optional, configured per org |
 | Stripe | billing, subscription management | for hosted plans |
 | Firecrawl | crawl a public docs URL into the KB | optional |

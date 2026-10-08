@@ -129,9 +129,9 @@ function startStuckTicketSweep(): void {
 // This interval is only a safety net for a notification that got dropped
 // (network blip on the LISTEN connection between disconnect and reconnect)
 // or a job stuck in `running` from a worker crash. It used to be the only
-// trigger, polling unconditionally every 15 seconds — on Neon-style
-// serverless Postgres that kept the database compute from ever
-// autosuspending, running up compute-hour billing for no work being done.
+// trigger, polling unconditionally every 15 seconds — on serverless Postgres
+// that kept the database compute from ever autosuspending, running up
+// compute-hour billing for no work being done.
 const KB_SYNC_SAFETY_SWEEP_INTERVAL_MS = 5 * 60 * 1000
 const KB_SYNC_STUCK_THRESHOLD_MS = 15 * 60 * 1000
 const KB_SYNC_MAX_ATTEMPTS = 3
@@ -206,8 +206,8 @@ function startKbSyncSweep(): { trigger: () => void; stop: () => void } {
   }
 }
 
-// How often to ping the dedicated LISTEN connection. Two jobs: (1) on Neon
-// and similar serverless Postgres, any query keeps the whole compute from
+// How often to ping the dedicated LISTEN connection. Two jobs: (1) on serverless
+// Postgres, any query keeps the whole compute from
 // auto-suspending on idle (the default is ~5 minutes) — a suspend silently
 // kills every connection on it, LISTEN included; (2) a network path can also
 // drop a long-idle TCP connection on its own (proxies, load balancers) without

@@ -63,7 +63,7 @@ const RATE_LIMIT_PER_MINUTE: Record<PlanId, number> = {
   standard: 50,
   pro: 150,
   // Deliberately held at 300, not the researched 600, until the load-test
-  // roadmap item verifies the Neon/Railway setup under real concurrency —
+  // roadmap item verifies the managed-Postgres/Railway setup under real concurrency —
   // see the Roadmap page's "Load test /api/mcp and /api/agent/*" item
   // (2026-07-29). Revisit once that lands.
   enterprise: 300,
