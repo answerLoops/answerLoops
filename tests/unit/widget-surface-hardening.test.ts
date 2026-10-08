@@ -137,8 +137,10 @@ describe('widget chat endpoint hardening', () => {
 
   it('uses the shared rate-limit store so the ceiling is not per-instance', () => {
     const s = src()
-    expect(s).toContain('await rateLimitShared(`widget-token:')
-    expect(s).toContain('await rateLimitShared(`widget-ip:')
+    // The two per-token counters are awaited together via Promise.all.
+    expect(s).toContain('rateLimitShared(`widget-token:')
+    expect(s).toContain('rateLimitShared(`widget-ip:')
+    expect(s).toMatch(/await Promise\.all\(\[\s*rateLimitShared\(`widget-token:/)
     expect(s).not.toContain("import { rateLimit }")
   })
 
