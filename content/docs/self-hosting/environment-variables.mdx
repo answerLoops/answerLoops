@@ -161,6 +161,7 @@ After deploying, register the webhook: `POST {AUTH_URL}/api/telegram/register` (
 | `RESEND_API_KEY` | API key from resend.com. Enables email alerts (new ticket, SLA breach, resolved). |
 | `RESEND_FROM` | Verified sender address e.g. `hello@yourdomain.com` |
 | `RESEND_NEWSLETTER_FROM` | From address for blog newsletter signup confirmations, e.g. `Nathan from answerLoops <nathan@yourdomain.com>`. Falls back to `RESEND_FROM`. |
+| `FEEDBACK_NOTIFY_EMAIL` | Where to send an alert when someone posts product feedback in the dashboard widget. Defaults to `hello@answerloops.com`; set it to your own inbox when self-hosting. Requires `RESEND_API_KEY`. |
 | `RESEND_WEBHOOK_SECRET` | Svix signing secret (`whsec_...`) for Resend's outbound delivery-status webhooks (`email.bounced`/`email.complained`/etc.) — see [Email Channel Setup](/docs/self-hosting/email-channel) |
 | `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | Google Cloud OAuth client credentials for the "Connect Gmail" send-only integration (see [Email Channel Setup](/docs/self-hosting/email-channel)) — optional, requires manual GCP OAuth-client + consent-screen setup |
 | `GMAIL_REDIRECT_URI` | Optional override for the Gmail OAuth callback URL (defaults to `<AUTH_URL or NEXTAUTH_URL>/api/email/gmail/callback`) |

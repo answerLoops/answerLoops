@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const requireOrgAccess = vi.fn()
 const rateLimitShared = vi.fn()
 const q = vi.hoisted(() => ({ createProductFeedback: vi.fn() }))
+const notify = vi.hoisted(() => ({ sendProductFeedbackNotification: vi.fn() }))
 
+vi.mock('@/lib/email/send', () => notify)
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: () => requireOrgAccess() }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: (...a: unknown[]) => rateLimitShared(...a) }))
 vi.mock('@/lib/db/queries/product-feedback', () => q)
@@ -31,6 +33,20 @@ describe('submitProductFeedbackAction', () => {
       body: GOOD,
       anonymous: true,
     })
+  })
+
+  it('notifies the operator after saving, with the trimmed body and anonymity flag', async () => {
+    await submitProductFeedbackAction({ body: `  ${GOOD}  `, anonymous: true })
+    expect(notify.sendProductFeedbackNotification).toHaveBeenCalledWith({ body: GOOD, anonymous: true })
+  })
+
+  it('does not notify for feedback that was rejected or never saved', async () => {
+    await submitProductFeedbackAction({ body: 'too short' })
+    rateLimitShared.mockResolvedValue({ ok: false })
+    await submitProductFeedbackAction({ body: GOOD })
+    requireOrgAccess.mockResolvedValue({ ok: false, error: 'Unauthorized' })
+    await submitProductFeedbackAction({ body: GOOD })
+    expect(notify.sendProductFeedbackNotification).not.toHaveBeenCalled()
   })
 
   it('requires a signed-in member before touching the database', async () => {

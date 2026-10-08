@@ -5,6 +5,7 @@ import { requireOrgAccess } from '@/lib/auth/org'
 import { isFeedbackWidgetEnabled } from '@/lib/product-feedback/enabled'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { createProductFeedback } from '@/lib/db/queries/product-feedback'
+import { sendProductFeedbackNotification } from '@/lib/email/send'
 import { validateFeedbackBody } from '@/lib/product-feedback/validation'
 
 // The widget re-fetches on the NOTIFY the table triggers emit, so this action
@@ -49,5 +50,8 @@ export async function submitProductFeedbackAction(input: unknown): Promise<Board
     body,
     anonymous: parsed.data.anonymous,
   })
+  // Best-effort alert to the operator; the sender never throws, so a mail
+  // outage cannot fail a submission that has already been saved.
+  await sendProductFeedbackNotification({ body, anonymous: parsed.data.anonymous })
   return { ok: true }
 }
