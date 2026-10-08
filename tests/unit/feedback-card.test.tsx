@@ -100,12 +100,12 @@ describe('badges', () => {
 describe('reply', () => {
   it('renders no reply block when there is no reply', () => {
     renderCard(item())
-    expect(screen.queryByText('answerLoops')).toBeNull()
+    expect(screen.queryByText('Nathan @ answerLoops')).toBeNull()
   })
 
   it('renders the reply body and the tag label', () => {
     renderCard(item({ reply: { body: 'Thanks for the kind words!', tag: 'planned', repliedAt: '2026-10-06T12:00:00.000Z' } }))
-    expect(screen.getByText('answerLoops')).toBeTruthy()
+    expect(screen.getByText('Nathan @ answerLoops')).toBeTruthy()
     expect(screen.getByText('Thanks for the kind words!')).toBeTruthy()
     expect(screen.getByText('Planned')).toBeTruthy()
   })

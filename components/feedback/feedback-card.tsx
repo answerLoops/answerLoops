@@ -52,7 +52,7 @@ export function FeedbackCard({ item }: { item: BoardFeedback }) {
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
               <LogoMark size={20} />
             </div>
-            <p className="min-w-0 text-sm font-semibold text-slate-900">answerLoops</p>
+            <p className="min-w-0 text-sm font-semibold text-slate-900">Nathan @ answerLoops</p>
             {item.reply.tag && (
               <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
                 <ThumbIcon className="h-3 w-3" />
