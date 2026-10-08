@@ -4,7 +4,7 @@ import path from 'node:path'
 
 // Covers the reconnect/resilience rewrite of bot/index.ts's watchConfigChanges():
 // production incident where the dedicated LISTEN connection went silently
-// stale after ~30 minutes idle (Neon auto-suspend / a proxy dropping a
+// stale after ~30 minutes idle (serverless-Postgres auto-suspend / a proxy dropping a
 // long-idle TCP connection without a clean `close`), and every NOTIFY after
 // that point was lost with nothing in the logs until someone manually
 // restarted the bot process. The fix replaces postgres.js's `.listen()`

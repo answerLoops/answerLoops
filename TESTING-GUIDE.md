@@ -12,7 +12,7 @@
 Before anything else, confirm these are set in your `.env` (or production environment):
 
 ```
-DATABASE_URL=               # Neon connection string
+DATABASE_URL=               # Postgres connection string
 AUTH_SECRET=                # random 32+ char string
 ENCRYPTION_KEY=             # 64-char hex string
 ```

@@ -6,8 +6,8 @@ import { getDirectDatabaseUrl } from '@/lib/db/direct-url'
 // Root-cause fix for a production bug found while debugging live Slack
 // ingestion: config hot-reload (bot/index.ts's config_changed LISTEN) and
 // the member_joined SSE stream (app/api/events/stream/route.ts) both opened
-// their LISTEN connection using DATABASE_URL directly. On Neon (and any
-// other pooled Postgres provider), DATABASE_URL is the pooled endpoint —
+// their LISTEN connection using DATABASE_URL directly. On any
+// pooled Postgres provider, DATABASE_URL is the pooled endpoint —
 // PgBouncer in transaction mode can swap the physical backend connection
 // between statements, so a NOTIFY fired elsewhere never reliably reaches a
 // LISTEN registered on a pooled connection. In practice this meant new

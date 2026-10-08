@@ -1,7 +1,7 @@
 name: answerloops
 
 # Production stack: built image, no source bind-mount, no dev server.
-# Requires a .env file with DATABASE_URL pointing to Neon (or another Postgres).
+# Requires a .env file with DATABASE_URL pointing to your Postgres.
 #
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
