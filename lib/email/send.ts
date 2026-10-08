@@ -222,6 +222,62 @@ export async function sendWelcomeEmail(email: string, name: string | null): Prom
   }
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+export const FEEDBACK_NOTIFY_DEFAULT = 'hello@answerloops.com'
+
+/**
+ * Tells the operator that someone posted product feedback, since nobody is
+ * watching the moderation queue all day. Sent to FEEDBACK_NOTIFY_EMAIL, falling
+ * back to hello@answerloops.com.
+ *
+ * Never throws — the caller is a user's submit action, and a mail provider
+ * having a bad minute is not a reason to fail their feedback. Failures are
+ * logged instead. The feedback text is user-supplied, so it is escaped before
+ * it goes into the HTML body.
+ */
+export async function sendProductFeedbackNotification(input: {
+  body: string
+  anonymous: boolean
+}): Promise<void> {
+  if (MOCK_EXTERNALS || !process.env.RESEND_API_KEY) return
+
+  const to = process.env.FEEDBACK_NOTIFY_EMAIL?.trim() || FEEDBACK_NOTIFY_DEFAULT
+  const preview = input.body.length > 60 ? `${input.body.slice(0, 60)}…` : input.body
+
+  try {
+    await client().emails.send({
+      from: from(),
+      to: [to],
+      subject: `New product feedback: ${preview.replace(/\s+/g, ' ')}`,
+      text: `New product feedback${input.anonymous ? ' (posted anonymously)' : ''}:\n\n${input.body}\n\nIt is waiting for review before it appears on the board.`,
+      html: `
+        <div style="${BASE_STYLE}">
+          <h2 style="font-size:18px;font-weight:600;color:#111827;margin-bottom:8px">
+            New product feedback
+          </h2>
+          <p style="${MUTED};margin-bottom:16px">
+            ${input.anonymous ? 'Posted anonymously.' : 'Posted by a workspace member.'}
+            It is waiting for review before it appears on the board.
+          </p>
+          <blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #c7d2fe;background:#f9fafb;color:#374151;font-size:14px;white-space:pre-wrap">${escapeHtml(input.body)}</blockquote>
+        </div>
+      `,
+    })
+  } catch (err) {
+    console.error('[email] product feedback notification failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+}
+
 export async function sendSlaBreachEmails(
   breachedTickets: { id: number; org_ticket_number: number }[],
   orgId: number

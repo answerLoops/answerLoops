@@ -47,12 +47,12 @@ export function FeedbackCard({ item }: { item: BoardFeedback }) {
       </div>
 
       {item.reply && (
-        <div className="border-t border-slate-200 bg-slate-50 p-3.5">
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
-              <LogoMark size={20} />
+        <div className="border-t border-slate-200 bg-slate-50 py-3.5 pl-7 pr-3.5">
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 border-l-2 border-indigo-200 pl-3">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white">
+              <LogoMark size={18} />
             </div>
-            <p className="min-w-0 text-sm font-semibold text-slate-900">answerLoops</p>
+            <p className="min-w-0 text-sm font-semibold text-slate-900">Nathan @ answerLoops</p>
             {item.reply.tag && (
               <span className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
                 <ThumbIcon className="h-3 w-3" />
@@ -60,7 +60,7 @@ export function FeedbackCard({ item }: { item: BoardFeedback }) {
               </span>
             )}
           </div>
-          <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">
+          <p className="mt-2 whitespace-pre-wrap break-words border-l-2 border-indigo-200 pl-3 text-sm leading-relaxed text-slate-700">
             {item.reply.body}
           </p>
         </div>
