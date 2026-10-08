@@ -381,7 +381,7 @@ function WidgetChatBody({
               placeholder="you@example.com"
               className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
             />
-            {emailError && <p className="text-[0.625rem] text-red-500">{emailError}</p>}
+            {emailError && <p className="break-words text-[0.625rem] text-red-500">{emailError}</p>}
             <button
               type="submit"
               disabled={emailPending}
@@ -431,7 +431,7 @@ function WidgetChatBody({
             )}
 
             {error && (
-              <p className="text-center text-xs text-red-400">{error}</p>
+              <p className="break-words text-center text-xs text-red-400">{error}</p>
             )}
 
             <div ref={bottomRef} />

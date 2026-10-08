@@ -46,7 +46,7 @@ export function CardSkeleton() {
 export function StepsCard({ data }: { data: StepsData }) {
   return (
     <section className={`${cardBase} p-3`} aria-label={data.title}>
-      <h3 className="mb-2.5 text-xs font-semibold text-gray-900">{data.title}</h3>
+      <h3 className="mb-2.5 break-words text-xs font-semibold text-gray-900">{data.title}</h3>
       <ol className="space-y-0">
         {data.steps.map((step, i) => {
           const isLast = i === data.steps.length - 1
@@ -90,7 +90,7 @@ export function ChoicesCard({ data }: { data: ChoicesData }) {
                 setPicked(option.label)
                 send(option.label)
               }}
-              className={`max-w-full break-words rounded-full border px-3 py-1.5 text-left text-xs font-medium transition-colors ${
+              className={`max-w-full break-words rounded-2xl border px-3 py-1.5 text-left text-xs font-medium transition-colors ${
                 selected
                   ? 'border-brand-600 bg-brand-600 text-white'
                   : 'border-brand-200 bg-brand-50 text-brand-700 hover:border-brand-300 hover:bg-brand-100 disabled:opacity-50 disabled:hover:bg-brand-50'
@@ -167,9 +167,9 @@ export function LinkCard({ data }: { data: LinkCardData }) {
       <p className="truncate text-[0.625rem] text-gray-400">{host}</p>
       <p className="mt-0.5 break-words text-xs font-semibold text-gray-900">{data.title}</p>
       {data.description && <p className="mt-0.5 break-words text-xs leading-relaxed text-gray-500">{data.description}</p>}
-      <span className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-brand-600 group-hover:text-brand-700">
-        {data.cta || 'Open'}
-        <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
+      <span className="mt-2 inline-flex max-w-full items-center gap-1 text-xs font-medium text-brand-600 group-hover:text-brand-700">
+        <span className="min-w-0 break-words">{data.cta || 'Open'}</span>
+        <svg className="h-3 w-3 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M7 17L17 7M9 7h8v8" />
         </svg>
       </span>
