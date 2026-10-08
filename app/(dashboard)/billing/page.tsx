@@ -23,7 +23,6 @@ const PLAN_FEATURES: Record<string, string[]> = {
     'Widget with lead capture',
     'MCP server + REST Agent API access',
     'Multi-language AI responses',
-    'White-label widget (remove branding)',
     'CSV export',
     'Email support',
   ],
@@ -34,6 +33,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
     'Human escalation routing',
     'Simulation / dry-run mode',
     'Knowledge gap dashboard',
+    'White-label widget (remove branding)',
     'Priority support',
   ],
   enterprise: [

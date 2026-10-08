@@ -66,7 +66,7 @@ const ROWS: Row[] = [
   { feature: 'CSV export', standard: true, pro: true, enterprise: true },
   {
     feature: 'White-label widget (remove branding)',
-    standard: true,
+    standard: false,
     pro: true,
     enterprise: true,
   },

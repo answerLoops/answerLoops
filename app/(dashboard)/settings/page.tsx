@@ -13,6 +13,7 @@ import { createApiKeyAction, revokeApiKeyAction } from '@/lib/actions/api-keys'
 import { API_SCOPES, ALL_SCOPES } from '@/lib/agent/scopes'
 import { deleteAccountAction, getCurrentOrgName } from '@/lib/actions/account'
 import { Button } from '@/components/ui/button'
+import { WidgetBrandingUpsell } from '@/components/billing/widget-branding-upsell'
 import type { SLAConfig } from '@/types'
 import { subscribeLiveEvents } from '@/lib/live-events'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
@@ -908,6 +909,8 @@ function WidgetSection() {
           See what the assistant knows →
         </a>
       </div>
+
+      <WidgetBrandingUpsell />
 
       {loading ? (
         <p className="text-sm text-gray-400">Loading…</p>

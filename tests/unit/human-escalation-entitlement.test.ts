@@ -63,6 +63,6 @@ describe('lib/billing/entitlements.ts — human_escalation stays a Pro+ feature'
   it('is declared and only unlocked at pro/enterprise', () => {
     const s = readSrc('lib/billing/entitlements.ts')
     expect(s).toContain("'human_escalation'")
-    expect(s).toContain("const PRO_FEATURES: Feature[] = [...STANDARD_FEATURES, 'csat_scoring', 'human_escalation'")
+    expect(s).toContain("const PRO_FEATURES: Feature[] = [...STANDARD_FEATURES, 'white_label_widget', 'csat_scoring', 'human_escalation'")
   })
 })

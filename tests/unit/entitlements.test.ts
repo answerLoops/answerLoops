@@ -17,6 +17,7 @@ const ALL_FEATURES: Feature[] = [
   'knowledge_gap_dashboard',
   'custom_ai_model_config',
   'csv_export',
+  'white_label_widget',
 ]
 
 afterEach(() => {
@@ -32,6 +33,21 @@ describe('hasFeature on cloud (DEPLOYMENT_MODE=cloud)', () => {
     expect(hasFeature('standard', 'csat_scoring')).toBe(false)
     expect(hasFeature('standard', 'simulation')).toBe(false)
     expect(hasFeature('standard', 'custom_ai_model_config')).toBe(false)
+  })
+
+  it('standard cannot turn widget branding off; pro and enterprise can', () => {
+    process.env.DEPLOYMENT_MODE = 'cloud'
+    expect(hasFeature('standard', 'white_label_widget')).toBe(false)
+    expect(hasFeature('pro', 'white_label_widget')).toBe(true)
+    expect(hasFeature('enterprise', 'white_label_widget')).toBe(true)
+    expect(planRequiredFor('white_label_widget')).toBe('pro')
+  })
+
+  it('self-hosted keeps white_label_widget unlocked on every plan', () => {
+    delete process.env.DEPLOYMENT_MODE
+    for (const planId of ['standard', 'pro', 'enterprise'] as PlanId[]) {
+      expect(hasFeature(planId, 'white_label_widget')).toBe(true)
+    }
   })
 
   it('pro unlocks everything standard has plus csat/escalation/simulation/knowledge-gaps', () => {
