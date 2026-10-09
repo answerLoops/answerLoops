@@ -121,9 +121,9 @@ export async function createCheckoutSession(
   // swallowed, leaving a dead page with no indication anything went wrong.
   try {
     const existing = await getSubscription(orgId)
-    const customerId = existing?.stripeCustomerId ?? null
 
     const stripe = getStripe()
+    const customerId = await reusableCustomerId(stripe, existing?.stripeCustomerId ?? null, orgId)
     const base = baseUrl()
 
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -237,9 +237,9 @@ export async function createEmbeddedCheckoutSession(
 
   try {
     const existing = await getSubscription(orgId)
-    const customerId = existing?.stripeCustomerId ?? null
 
     const stripe = getStripe()
+    const customerId = await reusableCustomerId(stripe, existing?.stripeCustomerId ?? null, orgId)
     const base = baseUrl()
 
     const checkoutSession = await stripe.checkout.sessions.create({
@@ -286,4 +286,36 @@ export async function createEmbeddedCheckoutSession(
         : 'Could not start checkout. Try again.'
     return { ok: false, error: message, status: 502 }
   }
+}
+
+/**
+ * The stored Customer ID, or null when Stripe no longer has that customer.
+ *
+ * The ID lives in our database but the customer lives in Stripe, and the two
+ * can drift: a customer deleted in the dashboard, or a row carried over from
+ * another Stripe mode or account. Passing a dead ID to Checkout fails the whole
+ * session with `resource_missing`, which locks that org out of ever starting a
+ * trial. Falling back to `customer_email` lets Checkout create a fresh
+ * Customer, and the webhook then overwrites the stale ID on completion. Any
+ * other Stripe failure still propagates.
+ */
+async function reusableCustomerId(
+  stripe: Stripe,
+  customerId: string | null,
+  orgId: number,
+): Promise<string | null> {
+  if (!customerId) return null
+  try {
+    const customer = await stripe.customers.retrieve(customerId)
+    if (!customer.deleted) return customerId
+  } catch (err) {
+    const missing =
+      err instanceof Stripe.errors.StripeInvalidRequestError && err.code === 'resource_missing'
+    if (!missing) throw err
+  }
+  logger.warn('Stored Stripe customer no longer exists; checking out as a new customer', {
+    module: MOD,
+    orgId,
+  })
+  return null
 }
