@@ -29,6 +29,35 @@ import {
 
 const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-US')}`
 
+const GATEWAY_STATUSES = new Set([502, 503, 504])
+const GATEWAY_RETRY_DELAY_MS = 1500
+
+type SecretOutcome =
+  | { kind: 'secret'; clientSecret: string }
+  | { kind: 'error'; message: string }
+  // The edge or host answered instead of the app — a restart or deploy in
+  // progress. Worth one retry; says nothing about the customer's connection.
+  | { kind: 'gateway' }
+
+async function requestClientSecret(planId: string, interval: BillingInterval): Promise<SecretOutcome> {
+  const res = await fetch('/api/billing/checkout/embedded', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ planId, interval }),
+  })
+  // An error page from Cloudflare or the host is HTML. Parsing it as JSON
+  // used to throw into the "check your connection" branch, which blamed the
+  // customer for a server-side outage.
+  const data = (await res.json().catch(() => null)) as { clientSecret?: string; error?: string } | null
+  if (data?.error) return { kind: 'error', message: data.error }
+  if (data?.clientSecret) return { kind: 'secret', clientSecret: data.clientSecret }
+  if (GATEWAY_STATUSES.has(res.status)) return { kind: 'gateway' }
+  return {
+    kind: 'error',
+    message: 'Checkout returned an unexpected response. Try selecting the plan again.',
+  }
+}
+
 interface Props {
   plans: Plan[]
   initialPlanId: string
@@ -97,30 +126,25 @@ export function EmbeddedCheckoutPanel({
     // never be wrong, since it decides what the card is charged for.
     let cancelled = false
 
-    fetch('/api/billing/checkout/embedded', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ planId, interval }),
-    })
-      .then((r) => r.json() as Promise<{ clientSecret?: string; error?: string }>)
-      .then((data) => {
-        if (cancelled) return
-        if (data.error) {
-          setSession({ planId, interval, clientSecret: null, error: data.error })
-          return
+    const settle = (secret: string | null, message: string | null) => {
+      if (!cancelled) setSession({ planId, interval, clientSecret: secret, error: message })
+    }
+
+    void (async () => {
+      try {
+        let outcome = await requestClientSecret(planId, interval)
+        if (outcome.kind === 'gateway') {
+          await new Promise((resolve) => setTimeout(resolve, GATEWAY_RETRY_DELAY_MS))
+          if (cancelled) return
+          outcome = await requestClientSecret(planId, interval)
         }
-        if (data.clientSecret) setSession({ planId, interval, clientSecret: data.clientSecret, error: null })
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setSession({
-            planId,
-            interval,
-            clientSecret: null,
-            error: 'Could not reach checkout. Check your connection and try again.',
-          })
-        }
-      })
+        if (outcome.kind === 'secret') settle(outcome.clientSecret, null)
+        else if (outcome.kind === 'error') settle(null, outcome.message)
+        else settle(null, 'Checkout is temporarily unavailable. Please try again in a minute.')
+      } catch {
+        settle(null, 'Could not reach checkout. Check your connection and try again.')
+      }
+    })()
 
     return () => {
       cancelled = true
