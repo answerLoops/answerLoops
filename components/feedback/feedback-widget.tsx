@@ -206,7 +206,7 @@ export function FeedbackWidget() {
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-slate-900">Product Feedback</h2>
           <p className="text-xs text-slate-500">
-            answer<span className="text-[#168fa3]">Loops</span>
+            answer<span className="text-[#0e7c8f]">Loops</span>
           </p>
         </div>
         <button

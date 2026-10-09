@@ -26,9 +26,12 @@ export const GithubIcon = ({
 export function NavWordmark() {
   return (
     <span className="flex shrink-0 items-center gap-3">
-      <LogoMark size={32} />
-      <span className="text-xl font-semibold tracking-tight sm:text-[30px]">
-        answer<span className="text-[#168fa3]">Loops</span>
+      <LogoMark size={32} alt="answerLoops" />
+      <span
+        aria-hidden="true"
+        className="text-xl font-semibold tracking-tight sm:text-[30px]"
+      >
+        answer<span className="text-[#0e7c8f]">Loops</span>
       </span>
     </span>
   )

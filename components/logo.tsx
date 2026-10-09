@@ -3,14 +3,16 @@ import Image from 'next/image'
 interface LogoMarkProps {
   size?: number
   className?: string
+  // Pass a name when the mark stands alone; leave empty when adjacent text names it.
+  alt?: string
 }
 
 // Transparent navy mark with an aqua center, shared across app and marketing.
-export function LogoMark({ size = 32, className = '' }: LogoMarkProps) {
+export function LogoMark({ size = 32, className = '', alt = '' }: LogoMarkProps) {
   return (
     <Image
       src="/icon.png"
-      alt=""
+      alt={alt}
       width={size}
       height={size}
       className={`object-contain ${className}`}
