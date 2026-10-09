@@ -1,6 +1,6 @@
 import Stripe from 'stripe'
 import { getStripe } from './stripe'
-import { CHECKOUT_BRANDING } from './branding'
+import { CHECKOUT_BRANDING, EMBEDDED_CHECKOUT_BRANDING } from './branding'
 import { getPlan, stripePriceFor, TRIAL_DAYS, type BillingInterval, type Plan } from './plans'
 import { getSubscription } from '@/lib/db/queries/billing'
 import { getDb } from '@/lib/db/drizzle'
@@ -260,7 +260,7 @@ export async function createEmbeddedCheckoutSession(
         metadata: { org_id: String(orgId), plan_id: plan.id },
       },
       allow_promotion_codes: true,
-      branding_settings: CHECKOUT_BRANDING,
+      branding_settings: EMBEDDED_CHECKOUT_BRANDING,
     }, { idempotencyKey: checkoutIdempotencyKey(orgId, plan.id, interval) })
 
     if (!checkoutSession.client_secret) {
