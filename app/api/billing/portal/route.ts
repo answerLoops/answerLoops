@@ -32,6 +32,14 @@ export async function POST() {
 
     return NextResponse.json({ url: portalSession.url })
   } catch (err) {
+    // The stored customer is gone from Stripe (deleted, or an ID from another
+    // Stripe mode). A portal needs a real customer, so there is nothing to
+    // fall back to — this is the same state as having no billing account, and
+    // should read that way rather than as a misconfiguration.
+    if (err instanceof Stripe.errors.StripeInvalidRequestError && err.code === 'resource_missing') {
+      logger.warn('Stored Stripe customer no longer exists; no portal available', { module: MOD, orgId })
+      return NextResponse.json({ error: 'No billing account found' }, { status: 404 })
+    }
     logger.error('Stripe billing portal session creation failed', { module: MOD, orgId, error: err })
     const message = err instanceof Stripe.errors.StripeError
       ? 'Could not open billing portal — billing is misconfigured. Contact support.'

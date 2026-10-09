@@ -21,19 +21,24 @@ const MOD = 'api/billing/checkout/embedded'
  * fresh session, since a Checkout Session's line items are fixed once created.
  */
 export async function POST(req: Request) {
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const access = await requireOrgAccess()
-  if (!access.ok) return NextResponse.json({ error: access.error }, { status: 401 })
-
-  if (!stripeConfigured()) {
-    return NextResponse.json({ error: 'Billing is not available on this deployment' }, { status: 400 })
-  }
-
-  const orgId = access.orgId
-
+  // Everything sits inside the try, including the session and org lookups. Both
+  // hit the database, and a failure there outside the try becomes a bare 500
+  // with no body — which the checkout page cannot tell apart from a dropped
+  // connection.
+  let orgId: number | undefined
   try {
+    const session = await auth()
+    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const access = await requireOrgAccess()
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: 401 })
+
+    if (!stripeConfigured()) {
+      return NextResponse.json({ error: 'Billing is not available on this deployment' }, { status: 400 })
+    }
+
+    orgId = access.orgId
+
     const { planId, interval } = (await req.json()) as { planId?: string; interval?: string }
 
     if (!planId) return NextResponse.json({ error: 'Missing plan' }, { status: 400 })

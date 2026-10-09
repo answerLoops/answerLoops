@@ -31,7 +31,17 @@ export const SIGNIN_LABEL = 'Log in'
 
 // A signed-in visitor with no plan is already past auth, so their journey
 // resumes one step further along: straight to the combined plan-and-card page.
-export const CHECKOUT_HREF = '/checkout'
+//
+// Absolute on a deployment with a separate app host, like DASHBOARD_HREF below.
+// /checkout is a platform page, so the marketing host answers a request for it
+// with a cross-origin redirect to the app host. As a relative Link, Next's
+// client-side navigation and prefetch follow that redirect with RSC headers,
+// the browser blocks it with a failed CORS preflight, and the click stalls for
+// seconds before the router falls back to a full page load. An absolute URL to
+// another origin is a plain navigation with none of that.
+export const CHECKOUT_HREF = process.env.NEXT_PUBLIC_APP_URL
+  ? `${process.env.NEXT_PUBLIC_APP_URL}/checkout`
+  : '/checkout'
 
 // NEXT_PUBLIC_APP_URL is inlined at build time — correct here, since this is a
 // client-readable value and cloud sets it before the build.
