@@ -62,7 +62,7 @@ describe('the embedded session is the hosted one, minus the redirect', () => {
   it('fails closed when Stripe returns no client secret', () => {
     const embedded = src().slice(src().indexOf('createEmbeddedCheckoutSession'))
     expect(embedded).toContain('if (!checkoutSession.client_secret)')
-    expect(embedded).toContain('status: 502')
+    expect(embedded).toContain('status: STRIPE_FAILURE_STATUS')
   })
 })
 

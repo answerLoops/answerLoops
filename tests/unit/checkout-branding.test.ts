@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
-import { CHECKOUT_BRANDING } from '@/lib/billing/branding'
+import { CHECKOUT_BRANDING, EMBEDDED_CHECKOUT_BRANDING } from '@/lib/billing/branding'
 
 /**
  * Checkout branding is passed on every session rather than relying only on
@@ -23,13 +23,25 @@ function pngSize(rel: string): { width: number; height: number; bytes: number } 
 // Stripe rejects branding images over 512 KB.
 const STRIPE_MAX_IMAGE_BYTES = 512 * 1024
 
+describe('embedded checkout branding', () => {
+  it('carries no logo or icon, which Stripe rejects for an embedded session', () => {
+    expect(EMBEDDED_CHECKOUT_BRANDING).not.toHaveProperty('logo')
+    expect(EMBEDDED_CHECKOUT_BRANDING).not.toHaveProperty('icon')
+  })
+
+  it('keeps every other setting identical to the hosted branding', () => {
+    const { logo: _logo, icon: _icon, ...rest } = CHECKOUT_BRANDING
+    expect(EMBEDDED_CHECKOUT_BRANDING).toEqual(rest)
+  })
+})
+
 describe('checkout branding', () => {
-  it('is applied to both the hosted and the embedded session', () => {
+  it('is applied to both the hosted and the embedded session, the latter without images', () => {
     const src = read('lib/billing/checkout.ts')
     const hosted = src.slice(src.indexOf('export async function createCheckoutSession'), src.indexOf('export async function createEmbeddedCheckoutSession'))
     const embedded = src.slice(src.indexOf('export async function createEmbeddedCheckoutSession'))
     expect(hosted).toContain('branding_settings: CHECKOUT_BRANDING')
-    expect(embedded).toContain('branding_settings: CHECKOUT_BRANDING')
+    expect(embedded).toContain('branding_settings: EMBEDDED_CHECKOUT_BRANDING')
   })
 
   it('uses the app primary button colour and white background', () => {
