@@ -47,7 +47,7 @@ describe('lib/billing/checkout.ts — Stripe failures return a real error, never
     // route describe below.
     expect(catchBlock).toContain('ok: false')
     expect(catchBlock).toContain('error:')
-    expect(catchBlock).toMatch(/status:\s*502/)
+    expect(catchBlock).toMatch(/status:\s*STRIPE_FAILURE_STATUS/)
   })
 
   it('logs the failure server-side before responding', () => {
@@ -69,7 +69,7 @@ describe('app/api/billing/portal/route.ts — Stripe failures return a real JSON
     expect(catchIdx).toBeGreaterThan(-1)
     const catchBlock = src.slice(catchIdx)
     expect(catchBlock).toContain('NextResponse.json({ error:')
-    expect(catchBlock).toMatch(/status:\s*502/)
+    expect(catchBlock).toMatch(/status:\s*STRIPE_FAILURE_STATUS/)
   })
 
   it('logs the failure server-side before responding', () => {
