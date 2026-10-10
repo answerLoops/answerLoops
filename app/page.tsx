@@ -129,15 +129,16 @@ export default function LandingPage() {
           <div className="home-hero-copy">
             <p className="marketing-eyebrow hero-positioning">
               <span className="hero-positioning-dot" aria-hidden="true" />
-              Agent-native AI support
+              Faster answers. More time to create.
             </p>
             <h1>
-              Faster answers. More time to create.
+              AI community support from your docs
             </h1>
             <p className="marketing-intro">
-              Turn your docs into answers wherever your community asks. One AI
-              drafts the reply, a second AI checks it against your docs before
-              it goes out — across Discord, Slack, Discourse, Circle, and more.
+              answerLoops turns your docs into answers wherever your community
+              asks. One AI drafts the reply, a second AI checks it against your
+              docs before it goes out — across Discord, Slack, Discourse,
+              Circle, and more.
             </p>
             <div className="marketing-actions">
               <Link

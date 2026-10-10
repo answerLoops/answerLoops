@@ -4,12 +4,33 @@ import { withSentryConfig } from "@sentry/nextjs/config";
 import docsNav from "./docs/docs.json" with { type: "json" };
 import { MARKETING_PAGE_PATHS } from "./lib/marketing/website-paths";
 
+const isDev = process.env.NODE_ENV !== 'production'
+
+// Resource policy for every route except the embeddable widget. Stripe is the
+// only third-party origin the browser talks to (embedded Checkout). Next's
+// inline bootstrap scripts and React inline styles need 'unsafe-inline'
+// because pages are cached at the edge and cannot carry a per-request nonce.
+// No form-action: OAuth sign-in posts a form to this origin and redirects to
+// the provider, and form-action also constrains that redirect. Dev adds eval
+// and websockets for hot reload only.
+const resourcePolicy = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://js.stripe.com https://*.js.stripe.com`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data:",
+  `connect-src 'self' https://api.stripe.com${isDev ? ' ws: wss:' : ''}`,
+  "frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com",
+  "object-src 'none'",
+  "base-uri 'self'",
+].join('; ')
+
 // Headers applied to every route except the embeddable widget — see below.
 const frameBlockingHeaders = [
   // Block clickjacking — page cannot be embedded in any iframe
   { key: 'X-Frame-Options', value: 'DENY' },
-  // Belt-and-suspenders CSP frame protection (overrides X-Frame-Options in modern browsers)
-  { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+  // Resource policy plus CSP frame protection (overrides X-Frame-Options in modern browsers)
+  { key: 'Content-Security-Policy', value: `${resourcePolicy}; frame-ancestors 'none'` },
 ]
 
 const baseSecurityHeaders = [
