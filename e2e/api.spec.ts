@@ -85,7 +85,7 @@ test.describe('Push', () => {
 
     const good = await request.post('/api/push/subscribe', {
       data: {
-        endpoint: 'https://push.example.com/abc',
+        endpoint: 'https://fcm.googleapis.com/fcm/send/e2e-subscription',
         keys: { p256dh: 'p256dh-key', auth: 'auth-key' },
       },
     })
@@ -94,7 +94,7 @@ test.describe('Push', () => {
     // Upsert (same endpoint) is accepted too — exercises the ON CONFLICT path.
     const again = await request.post('/api/push/subscribe', {
       data: {
-        endpoint: 'https://push.example.com/abc',
+        endpoint: 'https://fcm.googleapis.com/fcm/send/e2e-subscription',
         keys: { p256dh: 'p256dh-key-2', auth: 'auth-key-2' },
       },
     })
