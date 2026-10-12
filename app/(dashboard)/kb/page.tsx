@@ -10,6 +10,8 @@ import type { IngestUrlResult } from '@/lib/actions/ingest-url'
 import { runKbSync } from '@/lib/kb/sync-client'
 import { NotionKBSection } from '@/components/dashboard/notion-kb-section'
 import { CoverageTab } from './coverage-tab'
+import { ReviewTab } from './review-tab'
+import type { ReviewCounts } from '@/lib/db/queries/kb-review'
 
 type Article = KBArticle | KBSearchResult
 
@@ -551,6 +553,7 @@ function ArticlesList({ articles, onDeleted }: { articles: (Article | KBSearchRe
 const KB_TABS = [
   { id: 'manage', label: 'Manage' },
   { id: 'coverage', label: 'Knowledge coverage' },
+  { id: 'review', label: 'Review' },
 ] as const
 type KBTabId = (typeof KB_TABS)[number]['id']
 
@@ -563,7 +566,23 @@ async function fetchKbArticles(): Promise<KBArticle[]> {
 export default function KBPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const activeTab: KBTabId = searchParams.get('tab') === 'coverage' ? 'coverage' : 'manage'
+  const tabParam = searchParams.get('tab')
+  const activeTab: KBTabId = tabParam === 'coverage' || tabParam === 'review' ? tabParam : 'manage'
+  // How many unseen questions are waiting in the review queue; stays null for
+  // workspaces without the feature, so no badge shows.
+  const [pendingReview, setPendingReview] = useState<number | null>(null)
+  const handleReviewCounts = useCallback((c: ReviewCounts) => setPendingReview(c.pending), [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/kb/review?limit=0')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { counts?: ReviewCounts } | null) => {
+        if (!cancelled && data?.counts) setPendingReview(data.counts.pending)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   function setTab(id: KBTabId) {
     const params = new URLSearchParams(searchParams.toString())
@@ -667,12 +686,19 @@ export default function KBPage() {
             ].join(' ')}
           >
             {tab.label}
+            {tab.id === 'review' && pendingReview !== null && pendingReview > 0 && (
+              <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[0.625rem] font-semibold tabular-nums text-white">
+                {pendingReview}
+              </span>
+            )}
           </button>
         ))}
       </div>
 
       {activeTab === 'coverage' ? (
         <CoverageTab />
+      ) : activeTab === 'review' ? (
+        <ReviewTab onCountsChange={handleReviewCounts} />
       ) : (
         <>
 

@@ -15,6 +15,7 @@ const ALL_FEATURES: Feature[] = [
   'human_escalation',
   'simulation',
   'knowledge_gap_dashboard',
+  'kb_review_queue',
   'custom_ai_model_config',
   'csv_export',
   'white_label_widget',
@@ -52,7 +53,7 @@ describe('hasFeature on cloud (DEPLOYMENT_MODE=cloud)', () => {
 
   it('pro unlocks everything standard has plus csat/escalation/simulation/knowledge-gaps', () => {
     process.env.DEPLOYMENT_MODE = 'cloud'
-    for (const f of ['discord_integration', 'slack_integration', 'csv_export', 'csat_scoring', 'human_escalation', 'simulation', 'knowledge_gap_dashboard'] as Feature[]) {
+    for (const f of ['discord_integration', 'slack_integration', 'csv_export', 'csat_scoring', 'human_escalation', 'simulation', 'knowledge_gap_dashboard', 'kb_review_queue'] as Feature[]) {
       expect(hasFeature('pro', f)).toBe(true)
     }
     expect(hasFeature('pro', 'custom_ai_model_config')).toBe(false)
@@ -115,6 +116,7 @@ describe('planRequiredFor', () => {
     expect(planRequiredFor('human_escalation')).toBe('pro')
     expect(planRequiredFor('simulation')).toBe('pro')
     expect(planRequiredFor('knowledge_gap_dashboard')).toBe('pro')
+    expect(planRequiredFor('kb_review_queue')).toBe('pro')
     expect(planRequiredFor('custom_ai_model_config')).toBe('enterprise')
   })
 

@@ -7,10 +7,10 @@ import { countArticles, createArticleFromSource } from '@/lib/db/queries/kb'
 import { createKBSource, updateKBSourceChunkCount } from '@/lib/db/queries/kb-sources'
 import { rateLimit } from '@/lib/ratelimit'
 import { logger } from '@/lib/logger'
+import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
 
 const MOD = 'api/kb/upload'
 const MAX_FILE_BYTES = 50 * 1024 * 1024 // 50 MB
-const MAX_ARTICLES_PER_ORG = 2000
 const MAX_CHUNKS_PER_FILE = 200
 
 export async function POST(req: NextRequest) {

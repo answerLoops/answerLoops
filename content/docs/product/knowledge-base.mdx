@@ -121,9 +121,30 @@ The **Knowledge coverage** tab shows exactly what your chat assistant is able to
 
 If a question doesn't closely match any live article, the assistant answers from general knowledge instead, and that answer can be wrong. Use the tab to find those gaps before your customers do, then add or edit an article to cover them. The tab is available on every plan.
 
+## Review queue
+
+The **Review** tab turns questions your knowledge base couldn't answer into new articles, with a person checking every one before it goes live. It is available on the Pro plan and above.
+
+When the assistant answers a question that nothing in your knowledge base (or your team's earlier answers) covered, the question lands in the queue instead of disappearing:
+
+- **Support tickets** from your connected channels are added after the assistant has replied, so capturing a question never delays an answer. If the assistant's draft fully answered the question, it comes along as a starting point. If it didn't, the item is marked **No usable answer** and you write one.
+- **Website chat widget** questions are added when no article matched. The widget keeps no record of who asked, so the queue shows the question and the answer the assistant gave, never the visitor.
+
+When the same question comes in again, the existing item's counter goes up (**Asked 4 times**) instead of adding a duplicate, and the most-asked questions are listed first. Items you reject stay rejected, and their count keeps rising so you can see if people keep asking.
+
+For each item you can:
+
+1. Edit the **question** and the **answer**. Remove names, account details and anything else that was only meant for the person who asked.
+2. Click **Approve and add to knowledge base**. The edited text is saved as a new article and starts answering questions straight away.
+3. Or click **Reject** to dismiss it. A rejected item can be moved back to review at any time.
+
+Nothing in the queue is searchable or shown to customers until you approve it. Owners and admins can approve and reject; every team member can read the queue. The **Review** tab shows how many items are waiting, and each workspace holds up to 500 unreviewed items at a time; new questions are not captured while the queue is full, so clear it regularly.
+
+Approved articles count toward the same 2,000-article limit as every other source.
+
 ## Data persistence
 
-KB articles and source chunks are stored in the `kb_articles` and `kb_sources` tables in PostgreSQL. They persist across Docker restarts as long as you retain the `postgres-data` volume.
+KB articles and source chunks are stored in the `kb_articles` and `kb_sources` tables in PostgreSQL. Questions waiting in the review queue are stored in `kb_review_items` until they are approved or rejected. They persist across Docker restarts as long as you retain the `postgres-data` volume.
 
 <Warning>
   Never run `docker compose down -v`. The `-v` flag deletes all Docker volumes, which permanently removes your KB articles, tickets, and all other data. Use `docker compose down` (without `-v`) to stop the stack safely.

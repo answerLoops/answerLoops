@@ -21,6 +21,7 @@ const {
   getIntegration,
   generateText,
   assessAnswer,
+  captureUnansweredQuestion,
 } = vi.hoisted(() => ({
   sendToSlackChannel: vi.fn(async (_channel: string, _content: string, _orgId: number, _threadTs?: string) => 'posted-ts'),
   sendToChannel: vi.fn(async (_channelId: string, _content: string, _orgId: number) => 'posted-id'),
@@ -34,8 +35,10 @@ const {
   getIntegration: vi.fn(async () => null as { auto_deflect_enabled: number; confidence_threshold: number | null } | null),
   generateText: vi.fn(async () => ({ text: 'a high-confidence draft answer' })),
   assessAnswer: vi.fn(async () => ({ confidence: 0.95, answered_fully: true, reasoning: 'x' })),
+  captureUnansweredQuestion: vi.fn(async () => {}),
 }))
 
+vi.mock('@/lib/kb/review-capture', () => ({ captureUnansweredQuestion }))
 vi.mock('@/lib/slack/send', () => ({ sendToSlackChannel }))
 vi.mock('@/lib/discord/send', () => ({ sendToChannel }))
 vi.mock('@/lib/telegram/send', () => ({ sendToTelegramChat: vi.fn() }))
@@ -149,5 +152,50 @@ describe('runAIAgent: Automatic Deflections toggle', () => {
 
     expect(createComment).not.toHaveBeenCalled()
     expect(sendToChannel).not.toHaveBeenCalled()
+  })
+
+  describe('unseen-question capture for the review queue', () => {
+    it('queues a question nothing covered, carrying the draft only when the grader called it a full answer', async () => {
+      getIntegration.mockResolvedValue({ auto_deflect_enabled: 1, confidence_threshold: null })
+      const { runAIAgent } = await import('@/lib/ai/agent')
+
+      await runAIAgent(7, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1)
+
+      expect(captureUnansweredQuestion).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({
+          orgId: 3,
+          source: 'ticket',
+          question: 'a question',
+          ticketId: 7,
+          confidence: 0.95,
+          answer: 'a high-confidence draft answer',
+        })
+      )
+    })
+
+    it('queues it with no answer when the grader judged the draft incomplete', async () => {
+      assessAnswer.mockResolvedValue({ confidence: 0.3, answered_fully: false, reasoning: 'x' })
+      const { runAIAgent } = await import('@/lib/ai/agent')
+
+      await runAIAgent(7, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1)
+
+      expect(captureUnansweredQuestion).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ answer: '' }))
+    })
+
+    it('does not queue a question the knowledge base or prior answers covered', async () => {
+      const { runAIAgent } = await import('@/lib/ai/agent')
+
+      await runAIAgent(7, 'a question', 'C123', [{ summary: 's', answer: 'a' }], 3, 'slack', 'general_question', [], 1)
+
+      expect(captureUnansweredQuestion).not.toHaveBeenCalled()
+    })
+
+    it('does not queue bug reports or feature requests, which are never KB-deflectable', async () => {
+      const { runAIAgent } = await import('@/lib/ai/agent')
+
+      await runAIAgent(7, 'it crashes', 'C123', [], 3, 'slack', 'bug', [], 1)
+
+      expect(captureUnansweredQuestion).not.toHaveBeenCalled()
+    })
   })
 })

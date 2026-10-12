@@ -10,12 +10,13 @@ export type Feature =
   | 'human_escalation'
   | 'simulation'
   | 'knowledge_gap_dashboard'
+  | 'kb_review_queue'
   | 'custom_ai_model_config'
   | 'csv_export'
   | 'white_label_widget'
 
 const STANDARD_FEATURES: Feature[] = ['discord_integration', 'slack_integration', 'google_chat_integration', 'discourse_integration', 'circle_integration', 'csv_export']
-const PRO_FEATURES: Feature[] = [...STANDARD_FEATURES, 'white_label_widget', 'csat_scoring', 'human_escalation', 'simulation', 'knowledge_gap_dashboard']
+const PRO_FEATURES: Feature[] = [...STANDARD_FEATURES, 'white_label_widget', 'csat_scoring', 'human_escalation', 'simulation', 'knowledge_gap_dashboard', 'kb_review_queue']
 const ENTERPRISE_FEATURES: Feature[] = [...PRO_FEATURES, 'custom_ai_model_config']
 
 const FEATURES_BY_PLAN: Record<PlanId, Feature[]> = {

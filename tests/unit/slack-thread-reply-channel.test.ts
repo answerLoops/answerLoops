@@ -41,6 +41,7 @@ const {
   assessAnswer: vi.fn(async () => ({ confidence: 0.9, answered_fully: true, reasoning: 'x' })),
 }))
 
+vi.mock('@/lib/kb/review-capture', () => ({ captureUnansweredQuestion: vi.fn(async () => {}) }))
 vi.mock('@/lib/slack/send', () => ({ sendToSlackChannel }))
 vi.mock('@/lib/discord/send', () => ({ sendToChannel: vi.fn() }))
 vi.mock('@/lib/telegram/send', () => ({ sendToTelegramChat: vi.fn() }))

@@ -15,6 +15,7 @@ import { assessAnswer, shouldAutoDeflect, AUTO_DEFLECT_THRESHOLD, ASSESS_MODEL }
 import { postReply, postReplyToGithub, sendKeepAlive, type Platform } from '@/lib/channels/post-reply'
 import { reserveAutoDeflect } from '@/lib/billing/usage'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
+import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
 import { getIntegration } from '@/lib/db/queries/integrations'
 import { updateTicketAIDraftStatus, getTicketById } from '@/lib/db/queries/tickets'
 import { logger } from '@/lib/logger'
@@ -470,6 +471,22 @@ Guidelines:
         autoDeflectEnabled // Automatic Deflections off means no channel post at all, not even the generic ack
       )
       logger.info('routed to human review — draft held for approval, generic ack sent instead', { module: MOD, ticketId, confidence: pct, platform, escalated: !!escalationRoleId, heldByToggleOnly })
+    }
+
+    // Nothing in the KB or the team's prior answers covered this question, so
+    // queue it for a person to turn into an article. Runs after the reply is
+    // out, so it can never delay an answer. The draft only rides along when
+    // the grader judged it a full answer; otherwise the reviewer writes one.
+    if (priorAnswers.length === 0) {
+      await captureUnansweredQuestion({
+        orgId,
+        source: 'ticket',
+        question,
+        answer: assessment.answered_fully ? text : '',
+        ticketId,
+        confidence: assessment.confidence,
+        purpose,
+      })
     }
   } catch (err) {
     if (err instanceof NoAIProviderConfiguredError) {

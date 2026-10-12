@@ -11,6 +11,7 @@ import { embedQueryCached } from '@/lib/widget/embed-cache'
 import { buildGenuiTools } from '@/lib/widget/genui-tools'
 import { flattenMastraStream } from '@/lib/widget/mastra-stream'
 import { getKBContext } from '@/lib/db/queries/kb'
+import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
 import { getOrgByWidgetToken } from '@/lib/db/queries/widgets'
 import { getWidgetChatMemory } from '@/lib/ai/memory'
 import { rateLimitShared } from '@/lib/ratelimit'
@@ -416,10 +417,22 @@ If no article below covers the question, answer from general knowledge and don't
     // Billed unconditionally once the stream completes — this endpoint has
     // no confidence-assessment step like the MCP/ticket pipelines do, so a
     // delivered answer is the bar for what counts as a deflection here.
-    onFinish: async () => {
+    onFinish: async (event) => {
       await commitDeflection(org.id, reservationId).catch((e) => {
         logger.error('widget chat commitDeflection failed', { module: MOD, orgId: org.id, error: e })
       })
+      // No article matched, so whatever was just said came from general
+      // knowledge. Queue the question (never the visitor's identity) for a
+      // person to review before anything like it is treated as a KB answer.
+      if (allContext.length === 0) {
+        await captureUnansweredQuestion({
+          orgId: org.id,
+          source: 'widget',
+          question: query,
+          answer: typeof event?.text === 'string' ? event.text : '',
+          embedding: await embedQueryCached(query, org.id).catch(() => undefined),
+        })
+      }
     },
   })
 

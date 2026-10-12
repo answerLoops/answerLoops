@@ -94,6 +94,12 @@ const ROWS: Row[] = [
     pro: true,
     enterprise: true,
   },
+  {
+    feature: 'Knowledge base review queue',
+    standard: false,
+    pro: true,
+    enterprise: true,
+  },
   { feature: 'Priority support', standard: false, pro: true, enterprise: true },
   {
     feature: 'Custom model endpoints',

@@ -386,6 +386,40 @@ export const kbArticles = pgTable(
   ]
 )
 
+// Questions the assistant answered without any knowledge-base coverage,
+// captured so a person can review, fine-tune and approve the answer before it
+// becomes a published article. Nothing here is searchable or served to anyone
+// until approval creates a kb_articles row (see lib/db/queries/kb-review.ts).
+// A repeat of the same unseen question bumps `occurrences` on the existing
+// pending (or rejected) row instead of adding a new one.
+export const kbReviewItems = pgTable(
+  'kb_review_items',
+  {
+    id: serial('id').primaryKey(),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    // 'ticket' (community channels, MCP, API) or 'widget'.
+    source: text('source').notNull(),
+    ticketId: integer('ticket_id').references(() => tickets.id, { onDelete: 'set null' }),
+    question: text('question').notNull(),
+    answer: text('answer').notNull(),
+    // Same fixed platform-wide dimension as kb_articles.embedding_vec; used
+    // only to fold near-duplicate questions together.
+    embeddingVec: vector('embedding_vec', { dimensions: 1536 }),
+    confidence: doublePrecision('confidence'),
+    occurrences: integer('occurrences').notNull().default(1),
+    // 'pending' | 'approved' | 'rejected' (CHECK constraint in the migration).
+    status: text('status').notNull().default('pending'),
+    articleId: integer('article_id').references(() => kbArticles.id, { onDelete: 'set null' }),
+    reviewedBy: integer('reviewed_by').references(() => users.id, { onDelete: 'set null' }),
+    reviewedAt: text('reviewed_at'),
+    createdAt: text('created_at').notNull().default(now),
+    updatedAt: text('updated_at').notNull().default(now),
+  },
+  (t) => [
+    index('idx_kb_review_items_org_status').on(t.orgId, t.status, t.createdAt),
+  ]
+)
+
 export const integrations = pgTable(
   'integrations',
   {

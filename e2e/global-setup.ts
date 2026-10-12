@@ -61,7 +61,7 @@ export default async function globalSetup() {
   // Truncate all tables (order matters for FK constraints)
   await db.execute(sql`
     TRUNCATE integrations, github_repos, ticket_feedback, answer_messages,
-      ticket_links, ticket_embeddings, kb_articles, kb_sources, faq_snapshots,
+      ticket_links, ticket_embeddings, kb_review_items, kb_articles, kb_sources, faq_snapshots,
       notifications, ticket_events, ticket_replies, tickets,
       ai_assessments, ai_configs, push_subscriptions, sla_configs,
       invitations, memberships, users, orgs
