@@ -79,6 +79,10 @@ describe('auth.ts path lists', () => {
     expect(covers(listFor('PUBLIC_PATHS'), '/api/nav-state')).toBe(true)
   })
 
+  it('lists /widget.js in PUBLIC_PATHS so the embed loader is served to logged-out visitors on customer sites', () => {
+    expect(covers(listFor('PUBLIC_PATHS'), '/widget.js')).toBe(true)
+  })
+
   it('lists /llms-full.txt in PUBLIC_PATHS', () => {
     expect(covers(listFor('PUBLIC_PATHS'), '/llms-full.txt')).toBe(true)
   })

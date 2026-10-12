@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { getStripe } from '@/lib/billing/stripe'
+import { STRIPE_FAILURE_STATUS } from '@/lib/billing/http-status'
 import { getSubscription } from '@/lib/db/queries/billing'
 import { logger } from '@/lib/logger'
 
@@ -44,6 +45,6 @@ export async function POST() {
     const message = err instanceof Stripe.errors.StripeError
       ? 'Could not open billing portal — billing is misconfigured. Contact support.'
       : 'Could not open billing portal. Try again.'
-    return NextResponse.json({ error: message }, { status: 502 })
+    return NextResponse.json({ error: message }, { status: STRIPE_FAILURE_STATUS })
   }
 }

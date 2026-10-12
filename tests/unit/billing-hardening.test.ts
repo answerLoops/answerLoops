@@ -88,7 +88,7 @@ describe('POST /api/billing/portal — a stored customer Stripe no longer has', 
     expect(await res.json()).toEqual({ error: 'No billing account found' })
   })
 
-  it('keeps the 502 for other Stripe failures', async () => {
+  it('answers other Stripe failures with the pass-through failure status', async () => {
     portalCreate.mockRejectedValue(
       new Stripe.errors.StripeAuthenticationError({
         type: 'authentication_error',
@@ -99,6 +99,6 @@ describe('POST /api/billing/portal — a stored customer Stripe no longer has', 
 
     const res = await POST()
 
-    expect(res.status).toBe(502)
+    expect(res.status).toBe(500)
   })
 })

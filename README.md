@@ -391,6 +391,5 @@ Self-hosting means your community's questions and your documentation never leave
 
 [Docs](https://answerloops.com/docs) · [Get started](#get-started) · [Open an issue](https://github.com/answerLoops/answerLoops/issues)
 
-[![Star History Chart](https://api.star-history.com/svg?repos=answerLoops/answerLoops&type=Date)](https://star-history.com/#answerLoops/answerLoops&Date)
 
 </div>

@@ -1,5 +1,6 @@
 import Stripe from 'stripe'
 import { getStripe } from './stripe'
+import { STRIPE_FAILURE_STATUS } from './http-status'
 import { CHECKOUT_BRANDING, EMBEDDED_CHECKOUT_BRANDING } from './branding'
 import { getPlan, stripePriceFor, TRIAL_DAYS, type BillingInterval, type Plan } from './plans'
 import { getSubscription } from '@/lib/db/queries/billing'
@@ -162,7 +163,7 @@ export async function createCheckoutSession(
 
     if (!checkoutSession.url) {
       logger.error('Stripe returned a session with no URL', { module: MOD, orgId, planId: plan.id })
-      return { ok: false, error: 'Could not start checkout. Try again.', status: 502 }
+      return { ok: false, error: 'Could not start checkout. Try again.', status: STRIPE_FAILURE_STATUS }
     }
 
     return { ok: true, url: checkoutSession.url }
@@ -177,7 +178,7 @@ export async function createCheckoutSession(
       err instanceof Stripe.errors.StripeError
         ? 'Could not start checkout — billing is misconfigured. Contact support.'
         : 'Could not start checkout. Try again.'
-    return { ok: false, error: message, status: 502 }
+    return { ok: false, error: message, status: STRIPE_FAILURE_STATUS }
   }
 }
 
@@ -269,7 +270,7 @@ export async function createEmbeddedCheckoutSession(
         orgId,
         planId: plan.id,
       })
-      return { ok: false, error: 'Could not start checkout. Try again.', status: 502 }
+      return { ok: false, error: 'Could not start checkout. Try again.', status: STRIPE_FAILURE_STATUS }
     }
 
     return { ok: true, clientSecret: checkoutSession.client_secret }
@@ -284,7 +285,7 @@ export async function createEmbeddedCheckoutSession(
       err instanceof Stripe.errors.StripeError
         ? 'Could not start checkout — billing is misconfigured. Contact support.'
         : 'Could not start checkout. Try again.'
-    return { ok: false, error: message, status: 502 }
+    return { ok: false, error: message, status: STRIPE_FAILURE_STATUS }
   }
 }
 

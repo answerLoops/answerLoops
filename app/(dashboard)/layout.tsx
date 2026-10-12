@@ -62,7 +62,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <LogoMark size={25} />
           </div>
           <div>
-            <div className="text-sm font-semibold tracking-[-0.02em] text-slate-950">answer<span className="text-[#168fa3]">Loops</span></div>
+            <div className="text-sm font-semibold tracking-[-0.02em] text-slate-950">answer<span className="text-[#0e7c8f]">Loops</span></div>
             <div className="mt-0.5 text-[0.5625rem] font-medium uppercase tracking-[0.14em] text-slate-400">Agent operations</div>
           </div>
         </Link>
