@@ -56,8 +56,9 @@ describe('Discord OAuth state encoding', () => {
 
   it('callback route authenticates the state signature and binds it to the caller org', () => {
     const src = readRoute('app/api/discord/callback/route.ts')
-    expect(src).toContain('verifyOAuthState(state)')
-    expect(src).toContain('decoded.orgId !== access.orgId')
+    expect(src).toContain('verifyOAuthCallback(')
+    expect(src).toContain('caller: { userId: access.userId, orgId: access.orgId }')
+    expect(src).toContain('verifyDiscordInstall(')
     // no unsigned base64 decode, no default-org fallback
     expect(src).not.toContain("Buffer.from(state ?? '', 'base64url')")
     expect(src).not.toContain('?? 1')

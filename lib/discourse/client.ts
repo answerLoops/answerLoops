@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { safeFetch } from '@/lib/http/safe-fetch'
 
 /**
  * Shared helpers for the Discourse channel. Discourse authenticates writes
@@ -7,7 +8,7 @@ import crypto from 'crypto'
  * webhooks with an HMAC-SHA256 of the raw body under a per-webhook secret.
  */
 
-export interface DiscourseCreds {
+interface DiscourseCreds {
   siteUrl: string
   apiKey: string
   apiUsername: string
@@ -18,10 +19,15 @@ export function normalizeSiteUrl(url: string): string {
   return url.trim().replace(/\/+$/, '')
 }
 
+/**
+ * Calls the tenant's Discourse site. The site URL is tenant-supplied, so the
+ * request only goes to public https hosts (see lib/http/safe-fetch.ts) and
+ * throws UnsafeUrlError otherwise. Bodies must be strings.
+ */
 export async function discourseFetch(
   creds: DiscourseCreds,
   path: string,
-  init: RequestInit = {}
+  init: { method?: string; headers?: HeadersInit; body?: string; signal?: AbortSignal | null } = {}
 ): Promise<Response> {
   const headers = new Headers(init.headers)
   headers.set('Api-Key', creds.apiKey)
@@ -29,7 +35,13 @@ export async function discourseFetch(
   if (init.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
-  return fetch(`${normalizeSiteUrl(creds.siteUrl)}${path}`, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(10_000) })
+  return safeFetch(`${normalizeSiteUrl(creds.siteUrl)}${path}`, {
+    method: init.method,
+    headers,
+    body: init.body,
+    signal: init.signal,
+    timeoutMs: 10_000,
+  })
 }
 
 /**

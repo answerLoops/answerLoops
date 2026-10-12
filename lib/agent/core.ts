@@ -31,15 +31,15 @@ export const MAX_RESULTS = 20
 // Caps free-text inputs that feed an embedding or LLM call directly — the
 // rate limiter caps request *count*, not per-request size, so an uncapped
 // query/question is a way to run up real token cost in a single call.
-export const MAX_QUERY_LEN = 2000
+const MAX_QUERY_LEN = 2000
 
-export const MAX_IDEMPOTENCY_KEY_LEN = 200
+const MAX_IDEMPOTENCY_KEY_LEN = 200
 
 export const TICKET_STATUSES = ['open', 'in_progress', 'resolved', 'closed', 'duplicate'] as const
 export const PRIORITIES = ['critical', 'high', 'medium', 'low'] as const
 export const CATEGORIES = ['bug', 'feature_request', 'documentation', 'how_to', 'general_question'] as const
 
-export type CoreResult<T> = { ok: true; data: T } | { ok: false; error: string }
+type CoreResult<T> = { ok: true; data: T } | { ok: false; error: string }
 
 function ok<T>(data: T): CoreResult<T> {
   return { ok: true, data }
@@ -74,7 +74,7 @@ export function parseEnumArg<T extends string>(value: unknown, allowed: readonly
 
 // ── search_kb ────────────────────────────────────────────────────────────
 
-export interface SearchKbResult {
+interface SearchKbResult {
   question: string
   answer: string
   score: number
@@ -101,7 +101,7 @@ export async function searchKbCore(orgId: number, args: Record<string, unknown>)
 
 // ── get_faq ──────────────────────────────────────────────────────────────
 
-export interface FaqResult {
+interface FaqResult {
   message?: string
   week_start?: string
   week_end?: string
@@ -122,7 +122,7 @@ export async function getFaqCore(orgId: number): Promise<CoreResult<FaqResult>> 
 
 // ── get_tickets ──────────────────────────────────────────────────────────
 
-export interface TicketSummary {
+interface TicketSummary {
   id: number
   content: string
   category: string | null
@@ -132,7 +132,7 @@ export interface TicketSummary {
   created_at: string
 }
 
-export interface TicketsPage {
+interface TicketsPage {
   tickets: TicketSummary[]
   /** Pass back as `cursor` to fetch the next page; null once there isn't one. */
   next_cursor: string | null
@@ -174,12 +174,12 @@ export async function getTicketsCore(orgId: number, args: Record<string, unknown
 
 // ── create_ticket ────────────────────────────────────────────────────────
 
-export interface CreateTicketResult {
+interface CreateTicketResult {
   ticket_id: number
   duplicate: boolean
 }
 
-export interface CreateTicketOpts {
+interface CreateTicketOpts {
   /**
    * Namespaces idempotency-key-derived messageIds and the authorId so the
    * MCP and REST surfaces can never collide with each other even if a
@@ -243,7 +243,7 @@ export async function createTicketCore(
 
 // ── generate_answer ──────────────────────────────────────────────────────
 
-export interface GenerateAnswerResult {
+interface GenerateAnswerResult {
   answer: string
   confidence: number
   answered_fully: boolean

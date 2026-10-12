@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { getIntegrationByDiscourseSite, parseChannelIds } from '@/lib/db/queries/integrations'
 import { verifyDiscourseSignature } from '@/lib/discourse/client'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
+import { readBodyCapped } from '@/lib/http/read-body-capped'
+import { clampIngestContent, isIngestRateLimited, WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 import { logger } from '@/lib/logger'
 
 const MOD = 'api/discourse/webhook'
@@ -50,12 +52,18 @@ export async function POST(req: NextRequest) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  // 2. Verify the signature against this org's secret. Read the raw body once.
-  const rawBody = await req.text()
+  // 2. Verify the signature against this org's secret. Read the raw body once,
+  //    counting bytes as they stream so an oversized body is cut off early.
+  const rawBody = await readBodyCapped(req, WEBHOOK_MAX_BODY_BYTES)
+  if (rawBody === null) return new Response('Payload Too Large', { status: 413 })
   const signature = req.headers.get('x-discourse-event-signature')
   if (!verifyDiscourseSignature(rawBody, signature, integration.bot_secret)) {
     logger.warn('Discourse webhook signature mismatch', { module: MOD, orgId: integration.org_id })
     return new Response('Unauthorized', { status: 401 })
+  }
+
+  if (await isIngestRateLimited(integration.org_id)) {
+    return new Response('Too Many Requests', { status: 429 })
   }
 
   // 3. Setup ping — acknowledge.
@@ -91,7 +99,7 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: true })
   }
 
-  const content = (post.raw ?? (post.cooked ? stripHtml(post.cooked) : '')).trim()
+  const content = clampIngestContent((post.raw ?? (post.cooked ? stripHtml(post.cooked) : '')).trim())
   if (content.length < 10) return Response.json({ ok: true })
 
   const siteUrl = integration.team_id ?? instance.replace(/\/+$/, '')

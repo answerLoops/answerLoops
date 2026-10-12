@@ -14,8 +14,7 @@ describe('app/api/kb/sync-jobs/run/route.ts', () => {
   const src = read('app/api/kb/sync-jobs/run/route.ts')
 
   it('is BOT_SECRET-gated, like retry-stuck', () => {
-    expect(src).toContain("request.headers.get('authorization')")
-    expect(src).toMatch(/bearer !== process\.env\.BOT_SECRET/)
+    expect(src).toContain('isPlatformBotRequest(request)')
     expect(src).toContain("return new Response('Unauthorized', { status: 401 })")
   })
 

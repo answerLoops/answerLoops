@@ -14,7 +14,7 @@ import { parseAllowedOrigins } from '@/lib/widget/origin'
 // wrong. Same class of decision as minting an API key, so the same gate.
 const WIDGET_ADMIN_ROLES = ['owner', 'admin'] as const
 
-export interface WidgetTokenResult {
+interface WidgetTokenResult {
   token?: string
   expiresAt?: string
   /** Newline-separated allowlist as stored; empty means unrestricted. */
@@ -50,7 +50,7 @@ export async function regenerateWidgetTokenAction(): Promise<WidgetTokenResult> 
   return { token: info.token, expiresAt: info.expiresAt }
 }
 
-export interface WidgetOriginsResult {
+interface WidgetOriginsResult {
   origins?: string[]
   error?: string
 }

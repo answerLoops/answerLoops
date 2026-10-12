@@ -10,8 +10,10 @@ import {
   XAI_BASE_URL,
 } from '@/lib/ai/list-models'
 
-const h = vi.hoisted(() => ({ fetchMock: vi.fn() }))
+const h = vi.hoisted(() => ({ fetchMock: vi.fn(), safeFetchMock: vi.fn() }))
 vi.stubGlobal('fetch', h.fetchMock)
+// Tenant-supplied base URLs go through safeFetch (public https hosts only).
+vi.mock('@/lib/http/safe-fetch', () => ({ safeFetch: h.safeFetchMock }))
 
 function jsonResponse(body: unknown, ok = true, status = 200) {
   return {
@@ -53,17 +55,20 @@ describe('listOpenAIModels', () => {
   })
 
   it('respects a custom base URL, stripping a trailing slash', async () => {
-    h.fetchMock.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-6-luna' }] }))
+    h.safeFetchMock.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-6-luna' }] }))
     await listOpenAIModels('sk-test', 'https://my-proxy.example.com/v1/')
-    expect(h.fetchMock).toHaveBeenCalledWith(
+    expect(h.safeFetchMock).toHaveBeenCalledWith(
       'https://my-proxy.example.com/v1/models',
       expect.anything()
     )
+    expect(h.fetchMock).not.toHaveBeenCalled()
   })
 
-  it('throws with the status and body on a non-2xx response', async () => {
+  it('throws with only the status (never the upstream body) on a non-2xx response', async () => {
     h.fetchMock.mockResolvedValue(jsonResponse({ error: { message: 'invalid api key' } }, false, 401))
-    await expect(listOpenAIModels('bad-key')).rejects.toThrow(/401/)
+    const err = await listOpenAIModels('bad-key').catch((e) => e)
+    expect(err.message).toMatch(/401/)
+    expect(err.message).not.toMatch(/invalid api key/)
   })
 })
 
@@ -152,9 +157,16 @@ describe('listModelsForProvider', () => {
   })
 
   it('routes openai-compatible through listOpenAIModels with the given base URL', async () => {
-    h.fetchMock.mockResolvedValue(jsonResponse({ data: [{ id: 'llama3.2' }] }))
-    const models = await listModelsForProvider('openai-compatible', '', 'http://localhost:11434/v1')
+    h.safeFetchMock.mockResolvedValue(jsonResponse({ data: [{ id: 'llama3.2' }] }))
+    const models = await listModelsForProvider('openai-compatible', '', 'https://llm.example.com/v1')
     expect(models).toEqual(['llama3.2'])
-    expect(h.fetchMock).toHaveBeenCalledWith('http://localhost:11434/v1/models', expect.anything())
+    expect(h.safeFetchMock).toHaveBeenCalledWith('https://llm.example.com/v1/models', expect.anything())
+  })
+
+  it('ignores a base URL for named providers', async () => {
+    h.fetchMock.mockResolvedValue(jsonResponse({ data: [{ id: 'gpt-6-luna' }] }))
+    await listModelsForProvider('some-unknown-provider', 'sk-test', 'https://evil.example.com/v1')
+    expect(h.safeFetchMock).not.toHaveBeenCalled()
+    expect(h.fetchMock).toHaveBeenCalledWith('https://api.openai.com/v1/models', expect.anything())
   })
 })

@@ -4,7 +4,7 @@
 // back out so the UI can render a real link instead of the raw bracket text.
 const ATTACHMENT_LINE = /^\[Attachment: (.+?)\](?: — (\S+))?$/
 
-export interface ParsedContent {
+interface ParsedContent {
   text: string
   attachments: { name: string; url: string | null }[]
 }

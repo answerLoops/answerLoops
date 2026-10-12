@@ -12,7 +12,7 @@ export type EmailMessageStatus =
   | 'bounced'
   | 'delivery_failed'
 
-export interface EmailMessage {
+interface EmailMessage {
   id: number
   org_id: number
   direction: 'in' | 'out'
@@ -79,7 +79,7 @@ export async function recordInboundEmail(input: {
       status: 'received',
       rawPayload: input.rawPayload ?? null,
     })
-    .onConflictDoNothing({ target: emailMessages.rfcMessageId })
+    .onConflictDoNothing({ target: [emailMessages.orgId, emailMessages.rfcMessageId] })
     .returning()
   return row ? toEmailMessage(row) : null
 }
@@ -110,7 +110,7 @@ export async function recordOutboundEmail(input: {
       subject: input.subject ?? null,
       status: 'sent',
     })
-    .onConflictDoNothing({ target: emailMessages.rfcMessageId })
+    .onConflictDoNothing({ target: [emailMessages.orgId, emailMessages.rfcMessageId] })
 }
 
 /** Delivery-status webhooks reference Resend's own id — update by that, not our RFC id. */
@@ -177,16 +177,6 @@ export async function getLatestInboundForTicket(
       )
     )
     .orderBy(desc(emailMessages.createdAt))
-    .limit(1)
-  return row ? toEmailMessage(row) : null
-}
-
-/** Find a row by its RFC Message-ID (used by reply threading + delivery events). */
-export async function getEmailMessageByRfcId(rfcMessageId: string): Promise<EmailMessage | null> {
-  const [row] = await getDb()
-    .select()
-    .from(emailMessages)
-    .where(eq(emailMessages.rfcMessageId, rfcMessageId))
     .limit(1)
   return row ? toEmailMessage(row) : null
 }

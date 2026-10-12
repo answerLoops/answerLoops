@@ -7,10 +7,9 @@ Connecting Telegram works the same way on a self-hosted deployment as on managed
 
 ## Self-hosting-specific env var
 
-One optional environment variable matters only for self-hosted deployments — everything else is configured per-organization through the Settings UI:
+One optional environment variable matters only for self-hosted deployments — everything else, including the bot token, is configured per-organization through the Settings UI:
 
 ```dotenv
-TELEGRAM_BOT_TOKEN=123456789:AAHdqTcv...  # optional fallback token, skips per-org setup for a single-tenant deployment
 TELEGRAM_WEBHOOK_BASE_URL=https://your-tunnel.example.com  # optional, overrides AUTH_URL for the webhook only — see the integration guide's troubleshooting for when you need this
 ```
 

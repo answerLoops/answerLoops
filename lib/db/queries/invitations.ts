@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { invitations } from '../schema'
 
-export interface Invitation {
+interface Invitation {
   id: number
   org_id: number
   email: string

@@ -32,8 +32,8 @@ const {
   upsertSubscriptionAndClaimWelcome,
   getSubscription,
   getSubscriptionByStripeId,
-  hasProcessedWebhookEvent,
-  markWebhookEventProcessed,
+  claimWebhookEvent,
+  releaseWebhookEventClaim,
   pruneOldWebhookEvents,
   getOrgOwner,
   getOrgMembers,
@@ -58,9 +58,14 @@ const {
     }),
     getSubscription: vi.fn(async (orgId: number) => store.subsByOrg.get(orgId) ?? null),
     getSubscriptionByStripeId: vi.fn(async () => null),
-    hasProcessedWebhookEvent: vi.fn(async (id: string) => store.processedEvents.has(id)),
-    markWebhookEventProcessed: vi.fn(async (id: string) => {
+    // Mirrors the atomic claim: the first caller for an id wins, later ones lose.
+    claimWebhookEvent: vi.fn(async (id: string) => {
+      if (store.processedEvents.has(id)) return false
       store.processedEvents.add(id)
+      return true
+    }),
+    releaseWebhookEventClaim: vi.fn(async (id: string) => {
+      store.processedEvents.delete(id)
     }),
     pruneOldWebhookEvents: vi.fn(async () => {}),
     getOrgOwner: vi.fn(async (_orgId: number): Promise<{ email: string | null; name: string | null } | null> => null),
@@ -86,8 +91,8 @@ vi.mock('@/lib/db/queries/billing', () => ({
   upsertSubscriptionAndClaimWelcome,
   getSubscription,
   getSubscriptionByStripeId,
-  hasProcessedWebhookEvent,
-  markWebhookEventProcessed,
+  claimWebhookEvent,
+  releaseWebhookEventClaim,
   pruneOldWebhookEvents,
 }))
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useSyncExternalStore } from 'react'
 
-export type VisualViewportMetrics = {
+type VisualViewportMetrics = {
   /** Height of the area actually visible to the user (shrinks for the on-screen keyboard). */
   height: number
   /** Distance between the bottom of the layout viewport and the bottom of the visual viewport. */

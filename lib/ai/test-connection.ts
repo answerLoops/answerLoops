@@ -2,6 +2,7 @@ import { generateText, embed } from 'ai'
 import { buildChatProvider, buildEmbeddingModel } from '@/lib/ai/models'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { logger } from '@/lib/logger'
+import { assertPublicHttpsUrl, UnsafeUrlError } from '@/lib/http/safe-url'
 
 const MOD = 'ai/test-connection'
 
@@ -15,7 +16,7 @@ export interface AIConnectionResult {
   embedding: AIConnectionCheck
 }
 
-export interface AIConnectionInput {
+interface AIConnectionInput {
   chatProvider: string
   chatModel: string
   chatApiKey: string | null
@@ -26,7 +27,10 @@ export interface AIConnectionInput {
   embeddingBaseUrl: string | null
 }
 
+const UNSAFE_URL_MESSAGE = 'The base URL must be a public https address (no credentials, no private or local hosts).'
+
 function shortError(err: unknown): string {
+  if (err instanceof UnsafeUrlError) return UNSAFE_URL_MESSAGE
   const raw = err instanceof Error ? err.message : String(err)
   // Provider SDKs prepend a lot of noise; keep it to something a user can act on.
   const cleaned = raw.replace(/\s+/g, ' ').trim()
@@ -41,7 +45,8 @@ function shortError(err: unknown): string {
   if (/ENOTFOUND|ECONNREFUSED|fetch failed|network/i.test(cleaned)) {
     return 'Could not reach the endpoint — check the base URL and that it is reachable from the server.'
   }
-  return cleaned.slice(0, 200)
+  // Anything else is provider-specific text; keep it out of the response.
+  return 'The provider returned an error. Check the key, model ID and base URL.'
 }
 
 /**
@@ -56,6 +61,7 @@ export async function testAIProviderConnection(input: AIConnectionInput): Promis
 
   const chat: AIConnectionCheck = await (async () => {
     try {
+      if (input.chatBaseUrl) await assertPublicHttpsUrl(input.chatBaseUrl)
       const provider = buildChatProvider(input.chatProvider, input.chatApiKey, input.chatBaseUrl)
       await generateText({
         model: provider(input.chatModel),
@@ -75,6 +81,7 @@ export async function testAIProviderConnection(input: AIConnectionInput): Promis
 
   const embedding: AIConnectionCheck = await (async () => {
     try {
+      if (input.embeddingBaseUrl) await assertPublicHttpsUrl(input.embeddingBaseUrl)
       const model = buildEmbeddingModel(input.embeddingModel, input.embeddingApiKey, input.embeddingBaseUrl)
       await embed({ model, value: 'ok' })
       return { ok: true }

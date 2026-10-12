@@ -856,7 +856,7 @@ function SeedStep({ onDone }: { onDone: () => void }) {
                 <path d="M12 16V8m0 0l-3 3m3-3l3 3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
               <p className="text-sm text-ink-600"><span className="font-semibold text-brand-600">Click to upload</span> or drag and drop</p>
-              <p className="text-xs text-ink-400">PDF · DOCX · MD · TXT · CSV up to 50 MB</p></>
+              <p className="text-xs text-ink-400">PDF · DOCX · MD · TXT · CSV up to 10 MB</p></>
             )}
           </div>
           {uploadResult?.error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{uploadResult.error}</p>}

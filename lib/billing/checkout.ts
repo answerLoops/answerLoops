@@ -49,7 +49,7 @@ function checkoutIdempotencyKey(orgId: number, planId: string, interval: Billing
   return `checkout:${orgId}:${planId}:${interval}:${bucket}`
 }
 
-export type CheckoutResult =
+type CheckoutResult =
   | { ok: true; url: string }
   | { ok: false; error: string; status: number }
 
@@ -58,7 +58,7 @@ export type CheckoutResult =
  * form renders inside our own page rather than on checkout.stripe.com, so
  * there is nowhere to send the browser.
  */
-export type EmbeddedCheckoutResult =
+type EmbeddedCheckoutResult =
   | { ok: true; clientSecret: string }
   | { ok: false; error: string; status: number }
 

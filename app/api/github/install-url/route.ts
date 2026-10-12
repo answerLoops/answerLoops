@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
-import { signOAuthState } from '@/lib/oauth/state'
+import { createOAuthState, setOAuthNonceCookie } from '@/lib/oauth/state'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -19,19 +19,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'GITHUB_APP_SLUG is not a valid slug or URL' }, { status: 503 })
   }
 
+  // The callback exchanges the install redirect's authorization code, which
+  // needs the App's OAuth client credentials.
+  if (!process.env.GITHUB_APP_CLIENT_ID || !process.env.GITHUB_APP_CLIENT_SECRET) {
+    return NextResponse.json({ error: 'GITHUB_APP_CLIENT_ID and GITHUB_APP_CLIENT_SECRET must be configured' }, { status: 503 })
+  }
+
   try {
-    const access = await requireOrgAccess()
+    const access = await requireOrgAccess(['owner', 'admin'])
     if (!access.ok) {
-      return NextResponse.json({ error: access.error }, { status: 401 })
+      return NextResponse.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
     }
 
     // Where the flow started, so the callback returns the user to the right
     // screen. Only 'onboarding' is meaningful; anything else means Integrations.
     const from = req.nextUrl.searchParams.get('from') === 'onboarding' ? 'onboarding' : 'integrations'
-    const state = signOAuthState({ orgId: access.orgId, from })
+    const { state, nonce } = createOAuthState({ provider: 'github', orgId: access.orgId, userId: access.userId, from })
 
-    const url = `https://github.com/apps/${slug}/installations/new?state=${state}`
-    return NextResponse.json({ url })
+    const url = `https://github.com/apps/${slug}/installations/new?state=${encodeURIComponent(state)}`
+    return setOAuthNonceCookie(NextResponse.json({ url }), 'github', nonce)
   } catch (err) {
     logger.error('github install url generation failed', { module: MOD, requestId: getRequestId(req), error: err })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

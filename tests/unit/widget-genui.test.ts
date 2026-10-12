@@ -2,8 +2,6 @@ import { describe, it, expect } from 'vitest'
 import {
   calloutSchema,
   choicesSchema,
-  contactSchema,
-  linkCardSchema,
   parseGenuiResult,
   safeContactHref,
   safeHttpsUrl,

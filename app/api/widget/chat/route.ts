@@ -46,9 +46,27 @@ const GLOBAL_IP_WINDOW_MS = 60_000
 const MAX_MESSAGE_CHARS = 4_000
 const MAX_MESSAGES = 50
 
-// A client-generated UUID (36 chars) is the expected shape; capped generously
-// above that so a malformed value can't be used to inflate the memory key.
-const MAX_VISITOR_ID_LEN = 100
+// The widget generates a UUID (36 chars) per browser. Accepted shape is
+// letters, digits, hyphen and underscore up to 64 chars: wide enough for any
+// UUID form, and it excludes the `:` that delimits the memory key built from
+// this value (`widget:<orgId>:<visitorId>`).
+const MAX_VISITOR_ID_LEN = 64
+const VISITOR_ID_PATTERN = /^[A-Za-z0-9_-]+$/
+
+// Envelope methods this widget's client uses. The runtime serves many more
+// (thread, memory, inspector, transcribe, ...), none of which belong on a
+// public visitor endpoint, so anything else is a 404. `agent/connect` is not
+// needed: the widget drives a single run per message through useAgent and
+// never opens a CopilotChat connection.
+const ALLOWED_ENVELOPE_METHODS = new Set(['agent/run', 'info'])
+
+// Per-org ceiling on widget answers, independent of the plan's monthly
+// allowance (soft-cap plans keep answering past it). Bounds how much model
+// spend any one org's public widget can trigger in a short period.
+const ORG_HOURLY_MAX = 500
+const ORG_HOURLY_WINDOW_MS = 60 * 60_000
+const ORG_DAILY_MAX = 3_000
+const ORG_DAILY_WINDOW_MS = 24 * 60 * 60_000
 
 // 50 messages x 4000 chars is the largest legitimate payload; 512KB leaves room
 // for the JSON envelope. Enforced while the body streams in rather than after,
@@ -207,11 +225,14 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     return new Response('Invalid JSON', { status: 400 })
   }
 
-  // Everything other than a chat run (info, thread listing, etc.) passes
-  // through as-is — this widget's client only ever issues agent/run. The
-  // original request's body is already consumed above, so this still has to
-  // be a fresh Request built from the text just read, not `request` itself.
-  // The global IP limit above still applies to it.
+  // Only the methods this widget's client issues reach the runtime; the rest
+  // of its surface is not served here. `info` passes through as-is. The
+  // original request's body is already consumed above, so it still has to be
+  // a fresh Request built from the text just read, not `request` itself. The
+  // global IP limit above applies to both.
+  if (typeof envelope.method !== 'string' || !ALLOWED_ENVELOPE_METHODS.has(envelope.method)) {
+    return new Response('Not found', { status: 404 })
+  }
   if (envelope.method !== 'agent/run') return rebuildRequest(request, raw)
 
   const body = envelope.body
@@ -226,10 +247,15 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   // (lib/widget/origin.ts) — the token itself is public in page source, so
   // without this any caller who extracts it can spend against the org's
   // quota from anywhere, bypassing the allowlist entirely. See Known Issue 114.
-  if (!verifyRenderToken(body?.forwardedProps?.renderToken, widgetToken)) {
+  if (!verifyRenderToken(body?.forwardedProps?.renderToken, widgetToken, ip)) {
     return new Response('Forbidden', { status: 403 })
   }
-  if (!visitorId || typeof visitorId !== 'string' || visitorId.length > MAX_VISITOR_ID_LEN) {
+  if (
+    !visitorId ||
+    typeof visitorId !== 'string' ||
+    visitorId.length > MAX_VISITOR_ID_LEN ||
+    !VISITOR_ID_PATTERN.test(visitorId)
+  ) {
     return new Response('Missing visitorId', { status: 400 })
   }
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -269,6 +295,14 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   const org = await getOrgByWidgetToken(widgetToken)
   if (!org) {
     return new Response('Invalid widget token', { status: 404 })
+  }
+
+  const [orgHourly, orgDaily] = await Promise.all([
+    rateLimitShared(`widget-org-hour:${org.id}`, ORG_HOURLY_MAX, ORG_HOURLY_WINDOW_MS),
+    rateLimitShared(`widget-org-day:${org.id}`, ORG_DAILY_MAX, ORG_DAILY_WINDOW_MS),
+  ])
+  if (!orgHourly.ok || !orgDaily.ok) {
+    return new Response('Too many requests', { status: 429 })
   }
 
   // Client-asserted, not re-derivable here: this request is same-origin to us

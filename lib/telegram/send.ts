@@ -29,10 +29,11 @@ export async function sendToTelegramChat(
 ): Promise<string | null> {
   if (MOCK_EXTERNALS) return `mock-tg-${chatId}`
 
+  // Messages go out through the org's own connected bot only.
   const integration = await getIntegration(orgId, 'telegram')
-  const token = integration?.bot_token ?? process.env.TELEGRAM_BOT_TOKEN
+  const token = integration && integration.enabled === 1 ? integration.bot_token : null
   if (!token) {
-    logger.warn('no Telegram bot token — skipping send', { module: MOD, orgId })
+    logger.warn('no connected Telegram bot for this org — skipping send', { module: MOD, orgId })
     return null
   }
 

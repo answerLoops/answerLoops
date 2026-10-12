@@ -80,6 +80,8 @@ Set these on your `app` service (not only on the bot service — the app service
 
 Make sure `AUTH_URL` is set to your public app URL (e.g. `https://support.yourcompany.com`). Discord will redirect to `{AUTH_URL}/api/discord/callback` after authorization.
 
+The "Add to Discord" button requests the `bot`, `identify`, and `guilds` scopes. After authorization, answerLoops confirms the server that was authorized, checks that the person who clicked the button owns it or has the **Manage Server** or **Administrator** permission there, and checks that the bot is a member. Only org owners and admins can start or complete the flow. `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, and `DISCORD_TOKEN` must all be set on the `app` service for the button to appear.
+
 ---
 
 ## Forum channels

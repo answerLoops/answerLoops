@@ -75,7 +75,7 @@ describe('lib/ingest/pipeline.ts — placeholder ticket summary excludes raw att
   it('runs content through parseAttachmentLines before slicing it into the placeholder summary', () => {
     const src = read('lib/ingest/pipeline.ts')
     const idx = src.indexOf('const { text: contentText, attachments } = parseAttachmentLines(content)')
-    const createTicketIdx = src.indexOf('const ticket = await createTicket(')
+    const createTicketIdx = src.indexOf('ticket = await createTicket(')
     expect(idx).toBeGreaterThan(-1)
     expect(createTicketIdx).toBeGreaterThan(idx)
     const block = src.slice(idx, createTicketIdx)

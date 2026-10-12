@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 
 // All covers share the public site's palette and a 1200 × 630 canvas.
 export const BLOG_COVER_SIZE = { width: 1200, height: 630 }
-export const coverPalette = {
+const coverPalette = {
   navy: '#082e50',
   teal: '#168fa3',
   aqua: '#b9e0e5',
@@ -12,7 +12,7 @@ export const coverPalette = {
 }
 
 /** Inline styles keep the same React artwork usable in image generation. */
-export function BlogCoverFrame({
+function BlogCoverFrame({
   children,
   logoSrc,
   caption,

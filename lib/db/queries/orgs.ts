@@ -27,6 +27,7 @@ import {
   aiConfigs,
   subscriptions,
   widgetLeads,
+  slaConfigs,
   productFeedback,
   apiKeys,
   apiGenerations,
@@ -43,7 +44,7 @@ import {
 // impulsive deletion, short enough that "deleted" isn't a lie.
 export const ORG_PURGE_GRACE_DAYS = 30
 
-export interface Org {
+interface Org {
   id: number
   name: string
   slug: string | null
@@ -98,7 +99,7 @@ export async function saveOrgROIConfig(orgId: number, minutesPerTicket: number, 
     .where(eq(orgs.id, orgId))
 }
 
-export interface OrgDeletionStatus {
+interface OrgDeletionStatus {
   deletedAt: string
   purgeAt: string
 }
@@ -194,6 +195,7 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     await tx.delete(aiConfigs).where(eq(aiConfigs.orgId, orgId))
     await tx.delete(subscriptions).where(eq(subscriptions.orgId, orgId))
     await tx.delete(widgetLeads).where(eq(widgetLeads.orgId, orgId))
+    await tx.delete(slaConfigs).where(eq(slaConfigs.orgId, orgId))
     // The author's workspace is gone, so its feedback-board entries go with it
     // — even approved ones, which are otherwise visible to every workspace.
     await tx.delete(productFeedback).where(eq(productFeedback.orgId, orgId))

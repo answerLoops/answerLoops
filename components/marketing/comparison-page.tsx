@@ -3,12 +3,12 @@ import { PRICING_HREF } from '@/components/marketing/nav-shared'
 import Link from 'next/link'
 import { MarketingPage, PageHero, TrialCta } from './layout'
 import { PageSchema } from './page-schema'
-export interface ComparisonRow {
+interface ComparisonRow {
   feature: string
   us: string
   them: string
 }
-export interface ComparisonPageProps {
+interface ComparisonPageProps {
   competitor: string
   competitorSummary: string
   intro: string

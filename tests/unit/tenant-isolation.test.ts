@@ -83,10 +83,12 @@ describe('GitHub repo API routes enforce session org', () => {
     expect(src).toContain('await removeRepo(Number(id), orgId)')
   })
 
-  it('repo connect/remove routes authenticate and pass the session org', () => {
-    const connectSrc = read('app/api/github/connect-installation/route.ts')
-    expect(connectSrc).toContain('await auth()')
-    expect(connectSrc).toMatch(/await addRepo\([^)]*orgId\)/)
+  it('repo connect/remove routes authenticate and pass the verified org', () => {
+    expect(fs.existsSync(path.join(ROOT, 'app/api/github/connect-installation/route.ts'))).toBe(false)
+
+    const callbackSrc = read('app/api/github/callback/route.ts')
+    expect(callbackSrc).toContain("requireOrgAccess(['owner', 'admin'])")
+    expect(callbackSrc).toMatch(/await addRepo\([^)]*orgId\)/)
 
     const removeSrc = read('app/api/github/repos/[id]/route.ts')
     expect(removeSrc).toContain('await requireOrgAccess()')

@@ -47,6 +47,10 @@ Changes to the feedback and updates tables notify connected dashboards so the wi
 
 ## Configuration and billing
 
-Integration records store channel configuration. `ai_configs` stores workspace model settings. `sla_configs` stores response and resolution targets. `subscriptions` records hosted-plan state, and `api_generations` records standalone answer generation for usage accounting.
+Integration records store channel configuration. Each integration's shared secret is stored as a SHA-256 digest (`bot_secret_hash`), which is what inbound requests are matched against, together with an encrypted copy (`bot_secret_enc`) for the channels that must read it back to configure a remote webhook; lookups are always made for one platform at a time. Google Chat keeps its one-time connect code in separate columns (`pairing_code_hash`, `pairing_code_enc`, `pairing_code_expires_at`) that are cleared when the space is paired. At most one enabled Slack, Discourse or Google Chat integration can hold a given workspace, site or space (`team_id`).
+
+Message de-duplication is scoped to the workspace: `tickets` is unique on `(org_id, source_message_id)` and `email_messages` on `(org_id, rfc_message_id)`. Telegram tickets use `telegram:<chat id>:<message id>` as their source message id, because Telegram message ids repeat across chats; tickets created before that format keep the bare message id and are still recognised as duplicates.
+
+`ai_configs` stores workspace model settings. `sla_configs` stores response and resolution targets per priority. Rows with a null `org_id` are the global defaults; a workspace that saves its own targets gets its own row (unique per `org_id` and `priority`, removed with the workspace). Deadlines for a ticket use the workspace's row for the ticket's priority and fall back to the default row. `subscriptions` records hosted-plan state, and `api_generations` records standalone answer generation for usage accounting.
 
 Use application actions and documented APIs for routine changes. For self-hosted upgrades, apply the documented migrations and retain a tested backup. See [Upgrading](/docs/self-hosting/upgrading).

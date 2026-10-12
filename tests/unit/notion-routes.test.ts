@@ -27,7 +27,7 @@ describe('app/api/notion/route.ts — connection state', () => {
 
   it('exports GET and is auth-gated', () => {
     expect(src).toContain('export async function GET')
-    expect(src).toContain('auth()')
+    expect(src).toContain('requireOrgAccess()')
   })
 
   it('reads through the token-free projection', () => {
@@ -46,7 +46,7 @@ describe('app/api/notion/sync-kb/route.ts — manual sync trigger', () => {
 
   it('exports POST, is auth-gated, and enqueues a background job instead of syncing inline', () => {
     expect(src).toContain('export async function POST')
-    expect(src).toContain('requireOrgAccess()')
+    expect(src).toContain("requireOrgAccess(['owner', 'admin'])")
     expect(src).toContain("enqueueKbSyncJob({ orgId: access.orgId, kind: 'notion' })")
     // the heavy sync must not run in the request anymore
     expect(src).not.toContain('syncNotionToKB')

@@ -34,7 +34,7 @@ describe('lib/ingest/pipeline.ts — ticket creation never depends on AI', () =>
     expect(fnStart).toBeGreaterThan(-1)
     expect(fnEnd).toBeGreaterThan(fnStart)
     expect(body).not.toContain('triageMessage(')
-    expect(body).toContain('const ticket = await createTicket(')
+    expect(body).toContain('ticket = await createTicket(')
   })
 
   it('runBackgroundEnrichment catches NoAIProviderConfiguredError around the triage call and leaves the ticket on its placeholder rather than rethrowing', () => {

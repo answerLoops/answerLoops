@@ -3,7 +3,7 @@ import { getDb } from '../drizzle'
 import { emailDomains } from '../schema'
 import type { DomainRecordPair, DomainVerificationStatus } from '@/lib/email/domain'
 
-export interface EmailDomain {
+interface EmailDomain {
   id: number
   org_id: number
   domain: string

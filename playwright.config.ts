@@ -59,6 +59,9 @@ export const TEST_ENV = {
   // product-feedback.spec.ts exercises it.
   FEEDBACK_WIDGET_ENABLED: '1',
   MOCK_EXTERNALS: '1',
+  // The webServer runs a production build, where mock mode is otherwise refused
+  // (lib/mock-mode.ts). This opts the e2e server in explicitly.
+  MOCK_EXTERNALS_E2E: '1',
   BOT_SECRET: 'test-bot-secret',
   AUTH_SECRET: 'test-auth-secret',
   AUTH_URL: BASE_URL,

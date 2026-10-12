@@ -22,9 +22,9 @@ describe('app/api/discord/invite-url/route.ts — auth + entitlement', () => {
 
   it('resolves the org from a real membership row and rejects a session without one', () => {
     const s = src()
-    const accessIdx = s.indexOf('const access = await requireOrgAccess()')
+    const accessIdx = s.indexOf("const access = await requireOrgAccess(['owner', 'admin'])")
     const guardIdx = s.indexOf('if (!access.ok)')
-    const orgIdIdx = s.indexOf('const { orgId } = access')
+    const orgIdIdx = s.indexOf('const { orgId, userId } = access')
     expect(accessIdx).toBeGreaterThan(-1)
     expect(guardIdx).toBeGreaterThan(accessIdx)
     expect(orgIdIdx).toBeGreaterThan(guardIdx)
@@ -35,7 +35,7 @@ describe('app/api/discord/invite-url/route.ts — auth + entitlement', () => {
   it('checks discord_integration before building the OAuth URL', () => {
     const s = src()
     const checkIdx = s.indexOf("orgHasFeature(orgId, 'discord_integration')")
-    const urlBuildIdx = s.indexOf('const url = `https://discord.com')
+    const urlBuildIdx = s.indexOf('const url = buildDiscordInviteUrl(')
     expect(checkIdx).toBeGreaterThan(-1)
     expect(checkIdx).toBeLessThan(urlBuildIdx)
 

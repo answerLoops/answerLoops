@@ -111,12 +111,12 @@ describe('app/api/ingest/retry-stuck/route.ts', () => {
   const src = read('app/api/ingest/retry-stuck/route.ts')
 
   it('authenticates with the platform-wide BOT_SECRET, not a per-integration secret', () => {
-    expect(src).toContain('process.env.BOT_SECRET')
+    expect(src).toContain('isPlatformBotRequest(request)')
     expect(src).not.toContain('getIntegrationByBotSecret')
   })
 
   it('claims the ticket before doing any work, and no-ops cleanly if the claim fails', () => {
-    const claimIdx = src.indexOf('claimStuckTicketForRetry(ticket_id)')
+    const claimIdx = src.indexOf('claimStuckTicketForRetry(ticket_id, org_id)')
     const enrichIdx = src.indexOf('runBackgroundEnrichment(')
     expect(claimIdx).toBeGreaterThan(-1)
     expect(enrichIdx).toBeGreaterThan(claimIdx)
@@ -124,7 +124,7 @@ describe('app/api/ingest/retry-stuck/route.ts', () => {
   })
 
   it('awaits runBackgroundEnrichment directly rather than scheduling it via after()', () => {
-    expect(src).toContain('await runBackgroundEnrichment(ticket, org_id, aiPurpose)')
+    expect(src).toContain('await runBackgroundEnrichment(ticket, ticketOrgId, aiPurpose)')
     expect(src).not.toMatch(/from ['"]next\/server['"]/)
   })
 

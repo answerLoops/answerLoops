@@ -74,13 +74,23 @@ export const memberships = pgTable('memberships', {
   createdAt: text('created_at').notNull().default(now),
 })
 
-export const slaConfigs = pgTable('sla_configs', {
-  id: serial('id').primaryKey(),
-  priority: text('priority').notNull().unique(),
-  responseHours: integer('response_hours').notNull(),
-  resolveHours: integer('resolve_hours').notNull(),
-  updatedAt: text('updated_at').notNull().default(now),
-})
+// org_id NULL rows are the global defaults; a row with an org_id is that
+// workspace's own target for the priority and takes precedence.
+export const slaConfigs = pgTable(
+  'sla_configs',
+  {
+    id: serial('id').primaryKey(),
+    orgId: integer('org_id').references(() => orgs.id, { onDelete: 'cascade' }),
+    priority: text('priority').notNull(),
+    responseHours: integer('response_hours').notNull(),
+    resolveHours: integer('resolve_hours').notNull(),
+    updatedAt: text('updated_at').notNull().default(now),
+  },
+  (t) => [
+    uniqueIndex('sla_configs_org_priority_unique').on(t.orgId, t.priority).where(sql`org_id IS NOT NULL`),
+    uniqueIndex('sla_configs_default_priority_unique').on(t.priority).where(sql`org_id IS NULL`),
+  ]
+)
 
 export const tickets = pgTable(
   'tickets',
@@ -99,7 +109,7 @@ export const tickets = pgTable(
     // one does. discord_guild_id and discord_deleted_at are genuinely
     // Discord-specific (guilds are a Discord concept; the deleted-at
     // tracking has no equivalent on other platforms) and stay as-is.
-    sourceMessageId: text('source_message_id').unique(),
+    sourceMessageId: text('source_message_id'),
     discordGuildId: text('discord_guild_id'),
     sourceChannelId: text('source_channel_id'),
     sourceThreadId: text('source_thread_id'),
@@ -141,6 +151,9 @@ export const tickets = pgTable(
     index('idx_tickets_ai_draft').on(t.aiDraftStatus),
     index('idx_tickets_org').on(t.orgId),
     uniqueIndex('tickets_org_ticket_number_unique').on(t.orgId, t.orgTicketNumber),
+    // Message ids are unique within one org's tickets, not across the platform:
+    // two workspaces can legitimately see the same platform-issued id.
+    uniqueIndex('tickets_org_source_message_unique').on(t.orgId, t.sourceMessageId),
   ]
 )
 
@@ -393,7 +406,25 @@ export const integrations = pgTable(
     orgId: integer('org_id').notNull().references(() => orgs.id),
     platform: text('platform').notNull(),
     botToken: text('bot_token'),
+    // Legacy plaintext column. New writes leave it NULL; rows written before
+    // bot_secret_hash existed are hashed by the migration and re-encrypted
+    // into bot_secret_enc the first time they are read (see
+    // lib/db/queries/integrations.ts).
     botSecret: text('bot_secret').unique(),
+    // SHA-256 (hex) of the per-integration shared secret. Inbound requests are
+    // resolved by hashing the presented value and matching this column.
+    botSecretHash: text('bot_secret_hash'),
+    // The same secret, encrypted at rest, for the platforms that must read it
+    // back (Telegram setWebhook secret_token, Discourse/Circle webhook
+    // configuration, the bot process's outbound bearer).
+    botSecretEnc: text('bot_secret_enc'),
+    // Google Chat only: the one-time /connect code, kept apart from
+    // bot_secret. The hash is matched on /connect, the encrypted copy lets the
+    // settings page show a pending code, and both are cleared when pairing
+    // completes.
+    pairingCodeHash: text('pairing_code_hash'),
+    pairingCodeEnc: text('pairing_code_enc'),
+    pairingCodeExpiresAt: text('pairing_code_expires_at'),
     // Discourse only: the forum account the bot posts replies as, sent as the
     // `Api-Username` header on every write. Distinct from escalationRoleId,
     // which is the human tagged on low-confidence answers.
@@ -431,7 +462,15 @@ export const integrations = pgTable(
   (t) => [
     uniqueIndex('integrations_org_platform').on(t.orgId, t.platform),
     index('idx_integrations_bot_secret').on(t.botSecret),
+    uniqueIndex('integrations_bot_secret_hash_unique').on(t.botSecretHash),
+    uniqueIndex('integrations_pairing_code_hash_unique').on(t.pairingCodeHash),
     index('idx_integrations_org').on(t.orgId),
+    // One enabled connection per external workspace/site/space. Slack team
+    // ids, Discourse site URLs and Google Chat space names are stored in
+    // team_id; inbound events resolve an org from that value alone.
+    uniqueIndex('integrations_platform_team_enabled_unique')
+      .on(t.platform, t.teamId)
+      .where(sql`enabled = 1 AND team_id IS NOT NULL AND platform IN ('slack', 'discourse', 'google_chat')`),
   ]
 )
 
@@ -505,7 +544,7 @@ export const emailMessages = pgTable(
     id: serial('id').primaryKey(),
     orgId: integer('org_id').notNull().references(() => orgs.id),
     direction: text('direction').notNull(), // 'in' | 'out'
-    rfcMessageId: text('rfc_message_id').notNull().unique(),
+    rfcMessageId: text('rfc_message_id').notNull(),
     // Resend's own internal id for outbound sends — delivery-status webhooks
     // (bounced/complained/delivery_delayed) reference this, not our RFC id.
     providerMessageId: text('provider_message_id').unique(),
@@ -523,6 +562,7 @@ export const emailMessages = pgTable(
     createdAt: text('created_at').notNull().default(now),
   },
   (t) => [
+    uniqueIndex('email_messages_org_rfc_message_unique').on(t.orgId, t.rfcMessageId),
     index('idx_email_messages_org').on(t.orgId),
     index('idx_email_messages_ticket').on(t.ticketId),
     index('idx_email_messages_in_reply_to').on(t.inReplyTo),

@@ -19,7 +19,7 @@ const h = vi.hoisted(() => ({
   embedText: vi.fn(),
   searchArticles: vi.fn(),
   textSearchArticles: vi.fn(),
-  rateLimit: vi.fn(),
+  rateLimitShared: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
@@ -28,7 +28,7 @@ vi.mock('@/lib/db/queries/kb', () => ({
   searchArticles: h.searchArticles,
   textSearchArticles: h.textSearchArticles,
 }))
-vi.mock('@/lib/ratelimit', () => ({ rateLimit: h.rateLimit }))
+vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 
 function req(q = 'how do I configure this') {
   return new Request(`https://app.test/api/kb/search?q=${encodeURIComponent(q)}`)
@@ -36,7 +36,7 @@ function req(q = 'how do I configure this') {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  h.rateLimit.mockReturnValue({ ok: true })
+  h.rateLimitShared.mockResolvedValue({ ok: true })
   h.embedText.mockResolvedValue([0.1, 0.2])
   h.searchArticles.mockResolvedValue([{ id: 1, question: 'q', answer: 'a' }])
 })
@@ -69,7 +69,7 @@ describe('app/api/kb/search/route.ts: GET', () => {
 
   it('rate-limits per org before doing any billed work', async () => {
     h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 42, userId: 1, role: 'member' })
-    h.rateLimit.mockReturnValue({ ok: false, retryAfterMs: 1000 })
+    h.rateLimitShared.mockReturnValue({ ok: false, retryAfterMs: 1000 })
     const { GET } = await import('@/app/api/kb/search/route')
     const res = await GET(req())
     expect(res.status).toBe(429)

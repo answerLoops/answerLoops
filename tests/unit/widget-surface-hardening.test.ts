@@ -128,7 +128,7 @@ describe('widget lead endpoint carries the standard abuse controls', () => {
     // See Known Issue 114 / lib/widget/render-token.ts.
     expect(s).not.toContain('isOriginAllowed')
     expect(s).toContain("import { verifyRenderToken } from '@/lib/widget/render-token'")
-    expect(s).toContain('verifyRenderToken(renderToken, widgetToken)')
+    expect(s).toContain('verifyRenderToken(renderToken, widgetToken, ip)')
   })
 })
 
@@ -154,7 +154,7 @@ describe('widget chat endpoint hardening', () => {
     const s = src()
     expect(s).not.toContain('isOriginAllowed')
     expect(s).toContain("import { verifyRenderToken } from '@/lib/widget/render-token'")
-    expect(s).toContain('verifyRenderToken(body?.forwardedProps?.renderToken, widgetToken)')
+    expect(s).toContain('verifyRenderToken(body?.forwardedProps?.renderToken, widgetToken, ip)')
   })
 
   it('resolves the client IP through the trusted-proxy chain', () => {

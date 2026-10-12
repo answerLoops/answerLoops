@@ -2,9 +2,9 @@ import { sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 
 export type KbSyncJobKind = 'notion' | 'github_repo'
-export type KbSyncJobStatus = 'queued' | 'running' | 'succeeded' | 'failed'
+type KbSyncJobStatus = 'queued' | 'running' | 'succeeded' | 'failed'
 
-export interface KbSyncJob {
+interface KbSyncJob {
   id: number
   org_id: number
   kind: KbSyncJobKind

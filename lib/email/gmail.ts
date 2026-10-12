@@ -35,7 +35,7 @@ export function buildGmailAuthUrl(state: string): string | { error: string } {
   })
 }
 
-export interface ExchangedGmailTokens {
+interface ExchangedGmailTokens {
   accessToken: string
   refreshToken: string
   expiresAt: string

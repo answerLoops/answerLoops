@@ -102,7 +102,6 @@ describe('DB schema: exported tables', () => {
 
   it('kbSources table has required columns', async () => {
     const { kbSources } = await import('../../lib/db/schema')
-    const cols = Object.keys(kbSources)
     // Drizzle table object should be truthy
     expect(kbSources).toBeTruthy()
   })

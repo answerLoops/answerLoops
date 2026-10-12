@@ -93,7 +93,8 @@ describe('tickets.source_url is threaded from ingest all the way to the ticket',
 
   it('/api/ingest accepts source_url and passes it through', () => {
     const src = read('app/api/ingest/route.ts')
-    expect(src).toContain('source_url: z.string().optional()')
+    expect(src).toContain('source_url: z')
+    expect(src).toContain('.max(2048)')
     expect(src).toContain('sourceUrl: source_url,')
   })
 

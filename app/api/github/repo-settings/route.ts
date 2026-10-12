@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server'
-import { auth } from '@/auth'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { updateRepoSettings } from '@/lib/db/queries/github'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
@@ -8,9 +7,9 @@ import { getRequestId } from '@/lib/request-id'
 const MOD = 'api/github/repo-settings'
 
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const orgId = (session as { orgId?: number }).orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
+  const orgId = access.orgId
 
   let body: { repoId?: number; monitoredEvents?: string; kbEnabled?: number; autoDeflectEnabled?: number }
   try {

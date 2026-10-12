@@ -3,7 +3,7 @@ import { getDb } from '../drizzle'
 import { kbArticles, tickets } from '../schema'
 import type { KBArticle, KBSearchResult, PriorAnswer } from '@/types'
 
-export const KB_MATCH_THRESHOLD = 0.45
+const KB_MATCH_THRESHOLD = 0.45
 
 function toArticle(row: typeof kbArticles.$inferSelect): KBArticle {
   return {
@@ -72,7 +72,7 @@ export async function createArticle(
   return toArticle(row)
 }
 
-export async function getArticle(id: number): Promise<KBArticle | null> {
+async function getArticle(id: number): Promise<KBArticle | null> {
   const [row] = await getDb()
     .select()
     .from(kbArticles)

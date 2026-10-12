@@ -15,6 +15,8 @@
  * the real hop count if you add another layer — too high and you read a
  * spoofed entry, too low and every request behind the edge shares one bucket.
  */
+import { isOriginVerified, originVerifyConfigured } from './origin-guard'
+
 const DEFAULT_TRUST_PROXY_HOPS = 1
 
 export function trustedProxyHops(): number {
@@ -23,12 +25,31 @@ export function trustedProxyHops(): number {
   return Math.floor(raw)
 }
 
+/**
+ * Whether `cf-connecting-ip` may be believed for this request.
+ *
+ * - ORIGIN_VERIFY_SECRET configured (any deployment): only when the request
+ *   carries the matching edge header.
+ * - Managed cloud production without the secret: never. The header is only
+ *   meaningful when the origin is reachable solely through the edge, which
+ *   cannot be established without the secret, so the `x-forwarded-for`
+ *   policy below is used instead.
+ * - Self-hosted and local development without the secret: accepted, so
+ *   installs behind Cloudflare keep working with no extra setup.
+ */
+function trustsCloudflareHeader(req: { headers: Headers }): boolean {
+  if (originVerifyConfigured()) return isOriginVerified(req)
+  const managedCloudProduction =
+    process.env.NODE_ENV === 'production' && process.env.DEPLOYMENT_MODE === 'cloud'
+  return !managedCloudProduction
+}
+
 /** Takes anything with headers — NextRequest and plain Request both qualify. */
 export function clientIp(req: { headers: Headers }): string {
-  // Cloudflare overwrites (never appends to) this header, so it can't be
-  // spoofed from outside the edge — prefer it when present.
+  // Cloudflare overwrites (never appends to) this header, so when the request
+  // is known to have come through the edge it is the best source.
   const cf = req.headers.get('cf-connecting-ip')?.trim()
-  if (cf) return cf
+  if (cf && trustsCloudflareHeader(req)) return cf
 
   const xff = req.headers.get('x-forwarded-for')
   if (xff) {

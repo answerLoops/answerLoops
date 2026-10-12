@@ -1,7 +1,7 @@
 const ENV_MINUTES = Number(process.env.ROI_MINUTES_PER_TICKET ?? 10)
 const ENV_RATE = Number(process.env.ROI_STAFF_HOURLY_RATE ?? 50)
 
-export interface ROISavings {
+interface ROISavings {
   deflected: number
   hoursSaved: number
   dollarsSaved: number
@@ -9,7 +9,7 @@ export interface ROISavings {
   hourlyRate: number
 }
 
-export interface ROIConfig {
+interface ROIConfig {
   minutesPerTicket?: number | null
   staffHourlyRate?: number | null
 }

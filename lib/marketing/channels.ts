@@ -1,5 +1,5 @@
 /** Channel names shared by the public website. */
-export interface MarketedChannel {
+interface MarketedChannel {
   /** Display name, exactly as it should appear in copy. */
   name: string
   href: string

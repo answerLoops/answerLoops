@@ -15,7 +15,7 @@ PDFParse.setWorker(
   path.join(process.cwd(), 'node_modules/pdf-parse/dist/worker/pdf.worker.mjs')
 )
 
-export type SupportedFileType = 'pdf' | 'docx' | 'md' | 'txt' | 'csv'
+type SupportedFileType = 'pdf' | 'docx' | 'md' | 'txt' | 'csv'
 
 export function detectFileType(filename: string): SupportedFileType | null {
   const ext = filename.split('.').pop()?.toLowerCase()

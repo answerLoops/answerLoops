@@ -30,11 +30,15 @@ function read(relPath: string): string {
 
 const { processCommunityMessage, getIntegrationByBotSecret } = vi.hoisted(() => ({
   processCommunityMessage: vi.fn(async () => ({ ticket_id: 1 })),
-  getIntegrationByBotSecret: vi.fn(async () => ({ org_id: 3 })),
+  getIntegrationByBotSecret: vi.fn(async (_secret: string, _platform: unknown) => ({ org_id: 3, platform: 'slack' })),
 }))
 
 vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage }))
 vi.mock('@/lib/db/queries/integrations', () => ({ getIntegrationByBotSecret }))
+vi.mock('@/lib/ingest/limits', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/ingest/limits')>()),
+  isIngestRateLimited: vi.fn(async () => false),
+}))
 
 describe('lib/slack/poller.ts no longer calls processCommunityMessage in-process', () => {
   it('does not import processCommunityMessage at all', () => {
@@ -65,14 +69,55 @@ describe('lib/slack/poller.ts no longer calls processCommunityMessage in-process
 describe('app/api/ingest/route.ts accepts an explicit platform instead of always hardcoding discord', () => {
   it('the Zod schema declares an optional platform field covering every known platform', () => {
     const src = read('app/api/ingest/route.ts')
-    expect(src).toMatch(/platform:\s*z\.enum\(\[[^\]]*'slack'[^\]]*\]\)\.optional\(\)/)
+    expect(src).toContain("const INGEST_PLATFORMS = ['discord', 'slack'] as const")
+    expect(src).toMatch(/platform:\s*z\.enum\(INGEST_PLATFORMS\)\.optional\(\)/)
   })
 
   it('defaults to discord when platform is omitted, for the existing Discord bot forwarding', () => {
     const src = read('app/api/ingest/route.ts')
-    expect(src).toContain("platform: platform ?? 'discord'")
+    expect(src).toContain("platform ?? allowedPlatform ?? 'discord'")
     // The old unconditional hardcode must be gone, not just supplemented
     expect(src).not.toContain("platform: 'discord',\n  }, orgId)")
+  })
+})
+
+describe('app/api/ingest/route.ts binds the forwarded platform to the credential', () => {
+  async function callRoute(body: Record<string, unknown>) {
+    const { POST } = await import('@/app/api/ingest/route')
+    return POST(
+      new Request('http://localhost/api/ingest', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer secret', 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+    )
+  }
+
+  beforeEach(() => processCommunityMessage.mockClear())
+
+  it('looks the secret up for the discord and slack integrations only', async () => {
+    await callRoute({ message_id: 'm', content: 'hello there friend', author_id: 'u', author_name: 'u', channel_id: 'c', platform: 'slack' })
+    expect(getIntegrationByBotSecret).toHaveBeenLastCalledWith('secret', ['discord', 'slack'])
+  })
+
+  it('rejects a platform that differs from the one the secret belongs to', async () => {
+    getIntegrationByBotSecret.mockResolvedValueOnce({ org_id: 3, platform: 'discord' })
+    const res = await callRoute({ message_id: 'm', content: 'hello there friend', author_id: 'u', author_name: 'u', channel_id: 'c', platform: 'slack' })
+    expect(res.status).toBe(403)
+    expect(processCommunityMessage).not.toHaveBeenCalled()
+  })
+
+  it('does not accept channels that have their own authenticated route (telegram, email, github, mcp)', async () => {
+    for (const platform of ['telegram', 'email', 'github', 'mcp']) {
+      const res = await callRoute({ message_id: 'm', content: 'hello there friend', author_id: 'u', author_name: 'u', channel_id: 'c', platform })
+      expect(res.status).toBe(400)
+    }
+    expect(processCommunityMessage).not.toHaveBeenCalled()
+  })
+
+  it('rejects a non-http(s) source_url', async () => {
+    const res = await callRoute({ message_id: 'm', content: 'hello there friend', author_id: 'u', author_name: 'u', channel_id: 'c', source_url: 'javascript:alert(1)' })
+    expect(res.status).toBe(400)
   })
 })
 
@@ -109,6 +154,7 @@ describe('processCommunityMessage: platform actually threads through from the in
   })
 
   it('a Discord message with no platform field still defaults to "discord"', async () => {
+    getIntegrationByBotSecret.mockResolvedValueOnce({ org_id: 3, platform: 'discord' })
     await callRoute({
       message_id: 'm-1',
       content: 'a discord message, no platform field, old bot behavior',

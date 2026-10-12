@@ -3,8 +3,8 @@ import { getDb } from '@/lib/db/drizzle'
 import { getSLAConfig } from '@/lib/db/queries/sla'
 import type { Priority } from '@/types'
 
-export async function calculateDeadlines(priority: Priority, createdAt: Date = new Date()) {
-  const config = await getSLAConfig(priority)
+export async function calculateDeadlines(priority: Priority, orgId: number, createdAt: Date = new Date()) {
+  const config = await getSLAConfig(priority, orgId)
   if (!config) {
     return { sla_response_deadline: null, sla_resolve_deadline: null }
   }
@@ -18,7 +18,7 @@ export async function calculateDeadlines(priority: Priority, createdAt: Date = n
   }
 }
 
-export interface SlaBreachedTicket {
+interface SlaBreachedTicket {
   id: number
   org_ticket_number: number
 }

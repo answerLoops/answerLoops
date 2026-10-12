@@ -23,6 +23,10 @@ const { getTicketByThreadId, processCommunityMessage, getSlackPermalink, getInte
   getIntegrationByTeamId: vi.fn().mockResolvedValue(null),
 }))
 
+vi.mock('@/lib/ingest/limits', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/ingest/limits')>()),
+  isIngestRateLimited: vi.fn(async () => false),
+}))
 vi.mock('@/lib/db/queries/tickets', () => ({ getTicketByThreadId }))
 vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage }))
 vi.mock('@/lib/slack/permalink', () => ({ getSlackPermalink }))
