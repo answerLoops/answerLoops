@@ -14,6 +14,7 @@ const h = vi.hoisted(() => ({
   replace: vi.fn(),
   params: { current: new URLSearchParams() },
   onCountsChange: { current: null as null | ((c: { pending: number }) => void) },
+  onAdded: { current: null as null | (() => void) },
 }))
 
 vi.mock('next/navigation', () => ({
@@ -31,6 +32,12 @@ vi.mock('@/app/(dashboard)/kb/coverage-tab', () => ({
 }))
 vi.mock('@/components/dashboard/notion-kb-section', () => ({
   NotionKBSection: () => <div data-testid="notion-section" />,
+}))
+vi.mock('@/components/dashboard/add-knowledge-section', () => ({
+  AddKnowledgeSection: (props: { onAdded?: () => void }) => {
+    h.onAdded.current = props.onAdded ?? null
+    return <div data-testid="add-knowledge-section" />
+  },
 }))
 vi.mock('@/lib/actions/ingest-url', () => ({ ingestUrlAction: vi.fn() }))
 vi.mock('@/lib/kb/sync-client', () => ({ runKbSync: vi.fn() }))
@@ -65,6 +72,7 @@ beforeEach(() => {
   cleanup()
   vi.clearAllMocks()
   h.onCountsChange.current = null
+  h.onAdded.current = null
   route(() => json({ counts: { pending: 0 } }))
 })
 
@@ -178,5 +186,31 @@ describe('KB page: clicking tabs updates the URL', () => {
     await renderPage('foo=bar')
     await userEvent.click(tab('Review'))
     expect(h.replace).toHaveBeenCalledWith('/kb?foo=bar&tab=review', { scroll: false })
+  })
+})
+
+describe('KB page: add-knowledge form', () => {
+  it('shows the form on the Manage tab', async () => {
+    await renderPage()
+    expect(screen.getByTestId('add-knowledge-section')).toBeTruthy()
+  })
+
+  it('hides the form on the Review and Coverage tabs', async () => {
+    await renderPage('tab=review')
+    expect(screen.queryByTestId('add-knowledge-section')).toBeNull()
+    cleanup()
+    await renderPage('tab=coverage')
+    expect(screen.queryByTestId('add-knowledge-section')).toBeNull()
+  })
+
+  it('reloads the article list after an article is added', async () => {
+    await renderPage()
+    const listCalls = () => h.fetchMock.mock.calls.filter(([url]) => url === '/api/kb').length
+    const before = listCalls()
+    expect(h.onAdded.current).toBeTypeOf('function')
+    await act(async () => {
+      h.onAdded.current?.()
+    })
+    await waitFor(() => expect(listCalls()).toBe(before + 1))
   })
 })

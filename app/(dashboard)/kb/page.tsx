@@ -9,6 +9,7 @@ import { ingestUrlAction } from '@/lib/actions/ingest-url'
 import type { IngestUrlResult } from '@/lib/actions/ingest-url'
 import { runKbSync } from '@/lib/kb/sync-client'
 import { NotionKBSection } from '@/components/dashboard/notion-kb-section'
+import { AddKnowledgeSection } from '@/components/dashboard/add-knowledge-section'
 import { CoverageTab } from './coverage-tab'
 import { ReviewTab } from './review-tab'
 import type { ReviewCounts } from '@/lib/db/queries/kb-review'
@@ -702,6 +703,7 @@ export default function KBPage() {
       ) : (
         <>
 
+      <AddKnowledgeSection onAdded={loadAll} />
       <GitHubKBSection onSynced={loadAll} />
       <NotionKBSection onSynced={() => { loadAll(); refreshSources() }} />
       <FileUploadSection onImported={() => { loadAll(); refreshSources() }} />
