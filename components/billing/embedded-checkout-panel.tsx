@@ -33,12 +33,13 @@ const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-
 const GATEWAY_STATUSES = new Set([502, 503, 504])
 const GATEWAY_RETRY_DELAY_MS = 1500
 
-type PromoStatus = 'none' | 'invalid' | 'error' | 'applied' | 'no_card'
+type PromoStatus = 'none' | 'invalid' | 'error' | 'applied' | 'no_card' | 'rate_limited'
 
 const PROMO_MESSAGES: Record<PromoStatus, { text: string; good: boolean } | null> = {
   none: null,
   invalid: { text: 'That code is not valid.', good: false },
   error: { text: 'Could not check that code. Try again.', good: false },
+  rate_limited: { text: 'Too many attempts. Try again in a few minutes.', good: false },
   applied: { text: 'Code applied.', good: true },
   no_card: { text: 'Code applied. No card is needed.', good: true },
 }

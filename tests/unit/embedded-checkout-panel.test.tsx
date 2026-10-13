@@ -198,4 +198,19 @@ describe('EmbeddedCheckoutPanel — promo code field', () => {
 
     expect(screen.getByText(/no card is needed\. If the discount ever ends/i)).toBeTruthy()
   })
+
+  it('says to wait when attempts are limited, and keeps the card form mounted', async () => {
+    fetchMock.mockResolvedValueOnce(json({ clientSecret: 'cs_one', promoStatus: 'none' }))
+    renderPanel()
+    await screen.findByTestId('stripe-form')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Have a promo code?' }))
+    fireEvent.change(screen.getByLabelText('Promo code'), { target: { value: 'GUESS' } })
+    fetchMock.mockResolvedValueOnce(json({ clientSecret: 'cs_two', promoStatus: 'rate_limited' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    const message = await screen.findByText('Too many attempts. Try again in a few minutes.')
+    expect(message.className).toContain('text-red')
+    expect(await screen.findByTestId('stripe-form')).toBeTruthy()
+  })
 })
