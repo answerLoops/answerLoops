@@ -1,9 +1,11 @@
 'use server'
 
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { signIn, signOut } from '@/auth'
 import { getPlan, parseBillingInterval } from '@/lib/billing/plans'
 import { parsePromoCode } from '@/lib/billing/promo'
+import { parseSignInProvider } from '@/lib/auth/providers'
 
 async function getCallbackUrl(): Promise<string> {
   const hdrs = await headers()
@@ -57,8 +59,18 @@ async function getCallbackUrl(): Promise<string> {
   return '/checkout'
 }
 
-export async function loginWithGoogle(): Promise<void> {
-  await signIn('google', { redirectTo: await getCallbackUrl() })
+/**
+ * Starts the OAuth flow for one sign-in method.
+ *
+ * The provider id comes from a form value, so it is checked against the
+ * methods this deployment has configured before anything starts. An id that
+ * does not match goes back to the login page with a generic error rather than
+ * reaching the auth library.
+ */
+export async function loginWithProvider(providerId: string): Promise<void> {
+  const provider = parseSignInProvider(providerId)
+  if (!provider) redirect('/login?error=Default')
+  await signIn(provider, { redirectTo: await getCallbackUrl() })
 }
 
 export async function logout(): Promise<void> {
