@@ -12,6 +12,8 @@ const MOD = 'api/billing/checkout/embedded'
 const BodySchema = z.object({
   planId: z.string().min(1).max(64),
   interval: z.string().max(32).optional(),
+  // Validated by the lookup itself; a malformed value reports as an invalid code.
+  promoCode: z.string().max(128).optional(),
 })
 
 /**
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
     }
     const body = BodySchema.safeParse(raw)
     if (!body.success) return NextResponse.json({ error: 'Missing plan' }, { status: 400 })
-    const { planId, interval } = body.data
+    const { planId, interval, promoCode } = body.data
 
     // Narrowed here as well as on the page: this arrives from the client, and it
     // decides which Stripe price the customer is charged against. An
@@ -66,12 +68,13 @@ export async function POST(req: Request) {
       session.user.email ?? '',
       session.user.name ?? '',
       parsed,
+      promoCode,
     )
 
     if (!result.ok) {
       return NextResponse.json({ error: result.error }, { status: result.status })
     }
-    return NextResponse.json({ clientSecret: result.clientSecret })
+    return NextResponse.json({ clientSecret: result.clientSecret, promoStatus: result.promoStatus })
   } catch (err) {
     logger.error('failed to create embedded checkout session', { module: MOD, orgId, requestId: getRequestId(req), error: err })
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

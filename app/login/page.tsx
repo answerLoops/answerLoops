@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { parseBillingInterval } from '@/lib/billing/plans'
+import { parsePromoCode } from '@/lib/billing/promo'
 import { LoginForm } from '@/components/auth/login-form'
 import { Logo } from '@/components/logo'
 import { TRIAL_DAYS } from '@/lib/billing/plans'
@@ -25,12 +26,14 @@ interface Props {
     callbackUrl?: string
     plan?: string
     interval?: string
+    code?: string
     mode?: string
   }>
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { error, plan, interval, callbackUrl, mode } = await searchParams
+  const { error, plan, interval, code, callbackUrl, mode } = await searchParams
+  const promoCode = parsePromoCode(code)
 
   if (await auth()) {
     // An already-signed-in visitor clicking a pricing CTA lands here with a
@@ -45,11 +48,14 @@ export default async function LoginPage({ searchParams }: Props) {
     // when it is missing, so dropping it here would charge the monthly price
     // to somebody who clicked an annual card.
     const parsed = parseBillingInterval(interval)
+    const codeParam = promoCode ? `code=${encodeURIComponent(promoCode)}` : ''
     const resume = plan
       ? `/checkout?plan=${encodeURIComponent(plan)}${
           parsed ? `&interval=${parsed}` : ''
-        }`
-      : '/dashboard'
+        }${codeParam ? `&${codeParam}` : ''}`
+      : codeParam
+        ? `/checkout?${codeParam}`
+        : '/dashboard'
     redirect(resume)
   }
   const errorMessage = error
@@ -69,6 +75,7 @@ export default async function LoginPage({ searchParams }: Props) {
   const carried = new URLSearchParams()
   if (plan) carried.set('plan', plan)
   if (interval) carried.set('interval', interval)
+  if (promoCode) carried.set('code', promoCode)
   if (callbackUrl) carried.set('callbackUrl', callbackUrl)
   const toggleParams = new URLSearchParams(carried)
   if (!signingIn) toggleParams.set('mode', 'signin')

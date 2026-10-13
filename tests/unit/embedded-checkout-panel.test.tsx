@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, act } from '@testing-library/react'
+import { render, screen, waitFor, act, fireEvent } from '@testing-library/react'
 import { EmbeddedCheckoutPanel } from '@/components/billing/embedded-checkout-panel'
 import { PLANS } from '@/lib/billing/plans'
 
@@ -24,16 +24,19 @@ const html = (status: number) =>
 const plans = Object.values(PLANS)
 const fetchMock = vi.fn()
 
-function renderPanel() {
+function renderPanel(promoCode?: string) {
   return render(
     <EmbeddedCheckoutPanel
       plans={plans}
       initialPlanId={plans[0].id}
       initialInterval="monthly"
+      promoCode={promoCode}
       publishableKey="pk_test_placeholder"
     />,
   )
 }
+
+const lastBody = () => JSON.parse(fetchMock.mock.calls.at(-1)![1].body as string)
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true })
@@ -102,5 +105,97 @@ describe('EmbeddedCheckoutPanel — checkout session request', () => {
     renderPanel()
 
     expect(await screen.findByText(/check your connection/i)).toBeTruthy()
+  })
+})
+
+describe('EmbeddedCheckoutPanel — promo code field', () => {
+  it('hides the input behind a link and sends no code until one is applied', async () => {
+    fetchMock.mockResolvedValue(json({ clientSecret: 'cs_secret', promoStatus: 'none' }))
+    renderPanel()
+    await screen.findByTestId('stripe-form')
+
+    expect(screen.queryByLabelText('Promo code')).toBeNull()
+    expect(lastBody()).not.toHaveProperty('promoCode')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Have a promo code?' }))
+    expect(screen.getByLabelText('Promo code')).toBeTruthy()
+  })
+
+  it('requests a new session carrying the code when Apply is pressed, and says no card is needed', async () => {
+    fetchMock.mockResolvedValueOnce(json({ clientSecret: 'cs_one', promoStatus: 'none' }))
+    renderPanel()
+    await screen.findByTestId('stripe-form')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Have a promo code?' }))
+    fireEvent.change(screen.getByLabelText('Promo code'), { target: { value: 'FREEACCESS' } })
+    // Typing alone must not fire a request.
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+
+    fetchMock.mockResolvedValueOnce(json({ clientSecret: 'cs_two', promoStatus: 'no_card' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    expect(await screen.findByText('Code applied. No card is needed.')).toBeTruthy()
+    expect(lastBody()).toMatchObject({ promoCode: 'FREEACCESS' })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('confirms a partial discount without claiming the card is skipped', async () => {
+    fetchMock.mockResolvedValueOnce(json({ clientSecret: 'cs_one', promoStatus: 'none' }))
+    renderPanel()
+    await screen.findByTestId('stripe-form')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Have a promo code?' }))
+    fireEvent.change(screen.getByLabelText('Promo code'), { target: { value: 'HALFOFF' } })
+    fetchMock.mockResolvedValueOnce(json({ clientSecret: 'cs_two', promoStatus: 'applied' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    expect(await screen.findByText('Code applied.')).toBeTruthy()
+    expect(screen.queryByText(/no card/i)).toBeNull()
+  })
+
+  it('shows an invalid code in red and keeps the card form mounted', async () => {
+    fetchMock.mockResolvedValueOnce(json({ clientSecret: 'cs_one', promoStatus: 'none' }))
+    renderPanel()
+    await screen.findByTestId('stripe-form')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Have a promo code?' }))
+    fireEvent.change(screen.getByLabelText('Promo code'), { target: { value: 'NOPE' } })
+    fetchMock.mockResolvedValueOnce(json({ clientSecret: 'cs_two', promoStatus: 'invalid' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    const message = await screen.findByText('That code is not valid.')
+    expect(message.className).toContain('text-red')
+    expect(await screen.findByTestId('stripe-form')).toBeTruthy()
+  })
+
+  it('clears the code when the box is emptied and applied', async () => {
+    fetchMock.mockResolvedValue(json({ clientSecret: 'cs', promoStatus: 'applied' }))
+    renderPanel('HALFOFF')
+    await screen.findByText('Code applied.')
+    expect(lastBody()).toMatchObject({ promoCode: 'HALFOFF' })
+
+    fireEvent.change(screen.getByLabelText('Promo code'), { target: { value: '' } })
+    fetchMock.mockResolvedValue(json({ clientSecret: 'cs2', promoStatus: 'none' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Apply' }))
+
+    await waitFor(() => expect(lastBody()).not.toHaveProperty('promoCode'))
+    expect(screen.queryByText('Code applied.')).toBeNull()
+  })
+
+  it('opens the field already filled in, and applied, when the code came from the link', async () => {
+    fetchMock.mockResolvedValue(json({ clientSecret: 'cs', promoStatus: 'no_card' }))
+    renderPanel('FREEACCESS')
+
+    expect((screen.getByLabelText('Promo code') as HTMLInputElement).value).toBe('FREEACCESS')
+    expect(await screen.findByText('Code applied. No card is needed.')).toBeTruthy()
+    expect(lastBody()).toMatchObject({ promoCode: 'FREEACCESS' })
+  })
+
+  it('changes the "charged today?" answer only when the code removes the card', async () => {
+    fetchMock.mockResolvedValue(json({ clientSecret: 'cs', promoStatus: 'no_card' }))
+    renderPanel('FREEACCESS')
+    await screen.findByText('Code applied. No card is needed.')
+
+    expect(screen.getByText(/no card is needed\. If the discount ever ends/i)).toBeTruthy()
   })
 })

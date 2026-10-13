@@ -2,6 +2,7 @@ import Stripe from 'stripe'
 import { getStripe } from './stripe'
 import { STRIPE_FAILURE_STATUS } from './http-status'
 import { CHECKOUT_BRANDING, EMBEDDED_CHECKOUT_BRANDING } from './branding'
+import { resolvePromo, type PromoResolution } from './promo'
 import { getPlan, stripePriceFor, TRIAL_DAYS, type BillingInterval, type Plan } from './plans'
 import { getSubscription } from '@/lib/db/queries/billing'
 import { getDb } from '@/lib/db/drizzle'
@@ -45,9 +46,20 @@ const CANCEL_PATH = '/pricing'
 // (two attempts a few seconds apart still converge) while guaranteeing a
 // attempt outside that window gets a real new session.
 const IDEMPOTENCY_KEY_WINDOW_MS = 5 * 60_000
-function checkoutIdempotencyKey(orgId: number, planId: string, interval: BillingInterval): string {
+function checkoutIdempotencyKey(
+  orgId: number,
+  planId: string,
+  interval: BillingInterval,
+  promotionCodeId?: string,
+): string {
   const bucket = Math.floor(Date.now() / IDEMPOTENCY_KEY_WINDOW_MS)
-  return `checkout:${orgId}:${planId}:${interval}:${bucket}`
+  // Stripe rejects a reused key whose parameters differ. A session created with
+  // a pre-applied discount has different parameters from one without, so
+  // someone retrying with and without the code inside the window would
+  // otherwise hit that error. The suffix is added only when a code applies, so
+  // every key for an ordinary checkout is unchanged.
+  const promo = promotionCodeId ? `:${promotionCodeId}` : ''
+  return `checkout:${orgId}:${planId}:${interval}:${bucket}${promo}`
 }
 
 type CheckoutResult =
@@ -60,7 +72,7 @@ type CheckoutResult =
  * there is nowhere to send the browser.
  */
 type EmbeddedCheckoutResult =
-  | { ok: true; clientSecret: string }
+  | { ok: true; clientSecret: string; promoStatus: PromoResolution['status'] }
   | { ok: false; error: string; status: number }
 
 function baseUrl(): string {
@@ -208,6 +220,10 @@ export async function createEmbeddedCheckoutSession(
   fallbackEmail: string,
   fallbackName: string,
   interval: BillingInterval = 'monthly',
+  // A promotion code that arrived with the signup link. Only a code that
+  // covers the whole price changes anything; every other value, including a
+  // bad one, leaves checkout exactly as it was.
+  promoCode?: string | null,
 ): Promise<EmbeddedCheckoutResult> {
   const plan: Plan | null = getPlan(planId)
   if (!plan) return { ok: false, error: 'Unknown plan', status: 400 }
@@ -242,27 +258,59 @@ export async function createEmbeddedCheckoutSession(
     const stripe = getStripe()
     const customerId = await reusableCustomerId(stripe, existing?.stripeCustomerId ?? null, orgId)
     const base = baseUrl()
+    const resolved = await resolvePromo(stripe, promoCode)
 
-    const checkoutSession = await stripe.checkout.sessions.create({
-      // A new signup must not become a Stripe Customer merely by opening the
-      // payment form. Checkout creates the Customer when the subscription is
-      // completed; an existing subscriber keeps the stored Customer ID.
-      ...(customerId ? { customer: customerId } : { customer_email: email }),
-      mode: 'subscription',
-      // 'embedded_page', not 'embedded': the pinned API version
-      // (2026-08-26.dahlia, see lib/billing/stripe.ts) renamed the ui_mode
-      // values, and most documentation and examples still show the old names.
-      ui_mode: 'embedded_page',
-      line_items: [{ price: priceId, quantity: 1 }],
-      return_url: `${base}/start-trial?checkout=success`,
-      metadata: { org_id: String(orgId), plan_id: plan.id },
-      subscription_data: {
-        trial_period_days: TRIAL_DAYS,
+    const createSession = (promo: PromoResolution) => {
+      const discount = promo.status === 'applied' || promo.status === 'no_card' ? promo : null
+      const noCard = promo.status === 'no_card'
+      return stripe.checkout.sessions.create({
+        // A new signup must not become a Stripe Customer merely by opening the
+        // payment form. Checkout creates the Customer when the subscription is
+        // completed; an existing subscriber keeps the stored Customer ID.
+        ...(customerId ? { customer: customerId } : { customer_email: email }),
+        mode: 'subscription',
+        // 'embedded_page', not 'embedded': the pinned API version
+        // (2026-08-26.dahlia, see lib/billing/stripe.ts) renamed the ui_mode
+        // values, and most documentation and examples still show the old names.
+        ui_mode: 'embedded_page',
+        line_items: [{ price: priceId, quantity: 1 }],
+        return_url: `${base}/start-trial?checkout=success`,
         metadata: { org_id: String(orgId), plan_id: plan.id },
-      },
-      allow_promotion_codes: true,
-      branding_settings: EMBEDDED_CHECKOUT_BRANDING,
-    }, { idempotencyKey: checkoutIdempotencyKey(orgId, plan.id, interval) })
+        subscription_data: {
+          trial_period_days: TRIAL_DAYS,
+          metadata: { org_id: String(orgId), plan_id: plan.id },
+          // With no card on file, the end of the trial (or of a limited
+          // discount) must produce an invoice that can be paid, not a silent
+          // cancellation: 'cancel' and 'pause' would end the subscription of
+          // someone who owes nothing yet.
+          ...(noCard && {
+            trial_settings: { end_behavior: { missing_payment_method: 'create_invoice' as const } },
+          }),
+        },
+        // Codes are entered in the field on our checkout page and applied here,
+        // so Stripe's own promotion-code box is off for this flow. A code typed
+        // into that box would arrive after the session exists, too late to
+        // decide whether a card is needed.
+        ...(discount && { discounts: [{ promotion_code: discount.promotionCodeId }] }),
+        ...(noCard && { payment_method_collection: 'if_required' as const }),
+        branding_settings: EMBEDDED_CHECKOUT_BRANDING,
+      }, { idempotencyKey: checkoutIdempotencyKey(orgId, plan.id, interval, discount?.promotionCodeId) })
+    }
+
+    let promoStatus: PromoResolution['status'] = resolved.status
+    let checkoutSession: Stripe.Checkout.Session
+    try {
+      checkoutSession = await createSession(resolved)
+    } catch (err) {
+      // A code can be real yet still refused for this customer (limited to
+      // first-time customers, below a minimum amount). That is the code's
+      // problem, not a billing fault: carry on without it and say so.
+      const hasDiscount = resolved.status === 'applied' || resolved.status === 'no_card'
+      if (!hasDiscount || !(err instanceof Stripe.errors.StripeInvalidRequestError)) throw err
+      logger.warn('Stripe refused a valid promotion code for this checkout', { module: MOD, orgId, error: err })
+      promoStatus = 'invalid'
+      checkoutSession = await createSession({ status: 'invalid' })
+    }
 
     if (!checkoutSession.client_secret) {
       logger.error('Stripe returned an embedded session with no client secret', {
@@ -273,7 +321,7 @@ export async function createEmbeddedCheckoutSession(
       return { ok: false, error: 'Could not start checkout. Try again.', status: STRIPE_FAILURE_STATUS }
     }
 
-    return { ok: true, clientSecret: checkoutSession.client_secret }
+    return { ok: true, clientSecret: checkoutSession.client_secret, promoStatus }
   } catch (err) {
     logger.error('Stripe embedded checkout session creation failed', {
       module: MOD,

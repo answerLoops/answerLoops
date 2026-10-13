@@ -3,6 +3,7 @@
 import { headers } from 'next/headers'
 import { signIn, signOut } from '@/auth'
 import { getPlan, parseBillingInterval } from '@/lib/billing/plans'
+import { parsePromoCode } from '@/lib/billing/promo'
 
 async function getCallbackUrl(): Promise<string> {
   const hdrs = await headers()
@@ -20,12 +21,20 @@ async function getCallbackUrl(): Promise<string> {
     // The billing interval is narrowed the same way and for the same reason —
     // it also lands in the redirect, and downstream it selects which Stripe
     // price the person is charged.
+    //
+    // A promotion code rides along the same way, narrowed to its allowed shape
+    // because it too lands in the redirect.
     const requestedPlan = url.searchParams.get('plan')
+    const promoCode = parsePromoCode(url.searchParams.get('code'))
+    const codeParam = promoCode ? `code=${encodeURIComponent(promoCode)}` : ''
     if (requestedPlan && getPlan(requestedPlan)) {
       const interval = parseBillingInterval(url.searchParams.get('interval'))
-      const target = `/checkout?plan=${encodeURIComponent(requestedPlan)}`
-      return interval ? `${target}&interval=${interval}` : target
+      let target = `/checkout?plan=${encodeURIComponent(requestedPlan)}`
+      if (interval) target += `&interval=${interval}`
+      if (codeParam) target += `&${codeParam}`
+      return target
     }
+    if (codeParam) return `/checkout?${codeParam}`
 
     const cb = url.searchParams.get('callbackUrl')
     // Only allow same-origin relative paths to prevent open-redirect

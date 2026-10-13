@@ -141,7 +141,7 @@ describe('new checkout customer lifecycle', () => {
 
       const result = await createEmbeddedCheckoutSession(42, 'standard', 'owner@example.com', 'Owner')
 
-      expect(result).toEqual({ ok: true, clientSecret: 'cs_test_secret' })
+      expect(result).toEqual({ ok: true, clientSecret: 'cs_test_secret', promoStatus: 'none' })
       expect(createSession.mock.calls[0][0]).toMatchObject({ customer_email: 'owner@example.com' })
       expect(createSession.mock.calls[0][0]).not.toHaveProperty('customer')
     })
