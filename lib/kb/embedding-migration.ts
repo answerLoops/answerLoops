@@ -1,5 +1,6 @@
 import { embedMany, type EmbeddingModel } from 'ai'
-import { openai, createOpenAI } from '@ai-sdk/openai'
+import { openai } from '@ai-sdk/openai'
+import { ownEmbeddingModel } from '@/lib/ai/models'
 import { sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/drizzle'
 import { getOrgAIConfig } from '@/lib/db/queries/ai-config'
@@ -8,7 +9,6 @@ import { getPlatformModel, platformEmbedding } from '@/lib/ai/platform-models'
 import { getDeploymentMode } from '@/lib/billing/plans'
 import { getBillingTier } from '@/lib/billing/platform-ai-budget'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/model-defaults'
-import { createSafeProviderFetch } from '@/lib/ai/safe-provider-fetch'
 import { clampIngestContent } from '@/lib/ingest/limits'
 import { logger } from '@/lib/logger'
 
@@ -169,12 +169,7 @@ export async function runEmbeddingMigration(orgId: number): Promise<{ staged: nu
 
     let model: EmbeddingModel
     if (target.own && cfg) {
-      const embKey = cfg.embedding_api_key ?? (cfg.chat_provider === 'openai' ? cfg.chat_api_key : null)
-      model = createOpenAI({
-        apiKey: embKey ?? undefined,
-        baseURL: cfg.embedding_base_url ?? undefined,
-        ...(cfg.embedding_base_url ? { fetch: createSafeProviderFetch() } : {}),
-      }).embedding(target.modelId)
+      model = ownEmbeddingModel(cfg, target.modelId)
     } else {
       model = selfHosted ? openai.embedding(target.modelId) : platformEmbedding(target.modelId)
     }

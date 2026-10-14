@@ -102,3 +102,36 @@ describe('auth.ts PUBLIC_PATHS covers every self-authenticating API route', () =
     }
   })
 })
+
+describe('auth.ts PUBLIC_PATHS covers every route the bot calls with BOT_SECRET', () => {
+  // The bot process has no session; it authenticates with BOT_SECRET, checked
+  // inside the route by isPlatformBotRequest. A route like that which is not
+  // in PUBLIC_PATHS is 401'd by the session proxy before its own check runs,
+  // so the bot's sweep silently does nothing. Derived from the source tree,
+  // so a new bot route can't be added without being covered.
+  const authSrc = fs.readFileSync(path.join(process.cwd(), 'auth.ts'), 'utf-8')
+  const match = authSrc.match(/const PUBLIC_PATHS = \[([\s\S]*?)\]/)
+  if (!match) throw new Error('Could not find PUBLIC_PATHS in auth.ts')
+  const publicPaths = match[1].split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean)
+
+  function routeFiles(dir: string): string[] {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const full = path.join(dir, e.name)
+      if (e.isDirectory()) return routeFiles(full)
+      return e.name === 'route.ts' ? [full] : []
+    })
+  }
+
+  const botRoutes = routeFiles(path.join(process.cwd(), 'app/api'))
+    .filter((f) => fs.readFileSync(f, 'utf-8').includes('isPlatformBotRequest('))
+    .map((f) => '/' + path.relative(path.join(process.cwd(), 'app'), path.dirname(f)).split(path.sep).join('/'))
+
+  it('finds the bot routes it is guarding', () => {
+    expect(botRoutes).toEqual(expect.arrayContaining(['/api/kb/sync-jobs/run', '/api/kb/embedding-migration/run']))
+  })
+
+  it.each(botRoutes)('%s is covered by PUBLIC_PATHS', (route) => {
+    const covered = publicPaths.some((p) => route === p || route.startsWith(`${p}/`))
+    expect(covered, `${route} checks BOT_SECRET itself but the session proxy will 401 the bot first`).toBe(true)
+  })
+})
