@@ -81,11 +81,21 @@ async function meteredPlatformModel<M>(
   return meter(build(modelId), { orgId, tier, modelId })
 }
 
+/**
+ * The key for a client built from a workspace's own settings: exactly what
+ * the workspace saved, or an empty string for a keyless endpoint. Always a
+ * string, so the provider SDKs use it as given rather than looking anywhere
+ * else for one.
+ */
+function workspaceKey(apiKey: string | null): string {
+  return apiKey ?? ''
+}
+
 /** The workspace's own embedding provider, serving the given model. */
-function ownEmbeddingModel(cfg: OrgAIConfig, modelId: string): EmbeddingModel {
+export function ownEmbeddingModel(cfg: OrgAIConfig, modelId: string): EmbeddingModel {
   const embKey = cfg.embedding_api_key ?? (cfg.chat_provider === 'openai' ? cfg.chat_api_key : null)
   return createOpenAI({
-    apiKey: embKey ?? undefined,
+    apiKey: workspaceKey(embKey),
     baseURL: cfg.embedding_base_url ?? undefined,
     ...(cfg.embedding_base_url ? { fetch: customEndpointFetch } : {}),
   }).embedding(modelId)
@@ -174,29 +184,29 @@ export async function embeddingModel(defaultId: string, orgId?: number): Promise
 export function buildChatProvider(provider: string, apiKey: string | null, baseUrl: string | null) {
   switch (provider) {
     case 'anthropic':
-      return createAnthropic({ apiKey: apiKey ?? undefined })
+      return createAnthropic({ apiKey: workspaceKey(apiKey) })
     case 'google':
-      return createGoogleGenerativeAI({ apiKey: apiKey ?? undefined })
+      return createGoogleGenerativeAI({ apiKey: workspaceKey(apiKey) })
     case 'groq':
-      return createGroq({ apiKey: apiKey ?? undefined })
+      return createGroq({ apiKey: workspaceKey(apiKey) })
     case 'mistral':
-      return createMistral({ apiKey: apiKey ?? undefined })
+      return createMistral({ apiKey: workspaceKey(apiKey) })
     // xAI's Grok API is OpenAI-compatible — no dedicated @ai-sdk/xai package
     // needed, just the OpenAI client pointed at xAI's base URL.
     case 'xai':
       return createOpenAI({
-        apiKey: apiKey ?? undefined,
+        apiKey: workspaceKey(apiKey),
         baseURL: baseUrl ?? XAI_BASE_URL,
         ...(baseUrl ? { fetch: customEndpointFetch } : {}),
       })
     case 'openai-compatible':
       return createOpenAI({
-        apiKey: apiKey ?? undefined,
+        apiKey: workspaceKey(apiKey),
         baseURL: baseUrl ?? undefined,
         ...(baseUrl ? { fetch: customEndpointFetch } : {}),
       })
     default:
-      return createOpenAI({ apiKey: apiKey ?? undefined })
+      return createOpenAI({ apiKey: workspaceKey(apiKey) })
   }
 }
 
@@ -212,7 +222,7 @@ export function buildEmbeddingModel(
   baseUrl: string | null,
 ): EmbeddingModel {
   return createOpenAI({
-    apiKey: apiKey ?? undefined,
+    apiKey: workspaceKey(apiKey),
     baseURL: baseUrl ?? undefined,
     ...(baseUrl ? { fetch: customEndpointFetch } : {}),
   }).embedding(modelId)
