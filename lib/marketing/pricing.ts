@@ -61,11 +61,11 @@ export const PRICING_FAQ = [
   },
   {
     q: 'What does the trial include?',
-    a: 'A hosted plan starts with a 14-day subscription trial, with the features and answer allowance of your selected plan. A card is required. Cancel before the trial ends to avoid the subscription charge. New workspaces also receive five AI-processed tickets without a provider key; this is a one-time allowance, separate from your plan trial.',
+    a: 'A hosted plan starts with a 14-day subscription trial, with the features and answer allowance of your selected plan. A card is required. Cancel before the trial ends to avoid the subscription charge. AI usage is included during the trial, up to a limit, so you can try everything without a provider key.',
   },
   {
     q: 'Are AI model costs included?',
-    a: 'After the five-ticket allowance, connect your AI provider account. Your provider bills model usage directly, including the calls used for drafting, review, and knowledge search. answerLoops does not add a markup. Supported provider accounts work on every plan; custom model endpoints require Enterprise or self-hosting.',
+    a: 'Hosted plans include AI usage up to a limit that resets each month. To remove the limit, connect your AI provider account; your provider then bills model usage directly, including the calls used for drafting, review, and knowledge search. answerLoops does not add a markup. Supported provider accounts work on every plan; custom model endpoints require Enterprise or self-hosting.',
   },
   {
     q: 'Can I change or cancel my plan?',

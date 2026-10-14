@@ -166,10 +166,10 @@ export default function PrivacyPolicyPage() {
               different services.
             </p>
             <p>
-              New hosted workspaces receive a one-time allowance of five
-              AI-processed tickets using answerLoops-provided model access.
-              After that allowance, your organization must configure its own
-              provider credentials to continue AI processing.
+              Hosted plans include AI processing through model access provided
+              by answerLoops, up to a usage limit. Your organization can instead
+              configure its own provider credentials, in which case content is
+              processed by that provider under its terms.
             </p>
             <p>
               Processing can include the question, relevant knowledge, recent

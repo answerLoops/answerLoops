@@ -49,7 +49,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Do I need an AI provider account?',
-    a: 'Your first five help tickets include AI processing at no extra charge. To continue, connect an account with a supported AI service (like Anthropic or OpenAI) that powers the answers. You pay that service directly for AI usage, separately from your answerLoops subscription.',
+    a: 'Hosted plans include AI usage up to a limit, during your trial and every month after, so you can start without setting anything up. To remove the limit, connect an account with a supported AI service (like Anthropic or OpenAI) and pay that service directly for the usage, separately from your answerLoops subscription.',
   },
   {
     q: 'Can I run answerLoops on my own infrastructure?',
