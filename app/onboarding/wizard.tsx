@@ -761,7 +761,7 @@ function SlackFlow({ onDone, onBack, slackConnected }: { onDone: () => void; onB
 
 type SeedMode = 'choose' | 'file' | 'url'
 
-function SeedStep({ onDone }: { onDone: () => void }) {
+export function SeedStep({ onDone }: { onDone: () => void }) {
   const [mode, setMode] = useState<SeedMode>('choose')
   const [uploading, setUploading] = useState(false)
   const [uploadResult, setUploadResult] = useState<{ error?: string; created?: number; filename?: string } | null>(null)
@@ -850,7 +850,8 @@ function SeedStep({ onDone }: { onDone: () => void }) {
                 <CheckIcon className="h-5 w-5 text-green-600" />
               </div>
               <p className="text-sm font-medium text-green-700">{uploadResult.created} chunks added from {uploadResult.filename}</p>
-              <p className="text-xs text-green-500">Continuing…</p></>
+              {/* A partial upload carries an error explaining why it stopped; stay here so it can be read. */}
+              {!uploadResult.error && <p className="text-xs text-green-500">Continuing…</p>}</>
             ) : (
               <><svg className="h-6 w-6 text-ink-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <path d="M12 16V8m0 0l-3 3m3-3l3 3M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1" strokeLinecap="round" strokeLinejoin="round"/>
@@ -860,6 +861,9 @@ function SeedStep({ onDone }: { onDone: () => void }) {
             )}
           </div>
           {uploadResult?.error && <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">{uploadResult.error}</p>}
+          {uploadResult?.error && !!uploadResult.created && (
+            <PrimaryButton type="button" label="Continue →" onClick={onDone} />
+          )}
         </div>
       )}
 

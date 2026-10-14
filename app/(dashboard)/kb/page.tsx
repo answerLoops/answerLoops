@@ -260,7 +260,8 @@ function FileUploadSection({ onImported }: { onImported: () => void }) {
       const res = await fetch('/api/kb/upload', { method: 'POST', body: fd })
       const data = await res.json() as { error?: string; created?: number; filename?: string }
       setResult(data)
-      if (!data.error) onImported()
+      // A partial upload still added sections, so refresh the list for those too.
+      if (!data.error || data.created) onImported()
     } catch {
       setResult({ error: 'Upload failed. Try again.' })
     } finally {

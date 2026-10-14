@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   createArticleFromSource: vi.fn(),
   createKBSource: vi.fn(),
   updateKBSourceChunkCount: vi.fn(),
+  chunks: [{ question: 'q', answer: 'a'.repeat(100) }] as { question: string; answer: string }[],
 }))
 
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
@@ -21,7 +22,7 @@ vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles, createAr
 vi.mock('@/lib/db/queries/kb-sources', () => ({ createKBSource: h.createKBSource, updateKBSourceChunkCount: h.updateKBSourceChunkCount }))
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 vi.mock('@/lib/ingest/url', () => ({
-  chunkMarkdown: () => [{ question: 'q', answer: 'a'.repeat(100) }],
+  chunkMarkdown: () => h.chunks,
 }))
 vi.mock('@/lib/ingest/file-parsers', () => ({
   detectFileType: (n: string) => (n.endsWith('.txt') ? 'txt' : null),
@@ -43,6 +44,7 @@ beforeEach(() => {
   h.assertEmbeddingAvailable.mockResolvedValue(undefined)
   h.countArticles.mockResolvedValue(0)
   h.createKBSource.mockResolvedValue({ id: 3 })
+  h.chunks = [{ question: 'q', answer: 'a'.repeat(100) }]
   h.embedText.mockResolvedValue([0.1])
 })
 
@@ -101,5 +103,48 @@ describe('app/api/kb/upload/route.ts', () => {
     expect((await res.json()).error).toContain('No AI provider')
     expect(h.createKBSource).not.toHaveBeenCalled()
     expect(h.embedText).not.toHaveBeenCalled()
+  })
+})
+
+describe('app/api/kb/upload/route.ts — included usage runs out mid-file', () => {
+  // Every remaining chunk would fail the same way, so the upload stops at the
+  // first one, keeps what it added, and says how far it got and why, instead
+  // of returning success with a smaller count.
+  const five = () => Array.from({ length: 5 }, (_, i) => ({ question: `q${i}`, answer: 'a'.repeat(100) }))
+
+  it('stops at the first chunk that runs out, keeps the rest, and reports both the count and the reason', async () => {
+    h.chunks = five()
+    const err = new PlatformBudgetExhaustedError(7, 'embedding', 'trial')
+    h.embedText.mockResolvedValueOnce([0.1]).mockResolvedValueOnce([0.1]).mockRejectedValue(err)
+    const { POST } = await import('@/app/api/kb/upload/route')
+    const res = await POST(upload(1024) as never)
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.created).toBe(2)
+    expect(body.error).toBe(`Added 2 of 5 sections from a.txt. ${err.userMessage}`)
+    expect(h.embedText).toHaveBeenCalledTimes(3)
+    expect(h.updateKBSourceChunkCount).toHaveBeenCalledWith(3, 2)
+  })
+
+  it('returns the reason as a 400 when nothing could be added', async () => {
+    h.chunks = five()
+    const err = new PlatformBudgetExhaustedError(7, 'embedding', 'plan')
+    h.embedText.mockRejectedValue(err)
+    const { POST } = await import('@/app/api/kb/upload/route')
+    const res = await POST(upload(1024) as never)
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toBe(err.userMessage)
+    expect(h.embedText).toHaveBeenCalledTimes(1)
+  })
+
+  it('other per-chunk errors are still skipped and the upload carries on', async () => {
+    h.chunks = five()
+    h.embedText.mockRejectedValueOnce(new Error('transient')).mockResolvedValue([0.1])
+    const { POST } = await import('@/app/api/kb/upload/route')
+    const res = await POST(upload(1024) as never)
+    const body = await res.json()
+    expect(res.status).toBe(200)
+    expect(body.created).toBe(4)
+    expect(body.error).toBeUndefined()
   })
 })

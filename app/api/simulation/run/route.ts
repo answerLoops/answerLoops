@@ -5,7 +5,8 @@ import { auth } from '@/auth'
 import { getDb } from '@/lib/db/drizzle'
 import { tickets, DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { desc, eq, and } from 'drizzle-orm'
-import { chatModel, DEFAULT_CHAT_MODEL } from '@/lib/ai/models'
+import { chatModel, DEFAULT_CHAT_MODEL, NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { assessAnswer, AUTO_DEFLECT_THRESHOLD } from '@/lib/ai/assess'
 import { searchArticles } from '@/lib/db/queries/kb'
 import { embedText } from '@/lib/ai/embed'
@@ -110,28 +111,37 @@ export async function POST(request: Request) {
 
       send({ type: 'start', total: rows.length })
 
-      // One Agent for the whole run — model/orgId are fixed per request, only
-      // the per-ticket KB context varies, which is passed as an instructions
-      // override on each generate() call rather than rebuilding the agent.
-      let simAgent: Agent
+      // The model is resolved like every other surface: the workspace's own
+      // provider (with the model picked here), or, without one, the included
+      // platform chat model, metered to the workspace's chat usage. It is
+      // resolved again for every ticket so each generation is checked against
+      // the budget, not just the first; the per-ticket KB context is passed
+      // as an instructions override on each generate() call.
+      const buildAgent = async () => new Agent({
+        id: 'simulation-agent',
+        name: 'simulation-agent',
+        instructions: 'You are a technical support agent. Answer the user\'s question concisely and accurately.',
+        model: (await chatModel(model, orgId)) as MastraModelConfig,
+      })
+
       try {
-        simAgent = new Agent({
-          id: 'simulation-agent',
-          name: 'simulation-agent',
-          instructions: 'You are a technical support agent. Answer the user\'s question concisely and accurately.',
-          // Resolved like every other surface: the workspace's own provider
-          // (with the model picked here), or, without one, the included
-          // platform chat model, metered to the workspace's chat usage.
-          model: (await chatModel(model, orgId)) as MastraModelConfig,
-        })
+        await buildAgent()
       } catch (err) {
         logger.error('simulation model resolution failed', { module: MOD, orgId, error: err })
-        send({ type: 'error', message: 'Failed to resolve an AI model for this org' })
+        send({
+          type: 'error',
+          message: err instanceof NoAIProviderConfiguredError
+            ? aiUnavailableMessage(err, 'No AI provider is set up for this workspace. Add one in Settings → AI Model to run a simulation.')
+            : 'Failed to resolve an AI model for this org',
+        })
         controller.close()
         return
       }
 
       const results: SimTicketResult[] = []
+      // Set when AI becomes unavailable mid-run (for example, included usage
+      // is used up): the run stops there and reports the tickets it finished.
+      let stoppedBecause: string | null = null
 
       for (let i = 0; i < rows.length; i++) {
         const ticket = rows[i]
@@ -139,6 +149,7 @@ export async function POST(request: Request) {
         const t0 = Date.now()
 
         try {
+          const simAgent = await buildAgent()
           let kbContext = ''
           send({ type: 'step', index: i + 1, total: rows.length, step: 'embedding', ticketId: ticket.id, preview })
           try {
@@ -177,6 +188,11 @@ export async function POST(request: Request) {
           results.push(result)
           send({ type: 'ticket_done', index: i + 1, total: rows.length, result })
         } catch (err) {
+          if (err instanceof NoAIProviderConfiguredError) {
+            stoppedBecause = aiUnavailableMessage(err, 'No AI provider is set up for this workspace. Add one in Settings → AI Model to run a simulation.')
+            logger.warn('simulation stopped: AI unavailable', { module: MOD, orgId, completed: results.length })
+            break
+          }
           logger.error('simulation ticket failed', { module: MOD, ticketId: ticket.id, error: err })
           const result: SimTicketResult = {
             id: ticket.id,
@@ -198,6 +214,12 @@ export async function POST(request: Request) {
         }
       }
 
+      if (results.length === 0) {
+        send({ type: 'error', message: stoppedBecause ?? 'Simulation produced no results' })
+        controller.close()
+        return
+      }
+
       const wouldDeflect = results.filter(r => r.simWouldDeflect).length
       const actualDeflected = results.filter(r => r.actualWouldDeflect).length
       const matched = results.filter(r => r.match).length
@@ -216,6 +238,8 @@ export async function POST(request: Request) {
 
       logger.info('simulation complete', { module: MOD, orgId, total: results.length, matchRate: summary.matchRate })
       send({ type: 'done', summary, results, config: { count, model, threshold } })
+      // The client shows the partial results above, then this reason.
+      if (stoppedBecause) send({ type: 'error', message: stoppedBecause })
       controller.close()
     },
   })

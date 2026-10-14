@@ -112,6 +112,9 @@ export async function POST(req: NextRequest) {
 
   const budget = Math.min(chunks.length, MAX_ARTICLES_PER_ORG - existing)
   let created = 0
+  // Set when AI becomes unavailable mid-file (for example, included usage is
+  // used up): every remaining chunk would fail the same way, so stop there.
+  let stoppedBecause: string | null = null
 
   for (const chunk of chunks.slice(0, budget)) {
     try {
@@ -125,13 +128,28 @@ export async function POST(req: NextRequest) {
       }, orgId)
       created++
     } catch (err) {
+      if (err instanceof NoAIProviderConfiguredError) {
+        stoppedBecause = aiUnavailableMessage(err, 'No AI provider is set up for this workspace. Add one in Settings → AI Model, then upload again.')
+        break
+      }
       logger.warn('chunk embed failed', { module: MOD, sourceId: source.id, error: err })
     }
   }
 
   await updateKBSourceChunkCount(source.id, created)
 
-  logger.info('file ingested', { module: MOD, filename: file.name, created, sourceId: source.id })
+  logger.info('file ingested', { module: MOD, filename: file.name, created, sourceId: source.id, stopped: !!stoppedBecause })
+
+  if (stoppedBecause) {
+    if (created === 0) return Response.json({ error: stoppedBecause }, { status: 400 })
+    // Some of the file made it in: keep it and say how far the upload got.
+    return Response.json({
+      created,
+      sourceId: source.id,
+      filename: file.name,
+      error: `Added ${created} of ${budget} sections from ${file.name}. ${stoppedBecause}`,
+    })
+  }
 
   return Response.json({ created, sourceId: source.id, filename: file.name })
 }
