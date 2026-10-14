@@ -9,6 +9,8 @@ const MOD = 'ai/test-connection'
 export interface AIConnectionCheck {
   ok: boolean
   error?: string
+  /** Shown in place of "connection OK" when the check was not a live call. */
+  note?: string
 }
 
 export interface AIConnectionResult {
@@ -25,7 +27,11 @@ interface AIConnectionInput {
   embeddingModel: string
   embeddingApiKey: string | null
   embeddingBaseUrl: string | null
+  /** Knowledge-base processing will use included AI usage, so there is no embedding provider to call. */
+  skipEmbedding?: boolean
 }
+
+export const INCLUDED_EMBEDDINGS_NOTE = 'knowledge-base processing will use included AI usage. Add an OpenAI key under Embeddings to remove the limit.'
 
 const UNSAFE_URL_MESSAGE = 'The base URL must be a public https address (no credentials, no private or local hosts).'
 
@@ -56,7 +62,7 @@ function shortError(err: unknown): string {
  */
 export async function testAIProviderConnection(input: AIConnectionInput): Promise<AIConnectionResult> {
   if (MOCK_EXTERNALS) {
-    return { chat: { ok: true }, embedding: { ok: true } }
+    return { chat: { ok: true }, embedding: input.skipEmbedding ? { ok: true, note: INCLUDED_EMBEDDINGS_NOTE } : { ok: true } }
   }
 
   const chat: AIConnectionCheck = await (async () => {
@@ -80,6 +86,7 @@ export async function testAIProviderConnection(input: AIConnectionInput): Promis
   })()
 
   const embedding: AIConnectionCheck = await (async () => {
+    if (input.skipEmbedding) return { ok: true, note: INCLUDED_EMBEDDINGS_NOTE }
     try {
       if (input.embeddingBaseUrl) await assertPublicHttpsUrl(input.embeddingBaseUrl)
       const model = buildEmbeddingModel(input.embeddingModel, input.embeddingApiKey, input.embeddingBaseUrl)

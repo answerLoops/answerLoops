@@ -51,6 +51,7 @@ vi.mock('@/lib/actions/widget', () => ({
 vi.mock('@/lib/actions/ai-config', () => ({
   saveAIConfigAction: vi.fn(),
   clearAIConfigAction: vi.fn(),
+  includedEmbeddingsAvailableAction: vi.fn(async () => false),
 }))
 vi.mock('@/lib/actions/roi', () => ({ saveROIConfigAction: vi.fn() }))
 vi.mock('@/lib/actions/account', () => ({

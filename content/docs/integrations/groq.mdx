@@ -1,12 +1,16 @@
 ---
 title: Groq
-description: Use Groq's fast inference for answer generation, with an OpenAI key for embeddings.
+description: Use Groq's fast inference for answer generation. Knowledge-base processing (embeddings) runs on OpenAI.
 ---
 
 Groq runs open models (Llama, Gemma, Mixtral) on its own hardware at very low
-latency and cost. Good when you want quick, cheap drafts. This integration
-covers **chat only** — knowledge-base search still needs an OpenAI key for
-embeddings alongside it.
+latency and cost. Good when you want quick, cheap drafts. This integration covers **chat only**, because Groq doesn't offer embeddings.
+
+**OpenAI is the only provider that can handle knowledge-base processing
+(embeddings) today.** Google Gemini and Mistral are coming soon. On a hosted
+plan, knowledge-base processing runs on your plan's included AI usage until you
+add an OpenAI key under **Embeddings**, which removes that limit. Self-hosted
+installs need an OpenAI key (or a custom embedding endpoint).
 
 Available on every plan. Usage bills to your Groq account.
 
@@ -23,9 +27,11 @@ with `gsk_`.
    field suggests current options; see the
    [Groq models list](https://console.groq.com/docs/models) for exact names.
 4. **API key:** paste your `gsk_` key.
-5. **Embeddings:** leave the provider on OpenAI and enter an **OpenAI API key**
-   in the embedding key field — required, or knowledge-base search and KB
-   imports fail after you save.
+5. **Embeddings:** leave the provider on OpenAI. On a hosted plan the
+   **OpenAI API key** field is optional: leave it blank to use included AI
+   usage for knowledge-base processing, or add a key to remove the limit.
+   Self-hosted installs must enter one, or knowledge-base search and KB
+   imports fail after you save. answerLoops tells you if it's missing.
 6. Click **Test connection**, then **Save**.
 
 ## Models
@@ -39,4 +45,4 @@ with `gsk_`.
 ## Related
 
 - [AI Model settings](/docs/product/ai-config)
-- [OpenAI integration](/docs/integrations/openai) — for the embedding key
+- [OpenAI integration](/docs/integrations/openai) — for an OpenAI embedding key

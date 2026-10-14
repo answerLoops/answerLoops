@@ -27,6 +27,7 @@ vi.mock('@/lib/actions/ai-config', () => ({
   saveAIConfigAction: vi.fn(async () => null),
   clearAIConfigAction: vi.fn(async () => null),
   testAIConfigAction: vi.fn(),
+  includedEmbeddingsAvailableAction: vi.fn(async () => false),
 }))
 vi.mock('@/lib/actions/roi', () => ({ saveROIConfigAction: vi.fn() }))
 vi.mock('@/lib/actions/account', () => ({ deleteAccountAction: vi.fn(), getCurrentOrgName: vi.fn(async () => null) }))

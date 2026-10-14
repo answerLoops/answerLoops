@@ -6,7 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { updateSLAAction } from '@/lib/actions/sla'
 import { sendInviteAction, revokeInviteAction, removeMemberAction, transferOwnershipAction } from '@/lib/actions/invitations'
 import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction } from '@/lib/actions/widget'
-import { saveAIConfigAction, clearAIConfigAction, testAIConfigAction, listModelsAction } from '@/lib/actions/ai-config'
+import { saveAIConfigAction, clearAIConfigAction, testAIConfigAction, listModelsAction, includedEmbeddingsAvailableAction } from '@/lib/actions/ai-config'
 import type { AIConnectionResult } from '@/lib/ai/test-connection'
 import type { BudgetStatus } from '@/lib/billing/platform-ai-budget'
 import { saveROIConfigAction } from '@/lib/actions/roi'
@@ -424,6 +424,9 @@ export function AIModelSection() {
   const { toastMessage, showToast } = useToast()
   const [, startClearTransition] = useTransition()
   const [usageStatus, setUsageStatus] = useState<BudgetStatus | null>(null)
+  // True when knowledge-base processing can run on included AI usage, which
+  // makes the OpenAI embedding key optional for other chat providers.
+  const [includedEmbeddings, setIncludedEmbeddings] = useState(false)
   const formRef = useRef<HTMLFormElement>(null)
   const [testing, startTest] = useTransition()
   const [testResult, setTestResult] = useState<AIConnectionResult | null>(null)
@@ -516,6 +519,7 @@ export function AIModelSection() {
     fetch('/api/ai-config/usage-status')
       .then((r) => r.json())
       .then(setUsageStatus)
+    includedEmbeddingsAvailableAction().then(setIncludedEmbeddings, () => setIncludedEmbeddings(false))
   }, [])
 
   if (config === undefined) return <p className="text-sm text-gray-400">Loading…</p>
@@ -527,6 +531,7 @@ export function AIModelSection() {
   // hardcoded fallback list whenever they're available.
   const modelOptions = liveModels && liveModels.length > 0 ? liveModels : chatMeta.models
   const needsEmbedKey = chatProvider !== 'openai' || embeddingProvider === 'openai-compatible'
+  const embedsOnOpenAIWithOtherChat = embeddingProvider === 'openai' && chatProvider !== 'openai'
   const showForm = !configured || editing
 
   return (
@@ -724,7 +729,10 @@ export function AIModelSection() {
             <hr className="border-gray-100" />
 
             <div>
-              <p className="text-xs font-semibold text-gray-600 mb-2">Embeddings</p>
+              <p className="text-xs font-semibold text-gray-600 mb-1">Embeddings</p>
+              <p className="text-xs text-gray-500 mb-2">
+                OpenAI is the only provider that can handle knowledge-base processing (embeddings) today. Google Gemini and Mistral are coming soon.
+              </p>
               <div className="space-y-3">
                 <div>
                   <label className="block text-xs font-medium text-gray-600 mb-1">Embedding provider</label>
@@ -756,7 +764,9 @@ export function AIModelSection() {
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <label className="block text-xs font-medium text-gray-600">
-                        Embedding API key{chatProvider === 'openai' ? '' : ' (OpenAI key for embeddings)'}
+                        {embedsOnOpenAIWithOtherChat
+                          ? `OpenAI API key for embeddings${includedEmbeddings ? ' (optional)' : ''}`
+                          : 'Embedding API key'}
                       </label>
                       {configured && config.embedding_api_key_set
                         ? <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
@@ -773,6 +783,13 @@ export function AIModelSection() {
                       placeholder={configured && config.embedding_api_key_set ? 'Leave blank to keep current key' : 'sk-…'}
                       className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
                     />
+                    {embedsOnOpenAIWithOtherChat && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {includedEmbeddings
+                          ? 'Leave blank to use included AI usage for knowledge-base processing. Add a key to remove the limit.'
+                          : `Required: ${chatMeta.label} can't handle knowledge-base processing, so it needs an OpenAI key.`}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -805,7 +822,7 @@ export function AIModelSection() {
                   return (
                     <p key={k} className={check.ok ? 'text-green-700' : 'text-red-600'}>
                       <span className="font-medium capitalize">{k}:</span>{' '}
-                      {check.ok ? 'connection OK' : (check.error ?? 'failed')}
+                      {check.ok ? (check.note ?? 'connection OK') : (check.error ?? 'failed')}
                     </p>
                   )
                 })}

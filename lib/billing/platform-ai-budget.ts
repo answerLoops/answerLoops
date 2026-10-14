@@ -48,6 +48,16 @@ export async function getBillingTier(orgId: number): Promise<BudgetTier | null> 
   return tierForStatus(sub?.status)
 }
 
+/**
+ * Whether knowledge-base processing can fall back to included embeddings for
+ * this workspace: a hosted deployment, a live trial or paid plan, and an
+ * included embedding model configured.
+ */
+export async function includedEmbeddingsAvailable(orgId: number): Promise<boolean> {
+  if (getDeploymentMode() !== 'cloud' || !getPlatformModel('embedding')) return false
+  return (await getBillingTier(orgId)) !== null
+}
+
 type SpentRow = { spent: number | string | null }
 
 export async function getSpendMicros(orgId: number, tier: BudgetTier, kind: BudgetKind, now: Date = new Date()): Promise<number> {

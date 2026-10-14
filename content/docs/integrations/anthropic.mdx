@@ -1,11 +1,15 @@
 ---
 title: Anthropic
-description: Use Anthropic's Claude models for answer generation, with an OpenAI key for embeddings.
+description: Use Anthropic's Claude models for answer generation. Knowledge-base processing (embeddings) runs on OpenAI.
 ---
 
-Anthropic's Claude models generate the answers answerLoops drafts. Claude
-handles **chat only** — Anthropic has no embeddings API — so knowledge-base
-search still needs an OpenAI key for embeddings alongside it.
+Anthropic's Claude models generate the answers answerLoops drafts. Claude handles **chat only**, because Anthropic doesn't offer embeddings.
+
+**OpenAI is the only provider that can handle knowledge-base processing
+(embeddings) today.** Google Gemini and Mistral are coming soon. On a hosted
+plan, knowledge-base processing runs on your plan's included AI usage until you
+add an OpenAI key under **Embeddings**, which removes that limit. Self-hosted
+installs need an OpenAI key (or a custom embedding endpoint).
 
 Available on every plan. Usage bills to your Anthropic account.
 
@@ -23,12 +27,14 @@ create a key. Make sure the workspace has credit or billing configured.
    [Claude models list](https://docs.anthropic.com/en/docs/about-claude/models)
    for exact names.
 4. **API key:** paste your Anthropic key.
-5. **Embeddings:** leave the provider on OpenAI and enter an **OpenAI API key**
-   in the embedding key field. This is required — without it, every
-   knowledge-base search and every KB import fails after you save. answerLoops
-   tells you if it's missing.
-6. Click **Test connection** — it checks the Claude key and the OpenAI
-   embedding key separately — then **Save**.
+5. **Embeddings:** leave the provider on OpenAI. On a hosted plan the
+   **OpenAI API key** field is optional: leave it blank to use included AI
+   usage for knowledge-base processing, or add a key to remove the limit.
+   Self-hosted installs must enter one, or knowledge-base search and KB
+   imports fail after you save. answerLoops tells you if it's missing.
+6. Click **Test connection**. It checks the Claude key, and it checks the
+   OpenAI embedding key separately if you entered one (otherwise it tells you
+   knowledge-base processing will use included AI usage). Then **Save**.
 
 ## Models
 
@@ -39,6 +45,6 @@ create a key. Make sure the workspace has credit or billing configured.
 
 ## Related
 
-- [AI Model settings](/docs/product/ai-config) — the embedding-key requirement
-  and how provider switching is handled
-- [OpenAI integration](/docs/integrations/openai) — for the embedding key
+- [AI Model settings](/docs/product/ai-config) — how embeddings and included
+  usage work, and how provider switching is handled
+- [OpenAI integration](/docs/integrations/openai) — for an OpenAI embedding key

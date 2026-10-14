@@ -32,17 +32,26 @@ proxy) is part of **Custom AI model configuration**, which is included on Enterp
 | Provider | Chat | Embeddings |
 |---|---|---|
 | OpenAI | ✓ | ✓ (same key covers both) |
-| Anthropic | ✓ | — needs a separate OpenAI key for embeddings |
-| Google Gemini | ✓ | — separate OpenAI key |
-| Groq | ✓ | — separate OpenAI key |
-| Mistral | ✓ | — separate OpenAI key |
-| xAI (Grok) | ✓ | — separate OpenAI key |
+| Anthropic | ✓ | — (no embeddings API) |
+| Google Gemini | ✓ | Coming soon |
+| Groq | ✓ | — (no embeddings API) |
+| Mistral | ✓ | Coming soon |
+| xAI (Grok) | ✓ | — (no embeddings API) |
 | OpenAI‑compatible endpoint | ✓ (Enterprise) | ✓ (Enterprise) |
 
-In answerLoops, OpenAI is the named provider option for embeddings. If your chat provider is anything else,
-enter an **OpenAI API key under Embeddings** — otherwise knowledge‑base search
-and every ingest fails after you save. The form asks for it automatically and
-the save is rejected with a clear message if it's missing.
+**OpenAI is the only provider that can handle knowledge‑base processing
+(embeddings) today.** Google Gemini and Mistral are coming soon. Every other
+provider in the table covers answers only.
+
+If your chat provider isn't OpenAI:
+
+- **On a hosted plan**, the OpenAI key under **Embeddings** is optional. Leave
+  it blank and knowledge‑base processing runs on your plan's included AI usage.
+  Add an OpenAI key to remove that limit.
+- **On a self‑hosted install**, enter an **OpenAI API key under Embeddings** (or
+  use a custom embedding endpoint). Otherwise knowledge‑base search and every
+  ingest would fail, so the save is rejected with a clear message if it's
+  missing.
 
 ### Steps
 
@@ -54,12 +63,14 @@ the save is rejected with a clear message if it's missing.
    that goes stale between releases. If the live fetch fails (or before you've
    run it), Model ID falls back to a built‑in list of recent models, or you can
    type an ID directly with **Custom model ID…**.
-3. Pick the **embedding provider** and model. Add an OpenAI embedding key if the
-   chat provider isn't OpenAI.
+3. Pick the **embedding provider** and model. If the chat provider isn't
+   OpenAI, add an OpenAI embedding key (optional on a hosted plan, where
+   leaving it blank uses included AI usage).
 4. Click **Test connection** — this makes a one‑token call to each provider with
    the values you entered (nothing is saved yet) and reports `chat: connection
    OK` / `embedding: …` or a specific error (rejected key, unknown model,
-   unreachable endpoint).
+   unreachable endpoint). With no embedding key on a hosted plan, the embedding
+   line says knowledge‑base processing will use included AI usage instead.
 5. Click **Save**.
 
 ### Changing provider later

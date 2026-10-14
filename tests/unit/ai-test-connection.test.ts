@@ -59,4 +59,12 @@ describe('testAIProviderConnection', () => {
     expect(h.generateText).not.toHaveBeenCalled()
     vi.doUnmock('@/lib/mock-mode')
   })
+
+  it('reports included usage for the knowledge base instead of making an embedding call when told to skip it', async () => {
+    h.generateText.mockResolvedValue({ text: 'ok' })
+    const res = await testAIProviderConnection({ ...input, embeddingApiKey: null, skipEmbedding: true })
+    expect(h.embed).not.toHaveBeenCalled()
+    expect(res.chat).toEqual({ ok: true })
+    expect(res.embedding).toEqual({ ok: true, note: expect.stringMatching(/included AI usage/) })
+  })
 })

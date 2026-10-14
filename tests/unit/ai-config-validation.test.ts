@@ -135,4 +135,51 @@ describe('validateAIConfig', () => {
       validateAIConfig(cfg({ chat_provider: 'xai', chat_api_key: 'xai-test', embedding_api_key: 'sk-oai' }), null)
     ).toBeNull()
   })
+
+  // On a hosted plan with included AI usage, knowledge-base processing falls
+  // back to the included embeddings when the workspace has no embedding key
+  // of its own, so a non-OpenAI chat provider can be saved without one.
+  describe('with included embeddings available', () => {
+    const included = { includedEmbeddings: true }
+
+    it.each(['anthropic', 'google', 'groq', 'mistral', 'xai'])(
+      'accepts %s chat with no embedding key',
+      (provider) => {
+        expect(
+          validateAIConfig(cfg({ chat_provider: provider, chat_api_key: 'key', embedding_api_key: undefined }), null, included),
+        ).toBeNull()
+      },
+    )
+
+    it('accepts switching embeddings back to OpenAI with no key', () => {
+      expect(
+        validateAIConfig(
+          cfg({ chat_provider: 'anthropic', chat_api_key: undefined, embedding_provider: 'openai', embedding_api_key: undefined }),
+          existing({ chat_provider: 'anthropic', chat_api_key: 'sk-ant', embedding_provider: 'openai-compatible', embedding_base_url: 'https://e.example.com/v1' }),
+          included,
+        ),
+      ).toBeNull()
+    })
+
+    it('still requires a chat key for a named chat provider', () => {
+      expect(validateAIConfig(cfg({ chat_provider: 'anthropic', chat_api_key: undefined }), null, included))
+        .toMatch(/Add an API key for Anthropic/)
+    })
+
+    it('still requires a base URL for a custom embedding endpoint', () => {
+      expect(
+        validateAIConfig(cfg({ embedding_provider: 'openai-compatible', embedding_base_url: undefined }), null, included),
+      ).toMatch(/base URL is required/)
+    })
+  })
+
+  it('without included embeddings, the embedding-key rule still applies', () => {
+    expect(
+      validateAIConfig(
+        cfg({ chat_provider: 'anthropic', chat_api_key: 'sk-ant', embedding_api_key: undefined }),
+        null,
+        { includedEmbeddings: false },
+      ),
+    ).toMatch(/OpenAI embeddings need their own API key/)
+  })
 })

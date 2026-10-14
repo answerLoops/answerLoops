@@ -24,13 +24,26 @@ export interface AIConfigInput {
 /**
  * Reject configs that parse fine but can't actually run: a named provider with
  * no key, OpenAI embeddings with a non-OpenAI chat provider and no embedding
- * key, a custom endpoint with no base URL, and — the common footgun — changing
+ * key (unless included embeddings cover it), a custom endpoint with no base URL, and — the common footgun — changing
  * the provider while leaving the key field blank, which would otherwise reuse
  * the previous provider's key and 401 on every call.
  *
  * Returns an error message, or null when the config is usable.
  */
-export function validateAIConfig(d: AIConfigInput, existing: OrgAIConfig | null): string | null {
+export interface ValidationOptions {
+  /**
+   * True on a hosted workspace with included AI usage. Knowledge-base
+   * processing then falls back to the included embeddings when the workspace
+   * has no embedding key of its own, so that key becomes optional.
+   */
+  includedEmbeddings?: boolean
+}
+
+export function validateAIConfig(
+  d: AIConfigInput,
+  existing: OrgAIConfig | null,
+  { includedEmbeddings = false }: ValidationOptions = {},
+): string | null {
   const chatKeyPresent = !!d.chat_api_key || !!existing?.chat_api_key
   const embedKeyPresent = !!d.embedding_api_key || !!existing?.embedding_api_key
   const chatLabel = PROVIDER_LABEL[d.chat_provider] ?? d.chat_provider
@@ -46,6 +59,7 @@ export function validateAIConfig(d: AIConfigInput, existing: OrgAIConfig | null)
   }
   if (
     existing &&
+    !includedEmbeddings &&
     existing.embedding_provider !== d.embedding_provider &&
     d.embedding_provider === 'openai' &&
     !d.embedding_api_key &&
@@ -68,9 +82,10 @@ export function validateAIConfig(d: AIConfigInput, existing: OrgAIConfig | null)
   }
 
   // OpenAI embeddings only inherit the chat key when the chat provider is also
-  // OpenAI. Any other chat provider must supply a dedicated embedding key, or
-  // every KB search and ingest hits NoAIProviderConfiguredError after save.
-  if (d.embedding_provider === 'openai' && d.chat_provider !== 'openai' && !embedKeyPresent) {
+  // OpenAI. Without included embeddings to fall back on, any other chat
+  // provider must supply a dedicated embedding key, or every KB search and
+  // ingest hits NoAIProviderConfiguredError after save.
+  if (!includedEmbeddings && d.embedding_provider === 'openai' && d.chat_provider !== 'openai' && !embedKeyPresent) {
     return "OpenAI embeddings need their own API key when your chat provider isn't OpenAI — add one under Embeddings."
   }
 

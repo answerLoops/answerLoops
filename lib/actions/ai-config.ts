@@ -9,6 +9,7 @@ import { PLANS } from '@/lib/billing/plans'
 import { testAIProviderConnection, type AIConnectionResult } from '@/lib/ai/test-connection'
 import { validateAIConfig } from '@/lib/ai/config-validation'
 import { listModelsForProvider, ModelListError } from '@/lib/ai/list-models'
+import { includedEmbeddingsAvailable } from '@/lib/billing/platform-ai-budget'
 import { assertPublicHttpsUrl, UnsafeUrlError } from '@/lib/http/safe-url'
 
 const CHAT_PROVIDERS = ['openai', 'anthropic', 'google', 'groq', 'mistral', 'xai', 'openai-compatible'] as const
@@ -77,7 +78,7 @@ export async function saveAIConfigAction(
 
   const existing = await getOrgAIConfig(orgId)
 
-  const validationError = validateAIConfig(d, existing)
+  const validationError = validateAIConfig(d, existing, { includedEmbeddings: await includedEmbeddingsAvailable(orgId) })
   if (validationError) return { error: validationError }
 
   const entitlementError = await customEndpointEntitlementError(orgId, [d.chat_provider, d.embedding_provider])
@@ -141,6 +142,18 @@ export async function testAIConfigAction(
 
   const existing = await getOrgAIConfig(access.orgId)
 
+  const embeddingApiKey =
+    d.embedding_api_key ||
+    existing?.embedding_api_key ||
+    // OpenAI embeddings inherit the OpenAI chat key, matching lib/ai/models.ts
+    (d.embedding_provider === 'openai' && d.chat_provider === 'openai'
+      ? d.chat_api_key || existing?.chat_api_key || null
+      : null)
+  // With no OpenAI key to embed with, a hosted workspace's knowledge base runs
+  // on included usage, so there is no embedding provider of its own to check.
+  const skipEmbedding =
+    d.embedding_provider === 'openai' && !embeddingApiKey && (await includedEmbeddingsAvailable(access.orgId))
+
   const result = await testAIProviderConnection({
     chatProvider: d.chat_provider,
     chatModel: d.chat_model,
@@ -148,17 +161,22 @@ export async function testAIConfigAction(
     chatBaseUrl: d.chat_base_url || existing?.chat_base_url || null,
     embeddingProvider: d.embedding_provider,
     embeddingModel: d.embedding_model,
-    embeddingApiKey:
-      d.embedding_api_key ||
-      existing?.embedding_api_key ||
-      // OpenAI embeddings inherit the OpenAI chat key, matching lib/ai/models.ts
-      (d.embedding_provider === 'openai' && d.chat_provider === 'openai'
-        ? d.chat_api_key || existing?.chat_api_key || null
-        : null),
+    embeddingApiKey,
     embeddingBaseUrl: d.embedding_base_url || existing?.embedding_base_url || null,
+    skipEmbedding,
   })
 
   return { result }
+}
+
+/**
+ * Whether this workspace's knowledge base can run on included AI usage, which
+ * makes the OpenAI embedding key optional in the Settings form.
+ */
+export async function includedEmbeddingsAvailableAction(): Promise<boolean> {
+  const access = await resolveOrgForAIConfig()
+  if (!access.ok) return false
+  return includedEmbeddingsAvailable(access.orgId)
 }
 
 const ListModelsSchema = z.object({
