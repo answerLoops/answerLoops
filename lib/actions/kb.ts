@@ -6,8 +6,9 @@ import { requireOrgAccess } from '@/lib/auth/org'
 import { logger } from '@/lib/logger'
 import { getTicketById } from '@/lib/db/queries/tickets'
 import { countArticles, createArticle } from '@/lib/db/queries/kb'
-import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { embedTextWithModel } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
@@ -39,8 +40,8 @@ export async function promoteToKBAction(
   })()
 
   try {
-    const embedding = await embedText(`${question}\n\n${answer}`, orgId)
-    await createArticle({ question, answer, embedding, model: EMBEDDING_MODEL, sourceTicketId: ticket.id }, orgId)
+    const { embedding, model } = await embedTextWithModel(`${question}\n\n${answer}`, orgId)
+    await createArticle({ question, answer, embedding, model, sourceTicketId: ticket.id }, orgId)
   } catch (err) {
     logger.error('failed to promote ticket to knowledge base', { module: 'actions/kb', orgId, error: err })
     return { error: 'Could not add this answer to the knowledge base. Try again.' }
@@ -101,13 +102,13 @@ export async function addKnowledgeAction(
   try {
     // Same `question\n\nanswer` convention as promote-to-KB, file upload and
     // review-queue approval.
-    const embedding = await embedText(`${question}\n\n${answer}`, orgId)
-    const article = await createArticle({ question, answer, embedding, model: EMBEDDING_MODEL }, orgId)
+    const { embedding, model } = await embedTextWithModel(`${question}\n\n${answer}`, orgId)
+    const article = await createArticle({ question, answer, embedding, model }, orgId)
     refresh()
     return { ok: true, articleId: article.id }
   } catch (err) {
     if (err instanceof NoAIProviderConfiguredError) {
-      return { error: 'Connect an AI provider in Settings → AI Model first, so new articles can be made searchable.' }
+      return { error: aiUnavailableMessage(err, 'Connect an AI provider in Settings → AI Model first, so new articles can be made searchable.') }
     }
     logger.error('failed to add knowledge article', { module: 'actions/kb', orgId, error: err })
     return { error: 'Could not add this to the knowledge base. Try again.' }

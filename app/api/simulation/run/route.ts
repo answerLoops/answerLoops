@@ -119,7 +119,10 @@ export async function POST(request: Request) {
           id: 'simulation-agent',
           name: 'simulation-agent',
           instructions: 'You are a technical support agent. Answer the user\'s question concisely and accurately.',
-          model: (await chatModel(model, orgId, 'sandbox')) as MastraModelConfig,
+          // Resolved like every other surface: the workspace's own provider
+          // (with the model picked here), or, without one, the included
+          // platform chat model, metered to the workspace's chat usage.
+          model: (await chatModel(model, orgId)) as MastraModelConfig,
         })
       } catch (err) {
         logger.error('simulation model resolution failed', { module: MOD, orgId, error: err })
@@ -139,7 +142,7 @@ export async function POST(request: Request) {
           let kbContext = ''
           send({ type: 'step', index: i + 1, total: rows.length, step: 'embedding', ticketId: ticket.id, preview })
           try {
-            const vec = await embedText(ticket.content, orgId, 'sandbox')
+            const vec = await embedText(ticket.content, orgId)
             const articles = await searchArticles(vec, 3, orgId)
             if (articles.length) {
               kbContext = `\n\nKnowledge base:\n${articles.map(a => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n')}`

@@ -1,5 +1,5 @@
 import FirecrawlApp from '@mendable/firecrawl-js'
-import { embedText, assertEmbeddingAvailable, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { embedTextWithModel, assertEmbeddingAvailable } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { createArticle, createArticleFromSource, countArticles } from '@/lib/db/queries/kb'
 import { createKBSource, getKBSourceByFilename, getExistingSourceFilenames, updateKBSourceChunkCount } from '@/lib/db/queries/kb-sources'
@@ -126,14 +126,14 @@ async function saveChunks(chunks: Chunk[], orgId: number, sourceId?: number): Pr
   let lastError: unknown
   for (const chunk of budgeted) {
     try {
-      const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`, orgId)
+      const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
       if (sourceId != null) {
         await createArticleFromSource(
-          { question: chunk.question, answer: chunk.answer, embedding, model: EMBEDDING_MODEL, sourceId },
+          { question: chunk.question, answer: chunk.answer, embedding, model, sourceId },
           orgId,
         )
       } else {
-        await createArticle({ question: chunk.question, answer: chunk.answer, embedding, model: EMBEDDING_MODEL }, orgId)
+        await createArticle({ question: chunk.question, answer: chunk.answer, embedding, model }, orgId)
       }
       created++
     } catch (err) {

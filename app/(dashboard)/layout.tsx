@@ -8,14 +8,12 @@ import { SidebarNav } from '@/components/dashboard/sidebar-nav'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
 import { FeedbackWidget } from '@/components/feedback/feedback-widget'
 import { isFeedbackWidgetEnabled } from '@/lib/product-feedback/enabled'
-import { AITrialBanner } from '@/components/dashboard/ai-trial-banner'
+import { AIUsageBanner } from '@/components/dashboard/ai-usage-banner'
 import { DeflectionStatusBanner } from '@/components/dashboard/deflection-status-banner'
 import { logout } from '@/lib/actions/auth'
 import { auth } from '@/auth'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
-import { getDeploymentMode } from '@/lib/billing/plans'
-import { orgHasAIKey } from '@/lib/db/queries/ai-config'
-import { getPlatformKeyTrialStatus } from '@/lib/billing/platform-key-trial'
+import { getBudgetStatus } from '@/lib/billing/platform-ai-budget'
 import { listIntegrations } from '@/lib/db/queries/integrations'
 import { getRepos } from '@/lib/db/queries/github'
 import { MARKETING_URL } from '@/lib/site'
@@ -35,14 +33,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const orgId = session?.orgId ?? DEFAULT_ORG_ID
   const unreadCount = await getUnreadCount(orgId)
 
-  // Self-hosted deployments never see this — their "platform key" is
-  // already the self-hoster's own .env (see platformKeyAllowed in
-  // lib/ai/models.ts), so there's no trial to exhaust in the first place.
-  let trialStatus: { used: number; limit: number } | null = null
-  if (getDeploymentMode() !== 'self-hosted' && !(await orgHasAIKey(orgId))) {
-    const status = await getPlatformKeyTrialStatus(orgId)
-    if (status.exhausted) trialStatus = { used: status.used, limit: status.limit }
-  }
+  // Hosted workspaces without their own key run on included AI usage; the
+  // banner warns at 80% and when it's used up. Null for self-hosted, for a
+  // workspace with its own key, or with no live subscription.
+  const usageStatus = await getBudgetStatus(orgId)
 
   // Same "actually connected" check the Integrations page's tab-bar dots use —
   // a row can exist without the integration being genuinely connected (e.g.
@@ -122,7 +116,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <main className="dashboard-content relative flex-1 overflow-y-auto">
           <div className="dashboard-grid pointer-events-none absolute inset-0" />
           <div className="relative mx-auto w-full max-w-[1500px] p-4 sm:p-6 md:p-8 lg:p-10">
-            {trialStatus && <AITrialBanner used={trialStatus.used} limit={trialStatus.limit} />}
+            {usageStatus && <AIUsageBanner status={usageStatus} />}
             <DeflectionStatusBanner offPlatforms={offPlatforms} />
             {children}
           </div>

@@ -5,6 +5,7 @@ import { getIntegrationByBotSecret } from '@/lib/db/queries/integrations'
 import { searchArticles } from '@/lib/db/queries/kb'
 import { embedText } from '@/lib/ai/embed'
 import { chatModel, DEFAULT_CHAT_MODEL, NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { reserveGeneration, commitDeflection } from '@/lib/billing/usage'
 import { orgRateLimitPerMinute } from '@/lib/billing/entitlements-server'
@@ -92,7 +93,7 @@ If you cite a KB article, reference the question it answered. If you don't know,
     return Response.json({ answer: text })
   } catch (err) {
     if (err instanceof NoAIProviderConfiguredError) {
-      return Response.json({ error: 'No AI provider configured for this org — an admin needs to connect one in Settings → AI Model.' }, { status: 503 })
+      return Response.json({ error: aiUnavailableMessage(err, 'No AI provider configured for this org — an admin needs to connect one in Settings → AI Model.') }, { status: 503 })
     }
     logger.error('slash /ask AI failed', { module: MOD, error: err })
     return Response.json({ error: 'AI failed to generate an answer' }, { status: 500 })

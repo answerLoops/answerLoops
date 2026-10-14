@@ -4,6 +4,8 @@ import { planRequiredFor } from '@/lib/billing/entitlements'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { LockedFeature } from '@/components/billing/locked-feature'
 import { getOrgAIConfig } from '@/lib/db/queries/ai-config'
+import { getDeploymentMode } from '@/lib/billing/plans'
+import { getPlatformModel } from '@/lib/ai/platform-models'
 import SimulationClient from './simulation-client'
 
 export const dynamic = 'force-dynamic'
@@ -20,20 +22,20 @@ export default async function SimulationPage() {
     )
   }
 
-  // Simulation is the one surface allowed to fall back to the platform's own
-  // key (it's an explicit sandbox — see NoAIProviderConfiguredError in
-  // lib/ai/models.ts), so the model picker must only ever offer models that
-  // can actually run: the org's own configured provider/model if one exists,
-  // otherwise the platform-key fallback's provider (OpenAI, always — see
-  // chatModel()'s `openai(defaultId)` fallback) rather than every provider
-  // this app happens to support.
+  // The model picker only offers models that can actually run: the org's own
+  // configured provider/model if one exists. Without one, on hosted,
+  // chatModel() runs only the included platform chat model (metered to the
+  // workspace's included usage), so the picker is locked to it; self-hosted
+  // runs the operator's .env OpenAI key with a choice of OpenAI models.
   const cfg = await getOrgAIConfig(orgId).catch(() => null)
   const hasOrgKey = !!cfg?.chat_api_key || cfg?.chat_provider === 'openai-compatible'
+  const includedModel = !hasOrgKey && getDeploymentMode() === 'cloud' ? getPlatformModel('chat') : null
 
   return (
     <SimulationClient
       configuredProvider={hasOrgKey ? cfg!.chat_provider : null}
       configuredModel={hasOrgKey ? cfg!.chat_model : null}
+      includedModel={includedModel}
     />
   )
 }

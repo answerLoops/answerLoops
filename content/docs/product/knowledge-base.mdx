@@ -7,7 +7,9 @@ answerLoops searches the knowledge base for material relevant to a question and 
 
 ## Import methods
 
-There are four ways to add content to the knowledge base. URL import and file upload embed each chunk with your workspace's embedding provider, so on the hosted service configure one first under **Settings → AI Model**; without one, the import stops with a message asking you to add it.
+There are four ways to add content to the knowledge base. URL import and file upload embed each chunk for search. On a hosted plan this works without your own AI key, using your workspace's included AI usage; if that is used up for the month, the import stops with a message asking you to add your own provider under **Settings → AI Model**.
+
+If the embedding model behind your knowledge base changes, answerLoops re-embeds your content in the background from what you already added. Search keeps working throughout, and you don't need to re-upload anything.
 
 ### 1. URL import
 
@@ -122,9 +124,9 @@ Promoted articles appear in the Sources list with type `ticket`.
 
 Use the search bar at the top of the Knowledge Base page to find articles.
 
-**Semantic search** (default when an AI provider is configured): searches by meaning rather than exact words. Asking "how do I reset my password" will surface an article titled "Account recovery steps" even though the words don't match exactly.
+**Semantic search** (default when an AI provider is configured or included usage is available): searches by meaning rather than exact words. Asking "how do I reset my password" will surface an article titled "Account recovery steps" even though the words don't match exactly.
 
-**Keyword fallback** (when no AI key is configured): falls back to exact text matching. An amber warning banner appears at the top of the KB page to indicate that semantic search is unavailable.
+**Keyword fallback** (when no AI is available, for example included usage is used up and no key is configured): falls back to exact text matching. An amber warning banner appears at the top of the KB page to indicate that semantic search is unavailable.
 
 To clear a search and return to the full article list, click the **×** inside the search field or the **Clear** button.
 

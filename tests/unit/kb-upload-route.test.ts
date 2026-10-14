@@ -14,9 +14,8 @@ const h = vi.hoisted(() => ({
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/ai/embed', () => ({
-  embedText: h.embedText,
+  embedTextWithModel: async (text: string, orgId?: number) => ({ embedding: await h.embedText(text, orgId), model: 'm' }),
   assertEmbeddingAvailable: h.assertEmbeddingAvailable,
-  EMBEDDING_MODEL: 'm',
 }))
 vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles, createArticleFromSource: h.createArticleFromSource }))
 vi.mock('@/lib/db/queries/kb-sources', () => ({ createKBSource: h.createKBSource, updateKBSourceChunkCount: h.updateKBSourceChunkCount }))
@@ -29,7 +28,7 @@ vi.mock('@/lib/ingest/file-parsers', () => ({
   parseFile: async () => 'some text',
 }))
 
-import { NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { NoAIProviderConfiguredError, PlatformBudgetExhaustedError } from '@/lib/ai/models'
 
 function upload(size: number, extraHeaders: Record<string, string> = {}) {
   const fd = new FormData()
@@ -81,6 +80,17 @@ describe('app/api/kb/upload/route.ts', () => {
     expect(res.status).toBe(200)
     expect(h.embedText).toHaveBeenCalledWith(expect.any(String), 7)
     expect(h.createArticleFromSource).toHaveBeenCalled()
+  })
+
+  it('returns the included-usage message, and creates nothing, when knowledge-base processing is used up', async () => {
+    const err = new PlatformBudgetExhaustedError(7, 'embedding', 'plan')
+    h.assertEmbeddingAvailable.mockRejectedValue(err)
+    const { POST } = await import('@/app/api/kb/upload/route')
+    const res = await POST(upload(1024) as never)
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toBe(err.userMessage)
+    expect(h.createKBSource).not.toHaveBeenCalled()
+    expect(h.embedText).not.toHaveBeenCalled()
   })
 
   it('returns a clear error and creates nothing when no AI provider is configured', async () => {

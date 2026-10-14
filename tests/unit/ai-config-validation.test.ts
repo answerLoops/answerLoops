@@ -44,6 +44,16 @@ describe('validateAIConfig', () => {
       .toMatch(/Add an API key for Anthropic/)
   })
 
+  // A workspace on included AI usage runs the platform's models; choosing
+  // its own models takes its own provider. No named provider can be saved
+  // with just a model picked and no key.
+  it.each(['openai', 'anthropic', 'google', 'groq', 'mistral', 'xai'])(
+    'a model choice for %s cannot be saved without a key',
+    (provider) => {
+      expect(validateAIConfig(cfg({ chat_provider: provider, chat_model: 'any-model', chat_api_key: undefined }), null)).not.toBeNull()
+    },
+  )
+
   it('allows an update that keeps the stored key (blank field, same provider)', () => {
     expect(validateAIConfig(cfg({ chat_api_key: undefined }), existing())).toBeNull()
   })

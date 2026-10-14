@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
-import { chatModel, DEFAULT_FAST_MODEL, type ModelPurpose } from '@/lib/ai/models'
+import { chatModel, DEFAULT_FAST_MODEL } from '@/lib/ai/models'
 import { z } from 'zod'
 
 export const ASSESS_MODEL = DEFAULT_FAST_MODEL
@@ -29,16 +29,15 @@ interface AnswerAssessment {
 export async function assessAnswer(
   question: string,
   answer: string,
-  orgId?: number,
-  purpose: ModelPurpose = 'production'
+  orgId?: number
 ): Promise<AnswerAssessment> {
   // Agent instantiated per-call — see lib/ai/agent.ts for why (model is
-  // resolved per-org/per-purpose, so no single instance is valid across orgs).
+  // resolved per-org, so no single instance is valid across orgs).
   const assessAgent = new Agent({
     id: 'assess-agent',
     name: 'assess-agent',
     instructions: 'You are a strict reviewer grading a support answer before it is sent to a community member.',
-    model: (await chatModel(ASSESS_MODEL, orgId, purpose)) as MastraModelConfig,
+    model: (await chatModel(ASSESS_MODEL, orgId)) as MastraModelConfig,
   })
 
   const { object } = await assessAgent.generate(

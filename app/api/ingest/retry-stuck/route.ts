@@ -1,12 +1,8 @@
 import { z } from 'zod'
 import { claimStuckTicketForRetry } from '@/lib/db/queries/tickets'
 import { runBackgroundEnrichment } from '@/lib/ingest/pipeline'
-import { orgHasAIKey } from '@/lib/db/queries/ai-config'
-import { reservePlatformKeyTrial } from '@/lib/billing/platform-key-trial'
-import { getDeploymentMode } from '@/lib/billing/plans'
 import { isPlatformBotRequest } from '@/lib/http/bearer-auth'
 import { logger } from '@/lib/logger'
-import type { ModelPurpose } from '@/lib/ai/models'
 
 const MOD = 'api/ingest/retry-stuck'
 
@@ -49,18 +45,12 @@ export async function POST(request: Request) {
   if (!ticket) return Response.json({ ok: true, claimed: false })
   const ticketOrgId = org_id
 
-  let aiPurpose: ModelPurpose = 'production'
-  if (getDeploymentMode() !== 'self-hosted' && !(await orgHasAIKey(ticketOrgId))) {
-    const grantedTrial = await reservePlatformKeyTrial(ticketOrgId)
-    if (grantedTrial) aiPurpose = 'trial'
-  }
-
   logger.warn('retrying stuck pending ticket', { module: MOD, ticketId: ticket_id, orgId: ticketOrgId })
 
   // Awaited directly, not scheduled via after() — this route only answers
   // the sweep's own request, there's no separate caller waiting on a fast
   // ack the way a real webhook delivery needs.
-  await runBackgroundEnrichment(ticket, ticketOrgId, aiPurpose)
+  await runBackgroundEnrichment(ticket, ticketOrgId)
 
   return Response.json({ ok: true, claimed: true })
 }

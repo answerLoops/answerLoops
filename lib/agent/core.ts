@@ -1,6 +1,7 @@
 import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
 import { chatModel, DEFAULT_CHAT_MODEL, NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { embedText } from '@/lib/ai/embed'
 import { searchArticles, getKBContext } from '@/lib/db/queries/kb'
 import { getLatestFAQ } from '@/lib/db/queries/faq'
@@ -91,7 +92,7 @@ export async function searchKbCore(orgId: number, args: Record<string, unknown>)
     vector = await embedText(query, orgId)
   } catch (e) {
     if (e instanceof NoAIProviderConfiguredError) {
-      return err('No AI provider configured for this org — connect one in Settings → AI Model.')
+      return err(aiUnavailableMessage(e, 'No AI provider configured for this org — connect one in Settings → AI Model.'))
     }
     throw e
   }
@@ -313,7 +314,7 @@ export async function generateAnswerCore(
     text = result.text
   } catch (e) {
     if (e instanceof NoAIProviderConfiguredError) {
-      return err('No AI provider configured for this org — connect one in Settings → AI Model.')
+      return err(aiUnavailableMessage(e, 'No AI provider configured for this org — connect one in Settings → AI Model.'))
     }
     throw e
   }

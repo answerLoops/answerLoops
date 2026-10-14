@@ -32,7 +32,7 @@ const h = vi.hoisted(() => ({
 
 vi.mock('@/lib/mock-mode', () => ({ MOCK_EXTERNALS: false }))
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
-vi.mock('@/lib/ai/embed', () => ({ embedText: h.embedText, EMBEDDING_MODEL: 'test-embed-model' }))
+vi.mock('@/lib/ai/embed', () => ({ embedTextWithModel: async (...a: unknown[]) => ({ embedding: await h.embedText(...a), model: 'test-embed-model' }) }))
 vi.mock('@/lib/crypto/tokens', () => ({ decryptToken: h.decryptToken }))
 vi.mock('@/lib/ingest/url', () => ({ chunkMarkdown: h.chunkMarkdown }))
 vi.mock('@/lib/db/queries/notion', () => ({

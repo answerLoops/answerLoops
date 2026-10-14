@@ -41,7 +41,7 @@ describe('lib/ingest/pipeline.ts — ticket creation never depends on AI', () =>
     const s = src()
     const fnStart = s.indexOf('export async function runBackgroundEnrichment')
     const body = s.slice(fnStart)
-    const triageCallIdx = body.indexOf('triageMessage(content, orgId, aiPurpose)')
+    const triageCallIdx = body.indexOf('triageMessage(content, orgId)')
     const catchIdx = body.indexOf('if (!(err instanceof NoAIProviderConfiguredError)) throw err')
 
     expect(triageCallIdx).toBeGreaterThan(-1)
@@ -87,7 +87,7 @@ describe('lib/agent/core.ts — generate_answer and search_kb (MCP/Agent API)', 
     const nextFnIdx = s.indexOf('export async function', fnIdx + 1)
     const fnBody = s.slice(fnIdx, nextFnIdx > -1 ? nextFnIdx : undefined)
     expect(fnBody).toContain('e instanceof NoAIProviderConfiguredError')
-    expect(fnBody).toContain("return err('No AI provider configured")
+    expect(fnBody).toContain("return err(aiUnavailableMessage(e, 'No AI provider configured")
   })
 
   it('searchKbCore returns a structured err() instead of throwing on no-provider', () => {
@@ -96,7 +96,7 @@ describe('lib/agent/core.ts — generate_answer and search_kb (MCP/Agent API)', 
     const nextFnIdx = s.indexOf('export async function', fnIdx + 1)
     const fnBody = s.slice(fnIdx, nextFnIdx > -1 ? nextFnIdx : undefined)
     expect(fnBody).toContain('e instanceof NoAIProviderConfiguredError')
-    expect(fnBody).toContain("return err('No AI provider configured")
+    expect(fnBody).toContain("return err(aiUnavailableMessage(e, 'No AI provider configured")
   })
 })
 
@@ -158,18 +158,19 @@ describe('app/api/faq/generate/route.ts — clear 503 instead of an unhandled 50
     const catchIdx = s.indexOf('err instanceof NoAIProviderConfiguredError')
     expect(tryIdx).toBeGreaterThan(-1)
     expect(catchIdx).toBeGreaterThan(tryIdx)
-    const block = s.slice(catchIdx, catchIdx + 200)
+    const block = s.slice(catchIdx, catchIdx + 300)
     expect(block).toContain('503')
   })
 })
 
-describe('app/api/simulation/run/route.ts — the one production surface that may use the platform key', () => {
+describe('app/api/simulation/run/route.ts — resolves models like every other surface', () => {
   const src = () => readSrc('app/api/simulation/run/route.ts')
 
-  it('passes purpose \'sandbox\' to both chatModel and embedText', () => {
+  it('has no special platform-key purpose: without an own key it runs the included model, metered', () => {
     const s = src()
-    expect(s).toContain("chatModel(model, orgId, 'sandbox')")
-    expect(s).toContain("embedText(ticket.content, orgId, 'sandbox')")
+    expect(s).toContain('chatModel(model, orgId)')
+    expect(s).toContain('embedText(ticket.content, orgId)')
+    expect(s).not.toContain("'sandbox'")
   })
 })
 
@@ -192,5 +193,29 @@ describe('app/(dashboard)/simulation — model picker only offers runnable model
     const s = readSrc('app/(dashboard)/simulation/simulation-client.tsx')
     expect(s).toMatch(/!configuredProvider/)
     expect(s).toMatch(/No AI provider connected/i)
+  })
+})
+
+describe('user-facing AI-unavailable messages show the included-usage reason when that is the cause', () => {
+  it.each([
+    'app/api/kb/upload/route.ts',
+    'lib/actions/ingest-url.ts',
+    'app/api/kb/sync-jobs/run/route.ts',
+    'lib/agent/core.ts',
+    'app/api/slash/ask/route.ts',
+    'app/api/slash/summarize/route.ts',
+    'app/api/faq/generate/route.ts',
+  ])('%s uses aiUnavailableMessage', (file) => {
+    const s = readSrc(file)
+    expect(s).toContain("from '@/lib/ai/errors'")
+    expect(s).toContain('aiUnavailableMessage(')
+  })
+
+  it('lib/agent/core.ts uses it at both of its provider-error sites', () => {
+    expect(readSrc('lib/agent/core.ts').match(/aiUnavailableMessage\(/g)?.length).toBe(2)
+  })
+
+  it('the public widget keeps its generic message, with no internal usage detail for end users', () => {
+    expect(readSrc('app/api/widget/chat/route.ts')).not.toContain('aiUnavailableMessage(')
   })
 })

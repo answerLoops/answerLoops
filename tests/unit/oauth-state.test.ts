@@ -208,7 +208,7 @@ describe('AI config writes are owner/admin only', () => {
   })
 
   it('the ai-config read routes drop the default-org fallback', () => {
-    for (const f of ['app/api/ai-config/route.ts', 'app/api/ai-config/trial-status/route.ts']) {
+    for (const f of ['app/api/ai-config/route.ts', 'app/api/ai-config/usage-status/route.ts']) {
       const src = read(f)
       expect(src).toContain('requireOrgAccess()')
       expect(src).not.toContain('DEFAULT_ORG_ID')

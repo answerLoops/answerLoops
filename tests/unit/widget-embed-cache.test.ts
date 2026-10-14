@@ -1,13 +1,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const h = vi.hoisted(() => ({ embedText: vi.fn(async (t: string, orgId?: number) => [t.length, orgId ?? 0]) }))
-vi.mock('@/lib/ai/embed', () => ({ embedText: h.embedText }))
+const h = vi.hoisted(() => ({
+  embedText: vi.fn(async (t: string, orgId?: number) => [t.length, orgId ?? 0]),
+  pin: 'model-a' as string | null,
+}))
+vi.mock('@/lib/ai/embed', () => ({
+  embedTextWithModel: async (t: string, orgId?: number) => ({ embedding: await h.embedText(t, orgId), model: h.pin ?? 'model-a' }),
+}))
+vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => h.pin }))
 
 import { clearEmbedQueryCache, embedQueryCached } from '@/lib/widget/embed-cache'
 
 beforeEach(() => {
   clearEmbedQueryCache()
   h.embedText.mockClear()
+  h.pin = 'model-a'
 })
 
 describe('embedQueryCached', () => {
@@ -23,6 +30,21 @@ describe('embedQueryCached', () => {
     expect(h.embedText).toHaveBeenCalledTimes(2)
     expect(h.embedText).toHaveBeenLastCalledWith('pricing', 2)
     expect(a).not.toEqual(b)
+  })
+
+  it('stops serving a vector from the old model once the org moves to a new one', async () => {
+    await embedQueryCached('pricing', 1)
+    h.pin = 'model-b'
+    await embedQueryCached('pricing', 1)
+    expect(h.embedText).toHaveBeenCalledTimes(2)
+  })
+
+  it('caches the first vector for an org with no pin yet under the model that made it', async () => {
+    h.pin = null
+    await embedQueryCached('pricing', 1)
+    h.pin = 'model-a'
+    await embedQueryCached('pricing', 1)
+    expect(h.embedText).toHaveBeenCalledTimes(1)
   })
 
   it('expires entries after the TTL', async () => {

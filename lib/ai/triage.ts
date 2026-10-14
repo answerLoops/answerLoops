@@ -1,6 +1,6 @@
 import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
-import { chatModel, DEFAULT_FAST_MODEL, type ModelPurpose } from '@/lib/ai/models'
+import { chatModel, DEFAULT_FAST_MODEL } from '@/lib/ai/models'
 import { z } from 'zod'
 import type { TriageResult } from '@/types'
 
@@ -12,18 +12,14 @@ const TriageSchema = z.object({
   reasoning: z.string().max(400),
 })
 
-export async function triageMessage(
-  content: string,
-  orgId?: number,
-  purpose: ModelPurpose = 'production'
-): Promise<TriageResult> {
+export async function triageMessage(content: string, orgId?: number): Promise<TriageResult> {
   // Agent instantiated per-call — see lib/ai/agent.ts for why (model is
-  // resolved per-org/per-purpose, so no single instance is valid across orgs).
+  // resolved per-org, so no single instance is valid across orgs).
   const triageAgent = new Agent({
     id: 'triage-agent',
     name: 'triage-agent',
     instructions: 'You are a support triage assistant for a software product community.',
-    model: (await chatModel(DEFAULT_FAST_MODEL, orgId, purpose)) as MastraModelConfig,
+    model: (await chatModel(DEFAULT_FAST_MODEL, orgId)) as MastraModelConfig,
   })
 
   const { object } = await triageAgent.generate(

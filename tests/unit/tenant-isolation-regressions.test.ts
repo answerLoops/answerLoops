@@ -82,7 +82,7 @@ describe('Ingest pipeline threads orgId into dedupe and the AI agent', () => {
   it('runAIAgent receives the pipeline orgId', () => {
     const src = read('lib/ingest/pipeline.ts')
     expect(src).toMatch(
-      /runAIAgent\(ticketId, content, threadId \?\? channelId, priorAnswers, orgId, platform, category \?\? 'general_question', duplicates, orgTicketNumber, aiPurpose, channelId, threadId\)/
+      /runAIAgent\(ticketId, content, threadId \?\? channelId, priorAnswers, orgId, platform, category \?\? 'general_question', duplicates, orgTicketNumber, channelId, threadId\)/
     )
   })
 

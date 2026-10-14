@@ -531,7 +531,7 @@ export async function getStuckPendingTickets(thresholdMinutes: number): Promise<
 }
 
 // Atomically claims a stuck ticket for retry — single UPDATE...RETURNING,
-// same race-safe pattern as getNextOrgTicketNumber/reservePlatformKeyTrial.
+// same race-safe pattern as getNextOrgTicketNumber.
 // Returns null if another process already claimed it, or if the original
 // background job actually finished in the tiny window between the sweep's
 // discovery read and this claim (ai_draft_status is no longer 'pending') —

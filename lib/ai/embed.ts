@@ -1,39 +1,37 @@
 import { embed } from 'ai'
-import { embeddingModel, DEFAULT_EMBEDDING_MODEL, type ModelPurpose } from '@/lib/ai/models'
+import { embeddingModel, resolveEmbedding, DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/models'
 
 export const EMBEDDING_MODEL = DEFAULT_EMBEDDING_MODEL
 
-/**
- * Dimension of kb_articles.embedding_vec (lib/db/schema.ts), fixed
- * platform-wide so a single pgvector index can cover every org regardless
- * of which embedding_model an org has configured. text-embedding-3-small
- * (the platform default) and text-embedding-ada-002 both return this size
- * natively. An org that configures a different-dimension model (e.g.
- * text-embedding-3-large's default 3072) will get a hard failure creating
- * KB articles — Postgres rejects a wrong-length insert into a vector(1536)
- * column — rather than a silently-unindexed article. See lib/db/schema.ts's
- * comment on embeddingVec.
- */
-export const KB_EMBEDDING_DIMENSIONS = 1536
+// Dimension of kb_articles.embedding_vec; defined with the platform models
+// (lib/ai/platform-models.ts), which size every platform embedding to it.
+export { KB_EMBEDDING_DIMENSIONS } from '@/lib/ai/platform-models'
 
 /**
- * Embed a piece of text into a vector. Caller is responsible for combining the
- * fields worth embedding (e.g. summary + content) into `text`.
+ * Embed a piece of text and report which model produced the vector. Callers
+ * that store the vector must record that model: search only compares
+ * vectors from the workspace's pinned model (lib/ai/embedding-pin.ts).
+ * Caller is responsible for combining the fields worth embedding (e.g.
+ * summary + content) into `text`.
  */
-export async function embedText(text: string, orgId?: number, purpose: ModelPurpose = 'production'): Promise<number[]> {
-  const { embedding } = await embed({
-    model: await embeddingModel(EMBEDDING_MODEL, orgId, purpose),
-    value: text,
-  })
-  return embedding
+export async function embedTextWithModel(text: string, orgId?: number): Promise<{ embedding: number[]; model: string }> {
+  const { model, modelId } = await resolveEmbedding(EMBEDDING_MODEL, orgId)
+  const { embedding } = await embed({ model, value: text })
+  return { embedding, model: modelId }
+}
+
+/** Embed a piece of text into a vector, for callers that only search with it. */
+export async function embedText(text: string, orgId?: number): Promise<number[]> {
+  return (await embedTextWithModel(text, orgId)).embedding
 }
 
 /**
  * Resolve the org's embedding provider without calling it. Throws
- * NoAIProviderConfiguredError when the org has none and the deployment does
- * not allow the platform key, so bulk-import paths can refuse up front,
+ * NoAIProviderConfiguredError when the org has no usable provider, including
+ * when its included knowledge-base processing is used up
+ * (PlatformBudgetExhaustedError), so bulk-import paths can refuse up front,
  * before spending crawl or parse work or creating source rows.
  */
-export async function assertEmbeddingAvailable(orgId: number, purpose: ModelPurpose = 'production'): Promise<void> {
-  await embeddingModel(EMBEDDING_MODEL, orgId, purpose)
+export async function assertEmbeddingAvailable(orgId: number): Promise<void> {
+  await embeddingModel(EMBEDDING_MODEL, orgId)
 }

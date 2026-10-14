@@ -19,9 +19,15 @@ const STEP_LABEL: Record<string, string> = {
 }
 
 interface SimulationClientProps {
-  /** Org's configured chat provider, or null if no org key is configured (simulation then runs on the platform's own OpenAI key). */
+  /** Org's configured chat provider, or null if no org key is configured. */
   configuredProvider: string | null
   configuredModel: string | null
+  /**
+   * Hosted only: the included platform chat model a workspace without its
+   * own provider runs on. The picker is locked to it. Null with an own
+   * provider, and on self-hosted (which runs the .env key with a choice).
+   */
+  includedModel: string | null
 }
 
 interface ProgressEntry {
@@ -35,14 +41,14 @@ interface ProgressEntry {
   wouldDeflect?: boolean
 }
 
-export default function SimulationClient({ configuredProvider, configuredModel }: SimulationClientProps) {
+export default function SimulationClient({ configuredProvider, configuredModel, includedModel }: SimulationClientProps) {
   // Runnable models: the org's own provider's curated list if we have one
-  // for it, else just the org's single configured model, else the
-  // platform-key fallback's models (OpenAI only — that's the only provider
-  // chatModel()'s sandbox fallback ever actually calls).
+  // for it, else just the org's single configured model; without an own
+  // provider, the included model on hosted (chatModel() runs nothing else on
+  // the platform key there), or the platform key's OpenAI models self-hosted.
   const runnableModels = configuredProvider
     ? MODELS_BY_PROVIDER[configuredProvider] ?? (configuredModel ? [configuredModel] : MODELS_BY_PROVIDER.openai)
-    : MODELS_BY_PROVIDER.openai
+    : includedModel ? [includedModel] : MODELS_BY_PROVIDER.openai
 
   const [count, setCount] = useState(20)
   const [model, setModel] = useState(configuredModel && runnableModels.includes(configuredModel) ? configuredModel : runnableModels[0])
@@ -181,16 +187,22 @@ export default function SimulationClient({ configuredProvider, configuredModel }
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-400 mb-1">Model</label>
+            <label htmlFor="simulation-model" className="block text-xs text-gray-400 mb-1">Model</label>
             <select
+              id="simulation-model"
               value={model}
               onChange={e => setModel(e.target.value)}
-              disabled={running}
+              disabled={running || !!includedModel}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm disabled:opacity-50"
             >
               {runnableModels.map(m => <option key={m} value={m}>{m}</option>)}
             </select>
-            {!configuredProvider && (
+            {!configuredProvider && includedModel && (
+              <p className="mt-1 text-[0.6875rem] text-gray-400">
+                Included model. Add your own provider in Settings → AI Model to choose another.
+              </p>
+            )}
+            {!configuredProvider && !includedModel && (
               <p className="mt-1 text-[0.6875rem] text-amber-400">
                 No AI provider connected — running on the platform's default OpenAI key.
               </p>

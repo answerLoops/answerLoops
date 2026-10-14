@@ -9,65 +9,63 @@ import { getOrgAIConfig } from '@/lib/db/queries/ai-config'
 import { getDeploymentMode } from '@/lib/billing/plans'
 import { XAI_BASE_URL } from '@/lib/ai/list-models'
 import { createSafeProviderFetch } from '@/lib/ai/safe-provider-fetch'
+import { NoAIProviderConfiguredError } from '@/lib/ai/errors'
+import { getBillingTier, assertBudget } from '@/lib/billing/platform-ai-budget'
+import { meterLanguageModel, meterEmbeddingModel, type MeteringTarget } from '@/lib/ai/metering'
+import {
+  embeddingDimensionsSupported,
+  getPlatformModel,
+  platformEmbedding,
+  roleForDefault,
+  type PlatformRole,
+} from '@/lib/ai/platform-models'
+import { embeddingTargetFor, ensurePin, getPinnedModel } from '@/lib/ai/embedding-pin'
+import { hasPrice } from '@/lib/ai/pricing'
+import { logger } from '@/lib/logger'
+
+export { NoAIProviderConfiguredError, PlatformBudgetExhaustedError } from '@/lib/ai/errors'
+export { DEFAULT_CHAT_MODEL, DEFAULT_FAST_MODEL, DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/model-defaults'
+
+const MOD = 'ai/models'
 
 // Clients pointed at a tenant-supplied base URL send every request through a
 // fetch that only reaches public https hosts, connecting to the validated
 // address. First-party provider endpoints keep the SDK's default fetch.
 const customEndpointFetch = createSafeProviderFetch()
 
-/**
- * Thrown by chatModel()/embeddingModel() when a production call site on
- * managed cloud has no org-configured AI provider — instead of silently
- * spending the platform's own key. Callers on every real production path
- * (bot listeners, widget chat, MCP/Agent API) must catch this specifically
- * and degrade gracefully (skip drafting, surface a "connect an AI provider"
- * state) rather than let it bubble up as a generic 500. Only the sandbox
- * path (simulation) and self-hosted deployments (where the "platform key"
- * is the self-hoster's own .env, not answerLoops') may fall through to the
- * platform key — see the `purpose` param below.
+/*
+ * Who pays for a model call:
+ * - a workspace with its own provider uses it, with the models it chose;
+ * - self-hosted uses the operator's own .env key with the requested model;
+ * - a hosted workspace without its own provider runs on the platform's
+ *   models (lib/ai/platform-models.ts, never a model it saved) within its
+ *   included usage, metered per call (lib/billing/platform-ai-budget.ts).
+ *   With no live subscription, an unusable platform model, or the budget
+ *   used up, callers get NoAIProviderConfiguredError (or its
+ *   PlatformBudgetExhaustedError subclass) and degrade gracefully.
  */
-export class NoAIProviderConfiguredError extends Error {
-  constructor(orgId: number) {
-    super(`No AI provider configured for org ${orgId}`)
-    this.name = 'NoAIProviderConfiguredError'
-  }
-}
 
 /**
- * 'production' (default): the platform key may only be used as a fallback
- * on self-hosted deployments (where it's the self-hoster's own key). On
- * managed cloud, an org with no configured provider gets
- * NoAIProviderConfiguredError instead of silently running production
- * traffic on answerLoops' own bill.
- * 'sandbox': always falls through to the platform key regardless of
- * deployment mode — reserved for explicitly-a-test surfaces (simulation)
- * where running against the platform key is the intended, safe behavior.
- * 'trial': the caller has already atomically reserved one of the org's 5
- * lifetime free platform-key trial tickets (see
- * lib/billing/platform-key-trial.ts) before choosing this purpose — never
- * pass 'trial' speculatively, since this function does no metering of its
- * own and will use the platform key unconditionally.
+ * The platform model for a hosted workspace with no provider of its own:
+ * refused when that role's model is unusable, when there is no live
+ * subscription, or when the included usage for this kind of call is used
+ * up; otherwise metered.
  */
-export type ModelPurpose = 'production' | 'sandbox' | 'trial'
-
-// Platform default model IDs — the fallback used when an org has no AI
-// provider configured (or no override for that call site). Centralized here
-// so bumping a default means editing one constant, not hunting through every
-// chatModel()/embeddingModel() call site across lib/ai, lib/agent, and the
-// API routes that use them.
-export const DEFAULT_CHAT_MODEL = 'gpt-5.6-terra'
-export const DEFAULT_FAST_MODEL = 'gpt-5.6-luna'
-export const DEFAULT_EMBEDDING_MODEL = 'text-embedding-3-small'
-
-function platformKeyAllowed(purpose: ModelPurpose): boolean {
-  return purpose === 'sandbox' || purpose === 'trial' || getDeploymentMode() === 'self-hosted'
+async function platformBilled<M>(
+  orgId: number,
+  role: PlatformRole,
+  build: (id: string) => M,
+  meter: (model: M, target: MeteringTarget) => M,
+): Promise<M> {
+  const modelId = getPlatformModel(role)
+  if (!modelId) throw new NoAIProviderConfiguredError(orgId)
+  const tier = await getBillingTier(orgId)
+  if (!tier) throw new NoAIProviderConfiguredError(orgId)
+  await assertBudget(orgId, role === 'embedding' ? 'embedding' : 'chat', tier)
+  return meter(build(modelId), { orgId, tier, modelId })
 }
 
-export async function chatModel(
-  defaultId: string,
-  orgId?: number,
-  purpose: ModelPurpose = 'production'
-): Promise<LanguageModel> {
+export async function chatModel(defaultId: string, orgId?: number): Promise<LanguageModel> {
   if (MOCK_EXTERNALS) {
     return (require('./mock') as typeof import('./mock')).mockLanguageModel(defaultId)
   }
@@ -79,49 +77,67 @@ export async function chatModel(
         return buildChatProvider(cfg.chat_provider, cfg.chat_api_key, cfg.chat_base_url)(cfg.chat_model || defaultId)
       }
     } catch {
-      // fall through to platform key
+      // fall through to the platform key
     }
 
-    if (!platformKeyAllowed(purpose)) {
-      throw new NoAIProviderConfiguredError(orgId)
-    }
+    if (getDeploymentMode() === 'self-hosted') return openai(defaultId)
+    return platformBilled(orgId, roleForDefault(defaultId), (id) => openai(id), meterLanguageModel)
   }
 
   return openai(defaultId)
 }
 
-export async function embeddingModel(
-  defaultId: string,
-  orgId?: number,
-  purpose: ModelPurpose = 'production'
-): Promise<EmbeddingModel> {
+/**
+ * Embedding model for a workspace, plus the id of the model it runs, so
+ * callers that store vectors can record which model made them. Pin-aware:
+ * while a workspace's stored vectors are on a different model than its
+ * target (lib/ai/embedding-pin.ts), it keeps using the pinned model so new
+ * queries stay comparable with what is stored, until the re-embed job
+ * switches it.
+ */
+export async function resolveEmbedding(defaultId: string, orgId?: number): Promise<{ model: EmbeddingModel; modelId: string }> {
   if (MOCK_EXTERNALS) {
-    return (require('./mock') as typeof import('./mock')).mockEmbeddingModel(defaultId)
+    return { model: (require('./mock') as typeof import('./mock')).mockEmbeddingModel(defaultId), modelId: defaultId }
+  }
+  if (orgId === undefined) return { model: openai.embedding(defaultId), modelId: defaultId }
+
+  const cfg = await getOrgAIConfig(orgId).catch(() => null)
+  const selfHosted = getDeploymentMode() === 'self-hosted'
+  const target = embeddingTargetFor(cfg, selfHosted ? defaultId : getPlatformModel('embedding'))
+  if (!target) throw new NoAIProviderConfiguredError(orgId)
+
+  const pin = (await getPinnedModel(orgId)) ?? (await ensurePin(orgId, target.modelId))
+
+  const onTarget = async (): Promise<{ model: EmbeddingModel; modelId: string }> => {
+    if (target.own && cfg) {
+      const embKey = cfg.embedding_api_key ?? (cfg.chat_provider === 'openai' ? cfg.chat_api_key : null)
+      const model = createOpenAI({
+        apiKey: embKey ?? undefined,
+        baseURL: cfg.embedding_base_url ?? undefined,
+        ...(cfg.embedding_base_url ? { fetch: customEndpointFetch } : {}),
+      }).embedding(target.modelId)
+      return { model, modelId: target.modelId }
+    }
+    if (selfHosted) return { model: openai.embedding(target.modelId), modelId: target.modelId }
+    const model = await platformBilled(orgId, 'embedding', platformEmbedding, meterEmbeddingModel)
+    return { model, modelId: target.modelId }
   }
 
-  if (orgId !== undefined) {
-    try {
-      const cfg = await getOrgAIConfig(orgId)
-      if (cfg) {
-        const embKey = cfg.embedding_api_key ?? (cfg.chat_provider === 'openai' ? cfg.chat_api_key : null)
-        if (embKey || cfg.embedding_base_url) {
-          return createOpenAI({
-            apiKey: embKey ?? undefined,
-            baseURL: cfg.embedding_base_url ?? undefined,
-            ...(cfg.embedding_base_url ? { fetch: customEndpointFetch } : {}),
-          }).embedding(cfg.embedding_model || defaultId)
-        }
-      }
-    } catch {
-      // fall through to platform key
-    }
+  if (pin === target.modelId) return onTarget()
 
-    if (!platformKeyAllowed(purpose)) {
-      throw new NoAIProviderConfiguredError(orgId)
-    }
+  // Re-embed pending: keep serving the model the stored vectors belong to,
+  // on the platform key and unmetered, since the switch is not the
+  // workspace's doing to pay for twice.
+  if (!target.own && !selfHosted && !(await getBillingTier(orgId))) throw new NoAIProviderConfiguredError(orgId)
+  if (hasPrice(pin) && embeddingDimensionsSupported(pin)) {
+    return { model: selfHosted ? openai.embedding(pin) : platformEmbedding(pin), modelId: pin }
   }
+  logger.warn('pinned embedding model unavailable; using target until re-embed completes', { module: MOD, orgId, pin, target: target.modelId })
+  return onTarget()
+}
 
-  return openai.embedding(defaultId)
+export async function embeddingModel(defaultId: string, orgId?: number): Promise<EmbeddingModel> {
+  return (await resolveEmbedding(defaultId, orgId)).model
 }
 
 export function buildChatProvider(provider: string, apiKey: string | null, baseUrl: string | null) {

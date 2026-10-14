@@ -27,6 +27,7 @@ import {
   invitations,
   aiConfigs,
   subscriptions,
+  platformAiUsage,
   widgetLeads,
   slaConfigs,
   productFeedback,
@@ -196,6 +197,7 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     await tx.delete(invitations).where(eq(invitations.orgId, orgId))
     await tx.delete(aiConfigs).where(eq(aiConfigs.orgId, orgId))
     await tx.delete(subscriptions).where(eq(subscriptions.orgId, orgId))
+    await tx.delete(platformAiUsage).where(eq(platformAiUsage.orgId, orgId))
     await tx.delete(widgetLeads).where(eq(widgetLeads.orgId, orgId))
     await tx.delete(slaConfigs).where(eq(slaConfigs.orgId, orgId))
     // The author's workspace is gone, so its feedback-board entries go with it

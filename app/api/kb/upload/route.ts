@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { detectFileType, parseFile } from '@/lib/ingest/file-parsers'
 import { chunkMarkdown } from '@/lib/ingest/url'
-import { embedText, assertEmbeddingAvailable, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { embedTextWithModel, assertEmbeddingAvailable } from '@/lib/ai/embed'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { countArticles, createArticleFromSource } from '@/lib/db/queries/kb'
 import { createKBSource, updateKBSourceChunkCount } from '@/lib/db/queries/kb-sources'
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     if (err instanceof NoAIProviderConfiguredError) {
       return Response.json(
-        { error: 'No AI provider is set up for this workspace. Add one in Settings → AI Model, then upload again.' },
+        { error: aiUnavailableMessage(err, 'No AI provider is set up for this workspace. Add one in Settings → AI Model, then upload again.') },
         { status: 400 }
       )
     }
@@ -114,12 +115,12 @@ export async function POST(req: NextRequest) {
 
   for (const chunk of chunks.slice(0, budget)) {
     try {
-      const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`, orgId)
+      const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
       await createArticleFromSource({
         question: chunk.question,
         answer: chunk.answer,
         embedding,
-        model: EMBEDDING_MODEL,
+        model,
         sourceId: source.id,
       }, orgId)
       created++

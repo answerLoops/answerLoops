@@ -5,6 +5,7 @@ import { requireOrgAccess } from '@/lib/auth/org'
 import { ingestUrl, ingestSite, IngestLimitError } from '@/lib/ingest/url'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { logger } from '@/lib/logger'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 
@@ -74,7 +75,7 @@ export async function ingestUrlAction(
   } catch (err) {
     if (err instanceof IngestLimitError) return { error: err.message }
     if (err instanceof NoAIProviderConfiguredError) {
-      return { error: 'No AI provider is set up for this workspace. Add one in Settings → AI Model, then import again.' }
+      return { error: aiUnavailableMessage(err, 'No AI provider is set up for this workspace. Add one in Settings → AI Model, then import again.') }
     }
     const msg = err instanceof Error ? err.message : ''
     if (msg.includes('API key is missing') || msg.includes('AI_LoadAPIKeyError')) {

@@ -1,5 +1,5 @@
 import { chunkMarkdown } from '@/lib/ingest/url'
-import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { embedTextWithModel } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { logger } from '@/lib/logger'
@@ -156,13 +156,13 @@ export async function syncNotionToKB(
       for (const chunk of chunkMarkdown(doc.markdown, doc.title)) {
         if (created >= budget) break
         try {
-          const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`, orgId)
+          const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
           await createArticleFromSource(
             {
               question: chunk.question,
               answer: chunk.answer,
               embedding,
-              model: EMBEDDING_MODEL,
+              model,
               sourceId: source.id,
               published: 0,
             },

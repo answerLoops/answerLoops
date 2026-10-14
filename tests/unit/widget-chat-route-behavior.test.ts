@@ -44,7 +44,10 @@ vi.mock('@/lib/ai/models', () => ({
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
 vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: () => true }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
-vi.mock('@/lib/ai/embed', () => ({ embedText: h.embedText }))
+vi.mock('@/lib/ai/embed', () => ({
+  embedTextWithModel: async (text: string, orgId?: number) => ({ embedding: await h.embedText(text, orgId), model: 'test-embed-model' }),
+}))
+vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => 'test-embed-model' }))
 vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
 vi.mock('@/lib/logger', () => ({

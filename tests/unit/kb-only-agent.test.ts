@@ -45,7 +45,7 @@ describe('AI agent runs in KB-only mode when no GitHub repos configured', () => 
 
   it('both modes still feed the drafted answer to the confidence reviewer', () => {
     const src = read('lib/ai/agent.ts')
-    expect(src).toContain('assessAnswer(question, text, orgId, purpose)')
+    expect(src).toContain('assessAnswer(question, text, orgId)')
     expect(src).toContain('shouldAutoDeflect(assessment, threshold)')
   })
 })

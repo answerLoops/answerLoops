@@ -14,7 +14,6 @@ vi.mock('@/lib/db/queries/feedback', () => ({
 vi.mock('@/lib/db/queries/tickets', () => ({ claimStuckTicketForRetry: vi.fn(async () => null) }))
 vi.mock('@/lib/ingest/pipeline', () => ({ runBackgroundEnrichment: vi.fn() }))
 vi.mock('@/lib/db/queries/ai-config', () => ({ orgHasAIKey: vi.fn() }))
-vi.mock('@/lib/billing/platform-key-trial', () => ({ reservePlatformKeyTrial: vi.fn() }))
 vi.mock('@/lib/db/queries/kb-sync-jobs', () => ({
   getKbSyncJob: vi.fn(async () => null),
   finishKbSyncJob: vi.fn(),

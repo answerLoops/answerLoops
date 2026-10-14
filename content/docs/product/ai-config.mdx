@@ -1,6 +1,6 @@
 ---
 title: AI Model
-description: Configure chat and embedding providers, test connections, and manage the introductory AI allowance.
+description: Configure chat and embedding providers, test connections, and see your included AI usage.
 ---
 
 answerLoops uses a language model to draft answers and an embedding model to
@@ -11,13 +11,16 @@ models an org uses.
 
 | State | What's used |
 |---|---|
-| A new cloud org, no key configured | answerLoops' key, metered as a **free trial** — 5 AI‑answered tickets, lifetime, per org |
-| Trial used up, still no key | AI drafting stops; connect a provider to resume |
+| A hosted workspace, no key configured | **Included AI usage**, up to a limit — for the whole trial, then monthly on a paid plan |
+| Included usage used up, still no key | That part of AI pauses until next month; connect a provider to resume now |
 | Self‑hosted | The `OPENAI_API_KEY` in your environment |
 | A workspace with saved model settings | Its configured chat and embedding services |
 
-The card shows where you stand — trial credits remaining, "trial used up", or
-the configured provider and model.
+On included usage, answerLoops chooses the models, and the card lists them
+read‑only. To pick your own models, add your own provider. The card shows
+where you stand — included usage, "included usage used up", or the
+configured provider and model. See [Billing](/docs/product/billing) for how
+the limits work.
 
 ## Bring your own provider
 
@@ -71,6 +74,11 @@ stored key — the field shows "Key saved".
 
 ## Reset
 
-**Reset to platform default** deletes the org's AI config. A cloud org falls
-back to the trial (or, if exhausted, to no AI); a self‑hosted deployment falls
-back to its environment key.
+**Reset to platform default** deletes the org's AI config. A hosted workspace
+falls back to included usage (or, once it's used up, to no AI until next
+month); a self‑hosted deployment falls back to its environment key.
+
+If your embedding model changes (you switch it here, or answerLoops changes
+the included one), your knowledge base is re‑embedded in the background from
+what you already added. Search keeps working throughout, and you don't need to
+re‑upload anything.

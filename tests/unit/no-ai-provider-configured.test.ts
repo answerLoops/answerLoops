@@ -1,15 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-// Roadmap item 11: any org with no AI provider configured in Settings → AI
-// Model silently fell back to the platform's own OPENAI_API_KEY for every
-// production call site (bot listeners, widget chat, MCP/Agent API) on
-// managed cloud — the opposite of the "bring your own key" value prop, and
-// real cost exposure for the platform owner. Only the sandbox path
-// (simulation) may ever fall back to the platform key on cloud; self-hosted
-// deployments always may (their "platform key" is the self-hoster's own).
+// Roadmap item 11, revised for included platform AI usage: on managed cloud
+// an org with no AI provider of its own never silently runs on the
+// platform's key. It runs there only with a live subscription and included
+// usage left (metered, see platform-ai-routing.test.ts); with no live
+// subscription it gets NoAIProviderConfiguredError, on every surface,
+// including simulation. Self-hosted deployments always may use the platform
+// key (it is the self-hoster's own .env).
 
-const { getOrgAIConfig } = vi.hoisted(() => ({ getOrgAIConfig: vi.fn() }))
+const { getOrgAIConfig, getBillingTier } = vi.hoisted(() => ({
+  getOrgAIConfig: vi.fn(),
+  getBillingTier: vi.fn(),
+}))
 vi.mock('@/lib/db/queries/ai-config', () => ({ getOrgAIConfig }))
+vi.mock('@/lib/billing/platform-ai-budget', () => ({ getBillingTier, assertBudget: vi.fn() }))
+vi.mock('@/lib/ai/embedding-pin', async (orig) => ({
+  ...(await orig<typeof import('@/lib/ai/embedding-pin')>()),
+  getPinnedModel: async () => null,
+  ensurePin: async (_orgId: number, modelId: string) => modelId,
+}))
 
 async function models() {
   return import('@/lib/ai/models')
@@ -17,6 +26,7 @@ async function models() {
 
 beforeEach(() => {
   getOrgAIConfig.mockReset()
+  getBillingTier.mockReset().mockResolvedValue(null)
   delete process.env.DEPLOYMENT_MODE
   delete process.env.MOCK_EXTERNALS
 })
@@ -25,8 +35,8 @@ afterEach(() => {
   delete process.env.DEPLOYMENT_MODE
 })
 
-describe('chatModel — production purpose (default) on managed cloud', () => {
-  it('throws NoAIProviderConfiguredError when the org has no configured key', async () => {
+describe('chatModel on managed cloud', () => {
+  it('throws NoAIProviderConfiguredError when the org has no key and no live subscription', async () => {
     process.env.DEPLOYMENT_MODE = 'cloud'
     getOrgAIConfig.mockResolvedValue(null)
     const { chatModel, NoAIProviderConfiguredError } = await models()
@@ -48,6 +58,7 @@ describe('chatModel — production purpose (default) on managed cloud', () => {
     const { chatModel } = await models()
 
     await expect(chatModel('gpt-4o', 42)).resolves.toBeTruthy()
+    expect(getBillingTier).not.toHaveBeenCalled()
   })
 
   it('does not throw for an openai-compatible provider even with no explicit key (self-hosted proxy case)', async () => {
@@ -57,6 +68,14 @@ describe('chatModel — production purpose (default) on managed cloud', () => {
 
     await expect(chatModel('gpt-4o', 42)).resolves.toBeTruthy()
   })
+
+  it('a model simulation asks for does not get around it', async () => {
+    process.env.DEPLOYMENT_MODE = 'cloud'
+    getOrgAIConfig.mockResolvedValue(null)
+    const { chatModel, NoAIProviderConfiguredError } = await models()
+
+    await expect(chatModel('claude-sonnet-4-6', 42)).rejects.toBeInstanceOf(NoAIProviderConfiguredError)
+  })
 })
 
 describe('chatModel — self-hosted deployments always allow the platform key', () => {
@@ -65,16 +84,7 @@ describe('chatModel — self-hosted deployments always allow the platform key', 
     const { chatModel } = await models()
 
     await expect(chatModel('gpt-4o', 42)).resolves.toBeTruthy()
-  })
-})
-
-describe('chatModel — sandbox purpose always allows the platform key, regardless of deployment mode', () => {
-  it('does not throw on cloud with no org config when purpose is sandbox', async () => {
-    process.env.DEPLOYMENT_MODE = 'cloud'
-    getOrgAIConfig.mockResolvedValue(null)
-    const { chatModel } = await models()
-
-    await expect(chatModel('claude-sonnet-4-6', 42, 'sandbox')).resolves.toBeTruthy()
+    expect(getBillingTier).not.toHaveBeenCalled()
   })
 })
 
@@ -88,21 +98,13 @@ describe('chatModel — no orgId given (no org context at all)', () => {
   })
 })
 
-describe('embeddingModel — same production/sandbox contract as chatModel', () => {
-  it('throws NoAIProviderConfiguredError on cloud with no org config, production purpose', async () => {
+describe('embeddingModel — same contract as chatModel', () => {
+  it('throws NoAIProviderConfiguredError on cloud with no org config and no live subscription', async () => {
     process.env.DEPLOYMENT_MODE = 'cloud'
     getOrgAIConfig.mockResolvedValue(null)
     const { embeddingModel, NoAIProviderConfiguredError } = await models()
 
     await expect(embeddingModel('text-embedding-3-small', 42)).rejects.toBeInstanceOf(NoAIProviderConfiguredError)
-  })
-
-  it('does not throw on cloud with no org config when purpose is sandbox', async () => {
-    process.env.DEPLOYMENT_MODE = 'cloud'
-    getOrgAIConfig.mockResolvedValue(null)
-    const { embeddingModel } = await models()
-
-    await expect(embeddingModel('text-embedding-3-small', 42, 'sandbox')).resolves.toBeTruthy()
   })
 
   it('does not throw on self-hosted with no org config', async () => {

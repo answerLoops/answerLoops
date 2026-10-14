@@ -1,7 +1,7 @@
 import { getInstallationOctokit } from './app'
 import type { KbSyncProgressOpts } from '@/lib/kb-sync/progress'
 import { chunkMarkdown } from '@/lib/ingest/url'
-import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { embedTextWithModel } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import {
   createArticleFromSource,
@@ -100,8 +100,8 @@ export async function syncRepoToKB(
       for (const chunk of chunks) {
         if (created >= budget) break
         try {
-          const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`, orgId)
-          await createArticleFromSource({ question: chunk.question, answer: chunk.answer, embedding, model: EMBEDDING_MODEL, sourceId: source.id }, orgId)
+          const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
+          await createArticleFromSource({ question: chunk.question, answer: chunk.answer, embedding, model, sourceId: source.id }, orgId)
           created++
         } catch (err) {
           if (err instanceof NoAIProviderConfiguredError) throw err
@@ -281,9 +281,9 @@ export async function syncDiscussionsToKB(
     const article = buildDiscussionArticle(d)
     if (!article) continue
     try {
-      const embedding = await embedText(`${article.question}\n\n${article.answer}`, orgId)
+      const { embedding, model } = await embedTextWithModel(`${article.question}\n\n${article.answer}`, orgId)
       await createArticleFromSource(
-        { question: article.question, answer: article.answer, embedding, model: EMBEDDING_MODEL, sourceId: source.id, sourcePage: d.number },
+        { question: article.question, answer: article.answer, embedding, model, sourceId: source.id, sourcePage: d.number },
         orgId
       )
       created++
@@ -334,9 +334,9 @@ export async function syncSingleDiscussionToKB(
     return
   }
 
-  const embedding = await embedText(`${article.question}\n\n${article.answer}`, orgId)
+  const { embedding, model } = await embedTextWithModel(`${article.question}\n\n${article.answer}`, orgId)
   await upsertArticleFromSource(
-    { question: article.question, answer: article.answer, embedding, model: EMBEDDING_MODEL, sourceId: source.id, sourcePage: discussion.number },
+    { question: article.question, answer: article.answer, embedding, model, sourceId: source.id, sourcePage: discussion.number },
     orgId
   )
   await updateKBSourceChunkCount(source.id, await countArticlesForSource(source.id, orgId))

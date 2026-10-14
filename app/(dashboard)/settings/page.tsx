@@ -8,6 +8,7 @@ import { sendInviteAction, revokeInviteAction, removeMemberAction, transferOwner
 import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction } from '@/lib/actions/widget'
 import { saveAIConfigAction, clearAIConfigAction, testAIConfigAction, listModelsAction } from '@/lib/actions/ai-config'
 import type { AIConnectionResult } from '@/lib/ai/test-connection'
+import type { BudgetStatus } from '@/lib/billing/platform-ai-budget'
 import { saveROIConfigAction } from '@/lib/actions/roi'
 import { createApiKeyAction, revokeApiKeyAction } from '@/lib/actions/api-keys'
 import { API_SCOPES, ALL_SCOPES } from '@/lib/agent/scopes'
@@ -422,7 +423,7 @@ export function AIModelSection() {
   const [editing, setEditing] = useState(false)
   const { toastMessage, showToast } = useToast()
   const [, startClearTransition] = useTransition()
-  const [trialStatus, setTrialStatus] = useState<{ used: number; limit: number; remaining: number; exhausted: boolean } | null>(null)
+  const [usageStatus, setUsageStatus] = useState<BudgetStatus | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const [testing, startTest] = useTransition()
   const [testResult, setTestResult] = useState<AIConnectionResult | null>(null)
@@ -492,7 +493,7 @@ export function AIModelSection() {
       if (!result?.error) {
         setConfig(null)
         setEditing(false)
-        fetch('/api/ai-config/trial-status').then((r) => r.json()).then(setTrialStatus)
+        fetch('/api/ai-config/usage-status').then((r) => r.json()).then(setUsageStatus)
       }
       return result
     },
@@ -512,14 +513,15 @@ export function AIModelSection() {
           setCustomModel(resolved.custom)
         }
       })
-    fetch('/api/ai-config/trial-status')
+    fetch('/api/ai-config/usage-status')
       .then((r) => r.json())
-      .then(setTrialStatus)
+      .then(setUsageStatus)
   }, [])
 
   if (config === undefined) return <p className="text-sm text-gray-400">Loading…</p>
 
   const configured = config !== null
+  const usageUsedUp = !!usageStatus && (usageStatus.chat.exhausted || usageStatus.embedding.exhausted)
   const chatMeta = CHAT_PROVIDERS.find((p) => p.value === chatProvider) ?? CHAT_PROVIDERS[0]
   // Live models (just fetched from the provider itself) win over the
   // hardcoded fallback list whenever they're available.
@@ -531,22 +533,31 @@ export function AIModelSection() {
     <>
       {toastMessage && <Toast message={toastMessage} />}
       <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="min-w-0">
             <p className="text-sm font-medium text-gray-900">AI Model</p>
             <p className="text-xs text-gray-500">
               {configured
                 ? `${chatMeta.label} · ${config.chat_model}`
-                : trialStatus
-                  ? trialStatus.exhausted
-                    ? 'Free AI trial used up — add a key to keep AI features running'
-                    : `Using answerLoops' key — ${trialStatus.remaining} of ${trialStatus.limit} free AI-answered tickets left`
+                : usageStatus
+                  ? usageUsedUp
+                    ? 'Included AI usage is used up — add your provider to keep AI features running'
+                    : usageStatus.tier === 'trial'
+                      ? 'AI usage is included during your trial. Add your own provider to remove the limit.'
+                      : 'AI usage is included up to a monthly limit. Add your own provider to remove the limit.'
                   : 'Using platform default (OPENAI_API_KEY from environment)'}
             </p>
+            {!configured && usageStatus && (
+              <p data-testid="included-models" className="mt-1 text-xs text-gray-500 break-words">
+                Included models: Chat <code className="text-gray-700">{usageStatus.models.chat ?? 'unavailable'}</code>
+                {' · '}Fast <code className="text-gray-700">{usageStatus.models.fast ?? 'unavailable'}</code>
+                {' · '}Embeddings <code className="text-gray-700">{usageStatus.models.embedding ?? 'unavailable'}</code>
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${configured ? 'bg-brand-100 text-brand-700' : trialStatus?.exhausted ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
-              {configured ? 'Custom' : trialStatus?.exhausted ? 'Trial used up' : trialStatus ? 'Free trial' : 'Platform default'}
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${configured ? 'bg-brand-100 text-brand-700' : usageUsedUp ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>
+              {configured ? 'Custom' : usageUsedUp ? 'Included usage used up' : usageStatus ? 'Included' : 'Platform default'}
             </span>
             {configured && !editing && (
               <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>

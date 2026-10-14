@@ -122,7 +122,7 @@ describe('lib/ingest/pipeline.ts — passes the real channelId and threadId sepa
   it('appends channelId and threadId as new trailing args, leaving the existing threadId ?? channelId arg untouched', () => {
     const src = read('lib/ingest/pipeline.ts')
     expect(src).toContain(
-      "runAIAgent(ticketId, content, threadId ?? channelId, priorAnswers, orgId, platform, category ?? 'general_question', duplicates, orgTicketNumber, aiPurpose, channelId, threadId)"
+      "runAIAgent(ticketId, content, threadId ?? channelId, priorAnswers, orgId, platform, category ?? 'general_question', duplicates, orgTicketNumber, channelId, threadId)"
     )
   })
 })
@@ -147,7 +147,6 @@ describe('runAIAgent: Slack posts using the real channel, not the conflated thre
       'general_question',
       [],
       1,
-      'production',
       'C_REAL_CHANNEL', // slackChannelId — the real channel
       'ts-2' // slackThreadTs
     )

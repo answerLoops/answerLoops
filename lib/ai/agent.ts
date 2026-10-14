@@ -2,7 +2,7 @@
 import { Agent } from '@mastra/core/agent'
 import { createTool } from '@mastra/core/tools'
 import type { MastraModelConfig } from '@mastra/core/llm'
-import { chatModel, DEFAULT_CHAT_MODEL, NoAIProviderConfiguredError, type ModelPurpose } from '@/lib/ai/models'
+import { chatModel, DEFAULT_CHAT_MODEL, NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { z } from 'zod'
 import { searchCode, readFile, listFiles } from '@/lib/github/tools'
 import { getConfiguredRepos } from '@/lib/github/app'
@@ -155,12 +155,6 @@ export async function runAIAgent(
   // which is the global DB primary key and must never appear in anything a
   // customer or staff member reads. See lib/db/schema.ts's tickets table.
   orgTicketNumber: number,
-  // 'trial' only when the pipeline already atomically reserved one of this
-  // org's 5 lifetime free platform-key trial tickets — see
-  // lib/billing/platform-key-trial.ts. Forwarded to both model calls below
-  // so a trial ticket's draft AND its confidence grade both run on the
-  // platform key, not just the first.
-  purpose: ModelPurpose = 'production',
   // Slack-only, see postReply above: the real channel id and (if this is a
   // thread reply) the thread's ts, kept separate from `channelId` since
   // that param means something different for Discord (thread-id-or-channel)
@@ -369,8 +363,8 @@ Guidelines:
       : undefined
 
     // Instantiated per-call rather than module-level: the model itself is
-    // resolved per-org/per-purpose by chatModel() (mock mode, org-configured
-    // provider, platform-key fallback — see lib/ai/models.ts), so there is
+    // resolved per-org by chatModel() (mock mode, org-configured provider,
+    // included platform usage — see lib/ai/models.ts), so there is
     // no single Agent instance that would be valid across orgs.
     const supportAgent = new Agent({
       id: 'support-agent',
@@ -381,7 +375,7 @@ Guidelines:
       // @mastra/core vendors its own copy of the @ai-sdk/provider types with
       // branded `unique symbol` fields, so the two structurally-identical
       // types don't unify nominally. Cast at this one boundary.
-      model: (await chatModel(DEFAULT_CHAT_MODEL, orgId, purpose)) as MastraModelConfig,
+      model: (await chatModel(DEFAULT_CHAT_MODEL, orgId)) as MastraModelConfig,
       tools,
     })
 
@@ -392,7 +386,7 @@ Guidelines:
 
     let assessment
     try {
-      assessment = await assessAnswer(question, text, orgId, purpose)
+      assessment = await assessAnswer(question, text, orgId)
     } catch (err) {
       logger.error('assessment failed — defaulting to human review', { module: MOD, ticketId, error: err })
       assessment = { confidence: 0, answered_fully: false, reasoning: 'Assessment failed; routed to human review.' }

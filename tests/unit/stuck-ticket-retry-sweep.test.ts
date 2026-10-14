@@ -14,7 +14,7 @@ import path from 'node:path'
 //
 // Three pieces, each covered below:
 // 1. lib/ingest/pipeline.ts's after()-callback body extracted into a
-//    standalone exported runBackgroundEnrichment(ticket, orgId, aiPurpose)
+//    standalone exported runBackgroundEnrichment(ticket, orgId)
 //    that derives everything it needs from the persisted ticket row, so it
 //    works identically whether called immediately after ticket creation or
 //    minutes later from a retry.
@@ -38,19 +38,13 @@ function read(relPath: string): string {
   return fs.readFileSync(abs, 'utf-8')
 }
 
-const { claimStuckTicketForRetry, runBackgroundEnrichment, orgHasAIKey, reservePlatformKeyTrial, getDeploymentMode } = vi.hoisted(() => ({
+const { claimStuckTicketForRetry, runBackgroundEnrichment } = vi.hoisted(() => ({
   claimStuckTicketForRetry: vi.fn(),
   runBackgroundEnrichment: vi.fn(async () => undefined),
-  orgHasAIKey: vi.fn(async () => true),
-  reservePlatformKeyTrial: vi.fn(async () => false),
-  getDeploymentMode: vi.fn(() => 'cloud'),
 }))
 
 vi.mock('@/lib/db/queries/tickets', () => ({ claimStuckTicketForRetry }))
 vi.mock('@/lib/ingest/pipeline', () => ({ runBackgroundEnrichment }))
-vi.mock('@/lib/db/queries/ai-config', () => ({ orgHasAIKey }))
-vi.mock('@/lib/billing/platform-key-trial', () => ({ reservePlatformKeyTrial }))
-vi.mock('@/lib/billing/plans', () => ({ getDeploymentMode }))
 
 describe('lib/ingest/pipeline.ts — runBackgroundEnrichment is retry-safe', () => {
   const src = read('lib/ingest/pipeline.ts')
@@ -60,7 +54,7 @@ describe('lib/ingest/pipeline.ts — runBackgroundEnrichment is retry-safe', () 
   })
 
   it('processCommunityMessage schedules it via after() instead of an inline closure', () => {
-    expect(src).toContain('after(() => runBackgroundEnrichment(ticket, orgId, aiPurpose))')
+    expect(src).toContain('after(() => runBackgroundEnrichment(ticket, orgId))')
   })
 
   it('derives every input from the ticket row, not from pipeline-local closure variables', () => {
@@ -124,7 +118,7 @@ describe('app/api/ingest/retry-stuck/route.ts', () => {
   })
 
   it('awaits runBackgroundEnrichment directly rather than scheduling it via after()', () => {
-    expect(src).toContain('await runBackgroundEnrichment(ticket, ticketOrgId, aiPurpose)')
+    expect(src).toContain('await runBackgroundEnrichment(ticket, ticketOrgId)')
     expect(src).not.toMatch(/from ['"]next\/server['"]/)
   })
 
@@ -215,6 +209,6 @@ describe('app/api/ingest/retry-stuck — end-to-end claim/enrich behavior', () =
     }))
     const json = await res.json()
     expect(json).toEqual({ ok: true, claimed: true })
-    expect(runBackgroundEnrichment).toHaveBeenCalledWith({ id: 1, org_ticket_number: 1 }, 7, 'production')
+    expect(runBackgroundEnrichment).toHaveBeenCalledWith({ id: 1, org_ticket_number: 1 }, 7)
   })
 })

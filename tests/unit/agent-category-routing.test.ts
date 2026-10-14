@@ -89,7 +89,7 @@ describe('runAIAgent branches on ticket category before generating a KB-grounded
     const src = read('lib/ai/agent.ts')
     const generateIdx = src.indexOf('supportAgent.generate(')
     const rest = src.slice(generateIdx)
-    expect(rest).toContain('assessAnswer(question, text, orgId, purpose)')
+    expect(rest).toContain('assessAnswer(question, text, orgId)')
     expect(rest).toContain('shouldAutoDeflect(assessment, threshold)')
   })
 

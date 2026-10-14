@@ -2,6 +2,7 @@ import { requireOrgAccess } from '@/lib/auth/org'
 import { getResolvedTicketsThisWeek, insertFAQSnapshot } from '@/lib/db/queries/faq'
 import { generateFAQ } from '@/lib/ai/faq-generator'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -28,7 +29,7 @@ export async function POST(req: Request) {
       content = await generateFAQ(tickets, orgId)
     } catch (err) {
       if (err instanceof NoAIProviderConfiguredError) {
-        return Response.json({ error: 'No AI provider configured — connect one in Settings → AI Model to generate an FAQ.' }, { status: 503 })
+        return Response.json({ error: aiUnavailableMessage(err, 'No AI provider configured — connect one in Settings → AI Model to generate an FAQ.') }, { status: 503 })
       }
       throw err
     }

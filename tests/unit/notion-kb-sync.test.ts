@@ -94,10 +94,10 @@ describe('lib/notion/kb-sync.ts — syncNotionToKB', () => {
     expect(call).toContain('sourceId: source.id')
   })
 
-  it('embeds with the shared embed helper and records the model', () => {
-    expect(src).toContain("import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'")
-    expect(src).toContain('await embedText(')
-    expect(src).toContain('model: EMBEDDING_MODEL')
+  it('embeds with the shared embed helper and records the model that made the vector', () => {
+    expect(src).toContain("import { embedTextWithModel } from '@/lib/ai/embed'")
+    expect(src).toContain('const { embedding, model } = await embedTextWithModel(')
+    expect(src).not.toContain('EMBEDDING_MODEL')
   })
 
   it('has a MOCK_EXTERNALS branch so tests and local mock mode never hit Notion', () => {

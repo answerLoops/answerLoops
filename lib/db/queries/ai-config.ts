@@ -45,8 +45,8 @@ export async function getOrgAIConfig(orgId: number): Promise<OrgAIConfig | null>
 }
 
 // Same "does this org actually have a usable key" condition chatModel()
-// uses internally (lib/ai/models.ts) — centralized here so the platform-key
-// trial gate and any other caller can't drift from what models.ts itself
+// uses internally (lib/ai/models.ts) — centralized here so the included-usage
+// status check and any other caller can't drift from what models.ts itself
 // treats as "configured".
 export async function orgHasAIKey(orgId: number): Promise<boolean> {
   const cfg = await getOrgAIConfig(orgId)

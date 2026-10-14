@@ -28,7 +28,7 @@ beforeAll(async () => {
   for (const m of [
     '@/lib/ai/triage', '@/lib/db/queries/notifications', '@/lib/push/notify', '@/lib/email/send',
     '@/lib/ai/agent', '@/lib/channels/post-reply', '@/lib/ai/embed', '@/lib/ai/related', '@/lib/db/queries/embeddings',
-    '@/lib/db/queries/kb', '@/lib/db/queries/ai-config', '@/lib/billing/platform-key-trial',
+    '@/lib/db/queries/kb', '@/lib/db/queries/ai-config',
   ]) vi.doMock(m, () => new Proxy({}, { get: (_t, k) => (k === 'EMBEDDING_MODEL' ? 'm' : vi.fn(async () => ({}))) }))
   vi.doMock('@/lib/billing/plans', () => ({ getDeploymentMode: () => 'self-hosted' }))
   vi.doMock('@/lib/sla/engine', () => ({ calculateDeadlines: async () => ({}), checkSlaBreaches: async () => [] }))

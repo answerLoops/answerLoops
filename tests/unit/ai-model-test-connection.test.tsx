@@ -34,7 +34,7 @@ vi.mock('@/lib/actions/account', () => ({ deleteAccountAction: vi.fn(), getCurre
 beforeEach(() => {
   vi.clearAllMocks()
   global.fetch = vi.fn((url: string) =>
-    Promise.resolve({ json: () => Promise.resolve(url.includes('trial-status') ? null : null) } as Response),
+    Promise.resolve({ json: () => Promise.resolve(url.includes('usage-status') ? null : null) } as Response),
   ) as unknown as typeof fetch
 })
 

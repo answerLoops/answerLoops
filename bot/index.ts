@@ -114,6 +114,35 @@ function startStuckTicketSweep(): void {
   setInterval(() => { sweep().catch(() => {}) }, STUCK_TICKET_SWEEP_INTERVAL_MS)
 }
 
+// Re-embeds workspaces whose stored vectors are not on their target embedding
+// model (a platform model change in the environment, or a workspace changing
+// its own). The app route lists them and does the work, so model config lives
+// only in the app service; this process just keeps the sweep running.
+const EMBEDDING_MIGRATION_SWEEP_INTERVAL_MS = 5 * 60 * 1000
+
+function startEmbeddingMigrationSweep(): void {
+  const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
+  const botSecret = process.env.BOT_SECRET
+
+  const sweep = async () => {
+    if (!botSecret) return // the route requires BOT_SECRET; nothing to do without it
+    try {
+      const res = await fetch(`${targetUrl}/api/kb/embedding-migration/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${botSecret}` },
+      })
+      if (!res.ok) {
+        logger.warn('embedding migration sweep: request failed', { module: MOD, status: res.status })
+      }
+    } catch (err) {
+      // Must not crash the bot process; it retries on the next sweep.
+      logger.error('embedding migration sweep failed', { module: MOD, error: err })
+    }
+  }
+  sweep().catch(() => {})
+  setInterval(() => { sweep().catch(() => {}) }, EMBEDDING_MIGRATION_SWEEP_INTERVAL_MS)
+}
+
 // KB sync worker. Notion/GitHub KB syncs are enqueued into kb_sync_jobs (by the
 // "Sync now" buttons and the GitHub push webhook) instead of running inline in
 // those requests. This sweep claims queued jobs and drives each one via
@@ -750,6 +779,7 @@ async function main() {
   // kb_sync_job_queued handler is wired.
   startOrgPurgeSweep()
   startStuckTicketSweep()
+  startEmbeddingMigrationSweep()
 
   client.login(initial.discordToken)
 }

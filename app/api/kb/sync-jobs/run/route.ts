@@ -9,6 +9,7 @@ import { getRepoById } from '@/lib/db/queries/github'
 import { syncNotionToKB } from '@/lib/notion/kb-sync'
 import { syncRepoToKB, syncDiscussionsToKB } from '@/lib/github/kb-sync'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { isPlatformBotRequest } from '@/lib/http/bearer-auth'
 import { logger } from '@/lib/logger'
 
@@ -92,7 +93,7 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, ran: true, syncedCount })
   } catch (err) {
     const message = err instanceof NoAIProviderConfiguredError
-      ? 'No AI provider is set up for this workspace — add one in Settings → AI Model, then sync again.'
+      ? aiUnavailableMessage(err, 'No AI provider is set up for this workspace — add one in Settings → AI Model, then sync again.')
       : err instanceof Error ? err.message : 'Sync failed'
     await finishKbSyncJob(job.id, { status: 'failed', detail: message })
     logger.error('kb sync job failed', { module: MOD, jobId: job.id, kind: job.kind, error: err })

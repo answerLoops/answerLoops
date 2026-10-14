@@ -1,6 +1,6 @@
 import { after } from 'next/server'
 import { triageMessage } from '@/lib/ai/triage'
-import { NoAIProviderConfiguredError, type ModelPurpose } from '@/lib/ai/models'
+import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { createTicket, getTicketBySourceMessageId, getTicketByThreadId, recordCustomerReply, updateTicketTriage } from '@/lib/db/queries/tickets'
 import { createNotification } from '@/lib/db/queries/notifications'
 import { calculateDeadlines, checkSlaBreaches } from '@/lib/sla/engine'
@@ -8,13 +8,10 @@ import { sendPushToAll } from '@/lib/push/notify'
 import { sendNewTicketEmail, sendSlaBreachEmails } from '@/lib/email/send'
 import { runAIAgent } from '@/lib/ai/agent'
 import { sendKeepAlive } from '@/lib/channels/post-reply'
-import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { embedTextWithModel } from '@/lib/ai/embed'
 import { findRelated, isDuplicate } from '@/lib/ai/related'
 import { saveEmbedding, getCandidateVectors, replaceLinks, getPriorAnswers } from '@/lib/db/queries/embeddings'
 import { getKBContext } from '@/lib/db/queries/kb'
-import { orgHasAIKey } from '@/lib/db/queries/ai-config'
-import { reservePlatformKeyTrial } from '@/lib/billing/platform-key-trial'
-import { getDeploymentMode } from '@/lib/billing/plans'
 import { logger } from '@/lib/logger'
 import { isUniqueViolation } from '@/lib/ingest/db-errors'
 import { clampIngestContent } from '@/lib/ingest/limits'
@@ -109,20 +106,6 @@ export async function processCommunityMessage(
     }
   }
 
-  // A new org with no AI provider configured gets a taste of full AI
-  // processing before requiring their own key: atomically reserve one of
-  // its 5 lifetime free platform-key trial tickets (self-hosted deployments
-  // never need this — their "platform key" is already the self-hoster's own
-  // .env, see platformKeyAllowed in lib/ai/models.ts). Reserved once per
-  // ticket, here, not once per model call — triage, embedding, drafting, and
-  // confidence-grading all reuse the same decision instead of racing 3
-  // separate reservations for what is really one ticket's worth of trial.
-  let aiPurpose: ModelPurpose = 'production'
-  if (getDeploymentMode() !== 'self-hosted' && !(await orgHasAIKey(orgId))) {
-    const grantedTrial = await reservePlatformKeyTrial(orgId)
-    if (grantedTrial) aiPurpose = 'trial'
-  }
-
   // Triage is an LLM call — too slow to sit in front of an inbound webhook's
   // ack. Discord/Slack require a sub-few-second response or they retry the
   // event. (Google Chat's "not responding" placeholder turned out to be
@@ -177,9 +160,9 @@ export async function processCommunityMessage(
   logger.info('ticket created', { module: MOD, ticketId: ticket.id, orgId, platform })
 
   if (payload.waitForEnrichment) {
-    await runBackgroundEnrichment(ticket, orgId, aiPurpose)
+    await runBackgroundEnrichment(ticket, orgId)
   } else {
-    after(() => runBackgroundEnrichment(ticket, orgId, aiPurpose))
+    after(() => runBackgroundEnrichment(ticket, orgId))
   }
 
   return { ticket_id: ticket.id }
@@ -201,8 +184,7 @@ export async function processCommunityMessage(
 // running immediately after ticket creation or minutes later from a sweep.
 export async function runBackgroundEnrichment(
   ticket: Ticket,
-  orgId: number,
-  aiPurpose: ModelPurpose
+  orgId: number
 ): Promise<void> {
   const { id: ticketId, content, org_ticket_number: orgTicketNumber } = ticket
   const authorName = ticket.source_author_name ?? 'Unknown'
@@ -222,7 +204,7 @@ export async function runBackgroundEnrichment(
   try {
     const t0 = Date.now()
     try {
-      const triage = await withRetry(() => triageMessage(content, orgId, aiPurpose), 'triage', { module: MOD })
+      const triage = await withRetry(() => triageMessage(content, orgId), 'triage', { module: MOD })
       priority = severityToPriority(triage.severity_score)
       const { sla_response_deadline, sla_resolve_deadline } = await calculateDeadlines(priority, orgId)
       await updateTicketTriage(ticketId, {
@@ -293,12 +275,12 @@ export async function runBackgroundEnrichment(
     let duplicates: ReturnType<typeof findRelated> = []
     try {
       const t1 = Date.now()
-      const vector = await withRetry(
-        () => embedText(`${summary}\n\n${clampIngestContent(content)}`, orgId, aiPurpose),
+      const { embedding: vector, model } = await withRetry(
+        () => embedTextWithModel(`${summary}\n\n${clampIngestContent(content)}`, orgId),
         'embed',
         { module: MOD, ticketId }
       )
-      await saveEmbedding(ticketId, vector, EMBEDDING_MODEL)
+      await saveEmbedding(ticketId, vector, model)
       logger.info('embedding saved', { module: MOD, ticketId, durationMs: Date.now() - t1 })
 
       const candidates = await getCandidateVectors(ticketId, orgId)
@@ -328,7 +310,7 @@ export async function runBackgroundEnrichment(
 
     // AI agent
     await withRetry(
-      () => runAIAgent(ticketId, content, threadId ?? channelId, priorAnswers, orgId, platform, category ?? 'general_question', duplicates, orgTicketNumber, aiPurpose, channelId, threadId),
+      () => runAIAgent(ticketId, content, threadId ?? channelId, priorAnswers, orgId, platform, category ?? 'general_question', duplicates, orgTicketNumber, channelId, threadId),
       'AI agent',
       { module: MOD, ticketId }
     )

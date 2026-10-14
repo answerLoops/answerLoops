@@ -2,6 +2,7 @@ import {
   pgTable,
   serial,
   integer,
+  bigint,
   smallint,
   text,
   doublePrecision,
@@ -46,14 +47,17 @@ export const orgs = pgTable('orgs', {
   // is needed the way billing's deflection counters require. See
   // getNextOrgTicketNumber in lib/db/queries/tickets.ts.
   nextTicketNumber: integer('next_ticket_number').notNull().default(1),
-  // Free platform-key AI trial: a brand-new org with no AI provider
-  // configured gets PLATFORM_KEY_TRIAL_LIMIT tickets fully AI-processed on
-  // answerLoops' own key, so they see auto-triage/drafting/deflection work
-  // before deciding to add their own key. One-time (lifetime), not monthly —
-  // unlike billing's deflection limit, which resets every period. Assigned
-  // atomically the same way as nextTicketNumber above; see
-  // reservePlatformKeyTrial in lib/billing/platform-key-trial.ts.
-  platformKeyTrialUsed: integer('platform_key_trial_used').notNull().default(0),
+  // Included platform AI usage spent during the trial, in micro-dollars, for
+  // the whole trial. Incremented atomically per call by recordSpend in
+  // lib/billing/platform-ai-budget.ts. Paid-plan spend lives in
+  // platformAiUsage, per month.
+  trialChatSpendMicros: bigint('trial_chat_spend_micros', { mode: 'number' }).notNull().default(0),
+  trialEmbeddingSpendMicros: bigint('trial_embedding_spend_micros', { mode: 'number' }).notNull().default(0),
+  // The embedding model this workspace's stored vectors belong to. Queries
+  // and writes use it until the re-embed job moves everything to the target
+  // model and switches it; see lib/ai/embedding-pin.ts. Null until the first
+  // vector is written.
+  embeddingModelInUse: text('embedding_model_in_use'),
   createdAt: text('created_at').notNull().default(now),
 })
 
@@ -249,6 +253,10 @@ export const ticketEmbeddings = pgTable('ticket_embeddings', {
   ticketId: integer('ticket_id').primaryKey().references(() => tickets.id),
   vector: text('vector').notNull(),
   model: text('model').notNull(),
+  // Written only by the re-embed job (lib/kb/embedding-migration.ts) while a
+  // workspace moves to a new embedding model; null otherwise.
+  vectorNext: text('vector_next'),
+  modelNext: text('model_next'),
   createdAt: text('created_at').notNull().default(now),
 })
 
@@ -384,6 +392,11 @@ export const kbArticles = pgTable(
     // NULL rows from vector search.
     embeddingVec: vector('embedding_vec', { dimensions: 1536 }),
     model: text('model').notNull(),
+    // Written only by the re-embed job (lib/kb/embedding-migration.ts) while a
+    // workspace moves to a new embedding model; null otherwise.
+    embeddingNext: text('embedding_next'),
+    embeddingVecNext: vector('embedding_vec_next', { dimensions: 1536 }),
+    modelNext: text('model_next'),
     sourceTicketId: integer('source_ticket_id').references(() => tickets.id),
     sourceId: integer('source_id'),
     sourcePage: integer('source_page'),
@@ -657,6 +670,20 @@ export const subscriptions = pgTable('subscriptions', {
   createdAt: text('created_at').notNull().default(now),
   updatedAt: text('updated_at').notNull().default(now),
 })
+
+// Included platform AI usage on a paid plan, per workspace per UTC calendar
+// month ('YYYY-MM'), in micro-dollars. One upsert per metered call; see
+// recordSpend in lib/billing/platform-ai-budget.ts.
+export const platformAiUsage = pgTable(
+  'platform_ai_usage',
+  {
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    period: text('period').notNull(),
+    chatSpendMicros: bigint('chat_spend_micros', { mode: 'number' }).notNull().default(0),
+    embeddingSpendMicros: bigint('embedding_spend_micros', { mode: 'number' }).notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.orgId, t.period] })],
+)
 
 // Dedup table for Stripe webhook deliveries — Stripe does not guarantee
 // exactly-once delivery (retries on any non-2xx, or on timeout even after

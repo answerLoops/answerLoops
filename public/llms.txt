@@ -48,7 +48,7 @@ Monthly subscriptions: Standard $49 with 500 automated answers and a hard cap; P
 
 Annual subscriptions: Standard $468 per year ($39 monthly equivalent), Pro $1,428 ($119 equivalent), Enterprise $4,788 ($399 equivalent).
 
-All hosted plans have a 14-day trial with a card required. A separate one-time allowance covers five AI-processed tickets without a provider key. Connect a provider to continue after that allowance; model usage is billed separately. Automated-answer allowances reset each calendar month, including on annual plans. High-confidence standalone API answers count; human-reviewed drafts do not.
+All hosted plans have a 14-day trial with a card required. AI usage is included without a provider key, up to a limit, during the trial and each calendar month on paid plans, with separate limits for answers and knowledge-base processing. Connecting your own provider removes the limit; that model usage is billed by your provider. Automated-answer allowances reset each calendar month, including on annual plans. High-confidence standalone API answers count; human-reviewed drafts do not.
 
 ## Integrations
 

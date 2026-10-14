@@ -1,4 +1,5 @@
-import { embedText } from '@/lib/ai/embed'
+import { embedTextWithModel } from '@/lib/ai/embed'
+import { getPinnedModel } from '@/lib/ai/embedding-pin'
 
 /**
  * Short-lived cache of query embeddings for the widget.
@@ -12,8 +13,11 @@ import { embedText } from '@/lib/ai/embed'
  *
  * The key leads with the org id: each org can configure its own embedding
  * model, so a vector is only valid for the org that produced it, and one
- * tenant can never be handed another tenant's cache entry. Size and age are
- * both bounded so the map stays a fixed size however many distinct queries arrive.
+ * tenant can never be handed another tenant's cache entry. It also carries
+ * the org's pinned embedding model (lib/ai/embedding-pin.ts), so when the org
+ * moves to a new model, vectors from the old one stop being served. Size and
+ * age are both bounded so the map stays a fixed size however many distinct
+ * queries arrive.
  */
 
 const TTL_MS = 10 * 60_000
@@ -26,18 +30,21 @@ interface Entry {
 
 const cache = new Map<string, Entry>()
 
-const keyFor = (orgId: number, query: string) => `${orgId}:${query.trim().toLowerCase().replace(/\s+/g, ' ')}`
+const keyFor = (orgId: number, model: string | null, query: string) =>
+  `${orgId}:${model ?? ''}:${query.trim().toLowerCase().replace(/\s+/g, ' ')}`
 
 export async function embedQueryCached(query: string, orgId: number): Promise<number[]> {
-  const key = keyFor(orgId, query)
-  const hit = cache.get(key)
+  const pinned = await getPinnedModel(orgId)
+  const hitKey = keyFor(orgId, pinned, query)
+  const hit = cache.get(hitKey)
   if (hit && hit.expiresAt > Date.now()) {
     // Re-insert so the Map's insertion order doubles as recency order.
-    cache.delete(key)
-    cache.set(key, hit)
+    cache.delete(hitKey)
+    cache.set(hitKey, hit)
     return hit.vector
   }
-  const vector = await embedText(query, orgId)
+  const { embedding: vector, model } = await embedTextWithModel(query, orgId)
+  const key = keyFor(orgId, model, query)
   cache.delete(key)
   cache.set(key, { vector, expiresAt: Date.now() + TTL_MS })
   while (cache.size > MAX_ENTRIES) {

@@ -50,7 +50,8 @@ vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
 // binding (covered by widget-render-token.test.ts).
 vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: () => true }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
-vi.mock('@/lib/ai/embed', () => ({ embedText: vi.fn(async () => [0.1]) }))
+vi.mock('@/lib/ai/embed', () => ({ embedTextWithModel: vi.fn(async () => ({ embedding: [0.1], model: 'test-embed-model' })) }))
+vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => 'test-embed-model' }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
 vi.mock('@/lib/ai/models', () => ({
   chatModel: vi.fn(async () => ({ id: 'fake' })),

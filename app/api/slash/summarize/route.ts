@@ -3,6 +3,7 @@ import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
 import { getIntegrationByBotSecret } from '@/lib/db/queries/integrations'
 import { chatModel, DEFAULT_CHAT_MODEL, NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { reserveGeneration, commitDeflection } from '@/lib/billing/usage'
 import { orgRateLimitPerMinute } from '@/lib/billing/entitlements-server'
@@ -80,7 +81,7 @@ Keep it under 400 words. Respond in the same language as the conversation.`,
     return Response.json({ summary: text })
   } catch (err) {
     if (err instanceof NoAIProviderConfiguredError) {
-      return Response.json({ error: 'No AI provider configured for this org — an admin needs to connect one in Settings → AI Model.' }, { status: 503 })
+      return Response.json({ error: aiUnavailableMessage(err, 'No AI provider configured for this org — an admin needs to connect one in Settings → AI Model.') }, { status: 503 })
     }
     logger.error('slash /summarize AI failed', { module: MOD, error: err })
     return Response.json({ error: 'AI failed to summarize' }, { status: 500 })

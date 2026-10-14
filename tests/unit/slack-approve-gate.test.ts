@@ -146,7 +146,7 @@ describe('runAIAgent: low-confidence answers are held for approval, generic ack 
   it('sends a generic acknowledgment to Slack, never the actual draft text', async () => {
     const { runAIAgent } = await import('@/lib/ai/agent')
 
-    await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1, 'production', 'C123', undefined)
+    await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1, 'C123', undefined)
 
     expect(sendToSlackChannel).toHaveBeenCalled()
     const [, sentContent] = sendToSlackChannel.mock.calls[0]
@@ -157,7 +157,7 @@ describe('runAIAgent: low-confidence answers are held for approval, generic ack 
   it('still marks the ticket needs_human so the dashboard shows it for approval', async () => {
     const { runAIAgent } = await import('@/lib/ai/agent')
 
-    await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1, 'production', 'C123', undefined)
+    await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1, 'C123', undefined)
 
     expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human')
   })
@@ -166,7 +166,7 @@ describe('runAIAgent: low-confidence answers are held for approval, generic ack 
     getIntegration.mockResolvedValue({ auto_deflect_enabled: 0, confidence_threshold: null })
     const { runAIAgent } = await import('@/lib/ai/agent')
 
-    await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1, 'production', 'C123', undefined)
+    await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1, 'C123', undefined)
 
     expect(sendToSlackChannel).not.toHaveBeenCalled()
     expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human')
