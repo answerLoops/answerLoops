@@ -214,10 +214,10 @@ export default function TermsOfServicePage() {
 
           <Section id="ai-features" title="6. AI features">
             <p>
-              The Service uses third-party AI providers selected or configured
-              by you. Except for any limited trial allowance described in the
-              product, you supply the provider credentials and contract with and
-              pay that provider directly. Provider terms, availability, data
+              The Service uses third-party AI providers. Hosted plans include AI
+              usage up to a limit, provided through answerLoops&apos; own provider
+              accounts. Where you configure your own provider credentials, you
+              contract with and pay that provider directly. Provider terms, availability, data
               practices, model behavior, and usage charges are between you and
               the provider.
             </p>

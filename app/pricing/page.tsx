@@ -161,10 +161,11 @@ export default async function PricingPage({
           <div className="pricing-cost-note mt-8 rounded-xl border p-6">
             <h3>Plan your total cost</h3>
             <p className="mt-2 text-slate-600">
-              New hosted workspaces include five AI-processed tickets without a
-              provider key. After that, connect your provider and pay its model
-              usage directly. This one-time allowance is separate from your
-              14-day plan trial and monthly answer allowance.
+              Hosted plans include AI usage up to a limit, during your 14-day
+              trial and every month after, so you can start without a provider
+              key. Connect your own provider any time to remove the limit; it
+              then bills that usage directly. This is separate from your plan's
+              monthly answer allowance.
             </p>
             <Link
               className="marketing-text-link mt-4"
