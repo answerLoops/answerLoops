@@ -41,11 +41,17 @@ export async function getFeedbackSummary(ticketId: number): Promise<FeedbackSumm
   return { up, down, staffVote: staff?.vote as FeedbackVote ?? null }
 }
 
-export async function getTicketIdByAnswerMessage(discordMessageId: string): Promise<number | null> {
+/**
+ * Ticket behind a posted AI answer message, restricted to the given org.
+ * Returns null for an unknown message and for one that belongs to a
+ * different org.
+ */
+export async function getTicketIdByAnswerMessage(messageId: string, orgId: number): Promise<number | null> {
   const [row] = await getDb()
     .select({ ticketId: answerMessages.ticketId })
     .from(answerMessages)
-    .where(eq(answerMessages.discordMessageId, discordMessageId))
+    .innerJoin(tickets, eq(tickets.id, answerMessages.ticketId))
+    .where(and(eq(answerMessages.discordMessageId, messageId), eq(tickets.orgId, orgId)))
     .limit(1)
   return row?.ticketId ?? null
 }
@@ -57,6 +63,8 @@ export async function mapAnswerMessage(discordMessageId: string, ticketId: numbe
     .onConflictDoUpdate({
       target: answerMessages.discordMessageId,
       set: { ticketId },
+      // Only re-point a mapping that belongs to the same org as the new ticket.
+      setWhere: sql`(SELECT org_id FROM tickets WHERE id = ${answerMessages.ticketId}) = (SELECT org_id FROM tickets WHERE id = ${ticketId})`,
     })
 }
 

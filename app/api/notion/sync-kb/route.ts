@@ -10,8 +10,8 @@ const MOD = 'api/notion/sync-kb'
 // longer runs inside this request, which used to time out on any non-trivial
 // workspace.
 export async function POST() {
-  const access = await requireOrgAccess()
-  if (!access.ok) return NextResponse.json({ error: access.error }, { status: 401 })
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
 
   try {
     const job = await enqueueKbSyncJob({ orgId: access.orgId, kind: 'notion' })

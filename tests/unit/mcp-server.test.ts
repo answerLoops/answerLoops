@@ -332,9 +332,10 @@ describe('lib/db/queries/api-keys: org-scoped key lifecycle', () => {
   it('resolveApiKey rejects revoked keys (isNull filter) and expired keys (explicit date check)', () => {
     const s = src()
     const fnStart = s.indexOf('export async function resolveApiKey')
-    const fnBody = s.slice(fnStart, fnStart + 800)
+    const fnBody = s.slice(fnStart, fnStart + 1200)
     expect(fnBody).toContain('isNull(apiKeys.revokedAt)')
-    expect(fnBody).toMatch(/if \(row\.expiresAt && row\.expiresAt < new Date\(\)\.toISOString\(\)\) return null/)
+    expect(fnBody).toContain('new Date(row.expiresAt).getTime()')
+    expect(fnBody).toContain('expiresAtMs <= Date.now()')
   })
 
   it('resolveApiKey looks up by hash, never by plaintext key', () => {

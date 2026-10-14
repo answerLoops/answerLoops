@@ -27,3 +27,13 @@ export async function embedText(text: string, orgId?: number, purpose: ModelPurp
   })
   return embedding
 }
+
+/**
+ * Resolve the org's embedding provider without calling it. Throws
+ * NoAIProviderConfiguredError when the org has none and the deployment does
+ * not allow the platform key, so bulk-import paths can refuse up front,
+ * before spending crawl or parse work or creating source rows.
+ */
+export async function assertEmbeddingAvailable(orgId: number, purpose: ModelPurpose = 'production'): Promise<void> {
+  await embeddingModel(EMBEDDING_MODEL, orgId, purpose)
+}

@@ -28,20 +28,6 @@ export async function createNotification(
   return toNotification(row)
 }
 
-export async function markNotificationRead(id: number, orgId: number): Promise<void> {
-  await getDb()
-    .update(notifications)
-    .set({ read: 1 })
-    .where(and(eq(notifications.id, id), eq(notifications.orgId, orgId)))
-}
-
-export async function markAllNotificationsRead(orgId: number): Promise<void> {
-  await getDb()
-    .update(notifications)
-    .set({ read: 1 })
-    .where(and(eq(notifications.orgId, orgId), eq(notifications.read, 0)))
-}
-
 export async function getUnreadCount(orgId: number): Promise<number> {
   const [row] = await getDb()
     .select({ n: sql<number>`COUNT(*)::int` })

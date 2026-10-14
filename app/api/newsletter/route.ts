@@ -1,21 +1,27 @@
 import crypto from 'crypto'
-import { NextRequest, NextResponse } from 'next/server'
-import { getSubscriberByEmail, createSubscriber, resubscribe } from '@/lib/db/queries/newsletter'
+import { NextRequest, NextResponse, after } from 'next/server'
+import { getSubscriberByEmail } from '@/lib/db/queries/newsletter'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clientIp } from '@/lib/http/client-ip'
+import { verifyOriginProxy } from '@/lib/http/origin-guard'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
-import { sendNewsletterConfirmation } from '@/lib/email/send'
+import { sendNewsletterConfirmRequest } from '@/lib/newsletter/confirm-email'
 
 const MOD = 'api/newsletter'
 
 // Public, unauthenticated, pre-auth endpoint that sends an outbound email per
 // call, so it carries the same controls as every other route in that class
-// (see app/api/widget/lead/route.ts): per-IP rate limit, a body cap, and a
-// length-bounded email check.
+// (see app/api/widget/lead/route.ts): origin-proxy check, per-IP rate limit, a
+// body cap, and a length-bounded email check.
 const IP_MAX = 5
 const IP_WINDOW_MS = 60_000
+
+// Per address, so one inbox can't be sent a stream of confirmation emails
+// from many client addresses.
+const EMAIL_MAX = 3
+const EMAIL_WINDOW_MS = 60 * 60_000
 
 // A newsletter signup is one short email address. 64KB of headroom for the
 // JSON envelope is already generous; the address itself is capped far
@@ -31,6 +37,9 @@ const MAX_EMAIL_CHARS = 254
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/
 
 export async function POST(req: NextRequest) {
+  const originRejection = verifyOriginProxy(req)
+  if (originRejection) return originRejection
+
   const ip = clientIp(req)
 
   const ipLimit = await rateLimitShared(`newsletter-ip:${ip}`, IP_MAX, IP_WINDOW_MS)
@@ -55,36 +64,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
   }
 
-  let unsubscribeToken: string
-  try {
-    const existing = await getSubscriberByEmail(normalized)
-    if (existing && !existing.unsubscribed_at) {
-      // Already subscribed — no error, no repeat confirmation email.
-      return NextResponse.json({ ok: true, already: true })
-    }
+  // Double opt-in: this request never subscribes anyone. It emails the address
+  // a confirmation link (see app/unsubscribe/confirm/page.tsx); the address is
+  // stored only once that link is used. The response is identical whether the
+  // address is new, already subscribed, previously unsubscribed, or throttled,
+  // and the lookup and send run after the response so timing doesn't differ
+  // either.
+  const emailKey = crypto.createHash('sha256').update(normalized).digest('hex')
+  const requestId = getRequestId(req)
 
-    unsubscribeToken = crypto.randomBytes(32).toString('hex')
-    if (existing) {
-      await resubscribe(normalized, unsubscribeToken)
-    } else {
-      await createSubscriber({ email: normalized, unsubscribeToken })
-    }
-  } catch (err) {
-    logger.error('newsletter signup failed', { module: MOD, requestId: getRequestId(req), error: err })
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
-  }
+  after(async () => {
+    try {
+      const emailLimit = await rateLimitShared(`newsletter-email:${emailKey}`, EMAIL_MAX, EMAIL_WINDOW_MS)
+      if (!emailLimit.ok) return
 
-  try {
-    await sendNewsletterConfirmation(normalized, unsubscribeToken)
-  } catch (err) {
-    // The subscriber row is already committed — a mail provider hiccup here
-    // is not a reason to tell them the signup failed.
-    logger.error('newsletter confirmation email failed', {
-      module: MOD,
-      requestId: getRequestId(req),
-      error: err,
-    })
-  }
+      const existing = await getSubscriberByEmail(normalized)
+      if (existing && !existing.unsubscribed_at) return
+
+      await sendNewsletterConfirmRequest(normalized)
+    } catch (err) {
+      logger.error('newsletter signup failed', { module: MOD, requestId, error: err })
+    }
+  })
 
   return NextResponse.json({ ok: true })
 }

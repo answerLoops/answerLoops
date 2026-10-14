@@ -1,6 +1,6 @@
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
-import { signOAuthState } from '@/lib/oauth/state'
+import { createOAuthState, setOAuthNonceCookie } from '@/lib/oauth/state'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
@@ -19,9 +19,11 @@ const SCOPES = 'channels:history,channels:read,channels:join,chat:write,reaction
 
 export async function GET(req: NextRequest) {
   try {
-    const access = await requireOrgAccess()
-    if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
-    const { orgId } = access
+    const access = await requireOrgAccess(['owner', 'admin'])
+    if (!access.ok) {
+      return Response.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
+    }
+    const { orgId, userId } = access
 
     if (!(await orgHasFeature(orgId, 'slack_integration'))) {
       return Response.json({ error: 'Slack integration requires the Standard plan or above' }, { status: 403 })
@@ -33,7 +35,7 @@ export async function GET(req: NextRequest) {
     const baseUrl = process.env.AUTH_URL ?? req.nextUrl.origin
     const redirectUri = `${baseUrl}/api/slack/callback`
     const from = req.nextUrl.searchParams.get('from') === 'onboarding' ? 'onboarding' : 'settings'
-    const state = signOAuthState({ orgId, from })
+    const { state, nonce } = createOAuthState({ provider: 'slack', orgId, userId, from })
 
     const url = new URL('https://slack.com/oauth/v2/authorize')
     url.searchParams.set('client_id', clientId)
@@ -41,7 +43,7 @@ export async function GET(req: NextRequest) {
     url.searchParams.set('redirect_uri', redirectUri)
     url.searchParams.set('state', state)
 
-    return Response.json({ url: url.toString() })
+    return setOAuthNonceCookie(NextResponse.json({ url: url.toString() }), 'slack', nonce)
   } catch (err) {
     logger.error('slack install failed', { module: MOD, requestId: getRequestId(req), error: err })
     return Response.json({ error: 'Internal server error' }, { status: 500 })

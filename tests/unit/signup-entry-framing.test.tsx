@@ -6,15 +6,16 @@ import path from 'node:path'
 
 // The form calls a server action, which reaches auth.ts and the whole next-auth
 // runtime. None of that is under test here — the rendered label is.
-vi.mock('@/lib/actions/auth', () => ({ loginWithGoogle: vi.fn() }))
+vi.mock('@/lib/actions/auth', () => ({ loginWithProvider: vi.fn() }))
 
 import { LoginForm } from '@/components/auth/login-form'
+
+const GOOGLE = [{ id: 'google' as const, label: 'Google' }]
 
 /**
  * The front door, for someone who has never been here.
  *
- * Google is the only configured provider, so signing in and signing up run the
- * identical OAuth call — Google creates or reuses the account on its side
+ * Signing in and signing up run the identical OAuth call — Google creates or reuses the account on its side
  * either way. That makes the wording the entire user-facing difference, and
  * getting it wrong costs real signups in both directions: a new visitor told
  * only "sign in" assumes an account is a prerequisite, and a returning one told
@@ -45,12 +46,12 @@ describe('the marketing header speaks to someone with no account', () => {
 
 describe('the login form matches the mode it was opened in', () => {
   it('says sign up by default, because that is who arrives cold', () => {
-    render(<LoginForm />)
+    render(<LoginForm providers={GOOGLE} />)
     expect(screen.getByRole('button', { name: /sign up with google/i })).toBeTruthy()
   })
 
   it('says sign in when the page is in sign-in mode', () => {
-    render(<LoginForm signingIn />)
+    render(<LoginForm providers={GOOGLE} signingIn />)
     expect(screen.getByRole('button', { name: /sign in with google/i })).toBeTruthy()
   })
 
@@ -59,7 +60,7 @@ describe('the login form matches the mode it was opened in', () => {
     // Google's page is long enough to look broken without this.
     const src = read('components/auth/login-form.tsx')
     expect(src).toContain('Redirecting…')
-    expect(src).toContain('disabled={googlePending}')
+    expect(src).toContain('disabled={pendingId !== null || gated}')
   })
 })
 

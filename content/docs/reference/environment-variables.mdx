@@ -23,8 +23,8 @@ All variables are set in your `.env` file (local) or in your hosting provider's 
 
 | Variable | Description |
 |---|---|
-| `TRUST_PROXY_HOPS` | Number of proxies between the public internet and the app. Defaults to `1`. Rate limiters resolve the client IP by counting this many entries in from the right of `x-forwarded-for`, so a caller-supplied prefix on that header can't be used to mint a fresh bucket per request. Set to `2` for Cloudflare in front of a platform load balancer. `cf-connecting-ip` takes precedence when present |
-| `ORIGIN_VERIFY_SECRET` | Optional. When set, every public pre-auth POST route (`/api/mcp`, `/api/v1/agent/*`, `/api/widget/chat`) rejects any request missing a matching `x-origin-verify` header — without it, the proxy-supplied client-IP header can be spoofed by hitting the origin directly instead of through your edge proxy. Requires a matching rule on your CDN/edge proxy; see the self-hosting guide |
+| `TRUST_PROXY_HOPS` | Number of proxies between the public internet and the app. Defaults to `1`. Rate limiters resolve the client IP by counting this many entries in from the right of `x-forwarded-for`, so a caller-supplied prefix on that header can't be used to mint a fresh bucket per request. Set to `2` for Cloudflare in front of a platform load balancer. `cf-connecting-ip` takes precedence when it can be relied on (see `ORIGIN_VERIFY_SECRET`) |
+| `ORIGIN_VERIFY_SECRET` | Optional. When set, every public pre-auth POST route (`/api/mcp`, `/api/v1/agent/*`, `/api/widget/*`, `/api/newsletter`) rejects any request missing a matching `x-origin-verify` header, and `cf-connecting-ip` is read only from requests that carry it. Without it, self-hosted installs read `cf-connecting-ip` when present, and the managed cloud deployment uses `x-forwarded-for` only. Requires a matching rule on your CDN/edge proxy; see the self-hosting guide |
 
 ## Multi-domain
 
@@ -76,6 +76,7 @@ These are platform-wide defaults. Individual orgs can override the AI model in *
 |---|---|
 | `DISCORD_TOKEN` | Bot token from the Discord Developer Portal. Required on both the app service (for the channel picker UI) and the bot service |
 | `DISCORD_CLIENT_ID` | Discord application client ID. Optional — when set, onboarding offers a 1-click "Add to Discord" flow instead of asking for a manually-created bot token and channel IDs |
+| `DISCORD_CLIENT_SECRET` | Discord OAuth2 client secret. Required with `DISCORD_CLIENT_ID` for the 1-click flow |
 | `DISCORD_APPLICATION_ID` | Discord application ID (same value as `DISCORD_CLIENT_ID` in most setups). Required to register the `/ask` and `/summarize` slash commands |
 | `DISCORD_GUILD_ID` | ID of the Discord server to monitor |
 | `BOT_SECRET` | Shared secret between the bot and the app for authenticating ingest requests |
@@ -105,12 +106,14 @@ These are platform-wide defaults. Individual orgs can override the AI model in *
 | `GITHUB_APP_PRIVATE_KEY` | PEM-encoded private key generated in the GitHub App settings |
 | `GITHUB_WEBHOOK_SECRET` | Secret used to verify GitHub webhook payloads. Generate with `openssl rand -hex 32` — paste without trailing newline. Required — `/api/github/webhook` returns `503` until it is set |
 | `GITHUB_APP_SLUG` | URL slug for your GitHub App, e.g. `answerloops` |
+| `GITHUB_APP_CLIENT_ID` | The GitHub App's Client ID, used to confirm the person completing an install can access the installation. Enable "Request user authorization (OAuth) during installation" on the App |
+| `GITHUB_APP_CLIENT_SECRET` | A client secret generated in the GitHub App settings. Required with `GITHUB_APP_CLIENT_ID` |
 
 ## Telegram
 
 | Variable | Description |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather on Telegram |
+| `TELEGRAM_WEBHOOK_BASE_URL` | Optional. Overrides `AUTH_URL` for the Telegram webhook only. Each organization saves its own bot token in Integrations → Telegram. |
 
 ## Resend (email)
 

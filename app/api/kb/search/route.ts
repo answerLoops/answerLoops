@@ -1,7 +1,7 @@
 import { requireOrgAccess } from '@/lib/auth/org'
 import { embedText } from '@/lib/ai/embed'
 import { searchArticles, textSearchArticles } from '@/lib/db/queries/kb'
-import { rateLimit } from '@/lib/ratelimit'
+import { rateLimitShared } from '@/lib/ratelimit'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
   const orgId = access.orgId
 
-  const limit = rateLimit(`kb-search:${orgId}`, SEARCH_MAX, SEARCH_WINDOW_MS)
+  const limit = await rateLimitShared(`kb-search:${orgId}`, SEARCH_MAX, SEARCH_WINDOW_MS)
   if (!limit.ok) {
     return Response.json({ error: 'Too many requests' }, { status: 429 })
   }

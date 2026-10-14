@@ -41,7 +41,7 @@ export function NewsletterForm() {
   if (status === 'success') {
     return (
       <p className="marketing-newsletter-success" role="status">
-        You&apos;re on the list — new posts land in your inbox.
+        Check your inbox — we sent a link to confirm your signup.
       </p>
     )
   }

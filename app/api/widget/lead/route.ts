@@ -62,7 +62,7 @@ export async function POST(request: Request) {
   // See app/api/widget/chat/route.ts and lib/widget/render-token.ts — same
   // binding to a render that passed the origin allowlist, same reason
   // (Known Issue 114).
-  if (!verifyRenderToken(renderToken, widgetToken)) {
+  if (!verifyRenderToken(renderToken, widgetToken, ip)) {
     return new Response('Forbidden', { status: 403 })
   }
 

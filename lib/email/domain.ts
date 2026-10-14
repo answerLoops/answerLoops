@@ -13,7 +13,7 @@ export interface DomainRecordPair {
   value: string
 }
 
-export interface RegisteredDomain {
+interface RegisteredDomain {
   providerDomainId: string
   dkim: DomainRecordPair | null
   returnPath: DomainRecordPair | null

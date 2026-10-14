@@ -11,6 +11,7 @@ import {
   type BillingInterval,
   type Plan,
 } from '@/lib/billing/plans'
+import { parsePromoCode } from '@/lib/billing/promo-code'
 
 /**
  * The checkout page's interactive half.
@@ -32,25 +33,46 @@ const money = (cents: number) => `$${Math.round(cents / 100).toLocaleString('en-
 const GATEWAY_STATUSES = new Set([502, 503, 504])
 const GATEWAY_RETRY_DELAY_MS = 1500
 
+type PromoStatus = 'none' | 'invalid' | 'error' | 'applied' | 'no_card' | 'rate_limited'
+
+const PROMO_MESSAGES: Record<PromoStatus, { text: string; good: boolean } | null> = {
+  none: null,
+  invalid: { text: 'That code is not valid.', good: false },
+  error: { text: 'Could not check that code. Try again.', good: false },
+  rate_limited: { text: 'Too many attempts. Try again in a few minutes.', good: false },
+  applied: { text: 'Code applied.', good: true },
+  no_card: { text: 'Code applied. No card is needed.', good: true },
+}
+
 type SecretOutcome =
-  | { kind: 'secret'; clientSecret: string }
+  | { kind: 'secret'; clientSecret: string; promoStatus: PromoStatus }
   | { kind: 'error'; message: string }
   // The edge or host answered instead of the app — a restart or deploy in
   // progress. Worth one retry; says nothing about the customer's connection.
   | { kind: 'gateway' }
 
-async function requestClientSecret(planId: string, interval: BillingInterval): Promise<SecretOutcome> {
+async function requestClientSecret(
+  planId: string,
+  interval: BillingInterval,
+  promoCode: string | null,
+): Promise<SecretOutcome> {
   const res = await fetch('/api/billing/checkout/embedded', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ planId, interval }),
+    body: JSON.stringify({ planId, interval, ...(promoCode && { promoCode }) }),
   })
   // An error page from Cloudflare or the host is HTML. Parsing it as JSON
   // used to throw into the "check your connection" branch, which blamed the
   // customer for a server-side outage.
-  const data = (await res.json().catch(() => null)) as { clientSecret?: string; error?: string } | null
+  const data = (await res.json().catch(() => null)) as {
+    clientSecret?: string
+    promoStatus?: PromoStatus
+    error?: string
+  } | null
   if (data?.error) return { kind: 'error', message: data.error }
-  if (data?.clientSecret) return { kind: 'secret', clientSecret: data.clientSecret }
+  if (data?.clientSecret) {
+    return { kind: 'secret', clientSecret: data.clientSecret, promoStatus: data.promoStatus ?? 'none' }
+  }
   if (GATEWAY_STATUSES.has(res.status)) return { kind: 'gateway' }
   return {
     kind: 'error',
@@ -62,6 +84,8 @@ interface Props {
   plans: Plan[]
   initialPlanId: string
   initialInterval: BillingInterval
+  /** A promotion code from the signup link; it starts out applied and filled in. */
+  promoCode?: string | null
   /**
    * Passed in from the server rather than read here as
    * process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
@@ -87,10 +111,16 @@ export function EmbeddedCheckoutPanel({
   plans,
   initialPlanId,
   initialInterval,
+  promoCode = null,
   publishableKey,
 }: Props) {
   const [planId, setPlanId] = useState(initialPlanId)
   const [interval, setInterval] = useState<BillingInterval>(initialInterval)
+  // The code being sent with session requests, and what is typed in the box.
+  // They differ until Apply is pressed, so typing never fires a request.
+  const [appliedCode, setAppliedCode] = useState<string | null>(promoCode)
+  const [codeDraft, setCodeDraft] = useState(promoCode ?? '')
+  const [codeOpen, setCodeOpen] = useState(!!promoCode)
   // The last checkout response, tagged with the selection it was made for. Only
   // a response that matches the current selection is shown, so switching plan
   // or interval hides the previous session straight away (no effect has to
@@ -98,10 +128,17 @@ export function EmbeddedCheckoutPanel({
   const [session, setSession] = useState<{
     planId: string
     interval: BillingInterval
+    code: string | null
     clientSecret: string | null
+    promoStatus: PromoStatus
     error: string | null
   } | null>(null)
-  const current = session && session.planId === planId && session.interval === interval ? session : null
+  const current =
+    session && session.planId === planId && session.interval === interval && session.code === appliedCode
+      ? session
+      : null
+  const noCard = current?.promoStatus === 'no_card'
+  const promoMessage = current ? PROMO_MESSAGES[current.promoStatus] : null
   const clientSecret = current?.clientSecret ?? null
   const error = current?.error ?? null
 
@@ -126,19 +163,19 @@ export function EmbeddedCheckoutPanel({
     // never be wrong, since it decides what the card is charged for.
     let cancelled = false
 
-    const settle = (secret: string | null, message: string | null) => {
-      if (!cancelled) setSession({ planId, interval, clientSecret: secret, error: message })
+    const settle = (secret: string | null, message: string | null, promoStatus: PromoStatus = 'none') => {
+      if (!cancelled) setSession({ planId, interval, code: appliedCode, clientSecret: secret, promoStatus, error: message })
     }
 
     void (async () => {
       try {
-        let outcome = await requestClientSecret(planId, interval)
+        let outcome = await requestClientSecret(planId, interval, appliedCode)
         if (outcome.kind === 'gateway') {
           await new Promise((resolve) => setTimeout(resolve, GATEWAY_RETRY_DELAY_MS))
           if (cancelled) return
-          outcome = await requestClientSecret(planId, interval)
+          outcome = await requestClientSecret(planId, interval, appliedCode)
         }
-        if (outcome.kind === 'secret') settle(outcome.clientSecret, null)
+        if (outcome.kind === 'secret') settle(outcome.clientSecret, null, outcome.promoStatus)
         else if (outcome.kind === 'error') settle(null, outcome.message)
         else settle(null, 'Checkout is temporarily unavailable. Please try again in a minute.')
       } catch {
@@ -149,7 +186,7 @@ export function EmbeddedCheckoutPanel({
     return () => {
       cancelled = true
     }
-  }, [planId, interval])
+  }, [planId, interval, appliedCode])
 
   const fetchClientSecret = useCallback(async () => clientSecret ?? '', [clientSecret])
 
@@ -176,6 +213,53 @@ export function EmbeddedCheckoutPanel({
       {/* Payment — Stripe's iframe, our surroundings */}
       <div className="order-2 lg:order-1 lg:col-start-1 lg:row-span-2 lg:row-start-1">
         <h2 className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-500">Payment</h2>
+
+        <div className="mt-4">
+          {codeOpen ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const trimmed = codeDraft.trim()
+                // An empty box clears the code; a malformed one is never sent.
+                setAppliedCode(trimmed === '' ? null : (parsePromoCode(trimmed) ?? trimmed))
+              }}
+              className="flex gap-2"
+            >
+              <input
+                value={codeDraft}
+                onChange={(e) => setCodeDraft(e.target.value)}
+                aria-label="Promo code"
+                placeholder="Promo code"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:py-2"
+              />
+              <button
+                type="submit"
+                className="shrink-0 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 sm:py-2"
+              >
+                Apply
+              </button>
+            </form>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setCodeOpen(true)}
+              className="text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-900 hover:underline"
+            >
+              Have a promo code?
+            </button>
+          )}
+          {codeOpen && promoMessage && (
+            <p
+              role="status"
+              className={`mt-2 text-xs ${promoMessage.good ? 'text-emerald-700' : 'text-red-600'}`}
+            >
+              {promoMessage.text}
+            </p>
+          )}
+        </div>
 
         {error ? (
           <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
@@ -303,7 +387,9 @@ export function EmbeddedCheckoutPanel({
           {[
             {
               q: 'Am I going to be charged today?',
-              a: `No. The first ${TRIAL_DAYS} days are free. Your card is authorised now and charged only when the trial ends, and cancelling before then costs nothing.`,
+              a: noCard
+                ? `No. Your code covers the full price, so there is nothing to charge and no card is needed. If the discount ever ends, you will be asked to add a payment method under Settings → Billing.`
+                : `No. The first ${TRIAL_DAYS} days are free. Your card is authorised now and charged only when the trial ends, and cancelling before then costs nothing.`,
             },
             {
               q: 'Can I change plan later?',

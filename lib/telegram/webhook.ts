@@ -3,7 +3,7 @@ import { logger } from '@/lib/logger'
 const MOD = 'telegram/webhook'
 const TELEGRAM_API = 'https://api.telegram.org'
 
-export interface RegisterResult {
+interface RegisterResult {
   ok: boolean
   webhookUrl: string
   error?: string

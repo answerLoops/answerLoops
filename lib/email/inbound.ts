@@ -2,7 +2,7 @@
 // detection, spam verdict, HTML fallback, Message-ID parsing. No I/O —
 // everything here is directly unit-testable.
 
-export interface InboundHeaders {
+interface InboundHeaders {
   get(name: string): string | null
 }
 

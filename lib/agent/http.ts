@@ -41,7 +41,7 @@ const IP_RATE_LIMIT_WINDOW_MS = 60_000
 
 // Largest legitimate payload is create_ticket's 4000-char content plus JSON
 // envelope — 64KB is generous headroom.
-export const MAX_BODY_BYTES = 64 * 1024
+const MAX_BODY_BYTES = 64 * 1024
 
 /**
  * `code` distinguishes the three independent ceilings this surface can 429
@@ -49,9 +49,9 @@ export const MAX_BODY_BYTES = 64 * 1024
  * the billing cycle vs. upgrade the plan) if it knows which one it hit,
  * and the message string alone isn't a stable contract to match on.
  */
-export type AgentErrorCode = 'rate_limited' | 'deflection_limit_reached' | 'call_limit_reached'
+type AgentErrorCode = 'rate_limited' | 'deflection_limit_reached' | 'call_limit_reached'
 
-export interface AgentErrorBody {
+interface AgentErrorBody {
   error: { message: string; code?: AgentErrorCode }
 }
 
@@ -96,7 +96,7 @@ function rateLimitedResponse(max: number, result: RateLimitResult): NextResponse
   )
 }
 
-export type AgentAuthResult =
+type AgentAuthResult =
   | { orgId: number; keyId: number; scopes: ApiScope[]; rateLimitHeaders: Record<string, string> }
   | { response: NextResponse<AgentErrorBody> }
 
@@ -186,7 +186,7 @@ export async function authenticateAgentRequest(
   return { orgId, keyId, scopes, rateLimitHeaders: rateLimitHeaders(orgRateLimitMax, orgLimit) }
 }
 
-export type AgentBodyResult =
+type AgentBodyResult =
   | { ok: true; body: Record<string, unknown> }
   | { ok: false; response: NextResponse<AgentErrorBody> }
 

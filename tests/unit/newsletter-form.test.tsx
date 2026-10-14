@@ -32,7 +32,7 @@ describe('NewsletterForm', () => {
 
     expect(
       await screen.findByRole('status')
-    ).toHaveTextContent("You're on the list — new posts land in your inbox.")
+    ).toHaveTextContent("Check your inbox — we sent a link to confirm your signup.")
 
     expect(fetchMock).toHaveBeenCalledWith('/api/newsletter', {
       method: 'POST',
@@ -55,7 +55,7 @@ describe('NewsletterForm', () => {
 
     expect(
       await screen.findByRole('status')
-    ).toHaveTextContent("You're on the list — new posts land in your inbox.")
+    ).toHaveTextContent("Check your inbox — we sent a link to confirm your signup.")
   })
 
   it('disables the input and button and shows "Subscribing…" while the request is in flight', async () => {

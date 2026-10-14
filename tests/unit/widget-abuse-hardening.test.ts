@@ -52,7 +52,7 @@ describe('widget chat route reuses the shared rate limiter', () => {
   it('rejects with 429 when any limiter trips', () => {
     const src = read('app/api/widget/chat/route.ts')
     const matches = src.match(/status: 429/g) ?? []
-    expect(matches.length).toBe(3)
+    expect(matches.length).toBe(4)
   })
 })
 

@@ -44,24 +44,25 @@ Only relevant if you're running the dashboard on a separate subdomain from your 
   Set this to the actual number of proxies in front of the app. Too high and you read a value the client controls, which defeats per-IP limiting. Too low and everyone behind your edge shares one bucket, which throttles legitimate traffic. The default of `1` is correct for a single load balancer or CDN (Railway, Fly, a lone nginx). Add one for each additional layer — Cloudflare in front of Railway is `2`.
 </Warning>
 
-Cloudflare's `cf-connecting-ip` header is used when present and takes precedence, since Cloudflare overwrites rather than appends it.
+Cloudflare's `cf-connecting-ip` header is used when it can be relied on, since Cloudflare overwrites rather than appends it. It is used when `ORIGIN_VERIFY_SECRET` (below) is set and the request carries the matching header, or, on self-hosted and local installs with no secret set, whenever it is present. On the managed cloud deployment (`DEPLOYMENT_MODE=cloud` in production) it is used only for requests that pass the `ORIGIN_VERIFY_SECRET` check; otherwise the `x-forwarded-for` rule above applies.
 
 | Variable | Description | Example |
 |---|---|---|
 | `ORIGIN_VERIFY_SECRET` | Optional secret that locks the proxy-supplied client-IP header's trust to traffic that actually passed through your edge proxy/CDN | `openssl rand -hex 32` |
 
-The proxy-supplied client-IP header (`cf-connecting-ip` or equivalent) is only spoof-proof if the origin is unreachable except through your edge proxy. If your origin is still reachable directly, anyone can set that header themselves and mint a fresh rate-limit bucket per request, bypassing both the per-IP limiter and your edge's own WAF/DDoS layer.
+`ORIGIN_VERIFY_SECRET` ties trust in the proxy-supplied client-IP header (`cf-connecting-ip`) to traffic that came through your edge proxy. When it is set:
 
-To close this:
+- Public pre-auth POST routes (`/api/mcp`, `/api/v1/agent/*`, `/api/widget/*`, `/api/newsletter`) return `403 Forbidden` for requests that lack a matching `x-origin-verify` header.
+- `cf-connecting-ip` is read only from requests that carry that header.
+
+When it is not set, the app cannot tell an edge-routed request from a direct one. Self-hosted and local installs then read `cf-connecting-ip` when present and otherwise the `x-forwarded-for` entry selected by `TRUST_PROXY_HOPS`; the managed cloud deployment ignores `cf-connecting-ip` and uses `x-forwarded-for` only. Set the secret on any deployment that sits behind a CDN or edge proxy.
+
+To configure it:
 
 1. Generate a secret: `openssl rand -hex 32`.
 2. Set `ORIGIN_VERIFY_SECRET` to that value in your deployment's environment.
 3. On your CDN/edge proxy, add a rule (most offer a "modify request header" or equivalent feature) that runs for all traffic and sets a request header `x-origin-verify` to the same secret value.
-4. Confirm requests hitting your origin without that header now get a `403 Forbidden` from `/api/mcp`, `/api/v1/agent/*`, and `/api/widget/chat`.
-
-<Warning>
-  Until this is configured, the proxy-supplied client-IP header is trusted unconditionally — the app has no way to tell an edge-routed request from a direct one. Set `ORIGIN_VERIFY_SECRET` on any deployment sitting behind a CDN or edge proxy.
-</Warning>
+4. Confirm requests that reach your origin without that header get a `403 Forbidden` from the routes above.
 
 ## OAuth (required)
 
@@ -102,6 +103,7 @@ Per-org AI keys set in **Settings → AI Model** override these env vars for tha
 |---|---|
 | `DISCORD_TOKEN` | Platform shared bot token. Required for 1-click OAuth mode and for the channel picker in Settings. |
 | `DISCORD_CLIENT_ID` | Application ID — enables the "Add to Discord" 1-click flow from onboarding. Register callback: `{AUTH_URL}/api/discord/callback`. Without it, onboarding falls back to a manual bot-token + channel-ID flow |
+| `DISCORD_CLIENT_SECRET` | OAuth2 client secret from the same application. Required with `DISCORD_CLIENT_ID` for the 1-click flow, which confirms the authorized server and the installer's permissions there. |
 | `DISCORD_APPLICATION_ID` | Application ID for slash command registration (same value as `DISCORD_CLIENT_ID`) |
 | `DISCORD_GUILD_ID` | Guild ID for guild-scoped slash command registration during dev (instant vs. global's 1-hour delay) |
 | `BOT_SECRET` | Shared secret between the bot service and `/api/ingest`. Auto-generated per-org via Settings; this is the env fallback. |
@@ -139,8 +141,10 @@ See [Google Chat App Setup](/docs/self-hosting/google-chat-app) for the one-time
 | `GITHUB_APP_PRIVATE_KEY` | Base64-encoded PEM: `base64 -i your-app.pem \| tr -d '\n'` |
 | `GITHUB_WEBHOOK_SECRET` | Webhook secret. **Generate with `openssl rand -hex 32` and paste without the trailing newline.** Required: `/api/github/webhook` returns `503` and processes no deliveries until it is set, and the value must match the secret configured on the GitHub App. |
 | `GITHUB_APP_SLUG` | URL-safe app name (slug) — shown in your GitHub App's URL |
+| `GITHUB_APP_CLIENT_ID` | The GitHub App's Client ID. Used to confirm the person completing an install can access the installation. |
+| `GITHUB_APP_CLIENT_SECRET` | A client secret generated in the GitHub App settings. Required with `GITHUB_APP_CLIENT_ID`. |
 
-Register these URLs in your GitHub App:
+Register these URLs in your GitHub App, and enable **Request user authorization (OAuth) during installation**:
 - Callback URL: `{AUTH_URL}/api/github/callback`
 - Webhook URL: `{AUTH_URL}/api/github/webhook`
 
@@ -150,9 +154,9 @@ Subscribe to events: Issues, Issue comments, Discussions, Discussion comments, P
 
 | Variable | Description |
 |---|---|
-| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather. Fallback when no org token is saved. |
+| `TELEGRAM_WEBHOOK_BASE_URL` | Optional. Overrides `AUTH_URL` for the Telegram webhook only. |
 
-After deploying, register the webhook: `POST {AUTH_URL}/api/telegram/register` (or click **Register webhook** in Integrations → Telegram).
+Each organization saves its own bot token (from @BotFather) in Integrations → Telegram; there is no deployment-wide bot token. After saving, the webhook is registered automatically; to register it again, `POST {AUTH_URL}/api/telegram/register` (or click **Register webhook** in Integrations → Telegram).
 
 ## Email notifications — Resend (optional)
 

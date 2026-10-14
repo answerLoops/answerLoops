@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'fs'
 import path from 'path'
-import { execSync } from 'child_process'
 
 // Container + deployment config validation.
 // No Docker daemon needed — validates file structure, config syntax, and

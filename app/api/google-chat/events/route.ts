@@ -1,12 +1,13 @@
 import { verifyGoogleChatRequest } from '@/lib/google-chat/verify'
 import {
   getIntegrationByGoogleChatSpace,
-  getIntegrationByPairingCode,
   completeGoogleChatPairing,
 } from '@/lib/db/queries/integrations'
 import { getTicketByThreadId } from '@/lib/db/queries/tickets'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
+import { readBodyCapped } from '@/lib/http/read-body-capped'
+import { clampIngestContent, isIngestRateLimited, WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 import { logger } from '@/lib/logger'
 
 const MOD = 'api/google-chat/events'
@@ -33,7 +34,10 @@ interface GoogleChatEvent {
 }
 
 export async function POST(request: Request) {
-  const rawBody = await request.text()
+  // Byte-counted while streaming; the signed-token check below runs after the
+  // read, so the cap is what bounds an unauthenticated request.
+  const rawBody = await readBodyCapped(request, WEBHOOK_MAX_BODY_BYTES)
+  if (rawBody === null) return new Response('Payload Too Large', { status: 413 })
 
   const audience = process.env.GOOGLE_CHAT_ENDPOINT_URL
   if (!MOCK_EXTERNALS) {
@@ -81,12 +85,16 @@ export async function POST(request: Request) {
   const connectMatch = text.match(/^\/connect\s+(\S+)$/)
   if (connectMatch) {
     const code = connectMatch[1]
-    const pending = await getIntegrationByPairingCode(code)
-    if (!pending) {
-      return Response.json({ text: "That connect code wasn't recognized — check Settings → Integrations → Google Chat for a fresh one." })
+    // One atomic redemption: the code must be unexpired, the integration not
+    // yet paired, and the code is consumed by the same statement.
+    const pairing = await completeGoogleChatPairing(code, spaceName)
+    if (pairing.status === 'space_in_use') {
+      return Response.json({ text: 'This space is already connected to an answerLoops workspace.' })
     }
-    await completeGoogleChatPairing(pending.org_id, spaceName)
-    logger.info('Google Chat space paired', { module: MOD, orgId: pending.org_id, spaceName })
+    if (pairing.status !== 'paired') {
+      return Response.json({ text: "That connect code wasn't recognized or has expired — check Settings → Integrations → Google Chat for a fresh one." })
+    }
+    logger.info('Google Chat space paired', { module: MOD, orgId: pairing.orgId, spaceName })
     return Response.json({ text: '✅ This space is now connected. Questions posted here will flow into your answerLoops dashboard.' })
   }
 
@@ -99,6 +107,10 @@ export async function POST(request: Request) {
   const messageId = event.message?.name
   if (!messageId) return Response.json({})
 
+  if (await isIngestRateLimited(integration.org_id)) {
+    return new Response('Too Many Requests', { status: 429 })
+  }
+
   const threadName = event.message?.thread?.name
   const authorId = event.message?.sender?.name ?? event.user?.name ?? 'unknown'
   const authorName = event.message?.sender?.displayName ?? event.user?.displayName ?? authorId
@@ -110,7 +122,7 @@ export async function POST(request: Request) {
 
   const result = await processCommunityMessage({
     messageId,
-    content: text,
+    content: clampIngestContent(text),
     authorId,
     authorName,
     channelId: spaceName,

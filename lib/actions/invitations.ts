@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation'
 import { refresh } from 'next/cache'
 import { Resend } from 'resend'
 import { auth, unstable_update } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { getDb } from '@/lib/db/drizzle'
 import { users, orgs, memberships, tickets } from '@/lib/db/schema'
@@ -20,6 +21,15 @@ import { addMember, isMember } from '@/lib/db/queries/members'
 
 const INVITE_TTL_DAYS = 7
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
 const InviteSchema = z.object({
   email: z.string().email('Valid email required'),
   role: z.enum(['admin', 'member']).default('member'),
@@ -29,15 +39,19 @@ export async function sendInviteAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string; inviteUrl?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
-  const userId = Number(session.user.id)
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const { orgId, userId } = access
 
   const parsed = InviteSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
   const { email, role } = parsed.data
+
+  // Owner-only: granting the admin role.
+  if (role === 'admin' && access.role !== 'owner') {
+    return { error: 'Only an owner can invite an admin.' }
+  }
 
   const db = getDb()
 
@@ -62,14 +76,16 @@ export async function sendInviteAction(
       .from(users)
       .where(eq(users.id, userId))
       .limit(1)
-    const orgName = org?.name ?? 'a workspace'
-    const inviterName = inviter?.name ?? inviter?.email ?? 'Someone'
+    const rawOrgName = org?.name ?? 'a workspace'
+    const rawInviterName = inviter?.name ?? inviter?.email ?? 'Someone'
+    const orgName = escapeHtml(rawOrgName)
+    const inviterName = escapeHtml(rawInviterName)
     const fromAddress = process.env.RESEND_FROM ?? 'invites@yourdomain.com'
 
     await resend.emails.send({
       from: fromAddress,
       to: email,
-      subject: `${inviterName} invited you to ${orgName}`,
+      subject: `${rawInviterName} invited you to ${rawOrgName}`,
       html: `
         <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px">
           <h2 style="font-size:20px;font-weight:600;color:#111827;margin-bottom:8px">
@@ -99,9 +115,9 @@ export async function revokeInviteAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const { orgId } = access
 
   const id = Number(formData.get('id'))
   if (!id) return { error: 'Missing invite ID' }
@@ -182,10 +198,9 @@ export async function transferOwnershipAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
-  const currentUserId = Number(session.user.id)
+  const access = await requireOrgAccess(['owner'])
+  if (!access.ok) return { error: access.error }
+  const { orgId, userId: currentUserId } = access
 
   const targetMembershipId = Number(formData.get('membershipId'))
   const targetUserId = Number(formData.get('userId'))
@@ -227,23 +242,27 @@ export async function removeMemberAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
-  const currentUserId = Number(session.user.id)
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const { orgId, userId: currentUserId } = access
 
   const membershipId = Number(formData.get('membershipId'))
-  const targetUserId = Number(formData.get('userId'))
-
-  if (targetUserId === currentUserId) return { error: "You can't remove yourself." }
+  if (!Number.isInteger(membershipId) || membershipId < 1) return { error: 'Member not found.' }
 
   const db = getDb()
   const [target] = await db
-    .select({ role: memberships.role })
+    .select({ role: memberships.role, userId: memberships.userId })
     .from(memberships)
     .where(and(eq(memberships.id, membershipId), eq(memberships.orgId, orgId)))
     .limit(1)
-  if (target?.role === 'owner') return { error: 'Owners cannot be removed.' }
+  if (!target) return { error: 'Member not found.' }
+
+  // The target comes from the membership row, not the submitted userId field.
+  if (target.userId === currentUserId) return { error: "You can't remove yourself." }
+  if (target.role === 'owner') return { error: 'Owners cannot be removed.' }
+  if (target.role === 'admin' && access.role !== 'owner') {
+    return { error: 'Only an owner can remove an admin.' }
+  }
 
   await db.delete(memberships).where(and(eq(memberships.id, membershipId), eq(memberships.orgId, orgId)))
 

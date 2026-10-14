@@ -63,7 +63,7 @@ Once wired up, new messages create tickets in real time, and 👍/👎 or 1️�
 Self-hosted only — every managed-cloud org already gets real-time delivery through the shared Events API webhook, so cloud never starts the polling loop at all. Polling exists for operators who can't get Slack admin approval for an OAuth install, or who can't expose a public webhook URL to Slack for security-review or firewall reasons.
 
 1. Go to **Integrations → Slack** and click **Set up manually instead** (only shown on self-hosted deployments, next to **Add to Slack**)
-2. Paste a bot token (`xoxb-…`), the workspace's Team ID (`T…`), and one or more channel IDs
+2. Paste a bot token (`xoxb-…`), the workspace's Team ID (`T…`), and one or more channel IDs. answerLoops asks Slack which workspace the token belongs to and refuses to save if it differs from the Team ID entered, and a Slack workspace can be connected to one answerLoops workspace at a time
 3. A signing secret is optional here — only required if you also plan to wire up the Events API webhook alongside polling
 4. answerLoops calls `conversations.join` on every listed channel the same way OAuth does, then starts polling `conversations.history` on that channel every `SLACK_POLL_INTERVAL_SECONDS` (default 60, minimum recommended 30)
 

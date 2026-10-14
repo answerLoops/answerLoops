@@ -59,9 +59,17 @@ export const TEST_ENV = {
   // product-feedback.spec.ts exercises it.
   FEEDBACK_WIDGET_ENABLED: '1',
   MOCK_EXTERNALS: '1',
+  // The webServer runs a production build, where mock mode is otherwise refused
+  // (lib/mock-mode.ts). This opts the e2e server in explicitly.
+  MOCK_EXTERNALS_E2E: '1',
   BOT_SECRET: 'test-bot-secret',
   AUTH_SECRET: 'test-auth-secret',
   AUTH_URL: BASE_URL,
+  // The login page only offers a sign-in method whose credentials are set, so
+  // the e2e server needs a configured one for the button to render. Never used
+  // to sign in: the specs authenticate with a minted session cookie.
+  AUTH_GOOGLE_ID: '<e2e-google-client-id>',
+  AUTH_GOOGLE_SECRET: '<e2e-google-client-secret>',
   OPENAI_API_KEY: 'test-openai-key',
   VAPID_PUBLIC_KEY: 'BL_test_vapid_public_key',
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: 'BL_test_vapid_public_key',

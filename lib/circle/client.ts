@@ -10,6 +10,7 @@ import { MOCK_EXTERNALS } from '@/lib/mock-mode'
  * from the community's Developers → Tokens page.
  */
 
+// Fixed Circle host: no tenant-supplied host is ever used for these calls.
 const CIRCLE_API_BASE = 'https://app.circle.so/api/admin/v2'
 
 export async function circleFetch(token: string, path: string, init: RequestInit = {}): Promise<Response> {
@@ -68,14 +69,14 @@ export function normalizeCircleContent(raw: CirclePostShape, kind: 'post' | 'com
 
 export async function fetchCirclePost(token: string, postId: string): Promise<CirclePostShape | null> {
   if (MOCK_EXTERNALS) return null
-  const res = await circleFetch(token, `/posts/${postId}`)
+  const res = await circleFetch(token, `/posts/${encodeURIComponent(postId)}`)
   if (!res.ok) return null
   return (await res.json()) as CirclePostShape
 }
 
 export async function fetchCircleComment(token: string, commentId: string): Promise<CirclePostShape | null> {
   if (MOCK_EXTERNALS) return null
-  const res = await circleFetch(token, `/comments/${commentId}`)
+  const res = await circleFetch(token, `/comments/${encodeURIComponent(commentId)}`)
   if (!res.ok) return null
   return (await res.json()) as CirclePostShape
 }

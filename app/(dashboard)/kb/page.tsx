@@ -286,7 +286,7 @@ function FileUploadSection({ onImported }: { onImported: () => void }) {
       <div>
         <h2 className="text-sm font-semibold text-gray-900">Upload file</h2>
         <p className="text-xs text-gray-500 mt-0.5">
-          PDF, DOCX, MD, TXT, CSV — up to 50 MB. Each file is chunked and embedded into the knowledge base.
+          PDF, DOCX, MD, TXT, CSV — up to 10 MB. Each file is chunked and embedded into the knowledge base.
         </p>
       </div>
 

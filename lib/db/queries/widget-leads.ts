@@ -2,7 +2,7 @@ import { desc, eq } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { widgetLeads } from '../schema'
 
-export interface WidgetLead {
+interface WidgetLead {
   id: number
   orgId: number
   widgetToken: string

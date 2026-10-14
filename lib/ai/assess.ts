@@ -15,7 +15,7 @@ const AssessmentSchema = z.object({
   reasoning: z.string().max(400),
 })
 
-export interface AnswerAssessment {
+interface AnswerAssessment {
   confidence: number
   answered_fully: boolean
   reasoning: string

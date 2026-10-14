@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { memberships, users } from '../schema'
 
-export interface Member {
+interface Member {
   membership_id: number
   user_id: number
   org_id: number

@@ -2,7 +2,7 @@ import Link from 'next/link'
 import type { NavState } from './chrome'
 import { PageSchema, type PageSchemaProps } from './page-schema'
 import { MarketingPage, PageHero, TrialCta } from './layout'
-export interface IntentPageProps {
+interface IntentPageProps {
   navState: NavState
   eyebrow: string
   title: string

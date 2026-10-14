@@ -2,10 +2,10 @@ import { logger } from '../lib/logger'
 
 const MOD = 'bot/handlers'
 
-export type Vote = 'up' | 'down'
+type Vote = 'up' | 'down'
 
 // 👍/👎 emojis the bot treats as feedback votes on an AI answer.
-export const VOTE_EMOJI: Record<string, Vote> = {
+const VOTE_EMOJI: Record<string, Vote> = {
   '👍': 'up',
   '👎': 'down',
 }
@@ -48,19 +48,19 @@ export interface IncomingReaction {
   fetch(): Promise<unknown>
 }
 
-export interface ReactingUser {
+interface ReactingUser {
   bot: boolean
   id: string
 }
 
 /** A message is monitored when it (or its thread parent) is a watched channel. */
-export function isMonitored(message: IncomingMessage, channelIds: string[]): boolean {
+function isMonitored(message: IncomingMessage, channelIds: string[]): boolean {
   const parentId = message.channel.isThread() ? message.channel.parentId : null
   return channelIds.includes(message.channelId) || (parentId != null && channelIds.includes(parentId))
 }
 
 /** Whether a message should be forwarded to ingest at all. */
-export function shouldForward(message: IncomingMessage, channelIds: string[]): boolean {
+function shouldForward(message: IncomingMessage, channelIds: string[]): boolean {
   if (message.author.bot) return false
   if (!isMonitored(message, channelIds)) return false
   // Skip very short messages (likely reactions or quick replies).
@@ -69,7 +69,7 @@ export function shouldForward(message: IncomingMessage, channelIds: string[]): b
 }
 
 /** The /api/ingest body for a message; threads forward under their parent channel. */
-export function buildIngestPayload(message: IncomingMessage) {
+function buildIngestPayload(message: IncomingMessage) {
   const isThread = message.channel.isThread()
   return {
     message_id: message.id,
@@ -87,7 +87,7 @@ const authHeaders = (secret: string) => ({
   Authorization: `Bearer ${secret}`,
 })
 
-export interface ForwardResult {
+interface ForwardResult {
   forwarded: boolean
   ok?: boolean
   data?: { ok: boolean; ticket_id?: number; duplicate?: boolean; appended?: boolean; ignored?: boolean }

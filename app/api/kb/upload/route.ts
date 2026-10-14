@@ -2,15 +2,21 @@ import { NextRequest } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { detectFileType, parseFile } from '@/lib/ingest/file-parsers'
 import { chunkMarkdown } from '@/lib/ingest/url'
-import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { embedText, assertEmbeddingAvailable, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { countArticles, createArticleFromSource } from '@/lib/db/queries/kb'
 import { createKBSource, updateKBSourceChunkCount } from '@/lib/db/queries/kb-sources'
-import { rateLimit } from '@/lib/ratelimit'
+import { rateLimitShared } from '@/lib/ratelimit'
+import { readBodyBytesCapped } from '@/lib/http/read-body-capped'
 import { logger } from '@/lib/logger'
 import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
 
 const MOD = 'api/kb/upload'
-const MAX_FILE_BYTES = 50 * 1024 * 1024 // 50 MB
+const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10 MB
+// Multipart framing (boundaries, field headers) on top of the file itself.
+const MULTIPART_OVERHEAD_BYTES = 64 * 1024
+const MAX_REQUEST_BYTES = MAX_FILE_BYTES + MULTIPART_OVERHEAD_BYTES
+const TOO_LARGE_MESSAGE = 'File too large. Max size is 10 MB.'
 const MAX_CHUNKS_PER_FILE = 200
 
 export async function POST(req: NextRequest) {
@@ -18,15 +24,28 @@ export async function POST(req: NextRequest) {
   if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
   const orgId = access.orgId
 
-  const limit = rateLimit(`kb-upload:${orgId}`, 10, 10 * 60_000)
+  const limit = await rateLimitShared(`kb-upload:${orgId}`, 10, 10 * 60_000)
   if (!limit.ok) {
     const mins = Math.ceil(limit.retryAfterMs / 60_000)
     return Response.json({ error: `Rate limit reached. Try again in ${mins} minute${mins === 1 ? '' : 's'}.` }, { status: 429 })
   }
 
+  // Reject on the declared length first, then count the bytes that actually
+  // arrive, so an oversized upload is never buffered whole.
+  const declared = Number(req.headers.get('content-length'))
+  if (Number.isFinite(declared) && declared > MAX_REQUEST_BYTES) {
+    return Response.json({ error: TOO_LARGE_MESSAGE }, { status: 413 })
+  }
+  const contentType = req.headers.get('content-type') ?? ''
+  if (!contentType.toLowerCase().startsWith('multipart/form-data')) {
+    return Response.json({ error: 'Invalid form data' }, { status: 400 })
+  }
+  const raw = await readBodyBytesCapped(req, MAX_REQUEST_BYTES)
+  if (raw === null) return Response.json({ error: TOO_LARGE_MESSAGE }, { status: 413 })
+
   let formData: FormData
   try {
-    formData = await req.formData()
+    formData = await new Response(new Uint8Array(raw), { headers: { 'content-type': contentType } }).formData()
   } catch {
     return Response.json({ error: 'Invalid form data' }, { status: 400 })
   }
@@ -37,7 +56,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (file.size > MAX_FILE_BYTES) {
-    return Response.json({ error: `File too large. Max size is 50 MB.` }, { status: 400 })
+    return Response.json({ error: TOO_LARGE_MESSAGE }, { status: 413 })
   }
 
   const fileType = detectFileType(file.name)
@@ -48,6 +67,19 @@ export async function POST(req: NextRequest) {
   const existing = await countArticles(orgId)
   if (existing >= MAX_ARTICLES_PER_ORG) {
     return Response.json({ error: `Knowledge base is full (${MAX_ARTICLES_PER_ORG} articles). Delete some before uploading more.` }, { status: 400 })
+  }
+
+  // Refuse before parsing when this workspace has no usable embedding provider.
+  try {
+    await assertEmbeddingAvailable(orgId)
+  } catch (err) {
+    if (err instanceof NoAIProviderConfiguredError) {
+      return Response.json(
+        { error: 'No AI provider is set up for this workspace. Add one in Settings → AI Model, then upload again.' },
+        { status: 400 }
+      )
+    }
+    throw err
   }
 
   const buffer = Buffer.from(await file.arrayBuffer())
@@ -82,7 +114,7 @@ export async function POST(req: NextRequest) {
 
   for (const chunk of chunks.slice(0, budget)) {
     try {
-      const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`)
+      const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`, orgId)
       await createArticleFromSource({
         question: chunk.question,
         answer: chunk.answer,

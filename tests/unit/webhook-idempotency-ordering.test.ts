@@ -26,13 +26,13 @@ const src = () => readSrc('app/api/billing/webhook/route.ts')
 describe('webhook idempotency (item 49a)', () => {
   it('imports the dedup functions from the queries layer', () => {
     const s = src()
-    expect(s).toContain('hasProcessedWebhookEvent')
-    expect(s).toContain('markWebhookEventProcessed')
+    expect(s).toContain('claimWebhookEvent')
+    expect(s).toContain('releaseWebhookEventClaim')
   })
 
-  it('checks hasProcessedWebhookEvent before the switch, and short-circuits on a duplicate', () => {
+  it('claims the event id atomically before the switch, and short-circuits on a duplicate', () => {
     const s = src()
-    const checkIdx = s.indexOf('await hasProcessedWebhookEvent(event.id)')
+    const checkIdx = s.indexOf('await claimWebhookEvent(event.id)')
     const switchIdx = s.indexOf('switch (event.type)')
     expect(checkIdx).toBeGreaterThan(-1)
     expect(checkIdx).toBeLessThan(switchIdx)
@@ -56,10 +56,20 @@ describe('webhook event-ordering guard (item 49b)', () => {
     expect(s).toMatch(/lastAppliedEventCreated\s*!=\s*null\s*&&\s*event\.created\s*<=\s*lastAppliedEventCreated/)
   })
 
-  it('applies the stale check in subscription.updated, subscription.deleted, and invoice.payment_failed', () => {
+  it('applies the stale check in checkout.session.completed, subscription.updated, subscription.deleted, and invoice.payment_failed', () => {
     const s = src()
     const occurrences = [...s.matchAll(/isStaleEvent\(existingSub\?\.lastEventCreated, event\)/g)]
     expect(occurrences.length).toBe(3)
+    // checkout.session.completed is guarded against the org's last applied event.
+    const checkoutIdx = s.indexOf("case 'checkout.session.completed'")
+    const updatedIdx = s.indexOf("case 'customer.subscription.updated'")
+    expect(s.slice(checkoutIdx, updatedIdx)).toContain('isStaleEvent(existingForOrg?.lastEventCreated, event)')
+  })
+
+  it('releases the event claim when handling fails so the retry is processed', () => {
+    const s = src()
+    const catchIdx = s.indexOf("logger.error('Webhook handler error'")
+    expect(s.slice(catchIdx, catchIdx + 260)).toContain('releaseWebhookEventClaim(event.id)')
   })
 
   it('threads lastEventCreated: event.created into every upsertSubscription call', () => {
@@ -104,10 +114,8 @@ describe('lib/db/queries/billing.ts — dedup + ordering support', () => {
     expect(s).toContain('lastEventCreated?: number | null')
   })
 
-  it('exposes hasProcessedWebhookEvent, markWebhookEventProcessed, and pruneOldWebhookEvents', () => {
+  it('exposes pruneOldWebhookEvents', () => {
     const s = querySrc()
-    expect(s).toContain('export async function hasProcessedWebhookEvent(')
-    expect(s).toContain('export async function markWebhookEventProcessed(')
     expect(s).toContain('export async function pruneOldWebhookEvents(')
   })
 

@@ -9,8 +9,7 @@ import {
 } from '@/lib/db/queries/tickets'
 import { postReply, postReplyToGithub } from '@/lib/channels/post-reply'
 import { getTicketById } from '@/lib/db/queries/tickets'
-import { auth } from '@/auth'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { sendTicketResolvedEmail } from '@/lib/email/send'
 import { logger } from '@/lib/logger'
 
@@ -66,15 +65,17 @@ export async function updateTicketStatusAction(
 
   const { ticketId, status, staffName, resolutionNotes } = parsed.data
 
-  const session = await auth()
-  const orgId = session?.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess()
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
   const owned = await getTicketById(ticketId, orgId)
   if (!owned) return { error: 'Ticket not found' }
 
   try {
     await updateTicketStatus(ticketId, status, staffName, resolutionNotes)
   } catch (err) {
-    return { error: String(err) }
+    logger.error('failed to update ticket status', { module: 'actions/tickets', orgId, error: err })
+    return { error: 'Could not update the ticket. Try again.' }
   }
 
   if (status === 'resolved' || status === 'closed') {
@@ -106,8 +107,9 @@ export async function postReplyAction(
   }
 
   const { ticketId, staffName, content } = parsed.data
-  const session = await auth()
-  const orgId = session?.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess()
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
   const ticket = await getTicketById(ticketId, orgId)
   if (!ticket) return { error: 'Ticket not found' }
 
@@ -145,8 +147,9 @@ export async function updateAIDraftAction(
   if (!parsed.success) return { error: 'Invalid input' }
 
   const { ticketId, action, newDraft } = parsed.data
-  const session = await auth()
-  const orgId = session?.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess()
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
   const ticket = await getTicketById(ticketId, orgId)
   if (!ticket) return { error: 'Ticket not found' }
 

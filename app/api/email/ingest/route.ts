@@ -27,7 +27,8 @@ import {
   canonicalMessageId,
   collectThreadIds,
 } from '@/lib/email/inbound'
-import { rateLimit } from '@/lib/ratelimit'
+import { rateLimitShared } from '@/lib/ratelimit'
+import { readBodyCapped, readBodyBytesCapped } from '@/lib/http/read-body-capped'
 import { logger } from '@/lib/logger'
 
 const MOD = 'api/email/ingest'
@@ -87,8 +88,9 @@ export async function POST(req: NextRequest) {
   let headersRaw: unknown
 
   if (isResendWebhook) {
-    const rawBody = await req.text()
-    if (rawBody.length > MAX_BODY_BYTES) {
+    // Counted in bytes as the body streams, not trusted from Content-Length.
+    const rawBody = await readBodyCapped(req, MAX_BODY_BYTES)
+    if (rawBody === null) {
       return new Response('Payload Too Large', { status: 413 })
     }
     if (!verifyResendWebhook(rawBody, { id: svixId, timestamp: svixTimestamp, signature: svixSignature }, resendSecret!)) {
@@ -158,7 +160,7 @@ export async function POST(req: NextRequest) {
       logger.warn('email ingest received without secret', { module: MOD })
       return new Response('Unauthorized', { status: 401 })
     }
-    const matched = await getIntegrationByBotSecret(secret)
+    const matched = await getIntegrationByBotSecret(secret, 'email')
     if (!matched || matched.platform !== 'email') {
       logger.warn('email ingest secret did not match any org', { module: MOD })
       return new Response('Unauthorized', { status: 401 })
@@ -167,22 +169,30 @@ export async function POST(req: NextRequest) {
     orgId = integration.org_id
 
     const ct = req.headers.get('content-type') ?? ''
+    const bytes = await readBodyBytesCapped(req, MAX_BODY_BYTES)
+    if (bytes === null) {
+      return new Response('Payload Too Large', { status: 413 })
+    }
     if (ct.includes('application/json')) {
       try {
-        data = (await req.json()) as Record<string, unknown>
+        data = JSON.parse(bytes.toString('utf8')) as Record<string, unknown>
       } catch {
         return new Response('Bad Request', { status: 400 })
       }
     } else {
-      const fd = await req.formData()
-      data = Object.fromEntries(fd.entries())
+      try {
+        const fd = await new Response(new Uint8Array(bytes), { headers: { 'content-type': ct } }).formData()
+        data = Object.fromEntries(fd.entries())
+      } catch {
+        return new Response('Bad Request', { status: 400 })
+      }
     }
     headersRaw = data['headers'] ?? null
   }
 
   // Per-org rate limit — a compromised/misbehaving upstream account shouldn't
   // be able to burn this org's LLM spend or bury the ticket queue.
-  const rl = rateLimit(`email-ingest:${orgId}`, 60, 60_000)
+  const rl = await rateLimitShared(`email-ingest:${orgId}`, 60, 60_000)
   if (!rl.ok) {
     logger.warn('email ingest rate limited', { module: MOD, orgId })
     return new Response('Too Many Requests', { status: 429 })
@@ -294,7 +304,14 @@ export async function POST(req: NextRequest) {
   const threadIds = collectThreadIds(inReplyToHeader, referencesHeader)
   const existingTicketId = threadIds.length > 0 ? await findTicketByMessageIds(threadIds, orgId) : null
 
-  if (existingTicketId) {
+  // A reply only joins an existing ticket when it comes from the address that
+  // opened that ticket; Message-IDs alone are not proof of who is writing.
+  // Anything else is handled as a new conversation below.
+  const existingTicket = existingTicketId ? await getTicketById(existingTicketId, orgId) : null
+  const replyMatchesTicketSender =
+    !!existingTicket && (existingTicket.source_author_id ?? '').trim().toLowerCase() === senderEmail
+
+  if (existingTicketId && existingTicket && replyMatchesTicketSender) {
     // Deliberately does NOT re-run the AI agent here — auto-replying to a
     // reply is exactly the shape of a mail loop, and the loop-guard headers
     // above don't catch every case. A staff notification keeps the loop-risk
@@ -302,10 +319,9 @@ export async function POST(req: NextRequest) {
     await recordCustomerReply(existingTicketId, cleanText || content)
     await setEmailMessageTicket(recorded.id, existingTicketId)
     await updateEmailMessageStatus(recorded.id, 'processed')
-    const existingTicket = await getTicketById(existingTicketId, orgId)
     await createNotification(
       'new_question',
-      `Customer replied to ticket #${existingTicket?.org_ticket_number ?? existingTicketId} — ${senderEmail}`,
+      `Customer replied to ticket #${existingTicket.org_ticket_number} — ${senderEmail}`,
       existingTicketId,
       orgId
     )

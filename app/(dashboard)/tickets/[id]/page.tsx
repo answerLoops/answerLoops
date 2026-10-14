@@ -18,6 +18,7 @@ import { FeedbackButtons } from '@/components/tickets/feedback-buttons'
 import { getArticleBySourceTicket } from '@/lib/db/queries/kb'
 import { PromoteKBButton } from '@/components/tickets/promote-kb-button'
 import { LocalDate } from '@/components/ui/local-date'
+import { telegramMessageIdFromSource } from '@/lib/telegram/message-id'
 import { getIntegration, parseGuildChannelMap } from '@/lib/db/queries/integrations'
 import { getEmailMessagesForTicket } from '@/lib/db/queries/email-messages'
 import { TicketContent } from '@/components/tickets/ticket-content'
@@ -140,7 +141,7 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
             </span>
           ) : ticket.source_platform === 'telegram' && ticket.source_channel_id && ticket.source_message_id ? (
             <a
-              href={`https://t.me/c/${ticket.source_channel_id.replace('-100', '')}/${ticket.source_message_id}`}
+              href={`https://t.me/c/${ticket.source_channel_id.replace('-100', '')}/${telegramMessageIdFromSource(ticket.source_message_id)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-sky-600 hover:text-sky-800 hover:underline"

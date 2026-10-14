@@ -10,16 +10,32 @@
  * Failures throw; callers decide how to degrade (fall back to a static list).
  */
 
-const FETCH_TIMEOUT_MS = 8_000
+import { safeFetch } from '@/lib/http/safe-fetch'
 
-async function fetchJson(url: string, headers: Record<string, string>): Promise<unknown> {
+const FETCH_TIMEOUT_MS = 8_000
+const MAX_MODEL_LIST_BYTES = 1024 * 1024
+
+/** Thrown for a non-2xx model-list response. The message carries only the status, never the upstream body. */
+export class ModelListError extends Error {
+  constructor(public readonly status: number) {
+    super(`Model list request failed (${status})`)
+    this.name = 'ModelListError'
+  }
+}
+
+/**
+ * `custom` marks a URL derived from a tenant-supplied base URL; those go
+ * through safeFetch (public https hosts only). Fixed provider endpoints use
+ * plain fetch.
+ */
+async function fetchJson(url: string, headers: Record<string, string>, custom = false): Promise<unknown> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
   try {
-    const res = await fetch(url, { headers, signal: controller.signal })
-    if (!res.ok) {
-      throw new Error(`Model list request failed (${res.status}): ${await res.text().catch(() => res.statusText)}`)
-    }
+    const res = custom
+      ? await safeFetch(url, { headers, signal: controller.signal, timeoutMs: FETCH_TIMEOUT_MS, maxBytes: MAX_MODEL_LIST_BYTES })
+      : await fetch(url, { headers, signal: controller.signal })
+    if (!res.ok) throw new ModelListError(res.status)
     return await res.json()
   } finally {
     clearTimeout(timeout)
@@ -40,9 +56,11 @@ const OPENAI_CHAT_MODEL_PATTERN = /^(gpt-|chatgpt-|o[0-9])/i
 
 export async function listOpenAIModels(apiKey: string, baseUrl?: string | null): Promise<string[]> {
   const base = (baseUrl ?? 'https://api.openai.com/v1').replace(/\/$/, '')
-  const json = (await fetchJson(`${base}/models`, {
-    Authorization: `Bearer ${apiKey}`,
-  })) as OpenAICompatibleModelList
+  const json = (await fetchJson(
+    `${base}/models`,
+    { Authorization: `Bearer ${apiKey}` },
+    !!baseUrl
+  )) as OpenAICompatibleModelList
   const ids = (json.data ?? []).map((m) => m.id)
   // The chat-vs-everything-else heuristic only makes sense against the real
   // OpenAI API, which lists every model type it hosts together. A custom
@@ -128,6 +146,7 @@ export async function listModelsForProvider(
     case 'openai-compatible':
       return listOpenAIModels(apiKey, baseUrl)
     default:
-      return listOpenAIModels(apiKey, baseUrl)
+      // A base URL only applies to the custom-endpoint provider.
+      return listOpenAIModels(apiKey, null)
   }
 }

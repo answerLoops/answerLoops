@@ -3,11 +3,12 @@
 import crypto from 'crypto'
 import { z } from 'zod'
 import { refresh } from 'next/cache'
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import {
   upsertIntegration,
   deleteIntegration,
   getIntegration,
+  issueGoogleChatPairingCode,
 } from '@/lib/db/queries/integrations'
 import { updateDiscordGuildChannels, removeDiscordGuild } from '@/lib/db/queries/discord-guilds'
 import {
@@ -21,7 +22,9 @@ import { getEmailOauthConnection, deleteEmailOauthConnection } from '@/lib/db/qu
 import { revokeGmailToken } from '@/lib/email/gmail'
 import { revokeOutlookToken } from '@/lib/email/outlook'
 import { registerTelegramWebhook } from '@/lib/telegram/webhook'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { assertPublicHttpsUrl, UnsafeUrlError } from '@/lib/http/safe-url'
+import { generateBotSecret } from '@/lib/ingest/bot-secret'
+import { isUniqueViolation } from '@/lib/ingest/db-errors'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { planRequiredFor } from '@/lib/billing/entitlements'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
@@ -53,9 +56,9 @@ export async function saveDiscordIntegrationAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const gateError = await requireFeature(orgId, 'discord_integration')
   if (gateError) return { error: gateError }
@@ -99,7 +102,7 @@ export async function saveDiscordIntegrationAction(
       }
     }
 
-    const botSecret = existing?.bot_secret ?? crypto.randomBytes(32).toString('hex')
+    const botSecret = existing?.bot_secret ?? generateBotSecret()
     await upsertIntegration({
       orgId,
       platform: 'discord',
@@ -131,9 +134,9 @@ export async function deleteDiscordIntegrationAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   await deleteIntegration(orgId, 'discord')
   refresh()
@@ -149,15 +152,15 @@ export async function deleteDiscordIntegrationAction(
 // fresh one here too means flipping this toggle never fails/no-ops for an
 // org whose integrations row is missing for any other reason.
 export async function updateDiscordAutoDeflectAction(autoDeflectEnabled: boolean): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const gateError = await requireFeature(orgId, 'discord_integration')
   if (gateError) return { error: gateError }
 
   const existing = await getIntegration(orgId, 'discord')
-  const botSecret = existing?.bot_secret ?? crypto.randomBytes(32).toString('hex')
+  const botSecret = existing?.bot_secret ?? generateBotSecret()
   // upsertIntegration always writes `enabled` (defaulting true when omitted,
   // not "leave as-is" like most of its other fields) — passing the current
   // value explicitly here, rather than leaving it out, keeps this toggle
@@ -180,9 +183,9 @@ export async function saveDiscordGuildChannelsAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const gateError = await requireFeature(orgId, 'discord_integration')
   if (gateError) return { error: gateError }
@@ -208,9 +211,9 @@ export async function removeDiscordGuildAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const guildId = String(formData.get('guildId') ?? '').trim()
   if (!guildId) return { error: 'Missing guild id' }
@@ -241,9 +244,9 @@ export async function saveSlackIntegrationAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string; warning?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const gateError = await requireFeature(orgId, 'slack_integration')
   if (gateError) return { error: gateError }
@@ -257,6 +260,12 @@ export async function saveSlackIntegrationAction(
     .map((s) => s.trim())
     .filter(Boolean)
 
+  // Confirm the token really belongs to the workspace id being claimed.
+  if (!MOCK_EXTERNALS) {
+    const verified = await verifySlackWorkspace(botToken, teamId)
+    if (!verified.ok) return { error: verified.error }
+  }
+
   const { failed } = await joinSlackChannels(botToken, channelIdList)
   const warning = failed.length > 0
     ? `Joined ${channelIdList.length - failed.length}/${channelIdList.length} channels automatically. ` +
@@ -269,19 +278,24 @@ export async function saveSlackIntegrationAction(
   // as the OAuth callback. Preserve an existing secret across re-saves,
   // same pattern every other platform's save action already uses.
   const existingIntegration = await getIntegration(orgId, 'slack')
-  const botSecret = existingIntegration?.bot_secret ?? crypto.randomBytes(32).toString('hex')
+  const botSecret = existingIntegration?.bot_secret ?? generateBotSecret()
 
-  await upsertIntegration({
-    orgId,
-    platform: 'slack',
-    botToken,
-    botSecret,
-    webhookSecret: signingSecret ?? null,
-    teamId,
-    channelIds: channelIdList,
-    escalationRoleId: escalationRoleId?.trim() || null,
-    confidenceThreshold: confidenceThreshold ?? null,
-  })
+  try {
+    await upsertIntegration({
+      orgId,
+      platform: 'slack',
+      botToken,
+      botSecret,
+      webhookSecret: signingSecret ?? null,
+      teamId,
+      channelIds: channelIdList,
+      escalationRoleId: escalationRoleId?.trim() || null,
+      confidenceThreshold: confidenceThreshold ?? null,
+    })
+  } catch (err) {
+    if (isUniqueViolation(err)) return { error: 'That Slack workspace is already connected to another answerLoops workspace.' }
+    throw err
+  }
 
   refresh()
   return warning ? { warning } : null
@@ -291,13 +305,33 @@ export async function deleteSlackIntegrationAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   await deleteIntegration(orgId, 'slack')
   refresh()
   return null
+}
+
+// Asks Slack (auth.test) which workspace a bot token belongs to, so a workspace
+// id typed into the form can only be saved alongside a token from that
+// workspace.
+async function verifySlackWorkspace(botToken: string, teamId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    const res = await fetch('https://slack.com/api/auth.test', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${botToken}` },
+      signal: AbortSignal.timeout(10_000),
+    })
+    const data = await res.json() as { ok: boolean; team_id?: string; error?: string }
+    if (!data.ok) return { ok: false, error: 'Slack rejected this bot token — check it and try again' }
+    if (data.team_id !== teamId) return { ok: false, error: 'This bot token belongs to a different Slack workspace than the Team ID entered' }
+    return { ok: true }
+  } catch (err) {
+    logger.warn('Slack auth.test request failed', { module: 'actions/integrations', error: err })
+    return { ok: false, error: 'Could not reach Slack to verify the bot token — try again' }
+  }
 }
 
 // Slack never auto-adds a bot to a channel just because a scope was granted
@@ -346,9 +380,9 @@ export async function saveSlackChannelsAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string; warning?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const gateError = await requireFeature(orgId, 'slack_integration')
   if (gateError) return { error: gateError }
@@ -404,9 +438,9 @@ export async function saveTelegramIntegrationAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string; warning?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const parsed = TelegramIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -436,7 +470,7 @@ export async function saveTelegramIntegrationAction(
     }
   }
 
-  const botSecret = existing?.bot_secret ?? crypto.randomBytes(32).toString('hex')
+  const botSecret = existing?.bot_secret ?? generateBotSecret()
 
   await upsertIntegration({
     orgId,
@@ -472,13 +506,34 @@ export async function deleteTelegramIntegrationAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   await deleteIntegration(orgId, 'telegram')
   refresh()
   return null
+}
+
+/**
+ * Validates a customer-supplied site URL (https, public host) and returns it in
+ * the canonical form stored in team_id: lowercase origin plus any path, without
+ * a trailing slash.
+ */
+async function normalizePublicSiteUrl(
+  raw: string,
+  label: string,
+  example: string
+): Promise<{ url: string } | { error: string }> {
+  try {
+    const parsed = await assertPublicHttpsUrl(raw)
+    return { url: `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, '') }
+  } catch (err) {
+    if (err instanceof UnsafeUrlError) {
+      return { error: `${label} must be a public https:// address (e.g. ${example})` }
+    }
+    throw err
+  }
 }
 
 // ── Discourse ─────────────────────────────────────────────────────────────────
@@ -497,9 +552,9 @@ export async function saveDiscourseIntegrationAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string; webhookUrl?: string; webhookSecret?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const gateError = await requireFeature(orgId, 'discourse_integration')
   if (gateError) return { error: gateError }
@@ -515,11 +570,11 @@ export async function saveDiscourseIntegrationAction(
 
   const existing = await getIntegration(orgId, 'discourse')
 
-  const normalizedSiteUrl = siteUrl?.trim().replace(/\/+$/, '') || existing?.team_id || null
-  if (!normalizedSiteUrl) return { error: 'Discourse site URL is required' }
-  if (!/^https?:\/\/.+/.test(normalizedSiteUrl)) {
-    return { error: 'Site URL must start with https:// (e.g. https://forum.example.com)' }
-  }
+  const rawSiteUrl = siteUrl?.trim().replace(/\/+$/, '') || existing?.team_id || null
+  if (!rawSiteUrl) return { error: 'Discourse site URL is required' }
+  const siteCheck = await normalizePublicSiteUrl(rawSiteUrl, 'Site URL', 'https://forum.example.com')
+  if ('error' in siteCheck) return { error: siteCheck.error }
+  const normalizedSiteUrl = siteCheck.url
 
   const newKey = apiKey?.trim() || null
   if (!newKey && !existing?.bot_token) return { error: 'API key is required' }
@@ -529,20 +584,25 @@ export async function saveDiscourseIntegrationAction(
 
   // The inbound webhook HMAC secret — preserved across re-saves so a saved
   // webhook keeps verifying.
-  const botSecret = existing?.bot_secret ?? crypto.randomBytes(32).toString('hex')
+  const botSecret = existing?.bot_secret ?? generateBotSecret()
 
-  await upsertIntegration({
-    orgId,
-    platform: 'discourse',
-    botToken: newKey ?? undefined,
-    botSecret,
-    botUsername: username,
-    teamId: normalizedSiteUrl,
-    channelIds: categoryList,
-    escalationRoleId: escalationUser?.trim() || null,
-    confidenceThreshold: confidenceThreshold ?? null,
-    autoDeflectEnabled,
-  })
+  try {
+    await upsertIntegration({
+      orgId,
+      platform: 'discourse',
+      botToken: newKey ?? undefined,
+      botSecret,
+      botUsername: username,
+      teamId: normalizedSiteUrl,
+      channelIds: categoryList,
+      escalationRoleId: escalationUser?.trim() || null,
+      confidenceThreshold: confidenceThreshold ?? null,
+      autoDeflectEnabled,
+    })
+  } catch (err) {
+    if (isUniqueViolation(err)) return { error: 'That Discourse site is already connected to another answerLoops workspace.' }
+    throw err
+  }
 
   refresh()
 
@@ -554,9 +614,9 @@ export async function deleteDiscourseIntegrationAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   await deleteIntegration(orgId, 'discourse')
   refresh()
@@ -577,9 +637,9 @@ export async function saveCircleIntegrationAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string; webhookUrl?: string; webhookSecret?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const gateError = await requireFeature(orgId, 'circle_integration')
   if (gateError) return { error: gateError }
@@ -595,18 +655,18 @@ export async function saveCircleIntegrationAction(
 
   const existing = await getIntegration(orgId, 'circle')
 
-  const normalizedUrl = communityUrl?.trim().replace(/\/+$/, '') || existing?.team_id || null
-  if (!normalizedUrl) return { error: 'Circle community URL is required' }
-  if (!/^https?:\/\/.+/.test(normalizedUrl)) {
-    return { error: 'Community URL must start with https:// (e.g. https://community.example.com)' }
-  }
+  const rawCommunityUrl = communityUrl?.trim().replace(/\/+$/, '') || existing?.team_id || null
+  if (!rawCommunityUrl) return { error: 'Circle community URL is required' }
+  const communityCheck = await normalizePublicSiteUrl(rawCommunityUrl, 'Community URL', 'https://community.example.com')
+  if ('error' in communityCheck) return { error: communityCheck.error }
+  const normalizedUrl = communityCheck.url
 
   const newToken = apiToken?.trim() || null
   if (!newToken && !existing?.bot_token) return { error: 'API token is required' }
 
   // Per-org inbound secret — preserved across re-saves so a saved Workflow
   // keeps authenticating.
-  const botSecret = existing?.bot_secret ?? crypto.randomBytes(32).toString('hex')
+  const botSecret = existing?.bot_secret ?? generateBotSecret()
 
   await upsertIntegration({
     orgId,
@@ -629,9 +689,9 @@ export async function deleteCircleIntegrationAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   await deleteIntegration(orgId, 'circle')
   refresh()
@@ -651,9 +711,9 @@ export async function saveEmailIntegrationAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string; webhookSecret?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const parsed = EmailIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -667,7 +727,7 @@ export async function saveEmailIntegrationAction(
 
   const existing = await getIntegration(orgId, 'email')
   // bot_secret used as the webhook verification secret — stable per org
-  const botSecret = existing?.bot_secret ?? crypto.randomBytes(32).toString('hex')
+  const botSecret = existing?.bot_secret ?? generateBotSecret()
 
   await upsertIntegration({
     orgId,
@@ -688,9 +748,9 @@ export async function deleteEmailIntegrationAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const domain = await getEmailDomain(orgId)
   if (domain?.provider_domain_id) await removeDomain(domain.provider_domain_id)
@@ -715,9 +775,9 @@ export async function startEmailDomainVerificationAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const parsed = StartDomainVerificationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
@@ -750,9 +810,9 @@ export async function checkEmailDomainVerificationAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string; status?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const existing = await getEmailDomain(orgId)
   if (!existing?.provider_domain_id) return { error: 'No domain registered' }
@@ -775,9 +835,9 @@ export async function removeEmailDomainAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const existing = await getEmailDomain(orgId)
   if (existing?.provider_domain_id) await removeDomain(existing.provider_domain_id)
@@ -801,9 +861,9 @@ export async function disconnectOauthAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const existing = await getEmailOauthConnection(orgId)
   if (existing) {
@@ -823,55 +883,42 @@ export async function disconnectOauthAction(
 
 // Google Chat's unlisted-app model has no OAuth callback like Slack/Discord
 // to learn which space belongs to which org — instead an org generates this
-// one-time pairing code, a Workspace admin adds the app to a Chat space and
-// posts `/connect <code>`, and app/api/google-chat/events/route.ts resolves
-// the code and stores the space id (see completeGoogleChatPairing).
+// one-time pairing code (single use, expires after 24 hours), a Workspace
+// admin adds the app to a Chat space and posts `/connect <code>`, and
+// app/api/google-chat/events/route.ts redeems the code and stores the space id
+// (see completeGoogleChatPairing).
 export async function generateGoogleChatConnectCodeAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string; connectCode?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const gateError = await requireFeature(orgId, 'google_chat_integration')
   if (gateError) return { error: gateError }
 
-  const existing = await getIntegration(orgId, 'google_chat')
-  // Already paired to a space — regenerating a code here would silently
-  // disconnect it (upsert would overwrite team_id via the enabled:false
-  // insert path only for a brand new row, but re-running pairing on an
-  // already-connected org has no legitimate use case in v1).
-  if (existing?.enabled && existing.team_id) {
+  // Already paired to a space — issuing a new code here would have no
+  // legitimate use, and re-pairing must never move a connected integration.
+  // Idempotent otherwise: an unexpired pending code is returned as-is, so a
+  // double-submit or a stale client can't invalidate a code the user may have
+  // already posted into a space.
+  const issued = await issueGoogleChatPairingCode(orgId, `gc_${crypto.randomBytes(12).toString('hex')}`)
+  if (issued.status === 'already_paired') {
     return { error: 'Google Chat is already connected. Disconnect first to generate a new code.' }
   }
 
-  // Idempotent: an unpaired code already on the row is returned as-is rather
-  // than minted afresh, so a double-submit or a stale client can't invalidate
-  // a code the user may have already posted into a space.
-  if (existing && !existing.enabled && existing.bot_secret?.startsWith('gc_')) {
-    return { connectCode: existing.bot_secret }
-  }
-
-  const connectCode = `gc_${crypto.randomBytes(12).toString('hex')}`
-  await upsertIntegration({
-    orgId,
-    platform: 'google_chat',
-    botSecret: connectCode,
-    enabled: false,
-  })
-
   refresh()
-  return { connectCode }
+  return { connectCode: issued.code }
 }
 
 export async function saveGoogleChatSettingsAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const gateError = await requireFeature(orgId, 'google_chat_integration')
   if (gateError) return { error: gateError }
@@ -896,9 +943,9 @@ export async function deleteGoogleChatIntegrationAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   await deleteIntegration(orgId, 'google_chat')
   refresh()

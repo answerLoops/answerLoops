@@ -82,11 +82,10 @@ Within a few seconds a new ticket should appear in the dashboard's **Tickets** l
 
 ## Environment variables reference
 
-Telegram is configured per-organization through the Settings UI — there's no bot-wide credential required to make it work. Both variables below are optional.
+Telegram is configured per-organization through the Settings UI — there's no bot-wide credential required to make it work. Replies are always sent through the bot token the organization saved in Settings; there is no deployment-wide bot token. The variable below is optional.
 
 | Variable | Required | Description |
 |---|---|---|
-| `TELEGRAM_BOT_TOKEN` | No | Fallback bot token used only when an org hasn't saved its own token in Settings. Useful for single-tenant self-hosted deployments that want to skip the UI setup step. |
 | `TELEGRAM_WEBHOOK_BASE_URL` | No | Overrides `AUTH_URL` for the Telegram webhook only. `AUTH_URL` also drives the OAuth callback host, so the two need different values whenever the app is reached at a different origin than the public tunnel — e.g. developing locally with the app on `localhost` while exposing the webhook through ngrok. Falls back to `AUTH_URL` when unset, which is correct for every normal deployment. |
 
 ---

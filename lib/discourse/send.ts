@@ -35,15 +35,20 @@ export async function postToDiscourseTopic(
     return null
   }
 
-  const res = await discourseFetch(
-    { siteUrl, apiKey, apiUsername },
-    '/posts.json',
-    { method: 'POST', body: JSON.stringify({ topic_id: Number(topicId), raw: content }) }
-  )
+  let res: Response
+  try {
+    res = await discourseFetch(
+      { siteUrl, apiKey, apiUsername },
+      '/posts.json',
+      { method: 'POST', body: JSON.stringify({ topic_id: Number(topicId), raw: content }) }
+    )
+  } catch (err) {
+    logger.error('failed to reach Discourse site', { module: MOD, orgId, topicId, error: err })
+    return null
+  }
 
   if (!res.ok) {
-    const err = await res.text()
-    logger.error('failed to post Discourse reply', { module: MOD, orgId, topicId, status: res.status, err })
+    logger.error('failed to post Discourse reply', { module: MOD, orgId, topicId, status: res.status })
     return null
   }
 

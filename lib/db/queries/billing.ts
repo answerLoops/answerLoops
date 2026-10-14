@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { subscriptions, webhookEvents } from '../schema'
 
-export interface Subscription {
+interface Subscription {
   id: number
   orgId: number
   planId: string
@@ -173,22 +173,24 @@ export async function upsertSubscriptionAndClaimWelcome(input: {
   })
 }
 
-/** True if this Stripe event id has already been applied — webhook retries are common and expected. */
-export async function hasProcessedWebhookEvent(eventId: string): Promise<boolean> {
-  const [row] = await getDb()
-    .select({ eventId: webhookEvents.eventId })
-    .from(webhookEvents)
-    .where(eq(webhookEvents.eventId, eventId))
-    .limit(1)
-  return !!row
-}
-
-/** Records a Stripe event id as applied. Safe to call even if a concurrent delivery already recorded it. */
-export async function markWebhookEventProcessed(eventId: string): Promise<void> {
-  await getDb()
+/**
+ * Atomically claims a Stripe event id before it is handled: a single
+ * INSERT .. ON CONFLICT DO NOTHING RETURNING. Exactly one concurrent delivery
+ * gets `true`; every other delivery of the same event gets `false` and must not
+ * handle it.
+ */
+export async function claimWebhookEvent(eventId: string): Promise<boolean> {
+  const rows = await getDb()
     .insert(webhookEvents)
     .values({ eventId })
     .onConflictDoNothing()
+    .returning({ eventId: webhookEvents.eventId })
+  return rows.length > 0
+}
+
+/** Gives a claim back after the handler failed, so Stripe's retry is processed rather than skipped. */
+export async function releaseWebhookEventClaim(eventId: string): Promise<void> {
+  await getDb().delete(webhookEvents).where(eq(webhookEvents.eventId, eventId))
 }
 
 /** Cleans up dedup rows older than the retention window — Stripe doesn't retry past a few days, so nothing needs to be kept longer. */

@@ -14,7 +14,7 @@ The GitHub integration does three things:
 ## Prerequisites
 
 - A GitHub App created under your account or org
-- `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_SLUG`, and `GITHUB_WEBHOOK_SECRET` set in your environment
+- `GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_SLUG`, `GITHUB_APP_CLIENT_ID`, `GITHUB_APP_CLIENT_SECRET`, and `GITHUB_WEBHOOK_SECRET` set in your environment
 
 ## 1. Create a GitHub App
 
@@ -24,8 +24,8 @@ Go to **github.com → Settings → Developer settings → GitHub Apps → New G
 |---|---|
 | GitHub App name | Your app name (e.g. `answerLoops`) |
 | Homepage URL | `https://yourdomain.com` |
-| Callback URL | `https://yourdomain.com/api/auth/callback/github` |
-| Setup URL (Post installation) | `https://yourdomain.com/api/github/callback` |
+| Callback URL | `https://yourdomain.com/api/github/callback` |
+| Request user authorization (OAuth) during installation | Enabled |
 | Webhook URL | `https://yourdomain.com/api/github/webhook` |
 | Webhook secret | Any random string — save it as `GITHUB_WEBHOOK_SECRET` |
 
@@ -48,7 +48,9 @@ Under **Subscribe to events**, tick:
 - Discussion comments
 - Push (for automatic KB sync on push)
 
-Save the app. Note the **App ID** and your **App slug** (the URL-safe name).
+Save the app. Note the **App ID**, your **App slug** (the URL-safe name), and the app's **Client ID**. Under **Client secrets**, click **Generate a new client secret** and copy it.
+
+The user-authorization setting lets answerLoops confirm that the person finishing the install can access the installation before any repository is connected to your org.
 
 ## 2. Generate a private key
 
@@ -68,12 +70,14 @@ Set the result as `GITHUB_APP_PRIVATE_KEY`.
 GITHUB_APP_ID=<your-app-id>
 GITHUB_APP_PRIVATE_KEY=<base64-encoded-pem>
 GITHUB_APP_SLUG=<your-app-slug>
+GITHUB_APP_CLIENT_ID=<your-app-client-id>
+GITHUB_APP_CLIENT_SECRET=<your-app-client-secret>
 GITHUB_WEBHOOK_SECRET=<your-webhook-secret>
 ```
 
 ## 4. Install the app
 
-In your answerLoops dashboard, go to **Integrations → GitHub → Connect GitHub**. This opens the GitHub App install page for your account or org. After authorizing, GitHub redirects back and your repos are auto-discovered.
+In your answerLoops dashboard, go to **Integrations → GitHub → Connect GitHub**. This opens the GitHub App install page for your account or org. After authorizing, GitHub redirects back, answerLoops confirms you can access the installation, and your repos are auto-discovered. Only org owners and admins can connect GitHub, and a repository can be connected to one answerLoops org at a time.
 
 ## 5. Configure per-repo settings
 

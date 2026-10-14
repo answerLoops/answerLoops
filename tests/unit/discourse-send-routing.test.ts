@@ -17,9 +17,12 @@ vi.mock('@/lib/mock-mode', () => ({
   },
 }))
 
-const { getIntegration } = vi.hoisted(() => ({
+const { getIntegration, safeFetch } = vi.hoisted(() => ({
   getIntegration: vi.fn(),
+  safeFetch: vi.fn(),
 }))
+// The site URL is tenant-supplied, so Discourse calls go through safeFetch.
+vi.mock('@/lib/http/safe-fetch', () => ({ safeFetch }))
 vi.mock('@/lib/db/queries/integrations', () => ({ getIntegration }))
 
 const FULL_INTEGRATION = {
@@ -32,7 +35,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockExternals = false
   getIntegration.mockResolvedValue(FULL_INTEGRATION)
-  global.fetch = vi.fn().mockResolvedValue({
+  safeFetch.mockResolvedValue({
     ok: true,
     json: async () => ({ id: 987 }),
     text: async () => '',
@@ -47,7 +50,7 @@ describe('postToDiscourseTopic', () => {
     const result = await postToDiscourseTopic('42', 'hello', 3)
 
     expect(result).toBe('mock-discourse-42')
-    expect(global.fetch).not.toHaveBeenCalled()
+    expect(safeFetch).not.toHaveBeenCalled()
     expect(getIntegration).not.toHaveBeenCalled()
   })
 
@@ -56,7 +59,7 @@ describe('postToDiscourseTopic', () => {
     const { postToDiscourseTopic } = await import('@/lib/discourse/send')
 
     expect(await postToDiscourseTopic('42', 'hello', 3)).toBeNull()
-    expect(global.fetch).not.toHaveBeenCalled()
+    expect(safeFetch).not.toHaveBeenCalled()
   })
 
   it('returns null when the bot username is not set (partial creds)', async () => {
@@ -64,7 +67,7 @@ describe('postToDiscourseTopic', () => {
     const { postToDiscourseTopic } = await import('@/lib/discourse/send')
 
     expect(await postToDiscourseTopic('42', 'hello', 3)).toBeNull()
-    expect(global.fetch).not.toHaveBeenCalled()
+    expect(safeFetch).not.toHaveBeenCalled()
   })
 
   it('happy path: POSTs to {siteUrl}/posts.json with auth headers + topic body, returns the new post id', async () => {
@@ -73,18 +76,26 @@ describe('postToDiscourseTopic', () => {
     const result = await postToDiscourseTopic('42', 'the answer', 3)
 
     expect(result).toBe('987')
-    const [url, init] = vi.mocked(global.fetch).mock.calls[0]
+    const [url, init] = safeFetch.mock.calls[0]
     expect(url).toBe('https://forum.example.com/posts.json')
-    expect((init as RequestInit).method).toBe('POST')
-    const headers = new Headers((init as RequestInit).headers)
+    expect(init.method).toBe('POST')
+    const headers = new Headers(init.headers)
     expect(headers.get('Api-Key')).toBe('a-discourse-admin-api-key')
     expect(headers.get('Api-Username')).toBe('support-bot')
-    const body = JSON.parse((init as RequestInit).body as string)
+    const body = JSON.parse(init.body as string)
     expect(body).toEqual({ topic_id: 42, raw: 'the answer' })
   })
 
   it('returns null when Discourse rejects the write', async () => {
-    global.fetch = vi.fn().mockResolvedValue({ ok: false, status: 422, text: async () => 'nope' })
+    safeFetch.mockResolvedValue({ ok: false, status: 422, text: async () => 'nope' })
+    const { postToDiscourseTopic } = await import('@/lib/discourse/send')
+
+    expect(await postToDiscourseTopic('42', 'the answer', 3)).toBeNull()
+  })
+
+  it('returns null (does not throw) when the site URL is refused', async () => {
+    const { UnsafeUrlError } = await import('@/lib/http/safe-url')
+    safeFetch.mockRejectedValue(new UnsafeUrlError('nope'))
     const { postToDiscourseTopic } = await import('@/lib/discourse/send')
 
     expect(await postToDiscourseTopic('42', 'the answer', 3)).toBeNull()

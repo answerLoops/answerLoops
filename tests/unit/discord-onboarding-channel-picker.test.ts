@@ -32,9 +32,10 @@ function read(relPath: string): string {
 describe('Discord OAuth callback passes guild_id back to onboarding', () => {
   it('the onboarding redirect includes guild_id, not just discord_connected', () => {
     const src = read('app/api/discord/callback/route.ts')
-    const onboardingBlock = src.slice(src.indexOf("if (from === 'onboarding') {"))
-    expect(onboardingBlock).toContain("next.searchParams.set('discord_connected', '1')")
-    expect(onboardingBlock.slice(0, 200)).toContain("next.searchParams.set('guild_id', guildId)")
+    const successBlock = src.slice(src.indexOf('const successUrl'))
+    expect(successBlock).toContain("new URL(from === 'onboarding' ? '/onboarding' : '/settings', baseUrl)")
+    expect(successBlock).toContain("successUrl.searchParams.set('discord_connected', '1')")
+    expect(successBlock).toContain("successUrl.searchParams.set('guild_id', guildId)")
   })
 })
 

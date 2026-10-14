@@ -32,11 +32,12 @@ This is Google Chat's most distinctive setup step, so it's worth walking through
 
 In **Settings → Integrations → Google Chat**, click **Generate connect code**. This calls `generateGoogleChatConnectCodeAction`, which:
 
-- Checks the org isn't already connected — if a `google_chat` integration row already exists with `enabled: true` and a paired space id, the action refuses and returns an error telling you to disconnect first. Regenerating a code for an already-paired org has no legitimate use case in v1, and silently overwriting the pairing would be surprising.
+- Requires an organization owner or admin.
+- Checks the org isn't already connected — if a `google_chat` integration row already has a paired space id, the action refuses and returns an error telling you to disconnect first. Regenerating a code for an already-paired org has no legitimate use case, and silently overwriting the pairing would be surprising.
 - Generates a code shaped like `gc_<24 hex chars>` (`crypto.randomBytes(12).toString('hex')`, prefixed).
-- Writes an `integrations` row with that code as `bot_secret` and **`enabled: false`** — the row exists to hold the pending code, but it isn't a live connection yet.
+- Writes an `integrations` row with **`enabled: false`** that holds the pending code in its own columns, separate from the integration's shared secret: a SHA-256 digest (`pairing_code_hash`, used for matching), an encrypted copy (`pairing_code_enc`, so the Settings card can keep showing it) and an expiry (`pairing_code_expires_at`, 24 hours after it is issued).
 
-The code is shown once in the Settings UI along with the remaining steps.
+The code is single-use and expires 24 hours after it is generated. While an unexpired code is outstanding, generating again shows the same code.
 
 ### 2. Add the answerLoops app to a Google Chat space
 
@@ -44,14 +45,17 @@ You (or your Workspace admin) add the answerLoops Chat app to the space you want
 
 ### 3. Post the code in that space
 
-Post `/connect <code>` as a message in the space. That message hits the shared inbound webhook (`app/api/google-chat/events/route.ts`), which matches it against `^\/connect\s+(\S+)$` before doing anything else with the event. The handler looks the code up with `getIntegrationByPairingCode` — deliberately **not** filtered on `enabled`, since the whole point of this lookup is to find the still-pending row created in step 1.
+Post `/connect <code>` as a message in the space. That message hits the shared inbound webhook (`app/api/google-chat/events/route.ts`), which matches it against `^\/connect\s+(\S+)$` before doing anything else with the event. The handler redeems the code with `completeGoogleChatPairing(code, spaceName)`, a single atomic database statement. It only matches a `google_chat` row that has not been paired yet, whose pairing code digest matches and has not expired.
 
-- **Code not recognized** (typo, already consumed, or never generated): the space gets back "That connect code wasn't recognized — check Settings → Integrations → Google Chat for a fresh one." Nothing is written to the database.
-- **Code recognized**: `completeGoogleChatPairing(orgId, spaceName)` runs, setting `team_id` to the space's `resourceName` (e.g. `spaces/AAAAxxxxxxx`) and flipping `enabled` to `1`. The space receives "✅ This space is now connected. Questions posted here will flow into your answerLoops dashboard."
+- **Code not recognized** (typo, expired, already consumed, never generated, or the integration is already paired): the space gets back "That connect code wasn't recognized or has expired — check Settings → Integrations → Google Chat for a fresh one." Nothing is written to the database.
+- **Space already connected elsewhere**: if another enabled integration already holds that space, the space is told it is already connected and nothing changes.
+- **Code recognized**: in the same statement that matches it, `team_id` is set to the space's `resourceName` (e.g. `spaces/AAAAxxxxxxx`), `enabled` becomes `1`, and the pairing columns are cleared, so the code cannot be used a second time. The space receives "✅ This space is now connected. Questions posted here will flow into your answerLoops dashboard."
 
 ### 4. Confirm on the Settings page
 
-Back in answerLoops, leave the Google Chat card open. While a connect code is outstanding it polls for the pairing every few seconds and switches to **Connected · space paired** on its own once pairing completes server-side — there's also a **Check now** button to force it. The card then reveals the connected space id, escalation user, confidence threshold, and Automatic Deflections state. The connect code is stored the moment you generate it, so it survives a page reload; you won't be asked to generate a new one (and won't accidentally invalidate the one you already posted).
+Back in answerLoops, leave the Google Chat card open. While a connect code is outstanding it polls for the pairing every few seconds and switches to **Connected · space paired** on its own once pairing completes server-side — there's also a **Check now** button to force it. The card then reveals the connected space id, escalation user, confidence threshold, and Automatic Deflections state. The connect code is stored the moment you generate it, so it survives a page reload; you won't be asked to generate a new one (and won't accidentally invalidate the one you already posted) until it expires.
+
+A paired Google Chat integration has no shared secret of its own: requests from Google are authenticated by the signed token Google attaches to every event, and a connect code is never accepted as a credential for any other endpoint.
 
 <Tip>
   The connect code and the "add the app to a space" step can happen in either order — generating the code doesn't require the app to already be in the space, and adding the app doesn't require a code yet. Pairing only completes once `/connect <code>` is posted in the space *after* the app has joined it.
@@ -111,10 +115,10 @@ See [Google Chat App Setup](/docs/self-hosting/google-chat-app) for the full one
 
 <AccordionGroup>
   <Accordion title="'That connect code wasn't recognized' when posting /connect">
-    The code is a one-time token stored on a pending `integrations` row (`enabled: false`). This message means no row matches that exact code — check for a typo, confirm you copied the whole `gc_...` string, or generate a fresh code from **Settings → Integrations → Google Chat** if the old one has already been used to complete a pairing.
+    The code is a one-time token held on a pending `integrations` row (`enabled: false`) and is valid for 24 hours. This message means no unpaired row has a matching, unexpired code — check for a typo, confirm you copied the whole `gc_...` string, or generate a fresh code from **Settings → Integrations → Google Chat** if the old one expired or has already been used to complete a pairing.
   </Accordion>
   <Accordion title="'Google Chat is already connected. Disconnect first to generate a new code.'">
-    `generateGoogleChatConnectCodeAction` refuses to issue a new code while an `enabled: true` row with a paired space already exists, to avoid silently orphaning the current connection. Click **Disconnect** on the Settings card first, then generate a new code to pair a different space.
+    `generateGoogleChatConnectCodeAction` refuses to issue a new code while the row already has a paired space, to avoid silently orphaning the current connection. Click **Disconnect** on the Settings card first, then generate a new code to pair a different space.
   </Accordion>
   <Accordion title="Posted the code but the space never shows 'Connected'">
     Confirm the message was posted as `/connect <code>` with nothing else in the message — the handler matches `^\/connect\s+(\S+)$` exactly. Also confirm the answerLoops app has actually joined the space (it needs to be added before it can see the message at all) and that `GOOGLE_CHAT_ENDPOINT_URL` on the server matches the HTTP endpoint URL configured in the Chat app's connection settings — a mismatch fails the inbound token's audience check and the event never reaches the pairing logic.

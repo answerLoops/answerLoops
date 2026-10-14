@@ -11,24 +11,6 @@ const base = {
   'aria-hidden': true,
 }
 
-export function ArrowUpIcon({ className }: { className?: string }) {
-  return (
-    <svg {...base} className={className}>
-      <path d="M12 19V5" />
-      <path d="m5 12 7-7 7 7" />
-    </svg>
-  )
-}
-
-export function ArrowDownIcon({ className }: { className?: string }) {
-  return (
-    <svg {...base} className={className}>
-      <path d="M12 5v14" />
-      <path d="m19 12-7 7-7-7" />
-    </svg>
-  )
-}
-
 export function CloseIcon({ className }: { className?: string }) {
   return (
     <svg {...base} className={className}>

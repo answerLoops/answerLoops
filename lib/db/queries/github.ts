@@ -29,6 +29,19 @@ export async function getRepos(orgId: number): Promise<GitHubRepo[]> {
   return rows.map(toRepo)
 }
 
+export class GithubRepoTakenError extends Error {
+  constructor(owner: string, repo: string) {
+    super(`GitHub repository ${owner}/${repo} is already connected to another answerLoops org`)
+    this.name = 'GithubRepoTakenError'
+  }
+}
+
+/**
+ * Connects a repository to an org. A repository belongs to one org (unique on
+ * owner + repo): re-adding it for the org that already owns it refreshes the
+ * installation id and visibility; if a different org owns it this throws
+ * {@link GithubRepoTakenError} rather than touching that org's row.
+ */
 export async function addRepo(
   installationId: number,
   owner: string,
@@ -37,26 +50,38 @@ export async function addRepo(
   orgId: number
 ): Promise<GitHubRepo> {
   const db = getDb()
-  const existing = await db
+  const [existing] = await db
     .select()
     .from(githubRepos)
-    .where(and(eq(githubRepos.owner, owner), eq(githubRepos.repo, repo), eq(githubRepos.orgId, orgId)))
+    .where(and(eq(githubRepos.owner, owner), eq(githubRepos.repo, repo)))
     .limit(1)
 
-  if (existing.length > 0) {
+  if (existing) {
+    if (existing.orgId !== orgId) throw new GithubRepoTakenError(owner, repo)
     const [row] = await db
       .update(githubRepos)
       .set({ installationId, isPrivate: isPrivate ? 1 : 0 })
-      .where(and(eq(githubRepos.owner, owner), eq(githubRepos.repo, repo), eq(githubRepos.orgId, orgId)))
+      .where(and(eq(githubRepos.id, existing.id), eq(githubRepos.orgId, orgId)))
       .returning()
     return toRepo(row)
   }
 
-  const [row] = await db
-    .insert(githubRepos)
-    .values({ orgId, installationId, owner, repo, isPrivate: isPrivate ? 1 : 0 })
-    .returning()
-  return toRepo(row)
+  try {
+    const [row] = await db
+      .insert(githubRepos)
+      .values({ orgId, installationId, owner, repo, isPrivate: isPrivate ? 1 : 0 })
+      .returning()
+    return toRepo(row)
+  } catch (err) {
+    // Lost a race with another org inserting the same repository.
+    const [winner] = await db
+      .select({ orgId: githubRepos.orgId })
+      .from(githubRepos)
+      .where(and(eq(githubRepos.owner, owner), eq(githubRepos.repo, repo)))
+      .limit(1)
+    if (winner && winner.orgId !== orgId) throw new GithubRepoTakenError(owner, repo)
+    throw err
+  }
 }
 
 export async function removeRepo(id: number, orgId: number): Promise<void> {

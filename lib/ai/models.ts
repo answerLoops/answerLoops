@@ -8,6 +8,12 @@ import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { getOrgAIConfig } from '@/lib/db/queries/ai-config'
 import { getDeploymentMode } from '@/lib/billing/plans'
 import { XAI_BASE_URL } from '@/lib/ai/list-models'
+import { createSafeProviderFetch } from '@/lib/ai/safe-provider-fetch'
+
+// Clients pointed at a tenant-supplied base URL send every request through a
+// fetch that only reaches public https hosts, connecting to the validated
+// address. First-party provider endpoints keep the SDK's default fetch.
+const customEndpointFetch = createSafeProviderFetch()
 
 /**
  * Thrown by chatModel()/embeddingModel() when a production call site on
@@ -102,6 +108,7 @@ export async function embeddingModel(
           return createOpenAI({
             apiKey: embKey ?? undefined,
             baseURL: cfg.embedding_base_url ?? undefined,
+            ...(cfg.embedding_base_url ? { fetch: customEndpointFetch } : {}),
           }).embedding(cfg.embedding_model || defaultId)
         }
       }
@@ -130,9 +137,17 @@ export function buildChatProvider(provider: string, apiKey: string | null, baseU
     // xAI's Grok API is OpenAI-compatible — no dedicated @ai-sdk/xai package
     // needed, just the OpenAI client pointed at xAI's base URL.
     case 'xai':
-      return createOpenAI({ apiKey: apiKey ?? undefined, baseURL: baseUrl ?? XAI_BASE_URL })
+      return createOpenAI({
+        apiKey: apiKey ?? undefined,
+        baseURL: baseUrl ?? XAI_BASE_URL,
+        ...(baseUrl ? { fetch: customEndpointFetch } : {}),
+      })
     case 'openai-compatible':
-      return createOpenAI({ apiKey: apiKey ?? undefined, baseURL: baseUrl ?? undefined })
+      return createOpenAI({
+        apiKey: apiKey ?? undefined,
+        baseURL: baseUrl ?? undefined,
+        ...(baseUrl ? { fetch: customEndpointFetch } : {}),
+      })
     default:
       return createOpenAI({ apiKey: apiKey ?? undefined })
   }
@@ -152,5 +167,6 @@ export function buildEmbeddingModel(
   return createOpenAI({
     apiKey: apiKey ?? undefined,
     baseURL: baseUrl ?? undefined,
+    ...(baseUrl ? { fetch: customEndpointFetch } : {}),
   }).embedding(modelId)
 }

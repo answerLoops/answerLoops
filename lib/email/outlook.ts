@@ -49,7 +49,7 @@ interface OutlookTokenResponse {
   error_description?: string
 }
 
-export interface ExchangedOutlookTokens {
+interface ExchangedOutlookTokens {
   accessToken: string
   refreshToken: string
   expiresAt: string

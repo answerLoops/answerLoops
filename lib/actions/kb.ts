@@ -2,7 +2,6 @@
 
 import { z } from 'zod'
 import { refresh } from 'next/cache'
-import { auth } from '@/auth'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { logger } from '@/lib/logger'
 import { getTicketById } from '@/lib/db/queries/tickets'
@@ -11,7 +10,6 @@ import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
 import { rateLimitShared } from '@/lib/ratelimit'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 
 const PromoteSchema = z.object({ ticketId: z.coerce.number() })
@@ -20,11 +18,12 @@ export async function promoteToKBAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
+  const access = await requireOrgAccess()
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
+
   const parsed = PromoteSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: 'Invalid input' }
-
-  const session = await auth()
-  const orgId = session?.orgId ?? DEFAULT_ORG_ID
 
   const ticket = await getTicketById(parsed.data.ticketId, orgId)
   if (!ticket) return { error: 'Ticket not found' }
@@ -43,7 +42,8 @@ export async function promoteToKBAction(
     const embedding = await embedText(`${question}\n\n${answer}`, orgId)
     await createArticle({ question, answer, embedding, model: EMBEDDING_MODEL, sourceTicketId: ticket.id }, orgId)
   } catch (err) {
-    return { error: String(err) }
+    logger.error('failed to promote ticket to knowledge base', { module: 'actions/kb', orgId, error: err })
+    return { error: 'Could not add this answer to the knowledge base. Try again.' }
   }
 
   refresh()

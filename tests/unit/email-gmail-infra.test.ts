@@ -115,19 +115,20 @@ describe('server actions + routes: Gmail connect/disconnect flow', () => {
     expect(fnBody).toContain("emailSendMethod: 'platform'")
   })
 
-  it('install route redirects to the Gmail consent screen with signed state', () => {
+  it('install route redirects to the Gmail consent screen with signed state and a nonce cookie', () => {
     const src = readSrc('app/api/email/gmail/install/route.ts')
     expect(src).toContain('buildGmailAuthUrl')
-    expect(src).toContain('base64url')
-    expect(src).toContain('answerloops-gmail-oauth-state')
-    expect(src).toContain('httpOnly: true')
+    expect(src).toContain("createOAuthState({ provider: 'gmail'")
+    expect(src).toContain("setOAuthNonceCookie(NextResponse.redirect(authUrl), 'gmail', nonce)")
+    expect(src).toContain("requireOrgAccess(['owner', 'admin'])")
+    expect(src).not.toContain('base64url')
   })
 
-  it('callback route validates state expiry and upserts the connection + send method', () => {
+  it('callback route verifies the signed state against the caller and upserts the connection + send method', () => {
     const src = readSrc('app/api/email/gmail/callback/route.ts')
-    expect(src).toContain('10 * 60 * 1000')
-    expect(src).toContain('stateCookie')
-    expect(src).toContain('state mismatch')
+    expect(src).toContain("provider: 'gmail'")
+    expect(src).toContain('verifyOAuthCallback(')
+    expect(src).toContain('cookieNonce')
     expect(src).toContain('upsertEmailOauthConnection')
     expect(src).toContain("emailSendMethod: 'oauth'")
   })

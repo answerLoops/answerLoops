@@ -167,7 +167,7 @@ export async function updateTicketTriage(
  * timestamp, and seeking on it alone would silently skip or repeat rows
  * across a page boundary. `id` (serial, insertion-ordered) breaks every tie.
  */
-export interface TicketCursor {
+interface TicketCursor {
   createdAt: string
   id: number
 }
@@ -270,6 +270,26 @@ export async function getTicketBySourceMessageId(messageId: string, orgId: numbe
     .select()
     .from(tickets)
     .where(and(eq(tickets.sourceMessageId, messageId), eq(tickets.orgId, orgId)))
+    .limit(1)
+  return row ? toTicket(row) : null
+}
+
+// Like getTicketBySourceMessageId, but also pins the source channel. Used for
+// platforms whose message ids are only unique within one channel (Telegram's
+// legacy un-namespaced ids), so an old ticket can still be recognised.
+export async function getTicketBySourceMessageInChannel(
+  messageId: string,
+  channelId: string,
+  orgId: number
+): Promise<Ticket | null> {
+  const [row] = await getDb()
+    .select()
+    .from(tickets)
+    .where(and(
+      eq(tickets.sourceMessageId, messageId),
+      eq(tickets.sourceChannelId, channelId),
+      eq(tickets.orgId, orgId)
+    ))
     .limit(1)
   return row ? toTicket(row) : null
 }
@@ -516,11 +536,19 @@ export async function getStuckPendingTickets(thresholdMinutes: number): Promise<
 // background job actually finished in the tiny window between the sweep's
 // discovery read and this claim (ai_draft_status is no longer 'pending') —
 // either way, null means "don't do the work, it's already handled."
-export async function claimStuckTicketForRetry(id: number): Promise<Ticket | null> {
+// When `orgId` is given the claim only matches a ticket owned by that org, so a
+// caller naming the wrong org claims nothing.
+export async function claimStuckTicketForRetry(id: number, orgId?: number): Promise<Ticket | null> {
   const [row] = await getDb()
     .update(tickets)
     .set({ updatedAt: new Date().toISOString() })
-    .where(and(eq(tickets.id, id), eq(tickets.aiDraftStatus, 'pending')))
+    .where(
+      and(
+        eq(tickets.id, id),
+        eq(tickets.aiDraftStatus, 'pending'),
+        orgId !== undefined ? eq(tickets.orgId, orgId) : undefined
+      )
+    )
     .returning()
   return row ? toTicket(row) : null
 }

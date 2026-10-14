@@ -1,7 +1,6 @@
 import type { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { getIntegration } from '@/lib/db/queries/integrations'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -17,9 +16,9 @@ interface SlackChannel {
 export const dynamic = 'force-dynamic'
 
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-  const orgId = (session as { orgId?: number }).orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return Response.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
+  const orgId = access.orgId
 
   const integration = await getIntegration(orgId, 'slack')
   if (!integration?.bot_token) {
