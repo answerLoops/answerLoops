@@ -69,16 +69,39 @@ export function meterLanguageModel(model: LanguageModelV3, target: MeteringTarge
       },
       wrapStream: async ({ doStream, params }) => {
         const { stream, ...rest } = await doStream()
+        const reader = stream.getReader()
         let outText = ''
-        const metered = stream.pipeThrough(new TransformStream<StreamPart, StreamPart>({
-          transform(part, controller) {
-            if (part.type === 'text-delta') outText += part.delta
-            if (part.type === 'finish') {
-              record(target, 'chat', toTokenUsage(part.usage, () => estimateChat(params, outText), target))
+        let recorded = false
+        // Exactly once per stream: from the finish part's usage when it
+        // arrives, otherwise an estimate when the stream errors, ends early,
+        // or the caller cancels it (the provider still bills what it produced).
+        const recordOnce = (usage: ProviderUsage | undefined) => {
+          if (recorded) return
+          recorded = true
+          record(target, 'chat', toTokenUsage(usage, () => estimateChat(params, outText), target))
+        }
+        const metered = new ReadableStream<StreamPart>({
+          async pull(controller) {
+            try {
+              const { done, value } = await reader.read()
+              if (done) {
+                recordOnce(undefined)
+                controller.close()
+                return
+              }
+              if (value.type === 'text-delta') outText += value.delta
+              if (value.type === 'finish') recordOnce(value.usage)
+              controller.enqueue(value)
+            } catch (err) {
+              recordOnce(undefined)
+              controller.error(err)
             }
-            controller.enqueue(part)
           },
-        }))
+          async cancel(reason) {
+            recordOnce(undefined)
+            await reader.cancel(reason)
+          },
+        })
         return { stream: metered, ...rest }
       },
     },

@@ -58,6 +58,12 @@ export const orgs = pgTable('orgs', {
   // model and switches it; see lib/ai/embedding-pin.ts. Null until the first
   // vector is written.
   embeddingModelInUse: text('embedding_model_in_use'),
+  // Re-embed job bookkeeping (lib/kb/embedding-migration.ts): a lease held
+  // while a pass runs, when it last ran, and how many passes in a row failed
+  // (failing workspaces back off exponentially).
+  embeddingMigrationLeaseUntil: timestamp('embedding_migration_lease_until', { withTimezone: true }),
+  embeddingMigrationAttemptedAt: timestamp('embedding_migration_attempted_at', { withTimezone: true }),
+  embeddingMigrationFailures: integer('embedding_migration_failures').notNull().default(0),
   createdAt: text('created_at').notNull().default(now),
 })
 

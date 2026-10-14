@@ -10,7 +10,9 @@ export async function saveEmbedding(ticketId: number, vector: number[], model: s
     .values({ ticketId, vector: JSON.stringify(vector), model })
     .onConflictDoUpdate({
       target: ticketEmbeddings.ticketId,
-      set: { vector: JSON.stringify(vector), model },
+      // A fresh vector supersedes anything the re-embed job staged from the
+      // old text (lib/kb/embedding-migration.ts).
+      set: { vector: JSON.stringify(vector), model, vectorNext: null, modelNext: null },
     })
 }
 

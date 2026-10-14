@@ -38,7 +38,12 @@ export class PlatformBudgetExhaustedError extends NoAIProviderConfiguredError {
   readonly tier: BudgetTier
   readonly userMessage: string
 
-  constructor(orgId: number, kind: BudgetKind, tier: BudgetTier) {
+  /**
+   * `ownChatProvider`: the workspace already runs answers on its own key, so
+   * only knowledge-base processing is on included usage, and the fix is an
+   * embedding key rather than "add your AI provider".
+   */
+  constructor(orgId: number, kind: BudgetKind, tier: BudgetTier, options: { ownChatProvider?: boolean } = {}) {
     super(orgId, `Platform AI ${kind} budget exhausted for org ${orgId} (${tier})`)
     this.name = 'PlatformBudgetExhaustedError'
     this.kind = kind
@@ -46,8 +51,10 @@ export class PlatformBudgetExhaustedError extends NoAIProviderConfiguredError {
     const usage = tier === 'trial'
       ? `included trial AI usage for ${KIND_LABEL[kind]}`
       : `included AI usage for ${KIND_LABEL[kind]} this month`
-    this.userMessage =
-      `This workspace has used its ${usage}. Add your AI provider in Settings → AI Model to ${KIND_ACTION[kind]}.`
+    const fix = kind === 'embedding' && options.ownChatProvider
+      ? 'Add an OpenAI embedding key under Embeddings in Settings → AI Model'
+      : 'Add your AI provider in Settings → AI Model'
+    this.userMessage = `This workspace has used its ${usage}. ${fix} to ${KIND_ACTION[kind]}.`
   }
 }
 

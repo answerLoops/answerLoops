@@ -6,6 +6,7 @@ import { getOrgAIConfig } from '@/lib/db/queries/ai-config'
 import { embeddingTargetFor } from '@/lib/ai/embedding-pin'
 import { getPlatformModel, platformEmbedding } from '@/lib/ai/platform-models'
 import { getDeploymentMode } from '@/lib/billing/plans'
+import { getBillingTier } from '@/lib/billing/platform-ai-budget'
 import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/model-defaults'
 import { createSafeProviderFetch } from '@/lib/ai/safe-provider-fetch'
 import { clampIngestContent } from '@/lib/ingest/limits'
@@ -19,25 +20,60 @@ const BATCH = 100
  * embedding model, from the text already stored, then switches its pin
  * (lib/ai/embedding-pin.ts) in one transaction. Until then every query and
  * write keeps using the pinned model, so search keeps working throughout and
- * never compares vectors from two models. Unmetered: a platform model change
- * is ours to pay for, and a workspace's own model change runs on its own key.
+ * never compares vectors from two models. Not charged to included usage: a
+ * platform model change is ours to pay for (and only for workspaces with a
+ * live subscription), and a workspace's own model change runs on its own key.
+ *
+ * Each workspace is leased through a row while a pass runs (a session
+ * advisory lock would leak across the connection pool), and one whose passes
+ * keep failing backs off exponentially so it can't take every sweep's slots.
  */
 
-/** Workspaces whose pin differs from their target, or that hold rows not on their pin. */
+/** How long a pass may hold a workspace before another worker can take it; renewed per batch. */
+const LEASE = sql`interval '15 minutes'`
+// Backoff after N consecutive failures (in listMigrationCandidates):
+// 5 minutes × 2^N, with N capped at 8, about 21 hours.
+
+/** Workspaces whose pin differs from their target, or that hold rows not on their pin, least recently attempted first. */
 export async function listMigrationCandidates(platformModel: string, limit = 50): Promise<number[]> {
   const rows = (await getDb().execute(sql`
     SELECT o.id AS org_id FROM orgs o LEFT JOIN ai_configs c ON c.org_id = o.id
-    WHERE o.embedding_model_in_use IS NOT NULL AND (
-      o.embedding_model_in_use <> CASE
-        WHEN c.embedding_base_url IS NOT NULL OR c.embedding_api_key IS NOT NULL OR (c.chat_provider = 'openai' AND c.chat_api_key IS NOT NULL)
-        THEN COALESCE(NULLIF(c.embedding_model, ''), ${DEFAULT_EMBEDDING_MODEL})
-        ELSE ${platformModel} END
-      OR EXISTS (SELECT 1 FROM kb_articles a WHERE a.org_id = o.id AND a.model <> o.embedding_model_in_use)
-      OR EXISTS (SELECT 1 FROM ticket_embeddings te JOIN tickets t ON t.id = te.ticket_id WHERE t.org_id = o.id AND te.model <> o.embedding_model_in_use)
-    )
-    ORDER BY o.id LIMIT ${limit}
+    WHERE o.embedding_model_in_use IS NOT NULL
+      AND (o.embedding_migration_lease_until IS NULL OR o.embedding_migration_lease_until < now())
+      AND (o.embedding_migration_failures = 0 OR o.embedding_migration_attempted_at IS NULL
+        OR o.embedding_migration_attempted_at < now() - interval '5 minutes' * power(2, LEAST(o.embedding_migration_failures, 8)))
+      AND (
+        o.embedding_model_in_use <> CASE
+          WHEN c.embedding_base_url IS NOT NULL OR c.embedding_api_key IS NOT NULL OR (c.chat_provider = 'openai' AND c.chat_api_key IS NOT NULL)
+          THEN COALESCE(NULLIF(c.embedding_model, ''), ${DEFAULT_EMBEDDING_MODEL})
+          ELSE ${platformModel} END
+        OR EXISTS (SELECT 1 FROM kb_articles a WHERE a.org_id = o.id AND a.model <> o.embedding_model_in_use)
+        OR EXISTS (SELECT 1 FROM ticket_embeddings te JOIN tickets t ON t.id = te.ticket_id WHERE t.org_id = o.id AND te.model <> o.embedding_model_in_use)
+      )
+    ORDER BY o.embedding_migration_attempted_at ASC NULLS FIRST, o.id LIMIT ${limit}
   `)) as unknown as { org_id: number }[]
   return rows.map((r) => r.org_id)
+}
+
+/** Takes the workspace's lease if no live one is held; records the attempt. */
+async function acquireLease(orgId: number): Promise<boolean> {
+  const rows = (await getDb().execute(sql`
+    UPDATE orgs SET embedding_migration_lease_until = now() + ${LEASE}, embedding_migration_attempted_at = now()
+    WHERE id = ${orgId} AND (embedding_migration_lease_until IS NULL OR embedding_migration_lease_until < now())
+    RETURNING id
+  `)) as unknown as { id: number }[]
+  return rows.length > 0
+}
+
+async function renewLease(orgId: number): Promise<void> {
+  await getDb().execute(sql`UPDATE orgs SET embedding_migration_lease_until = now() + ${LEASE} WHERE id = ${orgId}`)
+}
+
+/** Releases the lease; a failed pass increments the failure count for backoff, a clean one resets it. */
+async function releaseLease(orgId: number, ok: boolean): Promise<void> {
+  await getDb().execute(ok
+    ? sql`UPDATE orgs SET embedding_migration_lease_until = NULL, embedding_migration_failures = 0 WHERE id = ${orgId}`
+    : sql`UPDATE orgs SET embedding_migration_lease_until = NULL, embedding_migration_failures = embedding_migration_failures + 1 WHERE id = ${orgId}`)
 }
 
 async function stageArticles(orgId: number, target: string, model: EmbeddingModel): Promise<number> {
@@ -49,6 +85,7 @@ async function stageArticles(orgId: number, target: string, model: EmbeddingMode
       ORDER BY id LIMIT ${BATCH}
     `)) as unknown as { id: number; question: string; answer: string }[]
     if (rows.length === 0) return staged
+    await renewLease(orgId)
     // Same text every KB writer embeds (lib/ai/embed.ts callers).
     const { embeddings } = await embedMany({ model, values: rows.map((r) => `${r.question}\n\n${r.answer}`) })
     for (let i = 0; i < rows.length; i++) {
@@ -71,6 +108,7 @@ async function stageTickets(orgId: number, target: string, model: EmbeddingModel
       ORDER BY te.ticket_id LIMIT ${BATCH}
     `)) as unknown as { id: number; summary: string; content: string }[]
     if (rows.length === 0) return staged
+    await renewLease(orgId)
     // Same text the ingest pipeline embeds (lib/ingest/pipeline.ts).
     const { embeddings } = await embedMany({ model, values: rows.map((r) => `${r.summary}\n\n${clampIngestContent(r.content)}`) })
     for (let i = 0; i < rows.length; i++) {
@@ -113,15 +151,21 @@ async function switchIfComplete(orgId: number, target: string): Promise<boolean>
 }
 
 export async function runEmbeddingMigration(orgId: number): Promise<{ staged: number; switched: boolean }> {
-  const [lock] = (await getDb().execute(sql`
-    SELECT pg_try_advisory_lock(hashtext('embedding-migration'), ${orgId}) AS locked
-  `)) as unknown as { locked: boolean }[]
-  if (!lock?.locked) return { staged: 0, switched: false }
+  if (!(await acquireLease(orgId))) return { staged: 0, switched: false }
+  let ok = false
   try {
     const cfg = await getOrgAIConfig(orgId)
     const selfHosted = getDeploymentMode() === 'self-hosted'
     const target = embeddingTargetFor(cfg, selfHosted ? DEFAULT_EMBEDDING_MODEL : getPlatformModel('embedding'))
     if (!target) return { staged: 0, switched: false }
+
+    // Moving onto the platform model runs on our key: only for a workspace
+    // that still has a live subscription. Otherwise this counts as a failed
+    // pass, so the workspace backs off instead of being retried every sweep.
+    if (!target.own && !selfHosted && !(await getBillingTier(orgId))) {
+      logger.info('embedding migration skipped: no live subscription', { module: MOD, orgId })
+      return { staged: 0, switched: false }
+    }
 
     let model: EmbeddingModel
     if (target.own && cfg) {
@@ -138,8 +182,9 @@ export async function runEmbeddingMigration(orgId: number): Promise<{ staged: nu
     const staged = (await stageArticles(orgId, target.modelId, model)) + (await stageTickets(orgId, target.modelId, model))
     const switched = await switchIfComplete(orgId, target.modelId)
     logger.info('embedding migration pass', { module: MOD, orgId, target: target.modelId, staged, switched })
+    ok = true
     return { staged, switched }
   } finally {
-    await getDb().execute(sql`SELECT pg_advisory_unlock(hashtext('embedding-migration'), ${orgId})`)
+    await releaseLease(orgId, ok)
   }
 }

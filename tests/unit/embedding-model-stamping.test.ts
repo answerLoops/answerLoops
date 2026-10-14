@@ -23,6 +23,29 @@ describe('stored vectors record the model that made them', () => {
   })
 })
 
+describe('rewriting a vector discards anything the re-embed job staged for that row', () => {
+  // Otherwise an article edited after staging (its text changed, vector
+  // rewritten) gets the stale staged vector copied over it at the switch.
+  const fnBody = (src: string, name: string) => {
+    const start = src.indexOf(`export async function ${name}`)
+    return src.slice(start, src.indexOf('\n}\n', start))
+  }
+
+  it.each(['createArticle', 'upsertArticleFromSource'])('kb.ts %s clears the staged columns when it updates a row', (name) => {
+    const body = fnBody(read('lib/db/queries/kb.ts'), name)
+    expect(body).toMatch(/embeddingNext: null/)
+    expect(body).toMatch(/embeddingVecNext: null/)
+    expect(body).toMatch(/modelNext: null/)
+  })
+
+  it('saveEmbedding clears the staged ticket vector on conflict', () => {
+    const body = fnBody(read('lib/db/queries/embeddings.ts'), 'saveEmbedding')
+    const set = body.slice(body.indexOf('onConflictDoUpdate'))
+    expect(set).toMatch(/vectorNext: null/)
+    expect(set).toMatch(/modelNext: null/)
+  })
+})
+
 describe('search only compares vectors on the workspace pin', () => {
   it('searchArticles filters kb_articles.model by the org pin', () => {
     const s = read('lib/db/queries/kb.ts')

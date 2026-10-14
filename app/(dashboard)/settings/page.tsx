@@ -554,6 +554,15 @@ export function AIModelSection() {
                 {' · '}Embeddings <code className="text-gray-700">{usageStatus.models.embedding ?? 'unavailable'}</code>
               </p>
             )}
+            {configured && usageStatus?.embedding.included && (
+              // An own chat key that can't embed: answers run on it, but
+              // knowledge-base processing still runs on included usage.
+              <p data-testid="included-embeddings" className="mt-1 text-xs text-gray-500 break-words">
+                {usageStatus.embedding.exhausted
+                  ? 'Included knowledge-base processing is used up — add an OpenAI embedding key under Embeddings to keep importing and searching.'
+                  : <>Knowledge-base processing uses included AI usage (embeddings <code className="text-gray-700">{usageStatus.models.embedding ?? 'unavailable'}</code>). Add an OpenAI embedding key under Embeddings to remove the limit.</>}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${configured ? 'bg-brand-100 text-brand-700' : usageUsedUp ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>

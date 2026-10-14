@@ -119,17 +119,24 @@ function startStuckTicketSweep(): void {
 // its own). The app route lists them and does the work, so model config lives
 // only in the app service; this process just keeps the sweep running.
 const EMBEDDING_MIGRATION_SWEEP_INTERVAL_MS = 5 * 60 * 1000
+// The route stops starting new workspaces after four minutes; this bounds a
+// request that hangs anyway, so a stuck one can't block every later sweep.
+const EMBEDDING_MIGRATION_REQUEST_TIMEOUT_MS = 10 * 60 * 1000
 
 function startEmbeddingMigrationSweep(): void {
   const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
   const botSecret = process.env.BOT_SECRET
+  let inFlight = false
 
   const sweep = async () => {
     if (!botSecret) return // the route requires BOT_SECRET; nothing to do without it
+    if (inFlight) return // the previous sweep is still running; never overlap
+    inFlight = true
     try {
       const res = await fetch(`${targetUrl}/api/kb/embedding-migration/run`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${botSecret}` },
+        signal: AbortSignal.timeout(EMBEDDING_MIGRATION_REQUEST_TIMEOUT_MS),
       })
       if (!res.ok) {
         logger.warn('embedding migration sweep: request failed', { module: MOD, status: res.status })
@@ -137,6 +144,8 @@ function startEmbeddingMigrationSweep(): void {
     } catch (err) {
       // Must not crash the bot process; it retries on the next sweep.
       logger.error('embedding migration sweep failed', { module: MOD, error: err })
+    } finally {
+      inFlight = false
     }
   }
   sweep().catch(() => {})

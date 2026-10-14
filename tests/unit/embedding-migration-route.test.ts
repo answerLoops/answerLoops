@@ -48,7 +48,43 @@ describe('POST /api/kb/embedding-migration/run', () => {
   })
 })
 
+describe('POST /api/kb/embedding-migration/run — bounded work per request', () => {
+  it('stops starting new workspaces once its time budget is spent', async () => {
+    vi.resetModules()
+    vi.unstubAllEnvs()
+    vi.stubEnv('DEPLOYMENT_MODE', 'cloud')
+    let now = 1_000_000
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+    const run = vi.fn(async () => {
+      now += 3 * 60_000 // each workspace takes three minutes
+      return { staged: 1, switched: true }
+    })
+    vi.doMock('@/lib/http/bearer-auth', () => ({ isPlatformBotRequest: () => true }))
+    vi.doMock('@/lib/ai/platform-models', () => ({ getPlatformModel: () => 'text-embedding-3-small' }))
+    vi.doMock('@/lib/kb/embedding-migration', () => ({ listMigrationCandidates: async () => [1, 2, 3, 4], runEmbeddingMigration: run }))
+    vi.doMock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() } }))
+    try {
+      const { POST, ROUTE_TIME_BUDGET_MS } = await import('@/app/api/kb/embedding-migration/run/route')
+      const res = await POST(new Request('https://x.test/api', { method: 'POST' }))
+      expect(run.mock.calls.length).toBeLessThan(4)
+      expect(run.mock.calls.length).toBe(Math.ceil(ROUTE_TIME_BUDGET_MS / (3 * 60_000)))
+      expect(await res.json()).toEqual({ ok: true, orgs: run.mock.calls.length })
+    } finally {
+      nowSpy.mockRestore()
+    }
+  })
+})
+
 describe('bot/index.ts', () => {
+  it('never overlaps sweeps and gives up on a hung request', () => {
+    const s = fs.readFileSync('bot/index.ts', 'utf-8')
+    const fn = s.slice(s.indexOf('function startEmbeddingMigrationSweep()'))
+    const body = fn.slice(0, fn.indexOf('\n}\n'))
+    expect(body).toMatch(/if \(inFlight\) return/)
+    expect(body).toMatch(/signal: AbortSignal\.timeout\(/)
+    expect(body).toMatch(/finally \{\s*inFlight = false/)
+  })
+
   it('runs an embedding-migration sweep against the app route with BOT_SECRET', () => {
     const s = fs.readFileSync('bot/index.ts', 'utf-8')
     expect(s).toContain('function startEmbeddingMigrationSweep()')

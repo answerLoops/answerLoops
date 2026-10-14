@@ -39,6 +39,21 @@ describe('PlatformBudgetExhaustedError', () => {
   })
 })
 
+describe('PlatformBudgetExhaustedError for a workspace with its own chat provider', () => {
+  // Its answers already run on its own key; only knowledge-base processing
+  // runs on included usage, and what removes that limit is an embedding key.
+  it('the embedding message points at the embedding key, not "add your AI provider"', () => {
+    const msg = new PlatformBudgetExhaustedError(1, 'embedding', 'plan', { ownChatProvider: true }).userMessage
+    expect(msg).toContain('included AI usage for knowledge-base processing this month')
+    expect(msg).toContain('Add an OpenAI embedding key under Embeddings in Settings → AI Model')
+    expect(msg).not.toContain('Add your AI provider')
+  })
+
+  it('without the option the message is unchanged', () => {
+    expect(new PlatformBudgetExhaustedError(1, 'embedding', 'plan').userMessage).toContain('Add your AI provider in Settings → AI Model')
+  })
+})
+
 describe('aiUnavailableMessage', () => {
   it('returns the budget message for a budget error', () => {
     const err = new PlatformBudgetExhaustedError(1, 'embedding', 'trial')

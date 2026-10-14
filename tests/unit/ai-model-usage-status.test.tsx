@@ -66,8 +66,9 @@ function mockFetchSequence(aiConfig: unknown, usageStatus: unknown) {
 }
 
 const models = { chat: 'gpt-5.6-terra', fast: 'gpt-5.6-luna', embedding: 'text-embedding-3-small' }
-const ok = { fraction: 0.2, warning: false, exhausted: false }
-const done = { fraction: 1, warning: true, exhausted: true }
+const ok = { included: true, warning: false, exhausted: false }
+const done = { included: true, warning: true, exhausted: true }
+const notIncluded = { included: false, warning: false, exhausted: false }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -75,7 +76,7 @@ beforeEach(() => {
 
 describe('AIModelSection — included AI usage', () => {
   it('describes included usage during the trial and lists the included models', async () => {
-    mockFetchSequence(null, { tier: 'trial', chat: ok, embedding: ok, models })
+    mockFetchSequence(null, { ownChatProvider: false, tier: 'trial', chat: ok, embedding: ok, models })
     render(<AIModelSection />)
 
     await waitFor(() => {
@@ -89,7 +90,7 @@ describe('AIModelSection — included AI usage', () => {
   })
 
   it('describes the monthly limit on a paid plan', async () => {
-    mockFetchSequence(null, { tier: 'plan', chat: ok, embedding: ok, models })
+    mockFetchSequence(null, { ownChatProvider: false, tier: 'plan', chat: ok, embedding: ok, models })
     render(<AIModelSection />)
 
     await waitFor(() => {
@@ -98,7 +99,7 @@ describe('AIModelSection — included AI usage', () => {
   })
 
   it('shows a used-up message and badge once either budget is used up', async () => {
-    mockFetchSequence(null, { tier: 'plan', chat: ok, embedding: done, models })
+    mockFetchSequence(null, { ownChatProvider: false, tier: 'plan', chat: ok, embedding: done, models })
     render(<AIModelSection />)
 
     await waitFor(() => {
@@ -108,7 +109,7 @@ describe('AIModelSection — included AI usage', () => {
   })
 
   it('never shows an amount', async () => {
-    mockFetchSequence(null, { tier: 'plan', chat: ok, embedding: ok, models })
+    mockFetchSequence(null, { ownChatProvider: false, tier: 'plan', chat: ok, embedding: ok, models })
     const { container } = render(<AIModelSection />)
     await waitFor(() => expect(screen.getByText('Included')).toBeInTheDocument())
     expect(container.textContent).not.toMatch(/\$\d/)
@@ -125,10 +126,8 @@ describe('AIModelSection — included AI usage', () => {
   })
 
   it('does not show included usage once the org has its own configured key', async () => {
-    mockFetchSequence(
-      { chat_provider: 'openai', chat_model: 'gpt-4o', chat_api_key_set: true },
-      { tier: 'plan', chat: ok, embedding: ok, models }
-    )
+    // An OpenAI key covers answers and embeddings, so usage-status is null.
+    mockFetchSequence({ chat_provider: 'openai', chat_model: 'gpt-4o', chat_api_key_set: true }, null)
     render(<AIModelSection />)
 
     await waitFor(() => {
@@ -139,8 +138,34 @@ describe('AIModelSection — included AI usage', () => {
     expect(screen.getByText('Custom')).toBeInTheDocument()
   })
 
+  it('an own chat key without embeddings: shows that knowledge-base processing is on included usage', async () => {
+    mockFetchSequence(
+      { chat_provider: 'anthropic', chat_model: 'claude-sonnet-4-6', chat_api_key_set: true },
+      { ownChatProvider: true, tier: 'plan', chat: notIncluded, embedding: ok, models }
+    )
+    render(<AIModelSection />)
+
+    const line = await screen.findByTestId('included-embeddings')
+    expect(line).toHaveTextContent('Knowledge-base processing uses included AI usage')
+    expect(line).toHaveTextContent('text-embedding-3-small')
+    expect(line).toHaveTextContent('Add an OpenAI embedding key under Embeddings to remove the limit.')
+    expect(screen.getByText('Custom')).toBeInTheDocument()
+  })
+
+  it('an own chat key whose included knowledge-base processing is used up: says so', async () => {
+    mockFetchSequence(
+      { chat_provider: 'anthropic', chat_model: 'claude-sonnet-4-6', chat_api_key_set: true },
+      { ownChatProvider: true, tier: 'plan', chat: notIncluded, embedding: done, models }
+    )
+    render(<AIModelSection />)
+
+    expect(await screen.findByTestId('included-embeddings')).toHaveTextContent(
+      'Included knowledge-base processing is used up — add an OpenAI embedding key under Embeddings to keep importing and searching.',
+    )
+  })
+
   it('shows "unavailable" for an included model that is not set', async () => {
-    mockFetchSequence(null, { tier: 'plan', chat: ok, embedding: ok, models: { ...models, fast: null } })
+    mockFetchSequence(null, { ownChatProvider: false, tier: 'plan', chat: ok, embedding: ok, models: { ...models, fast: null } })
     render(<AIModelSection />)
 
     const row = await screen.findByTestId('included-models')
@@ -153,7 +178,7 @@ describe('AIModelSection — included AI usage', () => {
     vi.mocked(clearAIConfigAction).mockResolvedValue(null as never)
     mockFetchSequence(
       { chat_provider: 'openai', chat_model: 'gpt-4o', chat_api_key_set: true, embedding_provider: 'openai', embedding_model: 'text-embedding-3-small' },
-      { tier: 'trial', chat: ok, embedding: ok, models }
+      { ownChatProvider: false, tier: 'trial', chat: ok, embedding: ok, models }
     )
     const user = userEvent.setup()
     render(<AIModelSection />)
@@ -174,7 +199,7 @@ describe('AIModelSection — included AI usage', () => {
     vi.mocked(clearAIConfigAction).mockResolvedValue({ error: 'Could not reset' } as never)
     mockFetchSequence(
       { chat_provider: 'openai', chat_model: 'gpt-4o', chat_api_key_set: true, embedding_provider: 'openai', embedding_model: 'text-embedding-3-small' },
-      { tier: 'plan', chat: ok, embedding: ok, models }
+      { ownChatProvider: false, tier: 'plan', chat: ok, embedding: ok, models }
     )
     const user = userEvent.setup()
     render(<AIModelSection />)

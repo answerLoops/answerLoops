@@ -20,7 +20,7 @@ async function load(opts: {
   status?: string | null
   rows?: Record<string, unknown>[]
   budgets?: Record<string, string>
-  hasKey?: boolean
+  cfg?: Record<string, unknown> | null
   deployment?: string
 }) {
   vi.resetModules()
@@ -39,7 +39,7 @@ async function load(opts: {
   vi.doMock('@/lib/db/queries/billing', () => ({
     getSubscription: async () => (opts.status === null ? null : { status: opts.status ?? 'active' }),
   }))
-  vi.doMock('@/lib/db/queries/ai-config', () => ({ orgHasAIKey: async () => opts.hasKey ?? false }))
+  vi.doMock('@/lib/db/queries/ai-config', () => ({ getOrgAIConfig: async () => opts.cfg ?? null }))
   const mod = await import('@/lib/billing/platform-ai-budget')
   return { mod, captured, warn }
 }
@@ -155,26 +155,39 @@ describe('getBudgetStatus', () => {
     PLATFORM_AI_TRIAL_CHAT_BUDGET_USD: '1', PLATFORM_AI_TRIAL_EMBEDDING_BUDGET_USD: '1',
   }
 
-  it('null on self-hosted, with an own key, or with no live subscription', async () => {
+  const OWN_OPENAI = { chat_provider: 'openai', chat_api_key: 'test-key', embedding_api_key: null, embedding_base_url: null }
+  const OWN_ANTHROPIC = { chat_provider: 'anthropic', chat_api_key: 'test-key', embedding_api_key: null, embedding_base_url: null }
+
+  it('null on self-hosted, when both kinds run on the workspace key, or with no live subscription', async () => {
     expect(await (await load({ budgets: env, deployment: '' })).mod.getBudgetStatus(1)).toBeNull()
-    expect(await (await load({ budgets: env, hasKey: true })).mod.getBudgetStatus(1)).toBeNull()
+    expect(await (await load({ budgets: env, cfg: OWN_OPENAI })).mod.getBudgetStatus(1)).toBeNull()
     expect(await (await load({ budgets: env, status: 'canceled' })).mod.getBudgetStatus(1)).toBeNull()
   })
 
-  it('warning is true at exactly 0.8, and the result carries only fractions and flags', async () => {
+  it('warning is true at exactly 80%, and the result carries only flags, never amounts or fractions', async () => {
     const { mod } = await load({ budgets: env, status: 'active', rows: [{ chat: 800_000, embedding: 0 }] })
     const s = await mod.getBudgetStatus(1)
     expect(s).toEqual({
       tier: 'plan',
-      chat: { fraction: 0.8, warning: true, exhausted: false },
-      embedding: { fraction: 0, warning: false, exhausted: false },
+      ownChatProvider: false,
+      chat: { included: true, warning: true, exhausted: false },
+      embedding: { included: true, warning: false, exhausted: false },
       models: { chat: 'gpt-5.6-terra', fast: 'gpt-5.6-luna', embedding: 'text-embedding-3-small' },
     })
   })
 
   it('a zero budget reports exhausted', async () => {
     const { mod } = await load({ budgets: { PLATFORM_AI_PLAN_CHAT_BUDGET_USD: '1' }, status: 'active', rows: [{ chat: 0, embedding: 0 }] })
-    expect((await mod.getBudgetStatus(1))?.embedding).toEqual({ fraction: 1, warning: true, exhausted: true })
+    expect((await mod.getBudgetStatus(1))?.embedding).toEqual({ included: true, warning: true, exhausted: true })
+  })
+
+  it('a workspace whose own chat provider cannot embed sees its knowledge-base usage, and only that', async () => {
+    const { mod } = await load({ budgets: env, cfg: OWN_ANTHROPIC, status: 'active', rows: [{ chat: 0, embedding: 900_000 }] })
+    expect(await mod.getBudgetStatus(1)).toMatchObject({
+      ownChatProvider: true,
+      chat: { included: false, warning: false, exhausted: false },
+      embedding: { included: true, warning: true, exhausted: false },
+    })
   })
 
   it('a trial converting to active reads the plan tier on the next call', async () => {
@@ -190,6 +203,6 @@ describe('getBudgetStatus', () => {
 describe('source', () => {
   it('never exposes budget amounts from the status helper', () => {
     const body = SRC().slice(SRC().indexOf('export async function getBudgetStatus'))
-    expect(body).not.toMatch(/budgetMicros:|spentMicros:/)
+    expect(body).not.toMatch(/budgetMicros:|spentMicros:|fraction:/)
   })
 })

@@ -7,11 +7,12 @@ import type { BudgetStatus, KindStatus } from '@/lib/billing/platform-ai-budget'
 // The dashboard warns a workspace on included AI usage at 80% of either
 // budget and again once one is used up. It never shows an amount.
 
-const ok: KindStatus = { fraction: 0.1, warning: false, exhausted: false }
-const warn: KindStatus = { fraction: 0.85, warning: true, exhausted: false }
-const done: KindStatus = { fraction: 1.02, warning: true, exhausted: true }
+const ok: KindStatus = { included: true, warning: false, exhausted: false }
+const warn: KindStatus = { included: true, warning: true, exhausted: false }
+const done: KindStatus = { included: true, warning: true, exhausted: true }
+const notIncluded: KindStatus = { included: false, warning: false, exhausted: false }
 const models = { chat: 'gpt-5.6-terra', fast: 'gpt-5.6-luna', embedding: 'text-embedding-3-small' }
-const s = (tier: 'trial' | 'plan', chat = ok, embedding = ok): BudgetStatus => ({ tier, chat, embedding, models })
+const s = (tier: 'trial' | 'plan', chat = ok, embedding = ok): BudgetStatus => ({ tier, ownChatProvider: false, chat, embedding, models })
 
 describe('AIUsageBanner', () => {
   it('renders nothing below 80%', () => {
@@ -65,6 +66,20 @@ describe('AIUsageBanner', () => {
     const banner = screen.getByRole('status')
     expect(banner).toHaveTextContent('for answers')
     expect(banner).not.toHaveTextContent('knowledge-base processing')
+  })
+
+  it('a workspace with its own chat key is pointed at an embedding key when knowledge-base usage runs out', () => {
+    render(<AIUsageBanner status={{ tier: 'plan', ownChatProvider: true, chat: notIncluded, embedding: done, models }} />)
+    const banner = screen.getByRole('alert')
+    expect(banner).toHaveTextContent('Add an OpenAI embedding key under Embeddings in Settings → AI Model')
+    expect(banner).not.toHaveTextContent('Add your AI provider')
+  })
+
+  it('a workspace with its own chat key gets an 80% warning about the embedding key too', () => {
+    render(<AIUsageBanner status={{ tier: 'plan', ownChatProvider: true, chat: notIncluded, embedding: warn, models }} />)
+    const banner = screen.getByRole('status')
+    expect(banner).toHaveTextContent('knowledge-base processing this month')
+    expect(banner).toHaveTextContent('Add an OpenAI embedding key')
   })
 
   it('never shows an amount', () => {

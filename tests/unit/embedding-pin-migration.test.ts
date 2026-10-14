@@ -47,3 +47,23 @@ describe('lib/db/schema.ts', () => {
     expect(s).toMatch(/vectorNext:\s*text\('vector_next'\)/)
   })
 })
+
+describe('drizzle/0053_embedding_migration_lease.sql', () => {
+  // The re-embed job leases a workspace through a row (a session advisory
+  // lock leaks across pooled connections) and backs off ones that keep failing.
+  const lease = () => fs.readFileSync('drizzle/0053_embedding_migration_lease.sql', 'utf-8')
+
+  it('adds the lease, last-attempt and failure-count columns to orgs idempotently', () => {
+    const s = lease()
+    expect(s).toMatch(/ALTER TABLE orgs ADD COLUMN IF NOT EXISTS embedding_migration_lease_until timestamptz/i)
+    expect(s).toMatch(/ALTER TABLE orgs ADD COLUMN IF NOT EXISTS embedding_migration_attempted_at timestamptz/i)
+    expect(s).toMatch(/ALTER TABLE orgs ADD COLUMN IF NOT EXISTS embedding_migration_failures integer NOT NULL DEFAULT 0/i)
+  })
+
+  it('schema.ts declares them on orgs', () => {
+    const s = schema()
+    expect(s).toMatch(/embeddingMigrationLeaseUntil:\s*timestamp\('embedding_migration_lease_until', \{ withTimezone: true \}\)/)
+    expect(s).toMatch(/embeddingMigrationAttemptedAt:\s*timestamp\('embedding_migration_attempted_at', \{ withTimezone: true \}\)/)
+    expect(s).toMatch(/embeddingMigrationFailures:\s*integer\('embedding_migration_failures'\)\.notNull\(\)\.default\(0\)/)
+  })
+})

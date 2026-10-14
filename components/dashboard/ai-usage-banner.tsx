@@ -27,9 +27,14 @@ export function AIUsageBanner({ status }: { status: BudgetStatus }) {
   const usage = status.tier === 'trial'
     ? `included trial AI usage for ${LABEL[hit.kind]}`
     : `included AI usage for ${LABEL[hit.kind]} this month`
+  // A workspace whose answers already run on its own key only lacks an
+  // embedding key; tell it that instead of "add your AI provider".
+  const embeddingKeyFix = hit.kind === 'embedding' && status.ownChatProvider
   const message = hit.exhausted
-    ? new PlatformBudgetExhaustedError(0, hit.kind, status.tier).userMessage
-    : `You've used 80% of your ${usage}. Add your AI provider so it keeps running when it runs out.`
+    ? new PlatformBudgetExhaustedError(0, hit.kind, status.tier, { ownChatProvider: status.ownChatProvider }).userMessage
+    : embeddingKeyFix
+      ? `You've used 80% of your ${usage}. Add an OpenAI embedding key under Embeddings in Settings → AI Model so it keeps running when it runs out.`
+      : `You've used 80% of your ${usage}. Add your AI provider so it keeps running when it runs out.`
   const tone = hit.exhausted ? 'border-red-200 bg-red-50 text-red-900' : 'border-amber-200 bg-amber-50 text-amber-900'
   const icon = hit.exhausted ? 'text-red-500' : 'text-amber-500'
   const button = hit.exhausted ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'

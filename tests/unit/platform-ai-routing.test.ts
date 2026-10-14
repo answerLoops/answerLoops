@@ -106,7 +106,7 @@ describe('embeddingModel', () => {
   it('hosted, no key: platform embedding model, metered', async () => {
     const t = await load({ tier: 'trial' })
     await t.models.embeddingModel(t.models.DEFAULT_EMBEDDING_MODEL, 1)
-    expect(t.assertBudget).toHaveBeenCalledWith(1, 'embedding', 'trial')
+    expect(t.assertBudget).toHaveBeenCalledWith(1, 'embedding', 'trial', { ownChatProvider: false })
     expect(t.meterEmbeddingModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier: 'trial', modelId: 'text-embedding-3-small' })
   })
 

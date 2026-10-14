@@ -10,7 +10,9 @@ import { getDeploymentMode } from '@/lib/billing/plans'
 import { XAI_BASE_URL } from '@/lib/ai/list-models'
 import { createSafeProviderFetch } from '@/lib/ai/safe-provider-fetch'
 import { NoAIProviderConfiguredError } from '@/lib/ai/errors'
-import { getBillingTier, assertBudget } from '@/lib/billing/platform-ai-budget'
+import { getBillingTier, assertBudget, type BudgetCheckOptions } from '@/lib/billing/platform-ai-budget'
+import type { BudgetKind } from '@/lib/ai/errors'
+import type { OrgAIConfig } from '@/lib/db/queries/ai-config'
 import { meterLanguageModel, meterEmbeddingModel, type MeteringTarget } from '@/lib/ai/metering'
 import {
   embeddingDimensionsSupported,
@@ -56,13 +58,37 @@ async function platformBilled<M>(
   role: PlatformRole,
   build: (id: string) => M,
   meter: (model: M, target: MeteringTarget) => M,
+  budgetOptions?: BudgetCheckOptions,
 ): Promise<M> {
   const modelId = getPlatformModel(role)
   if (!modelId) throw new NoAIProviderConfiguredError(orgId)
+  return meteredPlatformModel(orgId, role === 'embedding' ? 'embedding' : 'chat', modelId, build, meter, budgetOptions)
+}
+
+/** A specific model on the platform key, for a workspace with a live subscription and budget left; metered. */
+async function meteredPlatformModel<M>(
+  orgId: number,
+  kind: BudgetKind,
+  modelId: string,
+  build: (id: string) => M,
+  meter: (model: M, target: MeteringTarget) => M,
+  budgetOptions?: BudgetCheckOptions,
+): Promise<M> {
   const tier = await getBillingTier(orgId)
   if (!tier) throw new NoAIProviderConfiguredError(orgId)
-  await assertBudget(orgId, role === 'embedding' ? 'embedding' : 'chat', tier)
+  if (budgetOptions) await assertBudget(orgId, kind, tier, budgetOptions)
+  else await assertBudget(orgId, kind, tier)
   return meter(build(modelId), { orgId, tier, modelId })
+}
+
+/** The workspace's own embedding provider, serving the given model. */
+function ownEmbeddingModel(cfg: OrgAIConfig, modelId: string): EmbeddingModel {
+  const embKey = cfg.embedding_api_key ?? (cfg.chat_provider === 'openai' ? cfg.chat_api_key : null)
+  return createOpenAI({
+    apiKey: embKey ?? undefined,
+    baseURL: cfg.embedding_base_url ?? undefined,
+    ...(cfg.embedding_base_url ? { fetch: customEndpointFetch } : {}),
+  }).embedding(modelId)
 }
 
 export async function chatModel(defaultId: string, orgId?: number): Promise<LanguageModel> {
@@ -93,11 +119,17 @@ export async function chatModel(defaultId: string, orgId?: number): Promise<Lang
  * while a workspace's stored vectors are on a different model than its
  * target (lib/ai/embedding-pin.ts), it keeps using the pinned model so new
  * queries stay comparable with what is stored, until the re-embed job
- * switches it.
+ * switches it. The pinned model is served by whoever serves the target: the
+ * workspace's own provider, or the platform under the same subscription,
+ * budget and metering as any other platform call.
  */
 export async function resolveEmbedding(defaultId: string, orgId?: number): Promise<{ model: EmbeddingModel; modelId: string }> {
   if (MOCK_EXTERNALS) {
-    return { model: (require('./mock') as typeof import('./mock')).mockEmbeddingModel(defaultId), modelId: defaultId }
+    // Pinned like any other workspace, so search (which filters on the pin)
+    // finds what mock mode stores.
+    const modelId = orgId === undefined ? defaultId : ((await getPinnedModel(orgId)) ?? (await ensurePin(orgId, defaultId)))
+    const { mockEmbeddingModel } = await import('@/lib/ai/mock')
+    return { model: mockEmbeddingModel(modelId), modelId }
   }
   if (orgId === undefined) return { model: openai.embedding(defaultId), modelId: defaultId }
 
@@ -105,35 +137,34 @@ export async function resolveEmbedding(defaultId: string, orgId?: number): Promi
   const selfHosted = getDeploymentMode() === 'self-hosted'
   const target = embeddingTargetFor(cfg, selfHosted ? defaultId : getPlatformModel('embedding'))
   if (!target) throw new NoAIProviderConfiguredError(orgId)
+  const budgetOptions: BudgetCheckOptions = { ownChatProvider: !!(cfg?.chat_api_key || cfg?.chat_provider === 'openai-compatible') }
 
   const pin = (await getPinnedModel(orgId)) ?? (await ensurePin(orgId, target.modelId))
+  const modelId = pin
 
-  const onTarget = async (): Promise<{ model: EmbeddingModel; modelId: string }> => {
-    if (target.own && cfg) {
-      const embKey = cfg.embedding_api_key ?? (cfg.chat_provider === 'openai' ? cfg.chat_api_key : null)
-      const model = createOpenAI({
-        apiKey: embKey ?? undefined,
-        baseURL: cfg.embedding_base_url ?? undefined,
-        ...(cfg.embedding_base_url ? { fetch: customEndpointFetch } : {}),
-      }).embedding(target.modelId)
-      return { model, modelId: target.modelId }
-    }
-    if (selfHosted) return { model: openai.embedding(target.modelId), modelId: target.modelId }
-    const model = await platformBilled(orgId, 'embedding', platformEmbedding, meterEmbeddingModel)
-    return { model, modelId: target.modelId }
+  // The workspace's own provider serves both its target and, while a
+  // re-embed is pending, the model its stored vectors are on.
+  if (target.own && cfg) return { model: ownEmbeddingModel(cfg, modelId), modelId }
+
+  if (selfHosted) {
+    const served = pin === target.modelId || (hasPrice(pin) && embeddingDimensionsSupported(pin)) ? pin : target.modelId
+    return { model: openai.embedding(served), modelId: served }
   }
 
-  if (pin === target.modelId) return onTarget()
+  if (pin === target.modelId) {
+    const model = await platformBilled(orgId, 'embedding', platformEmbedding, meterEmbeddingModel, budgetOptions)
+    return { model, modelId }
+  }
 
-  // Re-embed pending: keep serving the model the stored vectors belong to,
-  // on the platform key and unmetered, since the switch is not the
-  // workspace's doing to pay for twice.
-  if (!target.own && !selfHosted && !(await getBillingTier(orgId))) throw new NoAIProviderConfiguredError(orgId)
+  // Re-embed pending toward the platform model: the pinned model, on the
+  // platform key, metered and budget-checked like any other platform call.
   if (hasPrice(pin) && embeddingDimensionsSupported(pin)) {
-    return { model: selfHosted ? openai.embedding(pin) : platformEmbedding(pin), modelId: pin }
+    const model = await meteredPlatformModel(orgId, 'embedding', pin, platformEmbedding, meterEmbeddingModel, budgetOptions)
+    return { model, modelId: pin }
   }
   logger.warn('pinned embedding model unavailable; using target until re-embed completes', { module: MOD, orgId, pin, target: target.modelId })
-  return onTarget()
+  const model = await platformBilled(orgId, 'embedding', platformEmbedding, meterEmbeddingModel, budgetOptions)
+  return { model, modelId: target.modelId }
 }
 
 export async function embeddingModel(defaultId: string, orgId?: number): Promise<EmbeddingModel> {

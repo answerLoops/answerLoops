@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import fs from 'node:fs'
 
 // GET /api/ai-config/usage-status feeds the AI Model settings card. It
-// returns fractions, flags and the included model names, never amounts, and
+// returns flags and the included model names, never amounts or fractions, and
 // null when included usage doesn't apply.
 
 describe('GET /api/ai-config/usage-status', () => {
@@ -10,8 +10,9 @@ describe('GET /api/ai-config/usage-status', () => {
     vi.resetModules()
     const status = {
       tier: 'plan',
-      chat: { fraction: 0.5, warning: false, exhausted: false },
-      embedding: { fraction: 0, warning: false, exhausted: false },
+      ownChatProvider: false,
+      chat: { included: true, warning: false, exhausted: false },
+      embedding: { included: true, warning: false, exhausted: false },
       models: { chat: 'gpt-5.6-terra', fast: 'gpt-5.6-luna', embedding: 'text-embedding-3-small' },
     }
     vi.doMock('@/lib/auth/org', () => ({ requireOrgAccess: async () => ({ ok: true, orgId: 4 }) }))

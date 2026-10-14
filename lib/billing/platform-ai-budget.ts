@@ -1,7 +1,8 @@
 import { sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/drizzle'
 import { getSubscription } from '@/lib/db/queries/billing'
-import { orgHasAIKey } from '@/lib/db/queries/ai-config'
+import { getOrgAIConfig } from '@/lib/db/queries/ai-config'
+import { hasOwnEmbeddingConfig } from '@/lib/ai/embedding-pin'
 import { getDeploymentMode } from '@/lib/billing/plans'
 import { getBudgetMicros } from '@/lib/billing/platform-ai-budget-config'
 import { PlatformBudgetExhaustedError, type BudgetKind, type BudgetTier } from '@/lib/ai/errors'
@@ -61,11 +62,21 @@ export async function getSpendMicros(orgId: number, tier: BudgetTier, kind: Budg
   return Number(rows[0]?.spent ?? 0)
 }
 
-export async function assertBudget(orgId: number, kind: BudgetKind, tier: BudgetTier): Promise<void> {
+export interface BudgetCheckOptions {
+  /** The workspace runs answers on its own key; shapes the exhausted message. */
+  ownChatProvider?: boolean
+}
+
+/**
+ * Refuses a platform call once the included usage for this kind is used up.
+ * Checked before the call and recorded after it, so calls already in flight
+ * when the budget is reached can overshoot it by roughly one call each.
+ */
+export async function assertBudget(orgId: number, kind: BudgetKind, tier: BudgetTier, options: BudgetCheckOptions = {}): Promise<void> {
   const budget = getBudgetMicros(tier, kind)
-  if (budget <= 0) throw new PlatformBudgetExhaustedError(orgId, kind, tier)
+  if (budget <= 0) throw new PlatformBudgetExhaustedError(orgId, kind, tier, options)
   const spent = await getSpendMicros(orgId, tier, kind)
-  if (spent >= budget) throw new PlatformBudgetExhaustedError(orgId, kind, tier)
+  if (spent >= budget) throw new PlatformBudgetExhaustedError(orgId, kind, tier, options)
 }
 
 /**
@@ -103,13 +114,18 @@ export async function recordSpend(orgId: number, kind: BudgetKind, tier: BudgetT
 }
 
 export interface KindStatus {
-  fraction: number
+  // Whether this kind of call runs on included usage at all (false when the
+  // workspace's own provider handles it).
+  included: boolean
   warning: boolean
   exhausted: boolean
 }
 
 export interface BudgetStatus {
   tier: BudgetTier
+  // The workspace runs answers on its own key (only knowledge-base
+  // processing can be on included usage).
+  ownChatProvider: boolean
   chat: KindStatus
   embedding: KindStatus
   // The models the workspace runs on while it has no provider of its own,
@@ -117,21 +133,28 @@ export interface BudgetStatus {
   models: Record<PlatformRole, string | null>
 }
 
+const NOT_INCLUDED: KindStatus = { included: false, warning: false, exhausted: false }
+
 function kindStatus(spent: number, budget: number): KindStatus {
-  if (budget <= 0) return { fraction: 1, warning: true, exhausted: true }
-  const fraction = spent / budget
-  return { fraction, warning: fraction >= BUDGET_WARNING_FRACTION, exhausted: spent >= budget }
+  if (budget <= 0) return { included: true, warning: true, exhausted: true }
+  return { included: true, warning: spent >= budget * BUDGET_WARNING_FRACTION, exhausted: spent >= budget }
 }
 
 type StatusRow = { chat: number | string | null; embedding: number | string | null }
 
 /**
- * Where a hosted workspace without its own key stands against its included
- * usage. Fractions and flags only, so nothing downstream can render an amount.
+ * Where a hosted workspace stands on included usage, per kind of call:
+ * answers count only without its own chat provider, knowledge-base
+ * processing only without its own embedding config (a non-OpenAI chat key
+ * alone doesn't embed). Flags only, never amounts or fractions, so nothing
+ * downstream can render or back out a budget.
  */
 export async function getBudgetStatus(orgId: number): Promise<BudgetStatus | null> {
   if (getDeploymentMode() !== 'cloud') return null
-  if (await orgHasAIKey(orgId)) return null
+  const cfg = await getOrgAIConfig(orgId).catch(() => null)
+  const ownChatProvider = !!(cfg?.chat_api_key || cfg?.chat_provider === 'openai-compatible')
+  const embeddingIncluded = !hasOwnEmbeddingConfig(cfg)
+  if (ownChatProvider && !embeddingIncluded) return null
   const tier = await getBillingTier(orgId)
   if (!tier) return null
 
@@ -146,8 +169,9 @@ export async function getBudgetStatus(orgId: number): Promise<BudgetStatus | nul
 
   return {
     tier,
-    chat: kindStatus(Number(rows[0]?.chat ?? 0), getBudgetMicros(tier, 'chat')),
-    embedding: kindStatus(Number(rows[0]?.embedding ?? 0), getBudgetMicros(tier, 'embedding')),
+    ownChatProvider,
+    chat: ownChatProvider ? NOT_INCLUDED : kindStatus(Number(rows[0]?.chat ?? 0), getBudgetMicros(tier, 'chat')),
+    embedding: embeddingIncluded ? kindStatus(Number(rows[0]?.embedding ?? 0), getBudgetMicros(tier, 'embedding')) : NOT_INCLUDED,
     models: {
       chat: getPlatformModel('chat'),
       fast: getPlatformModel('fast'),

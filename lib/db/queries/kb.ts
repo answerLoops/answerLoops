@@ -48,6 +48,11 @@ export async function createArticle(
           embedding: JSON.stringify(input.embedding),
           embeddingVec: input.embedding,
           model: input.model,
+          // A fresh vector supersedes anything the re-embed job staged from
+          // the old text (lib/kb/embedding-migration.ts).
+          embeddingNext: null,
+          embeddingVecNext: null,
+          modelNext: null,
           published: 1,
           updatedAt: new Date().toISOString(),
         })
@@ -235,6 +240,11 @@ export async function upsertArticleFromSource(
         embedding: JSON.stringify(input.embedding),
         embeddingVec: input.embedding,
         model: input.model,
+        // A fresh vector supersedes anything the re-embed job staged from
+        // the old text (lib/kb/embedding-migration.ts).
+        embeddingNext: null,
+        embeddingVecNext: null,
+        modelNext: null,
         published: 1,
         updatedAt: new Date().toISOString(),
       })

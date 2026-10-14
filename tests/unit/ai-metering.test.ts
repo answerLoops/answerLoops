@@ -60,15 +60,62 @@ describe('meterLanguageModel', () => {
     expect(recordSpend).toHaveBeenCalledWith(9, 'chat', 'plan', costMicros('gpt-5.6-luna', { input: 10, cachedInput: 0, output: 5 }))
   })
 
-  it('records nothing for a stream that errors before finish', async () => {
+  // The provider bills tokens produced before an abort or an error, so a
+  // stream that never reaches its finish part still records an estimate,
+  // exactly once. Otherwise aborting just before the end would be free.
+  it('a stream that ends without a finish part records an estimate once', async () => {
     const inner = new MockLanguageModelV3({
       doStream: async () => ({
-        stream: simulateReadableStream({ chunks: [{ type: 'error', error: new Error('boom') }] }),
+        stream: simulateReadableStream({
+          chunks: [
+            { type: 'text-start', id: '1' },
+            { type: 'text-delta', id: '1', delta: 'partial answer' },
+            { type: 'error', error: new Error('boom') },
+          ],
+        }),
       }),
     })
     const r = streamText({ model: meterLanguageModel(inner, target), prompt: 'q', onError: () => {} })
     await r.consumeStream()
-    expect(recordSpend).not.toHaveBeenCalled()
+    expect(recordSpend).toHaveBeenCalledTimes(1)
+    expect(recordSpend.mock.calls[0][3]).toBeGreaterThan(0)
+  })
+
+  it('a stream the caller cancels part-way records an estimate once', async () => {
+    const inner = new MockLanguageModelV3({
+      doStream: async () => ({
+        stream: simulateReadableStream({
+          chunks: [
+            { type: 'text-start', id: '1' },
+            { type: 'text-delta', id: '1', delta: 'partial' },
+            { type: 'text-delta', id: '1', delta: ' answer' },
+            { type: 'finish', finishReason: stop, usage: usage(10, 0, 5) },
+          ],
+        }),
+      }),
+    })
+    const wrapped = meterLanguageModel(inner, target)
+    const { stream } = await wrapped.doStream({ prompt: [{ role: 'user', content: [{ type: 'text', text: 'q' }] }] })
+    const reader = stream.getReader()
+    await reader.read()
+    await reader.read()
+    await reader.cancel()
+    await vi.waitFor(() => expect(recordSpend).toHaveBeenCalledTimes(1))
+    expect(recordSpend.mock.calls[0][3]).toBeGreaterThan(0)
+  })
+
+  it('a stream that reaches finish and then closes is recorded once, from the reported usage', async () => {
+    const inner = new MockLanguageModelV3({
+      doStream: async () => ({
+        stream: simulateReadableStream({
+          chunks: [{ type: 'finish', finishReason: stop, usage: usage(10, 0, 5) }],
+        }),
+      }),
+    })
+    const r = streamText({ model: meterLanguageModel(inner, target), prompt: 'q' })
+    await r.consumeStream()
+    expect(recordSpend).toHaveBeenCalledTimes(1)
+    expect(recordSpend).toHaveBeenCalledWith(9, 'chat', 'plan', costMicros('gpt-5.6-luna', { input: 10, cachedInput: 0, output: 5 }))
   })
 
   it('estimates from text length when usage is missing, and warns', async () => {

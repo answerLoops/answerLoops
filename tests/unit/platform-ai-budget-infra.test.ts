@@ -16,7 +16,7 @@ import path from 'node:path'
 const ROOT = process.cwd()
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf-8')
 
-const MIGRATIONS = ['drizzle/0051_platform_ai_budget.sql', 'drizzle/0052_embedding_model_pin.sql']
+const MIGRATIONS = ['drizzle/0051_platform_ai_budget.sql', 'drizzle/0052_embedding_model_pin.sql', 'drizzle/0053_embedding_migration_lease.sql']
 
 function sqlFiles(): string[] {
   return fs.readdirSync(path.join(ROOT, 'drizzle')).filter((f) => f.endsWith('.sql'))
