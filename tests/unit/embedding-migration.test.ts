@@ -91,7 +91,10 @@ describe('runEmbeddingMigration', () => {
     }))
     // Only the subscription lookup; budgets and metering must never be touched.
     vi.doMock('@/lib/billing/platform-ai-budget', () => ({ getBillingTier: async () => (o.tier === undefined ? 'plan' : o.tier) }))
-    vi.doMock('@/lib/ai/metering', () => { throw new Error('migration must not meter') })
+    vi.doMock('@/lib/ai/metering', () => ({
+      meterLanguageModel: () => { throw new Error('migration must not meter') },
+      meterEmbeddingModel: () => { throw new Error('migration must not meter') },
+    }))
     vi.doMock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }))
     if (o.embedMany) vi.doMock('ai', async (orig) => ({ ...(await orig<typeof import('ai')>()), embedMany: o.embedMany }))
   }
