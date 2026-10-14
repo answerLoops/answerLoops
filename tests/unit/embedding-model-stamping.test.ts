@@ -63,3 +63,33 @@ describe('search only compares vectors on the workspace pin', () => {
     expect(read('lib/widget/embed-cache.ts')).toMatch(/keyFor\(orgId, [a-zA-Z]+, query\)/)
   })
 })
+
+describe('the KB review queue (kb_review_items) follows the same model rules', () => {
+  // Its question vectors are compared with each other to merge duplicate
+  // unseen questions, so they carry a model and only same-model rows meet.
+  const recordFn = () => {
+    const s = read('lib/db/queries/kb-review.ts')
+    const start = s.indexOf('export async function recordReviewItem')
+    return s.slice(start, s.indexOf('\n}\n', start))
+  }
+
+  it('the duplicate check only compares rows on the workspace pin', () => {
+    expect(recordFn()).toMatch(/kbReviewItems\.model[\s\S]*embedding_model_in_use/)
+  })
+
+  it('a new review item is stamped with the workspace pin', () => {
+    const insert = recordFn().slice(recordFn().indexOf('db.insert(kbReviewItems)'))
+    expect(insert).toMatch(/model: sql`\(SELECT embedding_model_in_use FROM orgs WHERE id = \$\{orgId\}\)`/)
+  })
+
+  it('approving a review item stamps the article with the model that made its vector', () => {
+    const s = read('app/api/kb/review/[id]/route.ts')
+    expect(s).toContain('embedTextWithModel(')
+    expect(s).not.toMatch(/model: EMBEDDING_MODEL/)
+  })
+
+  it('capturing an unanswered question no longer takes a purpose', () => {
+    expect(read('lib/kb/review-capture.ts')).not.toMatch(/ModelPurpose|purpose/)
+    expect(read('lib/ai/agent.ts')).not.toMatch(/\bpurpose,/)
+  })
+})

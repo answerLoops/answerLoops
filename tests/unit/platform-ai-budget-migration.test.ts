@@ -8,7 +8,7 @@ import path from 'path'
 // but not the other only fails at runtime, inside a raw sql`` statement).
 
 const read = (p: string) => fs.readFileSync(path.join(process.cwd(), p), 'utf-8')
-const MIGRATION = 'drizzle/0051_platform_ai_budget.sql'
+const MIGRATION = 'drizzle/0052_platform_ai_budget.sql'
 
 describe(MIGRATION, () => {
   it('adds both trial spend columns to orgs, idempotently, as non-null bigint defaulting to 0', () => {

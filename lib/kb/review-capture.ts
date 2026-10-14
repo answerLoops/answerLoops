@@ -1,5 +1,4 @@
 import { embedText } from '@/lib/ai/embed'
-import type { ModelPurpose } from '@/lib/ai/models'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { recordReviewItem, type ReviewSource } from '@/lib/db/queries/kb-review'
 import { logger } from '@/lib/logger'
@@ -29,7 +28,6 @@ export async function captureUnansweredQuestion(input: {
   // Pass the vector when the caller already has it (the widget does) to skip a
   // second embedding call.
   embedding?: number[]
-  purpose?: ModelPurpose
 }): Promise<void> {
   try {
     const question = parseAttachmentLines(input.question).text.trim().slice(0, MAX_QUESTION_CHARS)
@@ -39,7 +37,7 @@ export async function captureUnansweredQuestion(input: {
     if (!question) return
     if (!(await orgHasFeature(input.orgId, 'kb_review_queue'))) return
 
-    const embedding = input.embedding ?? (await embedText(question, input.orgId, input.purpose))
+    const embedding = input.embedding ?? (await embedText(question, input.orgId))
     const outcome = await recordReviewItem(
       {
         source: input.source,

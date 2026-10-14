@@ -3,7 +3,9 @@ import { z } from 'zod'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { planRequiredFor } from '@/lib/billing/entitlements'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
-import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { embedTextWithModel } from '@/lib/ai/embed'
+import { NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { countArticles } from '@/lib/db/queries/kb'
 import { approveReviewItem, rejectReviewItem, reopenReviewItem, type ReviewResolution } from '@/lib/db/queries/kb-review'
 import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
@@ -84,16 +86,23 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
     }
 
     let embedding: number[]
+    let model: string
     try {
       // Same `question\n\nanswer` convention as promote-to-KB and file upload.
-      embedding = await embedText(`${body.question}\n\n${body.answer}`, orgId)
+      ;({ embedding, model } = await embedTextWithModel(`${body.question}\n\n${body.answer}`, orgId))
     } catch (err) {
+      if (err instanceof NoAIProviderConfiguredError) {
+        return Response.json(
+          { error: aiUnavailableMessage(err, 'No AI provider is set up for this workspace. Add one in Settings → AI Model, then approve again.') },
+          { status: 400 }
+        )
+      }
       logger.error('failed to embed approved review item', { module: MOD, orgId, requestId: getRequestId(req), error: err })
       return Response.json({ error: 'Could not add this answer to the knowledge base. Try again.' }, { status: 502 })
     }
 
     const result = await approveReviewItem(
-      { id: itemId, question: body.question, answer: body.answer, embedding, model: EMBEDDING_MODEL, reviewedBy: userId },
+      { id: itemId, question: body.question, answer: body.answer, embedding, model, reviewedBy: userId },
       orgId
     )
     return resolutionResponse(result) ?? Response.json({ ok: true, articleId: result.articleId })

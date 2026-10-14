@@ -15,6 +15,10 @@ ALTER TABLE ticket_embeddings ADD COLUMN IF NOT EXISTS vector_next text;
 --> statement-breakpoint
 ALTER TABLE ticket_embeddings ADD COLUMN IF NOT EXISTS model_next text;
 --> statement-breakpoint
+-- Review-queue question vectors are compared with each other to merge
+-- duplicates, so they record their model too.
+ALTER TABLE kb_review_items ADD COLUMN IF NOT EXISTS model text;
+--> statement-breakpoint
 
 -- Existing vectors were made with the workspace's own embedding model when it
 -- had its own embedding config, and with the platform default otherwise.
@@ -34,3 +38,5 @@ WHERE o.embedding_model_in_use IS NULL;
 UPDATE kb_articles a SET model = o.embedding_model_in_use FROM orgs o WHERE a.org_id = o.id AND a.model IS DISTINCT FROM o.embedding_model_in_use;
 --> statement-breakpoint
 UPDATE ticket_embeddings te SET model = o.embedding_model_in_use FROM tickets t JOIN orgs o ON o.id = t.org_id WHERE te.ticket_id = t.id AND te.model IS DISTINCT FROM o.embedding_model_in_use;
+--> statement-breakpoint
+UPDATE kb_review_items r SET model = o.embedding_model_in_use FROM orgs o WHERE r.org_id = o.id AND r.model IS DISTINCT FROM o.embedding_model_in_use;

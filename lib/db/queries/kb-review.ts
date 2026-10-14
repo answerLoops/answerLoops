@@ -122,6 +122,9 @@ export async function recordReviewItem(
         eq(kbReviewItems.orgId, orgId),
         inArray(kbReviewItems.status, ['pending', 'rejected']),
         isNotNull(kbReviewItems.embeddingVec),
+        // Only rows on the workspace's pinned embedding model, so two models
+        // never meet in one similarity score (lib/ai/embedding-pin.ts).
+        sql`${kbReviewItems.model} = (SELECT embedding_model_in_use FROM orgs WHERE id = ${orgId})`,
         sql`${distance} <= ${1 - REVIEW_DUPLICATE_SIMILARITY}`
       )
     )
@@ -149,6 +152,9 @@ export async function recordReviewItem(
     question: input.question,
     answer: input.answer,
     embeddingVec: input.embedding,
+    // Callers embed through the workspace's pin (lib/ai/embed.ts), so the
+    // vector belongs to the pinned model.
+    model: sql`(SELECT embedding_model_in_use FROM orgs WHERE id = ${orgId})`,
     confidence: input.confidence ?? null,
   })
   return 'created'

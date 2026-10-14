@@ -5,10 +5,10 @@ import fs from 'fs'
 // constant model name regardless of the model actually used, so the migration
 // aligns them with each workspace's pin before search starts filtering on it.
 
-const sqlText = () => fs.readFileSync('drizzle/0052_embedding_model_pin.sql', 'utf-8')
+const sqlText = () => fs.readFileSync('drizzle/0053_embedding_model_pin.sql', 'utf-8')
 const schema = () => fs.readFileSync('lib/db/schema.ts', 'utf-8')
 
-describe('drizzle/0052_embedding_model_pin.sql', () => {
+describe('drizzle/0053_embedding_model_pin.sql', () => {
   it('adds the pin and staging columns idempotently', () => {
     const s = sqlText()
     for (const re of [
@@ -48,10 +48,10 @@ describe('lib/db/schema.ts', () => {
   })
 })
 
-describe('drizzle/0053_embedding_migration_lease.sql', () => {
+describe('drizzle/0054_embedding_migration_lease.sql', () => {
   // The re-embed job leases a workspace through a row (a session advisory
   // lock leaks across pooled connections) and backs off ones that keep failing.
-  const lease = () => fs.readFileSync('drizzle/0053_embedding_migration_lease.sql', 'utf-8')
+  const lease = () => fs.readFileSync('drizzle/0054_embedding_migration_lease.sql', 'utf-8')
 
   it('adds the lease, last-attempt and failure-count columns to orgs idempotently', () => {
     const s = lease()
@@ -65,5 +65,19 @@ describe('drizzle/0053_embedding_migration_lease.sql', () => {
     expect(s).toMatch(/embeddingMigrationLeaseUntil:\s*timestamp\('embedding_migration_lease_until', \{ withTimezone: true \}\)/)
     expect(s).toMatch(/embeddingMigrationAttemptedAt:\s*timestamp\('embedding_migration_attempted_at', \{ withTimezone: true \}\)/)
     expect(s).toMatch(/embeddingMigrationFailures:\s*integer\('embedding_migration_failures'\)\.notNull\(\)\.default\(0\)/)
+  })
+})
+
+describe('drizzle/0053_embedding_model_pin.sql — review queue', () => {
+  it('adds a model column to kb_review_items and backfills it from the pin', () => {
+    const s = fs.readFileSync('drizzle/0053_embedding_model_pin.sql', 'utf-8')
+    expect(s).toMatch(/ALTER TABLE kb_review_items ADD COLUMN IF NOT EXISTS model text/i)
+    expect(s).toMatch(/UPDATE kb_review_items r SET model = o\.embedding_model_in_use FROM orgs o WHERE r\.org_id = o\.id AND r\.model IS DISTINCT FROM o\.embedding_model_in_use/i)
+  })
+
+  it('schema.ts declares kbReviewItems.model', () => {
+    const s = fs.readFileSync('lib/db/schema.ts', 'utf-8')
+    const table = s.slice(s.indexOf('export const kbReviewItems'))
+    expect(table.slice(0, table.indexOf('\n)'))).toMatch(/model:\s*text\('model'\)/)
   })
 })

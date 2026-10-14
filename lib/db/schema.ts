@@ -437,6 +437,9 @@ export const kbReviewItems = pgTable(
     // Same fixed platform-wide dimension as kb_articles.embedding_vec; used
     // only to fold near-duplicate questions together.
     embeddingVec: vector('embedding_vec', { dimensions: 1536 }),
+    // The embedding model that made embeddingVec (the workspace's pin at
+    // capture time); duplicates are only folded within one model.
+    model: text('model'),
     confidence: doublePrecision('confidence'),
     occurrences: integer('occurrences').notNull().default(1),
     // 'pending' | 'approved' | 'rejected' (CHECK constraint in the migration).

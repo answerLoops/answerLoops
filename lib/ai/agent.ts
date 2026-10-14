@@ -479,7 +479,6 @@ Guidelines:
         answer: assessment.answered_fully ? text : '',
         ticketId,
         confidence: assessment.confidence,
-        purpose,
       })
     }
   } catch (err) {

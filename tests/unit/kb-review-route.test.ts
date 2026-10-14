@@ -29,7 +29,7 @@ vi.mock('@/lib/db/queries/kb-review', () => ({
   reopenReviewItem: h.reopenReviewItem,
 }))
 vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles }))
-vi.mock('@/lib/ai/embed', () => ({ embedText: h.embedText, EMBEDDING_MODEL: 'test-embedding' }))
+vi.mock('@/lib/ai/embed', () => ({ embedTextWithModel: async (text: string, orgId?: number) => ({ embedding: await h.embedText(text, orgId), model: 'test-embedding' }) }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 
 const counts = { pending: 2, approved: 1, rejected: 0 }
@@ -184,6 +184,17 @@ describe('PATCH /api/kb/review/[id]', () => {
     const { PATCH } = await import('@/app/api/kb/review/[id]/route')
     const res = await PATCH(patchReq(approve), ctx())
     expect(res.status).toBe(502)
+    expect(h.approveReviewItem).not.toHaveBeenCalled()
+  })
+
+  it('explains, with a 400, when knowledge-base processing is used up, and publishes nothing', async () => {
+    const { PlatformBudgetExhaustedError } = await import('@/lib/ai/errors')
+    const err = new PlatformBudgetExhaustedError(7, 'embedding', 'plan')
+    h.embedText.mockRejectedValue(err)
+    const { PATCH } = await import('@/app/api/kb/review/[id]/route')
+    const res = await PATCH(patchReq(approve), ctx())
+    expect(res.status).toBe(400)
+    expect((await res.json()).error).toBe(err.userMessage)
     expect(h.approveReviewItem).not.toHaveBeenCalled()
   })
 

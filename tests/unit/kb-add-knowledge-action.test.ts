@@ -21,7 +21,7 @@ const h = vi.hoisted(() => ({
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles, createArticle: h.createArticle }))
-vi.mock('@/lib/ai/embed', () => ({ embedText: h.embedText, EMBEDDING_MODEL: 'test-embedding' }))
+vi.mock('@/lib/ai/embed', () => ({ embedTextWithModel: async (text: string, orgId?: number) => ({ embedding: await h.embedText(text, orgId), model: 'test-embedding' }) }))
 vi.mock('@/lib/ai/models', () => ({ NoAIProviderConfiguredError: h.NoAIProviderConfiguredError }))
 vi.mock('next/cache', () => ({ refresh: h.refresh }))
 vi.mock('@/lib/logger', () => ({ logger: { error: h.loggerError, info: vi.fn(), warn: vi.fn(), debug: vi.fn() } }))

@@ -3,7 +3,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 // Infra guards for included platform AI usage and the embedding-model pin
-// (drizzle/0051, drizzle/0052). Fills the gaps the feature-level tests leave:
+// (drizzle/0052, drizzle/0053, drizzle/0054). Fills the gaps the feature-level tests leave:
 //   - the migration runner (lib/db/migrate.ts) applies drizzle/*.sql sorted by
 //     name and splits on "--> statement-breakpoint", so a duplicate numeric
 //     prefix, an empty chunk, or a non-idempotent DDL statement breaks deploys;
@@ -16,7 +16,7 @@ import path from 'node:path'
 const ROOT = process.cwd()
 const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf-8')
 
-const MIGRATIONS = ['drizzle/0051_platform_ai_budget.sql', 'drizzle/0052_embedding_model_pin.sql', 'drizzle/0053_embedding_migration_lease.sql']
+const MIGRATIONS = ['drizzle/0052_platform_ai_budget.sql', 'drizzle/0053_embedding_model_pin.sql', 'drizzle/0054_embedding_migration_lease.sql']
 
 function sqlFiles(): string[] {
   return fs.readdirSync(path.join(ROOT, 'drizzle')).filter((f) => f.endsWith('.sql'))
@@ -42,15 +42,16 @@ describe('migration file naming and runner compatibility', () => {
     expect(dupes).toEqual([])
   })
 
-  it('0051 and 0052 exist and the runner applies 0052 after 0051 (and after every earlier file)', () => {
+  it('0052 and 0053 exist and the runner applies 0053 after 0052 (and after every earlier file)', () => {
     const sorted = sqlFiles().sort()
-    const i51 = sorted.indexOf('0051_platform_ai_budget.sql')
-    const i52 = sorted.indexOf('0052_embedding_model_pin.sql')
-    expect(i51).toBeGreaterThanOrEqual(0)
-    expect(i52).toBe(i51 + 1)
-    // 0052 backfills from ai_configs/kb_articles/ticket_embeddings, which
-    // older migrations create; nothing numbered below it may sort after it.
-    for (const f of sorted.slice(i52 + 1)) expect(Number(f.slice(0, 4))).toBeGreaterThan(52)
+    const iBudget = sorted.indexOf('0052_platform_ai_budget.sql')
+    const iPin = sorted.indexOf('0053_embedding_model_pin.sql')
+    expect(iBudget).toBeGreaterThanOrEqual(0)
+    expect(iPin).toBe(iBudget + 1)
+    // 0053 backfills from ai_configs/kb_articles/ticket_embeddings/
+    // kb_review_items, which older migrations create; nothing numbered below
+    // it may sort after it.
+    for (const f of sorted.slice(iPin + 1)) expect(Number(f.slice(0, 4))).toBeGreaterThan(53)
   })
 
   it.each(MIGRATIONS)('%s has no empty or comment-only statement chunk', (file) => {
@@ -104,8 +105,8 @@ function schemaColumns(table: string): Set<string> {
 }
 
 describe('schema.ts <-> migration column parity', () => {
-  it('platform_ai_usage declares exactly the columns 0051 creates', () => {
-    const sql = read('drizzle/0051_platform_ai_budget.sql')
+  it('platform_ai_usage declares exactly the columns 0052 creates', () => {
+    const sql = read('drizzle/0052_platform_ai_budget.sql')
     const create = sql.match(/CREATE TABLE IF NOT EXISTS platform_ai_usage\s*\(([\s\S]*?)\n\);/i)
     expect(create).toBeTruthy()
     const sqlCols = create![1]
@@ -122,7 +123,7 @@ describe('schema.ts <-> migration column parity', () => {
     expect(schemaBlock('platform_ai_usage')).toMatch(/primaryKey\(\{\s*columns:\s*\[t\.orgId,\s*t\.period\]\s*\}\)/)
   })
 
-  it('every column added by 0051/0052 is declared on the matching pgTable', () => {
+  it('every column added by 0052/0053/0054 is declared on the matching pgTable', () => {
     for (const file of MIGRATIONS) {
       for (const m of read(file).matchAll(/ALTER TABLE (\w+) ADD COLUMN IF NOT EXISTS (\w+)/gi)) {
         const [, table, col] = m
@@ -131,7 +132,7 @@ describe('schema.ts <-> migration column parity', () => {
     }
   })
 
-  it('the column 0051 drops is no longer declared on orgs', () => {
+  it('the column 0052 drops is no longer declared on orgs', () => {
     expect(schemaColumns('orgs').has('platform_key_trial_used')).toBe(false)
   })
 })
@@ -267,7 +268,7 @@ describe('sql.raw in lib/billing/platform-ai-budget.ts', () => {
     return [...m![1].matchAll(/^\s*(\w+):\s*'([a-z_]+)',?\s*$/gm)].map((x) => `${x[1]}=${x[2]}`)
   }
 
-  it('the column allow-lists name only the spend columns from 0051', () => {
+  it('the column allow-lists name only the spend columns from 0052', () => {
     expect(mapValues('TRIAL_COLUMN').sort()).toEqual(['chat=trial_chat_spend_micros', 'embedding=trial_embedding_spend_micros'])
     expect(mapValues('PLAN_COLUMN').sort()).toEqual(['chat=chat_spend_micros', 'embedding=embedding_spend_micros'])
   })

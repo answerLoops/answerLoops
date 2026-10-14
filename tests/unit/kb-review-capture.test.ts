@@ -32,7 +32,7 @@ describe('captureUnansweredQuestion', () => {
   it('records the question for the org with its embedding', async () => {
     await capture({ ticketId: 11, confidence: 0.4 })
     expect(h.orgHasFeature).toHaveBeenCalledWith(7, 'kb_review_queue')
-    expect(h.embedText).toHaveBeenCalledWith('How do I export data?', 7, undefined)
+    expect(h.embedText).toHaveBeenCalledWith('How do I export data?', 7)
     expect(h.recordReviewItem).toHaveBeenCalledWith(
       {
         source: 'ticket',
