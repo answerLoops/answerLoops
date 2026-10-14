@@ -12,7 +12,6 @@ import { TRIAL_DAYS } from '@/lib/billing/plans'
 
 export const dynamic = 'force-dynamic'
 
-
 const ERROR_MESSAGES: Record<string, string> = {
   OAuthSignin: 'Could not start sign-in. Try again.',
   OAuthCallback: 'Sign-in was cancelled or failed. Try again.',
@@ -66,9 +65,9 @@ export default async function LoginPage({ searchParams }: Props) {
     ? ERROR_MESSAGES[error] ?? ERROR_MESSAGES.Default
     : null
 
-  // Sign-up is the default because that is who arrives here cold. Google is the
-  // only provider, so both modes run the identical OAuth flow — Google creates
-  // or reuses the account on its side either way. What differs is what the page
+  // Sign-up is the default because that is who arrives here cold. Every
+  // sign-in method is OAuth, so both modes run the identical flow — the
+  // provider creates or reuses the account either way. What differs is what the page
   // claims to be, and a returning user told only "create an account" reasonably
   // wonders whether they are about to make a second one.
   const signingIn = mode === 'signin'

@@ -19,7 +19,7 @@ If you'd rather skip all of this, the [cloud quickstart](/docs/quickstart-cloud)
 - [Docker + Docker Compose](https://docs.docker.com/get-docker/)
 - [pnpm 9+](https://pnpm.io/installation)
 - An AI provider key (OpenAI recommended, or any [supported provider](/docs/self-hosting/ai-providers))
-- At least one OAuth provider (GitHub, Discord, or Google)
+- A Google OAuth client (see [OAuth setup](/docs/self-hosting/oauth))
 
 ## 1. Clone the repo
 
@@ -43,9 +43,9 @@ AUTH_URL=http://localhost:3000
 AUTH_SECRET=<run: openssl rand -hex 32>
 ENCRYPTION_KEY=<run: openssl rand -hex 32>
 
-# At least one OAuth provider
-AUTH_GITHUB_ID=<your-github-client-id>
-AUTH_GITHUB_SECRET=<your-github-client-secret>
+# Google sign-in (the sign-in page shows no button without these)
+AUTH_GOOGLE_ID=<your-google-oauth-client-id>
+AUTH_GOOGLE_SECRET=<your-google-oauth-client-secret>
 
 # AI (required for deflection and KB search)
 OPENAI_API_KEY=<your-openai-api-key>
@@ -79,7 +79,7 @@ Drizzle migrations run automatically on first start — no manual migration step
 
 ## 4. Create your account
 
-Open [http://localhost:3000](http://localhost:3000) and sign in with GitHub, Discord, or Google OAuth. On first login you'll see the onboarding wizard:
+Open [http://localhost:3000](http://localhost:3000) and sign in with Google. On first login you'll see the onboarding wizard:
 
 1. **Connect your community** — Discord 1-click invite, Slack token, or skip
 2. **Seed your knowledge base** — drag-drop docs files or paste a URL

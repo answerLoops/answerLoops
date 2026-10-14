@@ -92,6 +92,6 @@ describe('LoginForm — providers', () => {
     expect(screen.queryByRole('button')).toBeNull()
     expect(screen.queryByRole('checkbox')).toBeNull()
     expect(screen.getByText(/sign-in is not set up on this deployment/i)).toBeTruthy()
-    expect(screen.getByRole('link', { name: /self-hosting guide/i }).getAttribute('href')).toBe('/docs/quickstart-self-host')
+    expect(screen.getByRole('link', { name: /oauth setup guide/i }).getAttribute('href')).toBe('/docs/self-hosting/oauth')
   })
 })

@@ -46,8 +46,8 @@ export function LoginForm({ providers, signingIn = false }: Props) {
         <p className="mt-1 text-amber-800">
           If you run this install, add a sign-in method&rsquo;s credentials to your environment.
           The{' '}
-          <Link href="/docs/quickstart-self-host" className="underline underline-offset-2">
-            self-hosting guide
+          <Link href="/docs/self-hosting/oauth" className="underline underline-offset-2">
+            OAuth setup guide
           </Link>{' '}
           lists them.
         </p>
