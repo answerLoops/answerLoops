@@ -45,7 +45,13 @@ test.describe('knowledge base review queue', () => {
     const answer = page.locator(`#review-a-${item.id}`)
     await expect(page.locator(`#review-q-${item.id}`)).toHaveValue(new RegExp(topic))
     await answer.fill(`Open Settings and choose ${topic}, then restart the app.`)
-    await page.getByRole('button', { name: /approve and add to knowledge base/i }).first().click()
+    // Scoped to this item's card: other specs leave their own pending items in the queue, and
+    // those can sort above this one.
+    await page
+      .getByRole('listitem')
+      .filter({ has: answer })
+      .getByRole('button', { name: /approve and add to knowledge base/i })
+      .click()
 
     // The edited answer is what reached the knowledge base.
     const approved = await waitFor(async () => (await listItems(request, 'approved')).items.find((i) => i.id === item.id) ?? false)

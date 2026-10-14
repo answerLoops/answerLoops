@@ -40,11 +40,11 @@ export function AddKnowledgeSection({ onAdded }: { onAdded?: () => void }) {
       aria-labelledby="add-knowledge-heading"
     >
       <h2 id="add-knowledge-heading" className="text-sm font-semibold text-slate-900">
-        Add to the knowledge base
+        Write an answer by hand
       </h2>
       <p className="mt-0.5 text-xs text-slate-500">
-        Write down something the assistant should know. It is saved as an article and starts answering questions
-        straight away, so leave out names and account details.
+        Write down something the assistant should know. It starts answering questions straight away, so leave out
+        names and account details.
       </p>
 
       <form action={formAction} className="mt-3 space-y-3">

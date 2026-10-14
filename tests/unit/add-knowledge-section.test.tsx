@@ -4,7 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 /**
- * The dashboard's "Add to the knowledge base" form: what it lets a person
+ * The dashboard's "Write an answer by hand" form: what it lets a person
  * submit, that a failure keeps their text, and that success clears the form and
  * tells the page to reload its article list. The server action is faked.
  */
