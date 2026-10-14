@@ -5,12 +5,16 @@ import { enqueueKbSyncJob } from '@/lib/db/queries/kb-sync-jobs'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { syncSingleDiscussionToKB } from '@/lib/github/kb-sync'
 import { getInstallationOctokitById } from '@/lib/github/app'
+import { readBodyCapped } from '@/lib/http/read-body-capped'
+import { isIngestRateLimited, WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const MOD = 'api/github/webhook'
+
+const GITHUB_MAX_BODY_BYTES = 5 * WEBHOOK_MAX_BODY_BYTES
 
 // Repo owners/members/collaborators filing an issue are doing work tracking,
 // not asking for help — ingesting those inflates the staff queue and skews
@@ -38,7 +42,10 @@ export async function POST(req: NextRequest) {
   const secret = (process.env.GITHUB_WEBHOOK_SECRET ?? '').trim()
   const sig = req.headers.get('x-hub-signature-256') ?? ''
   const event = req.headers.get('x-github-event') ?? ''
-  const body = await req.text()
+  // GitHub caps webhook payloads at 25 MB; 5 MB comfortably covers the push,
+  // issue and discussion events handled here. Counted in bytes as it streams.
+  const body = await readBodyCapped(req, GITHUB_MAX_BODY_BYTES)
+  if (body === null) return NextResponse.json({ error: 'payload too large' }, { status: 413 })
 
   // Every delivery must carry a signature this server can verify against a
   // configured secret. A missing secret is a deployment error, not a reason
@@ -205,6 +212,11 @@ async function handleTicket({
   if (!content.trim() || content.trim().length < 10) return
 
   try {
+    if (await isIngestRateLimited(orgId)) {
+      logger.warn('github ticket ingest rate limited', { module: MOD, orgId })
+      return
+    }
+
     const result = await processCommunityMessage({
       messageId,
       content,

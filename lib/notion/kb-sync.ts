@@ -35,7 +35,7 @@ export const NOTION_SOURCE_FILENAME = 'notion:workspace'
  */
 const NOTION_SOURCE_STAGING_FILENAME = 'notion:workspace:rebuilding'
 
-export interface NotionSyncResult {
+interface NotionSyncResult {
   synced: number
   truncated: boolean
   /** A budget in lib/notion/client.ts was hit and some pages weren't fetched. */

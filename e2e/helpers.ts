@@ -4,10 +4,10 @@ import type { APIRequestContext } from '@playwright/test'
 
 export const FIXTURES_DIR = path.join(__dirname, 'fixtures')
 
-export const BOT_SECRET = 'test-bot-secret'
+const BOT_SECRET = 'test-bot-secret'
 export const BOT_AUTH = { Authorization: `Bearer ${BOT_SECRET}` }
 
-export interface IngestOpts {
+interface IngestOpts {
   content: string
   messageId?: string
   authorName?: string
@@ -127,7 +127,7 @@ export const MOCK_CHANNELS = [
 // KB source helpers
 // ---------------------------------------------------------------------------
 
-export interface KBSourceResponse {
+interface KBSourceResponse {
   id: number
   filename: string
   file_type: string

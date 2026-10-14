@@ -82,7 +82,7 @@ describe('bot process routes per-guild lookups through discord_guilds, not the s
 describe('OAuth callback connects guilds without overwriting existing connections', () => {
   it('app/api/discord/callback/route.ts calls addDiscordGuild instead of upserting a single connected_guild_id', () => {
     const src = readSource('app/api/discord/callback/route.ts')
-    expect(src).toContain('addDiscordGuild(orgId, guildId)')
+    expect(src).toContain('addDiscordGuild(orgId, guildId, verified.guildName)')
     expect(src).not.toContain('connectedGuildId: guildId')
   })
 

@@ -8,7 +8,7 @@ import { getRequestId } from '@/lib/request-id'
 const MOD = 'api/telegram/register'
 
 export async function POST(req: NextRequest) {
-  const access = await requireOrgAccess()
+  const access = await requireOrgAccess(['owner', 'admin'])
   if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
 
   const orgId = access.orgId

@@ -51,7 +51,6 @@ describe('email-messages query layer', () => {
       'setEmailMessageTicket',
       'findTicketByMessageIds',
       'getLatestInboundForTicket',
-      'getEmailMessageByRfcId',
       'countRecentOutboundToSender',
       'markStatusByProviderMessageId',
     ]) {
@@ -61,7 +60,7 @@ describe('email-messages query layer', () => {
 
   it('recordInboundEmail uses onConflictDoNothing on rfc_message_id (idempotency gate)', () => {
     const src = readSrc('lib/db/queries/email-messages.ts')
-    expect(src).toMatch(/onConflictDoNothing\(\{ target: emailMessages\.rfcMessageId \}\)/)
+    expect(src).toMatch(/onConflictDoNothing\(\{ target: \[emailMessages\.orgId, emailMessages\.rfcMessageId\] \}\)/)
   })
 
   it('findTicketByMessageIds scopes the lookup by orgId (no cross-org thread matches)', () => {
@@ -154,7 +153,7 @@ describe('ingest route: guard chain and threading', () => {
   it('enforces a request size cap and a per-org rate limit', () => {
     const s = src()
     expect(s).toContain('MAX_BODY_BYTES')
-    expect(s).toContain('rateLimit(')
+    expect(s).toContain('rateLimitShared(')
   })
 })
 

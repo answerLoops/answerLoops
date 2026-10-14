@@ -1443,17 +1443,10 @@ const INTEGRATION_TAB_IDS = new Set([
   'discord', 'slack', 'google-chat', 'telegram', 'discourse', 'circle', 'email', 'github', 'notion',
 ])
 
-const DEFAULT_SLA_CONFIGS: SLAConfig[] = [
-  { id: 1, priority: 'critical', response_hours: 1, resolve_hours: 4, updated_at: '' },
-  { id: 2, priority: 'high', response_hours: 4, resolve_hours: 24, updated_at: '' },
-  { id: 3, priority: 'medium', response_hours: 24, resolve_hours: 72, updated_at: '' },
-  { id: 4, priority: 'low', response_hours: 72, resolve_hours: 168, updated_at: '' },
-]
-
 export default function SettingsPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const slaConfigs = DEFAULT_SLA_CONFIGS
+  const [slaConfigs, setSlaConfigs] = useState<SLAConfig[] | null>(null)
 
   const tabParam = searchParams.get('tab')
   const activeTab = (tabParam as TabId) ?? 'general'
@@ -1463,6 +1456,13 @@ export default function SettingsPage() {
     params.set('tab', id)
     router.replace(`/settings?${params.toString()}`, { scroll: false })
   }
+
+  useEffect(() => {
+    fetch('/api/sla')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((rows) => { if (Array.isArray(rows)) setSlaConfigs(rows) })
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (tabParam && INTEGRATION_TAB_IDS.has(tabParam)) {
@@ -1513,9 +1513,13 @@ export default function SettingsPage() {
                 <div className="px-4 py-2.5">Resolve (hours)</div>
                 <div className="px-4 py-2.5" />
               </div>
-              {slaConfigs.map((config) => (
-                <SLARow key={config.priority} config={config} />
-              ))}
+              {slaConfigs === null ? (
+                <div className="px-4 py-3 text-sm text-gray-400">Loading…</div>
+              ) : (
+                slaConfigs.map((config) => (
+                  <SLARow key={config.priority} config={config} />
+                ))
+              )}
             </div>
           </section>
           <section>

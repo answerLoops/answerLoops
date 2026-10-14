@@ -6,6 +6,8 @@ import { logger } from '@/lib/logger'
 
 const MOD = 'api/discourse/register'
 
+const GENERIC_ERROR = 'Could not register the webhook with your Discourse site. Check the site URL, API key and username, then try again.'
+
 interface EventType { id: number; name: string }
 interface WebHook { id: number; payload_url: string }
 
@@ -34,14 +36,16 @@ export async function POST(req: NextRequest) {
     // Resolve the numeric event-type ids for topic + post events.
     const typesRes = await discourseFetch(creds, '/admin/api/web_hooks/event_types.json')
     if (!typesRes.ok) {
-      return Response.json({ error: `Discourse rejected the API key (${typesRes.status})` }, { status: 502 })
+      logger.warn('Discourse event type lookup rejected', { module: MOD, orgId, status: typesRes.status })
+      return Response.json({ error: GENERIC_ERROR }, { status: 502 })
     }
     const { web_hook_event_types: types } = (await typesRes.json()) as { web_hook_event_types: EventType[] }
     const eventTypeIds = types
       .filter((t) => t.name.startsWith('topic') || t.name.startsWith('post'))
       .map((t) => t.id)
     if (eventTypeIds.length === 0) {
-      return Response.json({ error: 'Could not resolve Discourse event types' }, { status: 502 })
+      logger.warn('Discourse returned no usable event types', { module: MOD, orgId })
+      return Response.json({ error: GENERIC_ERROR }, { status: 502 })
     }
 
     const categoryIds = (integration.channel_ids ? JSON.parse(integration.channel_ids) as string[] : [])
@@ -82,14 +86,13 @@ export async function POST(req: NextRequest) {
         })
 
     if (!res.ok) {
-      const err = await res.text()
-      logger.error('Discourse webhook registration failed', { module: MOD, orgId, status: res.status, err })
-      return Response.json({ error: `Discourse rejected the webhook (${res.status})` }, { status: 502 })
+      logger.error('Discourse webhook registration failed', { module: MOD, orgId, status: res.status })
+      return Response.json({ error: GENERIC_ERROR }, { status: 502 })
     }
 
     return Response.json({ ok: true, webhookUrl: payloadUrl })
   } catch (err) {
     logger.error('Discourse webhook registration threw', { module: MOD, orgId, error: err })
-    return Response.json({ error: 'Could not reach the Discourse site' }, { status: 502 })
+    return Response.json({ error: GENERIC_ERROR }, { status: 502 })
   }
 }

@@ -78,12 +78,10 @@ describe('lib/db/schema.ts: newsletterSubscribers', () => {
 })
 
 describe('lib/db/queries/newsletter.ts', () => {
-  it('exposes signup, resubscribe, and unsubscribe-by-token helpers', async () => {
+  it('exposes the lookup, confirm and unsubscribe-by-token helpers', async () => {
     const queries = await import('../../lib/db/queries/newsletter')
     expect(queries).toHaveProperty('getSubscriberByEmail')
-    expect(queries).toHaveProperty('createSubscriber')
-    expect(queries).toHaveProperty('resubscribe')
-    expect(queries).toHaveProperty('getSubscriberByUnsubscribeToken')
+    expect(queries).toHaveProperty('confirmSubscription')
     expect(queries).toHaveProperty('unsubscribeByToken')
   })
 })
@@ -120,45 +118,35 @@ describe('newsletter route carries the standard public-endpoint abuse controls',
     expect(patternIdx).toBeGreaterThan(-1)
   })
 
-  it('checks for an existing subscriber before inserting and returns already:true instead of a duplicate insert', () => {
+  it('rejects requests that bypassed the edge proxy before trusting the client IP', () => {
     const src = read('app/api/newsletter/route.ts')
-    const existingIdx = src.indexOf('getSubscriberByEmail(normalized)')
-    const alreadyIdx = src.indexOf('{ ok: true, already: true }')
-    const insertIdx = src.indexOf('createSubscriber({ email: normalized')
-    expect(existingIdx).toBeGreaterThan(-1)
-    expect(alreadyIdx).toBeGreaterThan(-1)
-    expect(insertIdx).toBeGreaterThan(-1)
-    // The already-subscribed short-circuit must return before the insert runs.
-    expect(alreadyIdx).toBeLessThan(insertIdx)
+    const guardIdx = src.indexOf('verifyOriginProxy(req)')
+    const ipIdx = src.indexOf('clientIp(req)')
+    expect(guardIdx).toBeGreaterThan(-1)
+    expect(guardIdx).toBeLessThan(ipIdx)
   })
 
-  it('resubscribes an unsubscribed row instead of erroring on the unique email', () => {
+  it('never subscribes from the POST: it only emails a confirmation link', () => {
     const src = read('app/api/newsletter/route.ts')
-    expect(src).toContain('!existing.unsubscribed_at')
-    expect(src).toContain('await resubscribe(normalized, unsubscribeToken)')
+    expect(src).not.toContain('createSubscriber')
+    expect(src).not.toContain('resubscribe')
+    expect(src).toContain('sendNewsletterConfirmRequest(normalized)')
   })
 
-  it('creates a subscriber with a fresh unsubscribe token and returns ok:true on success', () => {
+  it('answers identically for new, subscribed, unsubscribed and throttled addresses', () => {
     const src = read('app/api/newsletter/route.ts')
-    expect(src).toContain("unsubscribeToken = crypto.randomBytes(32).toString('hex')")
-    expect(src).toContain('return NextResponse.json({ ok: true })')
+    expect(src).not.toContain('already:')
+    // Lookup, per-email limit and send all run after the response is built.
+    const afterIdx = src.indexOf('after(async')
+    expect(afterIdx).toBeGreaterThan(-1)
+    expect(src.indexOf('getSubscriberByEmail(normalized)')).toBeGreaterThan(afterIdx)
+    expect(src.indexOf('newsletter-email:')).toBeGreaterThan(afterIdx)
+    expect(src.lastIndexOf('return NextResponse.json({ ok: true })')).toBeGreaterThan(afterIdx)
   })
 
-  it('sends a confirmation email but never fails the signup if it throws', () => {
-    const src = read('app/api/newsletter/route.ts')
-    expect(src).toContain("import { sendNewsletterConfirmation } from '@/lib/email/send'")
-    const sendIdx = src.indexOf('await sendNewsletterConfirmation(normalized, unsubscribeToken)')
-    const catchIdx = src.indexOf('newsletter confirmation email failed')
-    const finalOkIdx = src.lastIndexOf('return NextResponse.json({ ok: true })')
-    expect(sendIdx).toBeGreaterThan(-1)
-    expect(catchIdx).toBeGreaterThan(sendIdx)
-    expect(finalOkIdx).toBeGreaterThan(sendIdx)
-  })
-
-  it('returns 400 for a non-string or malformed email, and 500 on a DB failure', () => {
+  it('returns 400 for a non-string or malformed email', () => {
     const src = read('app/api/newsletter/route.ts')
     expect(src).toContain("status: 400")
-    expect(src).toContain("status: 500")
     expect(src).toContain("typeof email !== 'string'")
   })
 })

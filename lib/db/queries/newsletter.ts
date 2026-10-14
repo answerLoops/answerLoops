@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { newsletterSubscribers } from '../schema'
 
-export interface NewsletterSubscriber {
+interface NewsletterSubscriber {
   id: number
   email: string
   unsubscribe_token: string
@@ -29,7 +29,7 @@ export async function getSubscriberByEmail(email: string): Promise<NewsletterSub
   return row ? toSubscriber(row) : null
 }
 
-export async function createSubscriber(input: {
+async function createSubscriber(input: {
   email: string
   unsubscribeToken: string
 }): Promise<NewsletterSubscriber> {
@@ -41,7 +41,7 @@ export async function createSubscriber(input: {
 }
 
 /** Clears a previous unsubscribe and re-activates the row with a fresh token. */
-export async function resubscribe(
+async function resubscribe(
   email: string,
   unsubscribeToken: string
 ): Promise<NewsletterSubscriber> {
@@ -53,17 +53,6 @@ export async function resubscribe(
   return toSubscriber(row)
 }
 
-export async function getSubscriberByUnsubscribeToken(
-  token: string
-): Promise<NewsletterSubscriber | null> {
-  const [row] = await getDb()
-    .select()
-    .from(newsletterSubscribers)
-    .where(eq(newsletterSubscribers.unsubscribeToken, token))
-    .limit(1)
-  return row ? toSubscriber(row) : null
-}
-
 /** Idempotent: unsubscribing an already-unsubscribed row is a no-op, not an error. */
 export async function unsubscribeByToken(token: string): Promise<NewsletterSubscriber | null> {
   const [row] = await getDb()
@@ -72,4 +61,20 @@ export async function unsubscribeByToken(token: string): Promise<NewsletterSubsc
     .where(eq(newsletterSubscribers.unsubscribeToken, token))
     .returning()
   return row ? toSubscriber(row) : null
+}
+
+/**
+ * Completes a double opt-in: creates the subscriber, or re-activates an
+ * unsubscribed one, with a fresh unsubscribe token. `created` is false when
+ * the address was already actively subscribed (nothing changed, so no welcome
+ * email should follow).
+ */
+export async function confirmSubscription(
+  email: string,
+  unsubscribeToken: string
+): Promise<{ subscriber: NewsletterSubscriber; created: boolean }> {
+  const existing = await getSubscriberByEmail(email)
+  if (existing && !existing.unsubscribed_at) return { subscriber: existing, created: false }
+  if (existing) return { subscriber: await resubscribe(email, unsubscribeToken), created: true }
+  return { subscriber: await createSubscriber({ email, unsubscribeToken }), created: true }
 }

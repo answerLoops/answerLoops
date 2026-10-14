@@ -4,7 +4,7 @@ import { apiKeys } from '../schema'
 import { generateApiKey, hashApiKey } from '@/lib/mcp/keys'
 import { normalizeScopes, ALL_SCOPES, type ApiScope } from '@/lib/agent/scopes'
 
-export interface ApiKey {
+interface ApiKey {
   id: number
   org_id: number
   key_prefix: string
@@ -34,7 +34,7 @@ function toApiKey(row: typeof apiKeys.$inferSelect): ApiKey {
 // for one org to hold more, and without a cap a compromised session can mint
 // unlimited long-lived credentials (each one an independent path into the
 // org's data that survives the session ending).
-export const MAX_ACTIVE_KEYS_PER_ORG = 25
+const MAX_ACTIVE_KEYS_PER_ORG = 25
 
 /**
  * Creates a key and returns the plaintext once — never retrievable again after this call.
@@ -106,7 +106,13 @@ export async function resolveApiKey(
     .where(and(eq(apiKeys.keyHash, hash), isNull(apiKeys.revokedAt)))
     .limit(1)
   if (!row) return null
-  if (row.expiresAt && row.expiresAt < new Date().toISOString()) return null
+  if (row.expiresAt) {
+    // Compared as instants, not strings: the column is text, so a stored value
+    // in any ISO variant (offset, fractional seconds) must still order correctly.
+    // An unparseable value fails closed.
+    const expiresAtMs = new Date(row.expiresAt).getTime()
+    if (!Number.isFinite(expiresAtMs) || expiresAtMs <= Date.now()) return null
+  }
 
   await getDb().update(apiKeys).set({ lastUsedAt: new Date().toISOString() }).where(eq(apiKeys.id, row.id))
   return { orgId: row.orgId, keyId: row.id, scopes: normalizeScopes(row.scopes) }

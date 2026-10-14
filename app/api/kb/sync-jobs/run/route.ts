@@ -9,6 +9,7 @@ import { getRepoById } from '@/lib/db/queries/github'
 import { syncNotionToKB } from '@/lib/notion/kb-sync'
 import { syncRepoToKB, syncDiscussionsToKB } from '@/lib/github/kb-sync'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
+import { isPlatformBotRequest } from '@/lib/http/bearer-auth'
 import { logger } from '@/lib/logger'
 
 export const dynamic = 'force-dynamic'
@@ -24,9 +25,7 @@ const RunSchema = z.object({ jobId: z.number() })
 // the job (status → running) before it POSTs here; this route does the work
 // awaited and records the outcome.
 export async function POST(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  const bearer = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
-  if (!bearer || !process.env.BOT_SECRET || bearer !== process.env.BOT_SECRET) {
+  if (!isPlatformBotRequest(request)) {
     return new Response('Unauthorized', { status: 401 })
   }
 

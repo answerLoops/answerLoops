@@ -1,8 +1,11 @@
 'use server'
 
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { signIn, signOut } from '@/auth'
 import { getPlan, parseBillingInterval } from '@/lib/billing/plans'
+import { parsePromoCode } from '@/lib/billing/promo'
+import { parseSignInProvider } from '@/lib/auth/providers'
 
 async function getCallbackUrl(): Promise<string> {
   const hdrs = await headers()
@@ -20,12 +23,20 @@ async function getCallbackUrl(): Promise<string> {
     // The billing interval is narrowed the same way and for the same reason —
     // it also lands in the redirect, and downstream it selects which Stripe
     // price the person is charged.
+    //
+    // A promotion code rides along the same way, narrowed to its allowed shape
+    // because it too lands in the redirect.
     const requestedPlan = url.searchParams.get('plan')
+    const promoCode = parsePromoCode(url.searchParams.get('code'))
+    const codeParam = promoCode ? `code=${encodeURIComponent(promoCode)}` : ''
     if (requestedPlan && getPlan(requestedPlan)) {
       const interval = parseBillingInterval(url.searchParams.get('interval'))
-      const target = `/checkout?plan=${encodeURIComponent(requestedPlan)}`
-      return interval ? `${target}&interval=${interval}` : target
+      let target = `/checkout?plan=${encodeURIComponent(requestedPlan)}`
+      if (interval) target += `&interval=${interval}`
+      if (codeParam) target += `&${codeParam}`
+      return target
     }
+    if (codeParam) return `/checkout?${codeParam}`
 
     const cb = url.searchParams.get('callbackUrl')
     // Only allow same-origin relative paths to prevent open-redirect
@@ -48,8 +59,18 @@ async function getCallbackUrl(): Promise<string> {
   return '/checkout'
 }
 
-export async function loginWithGoogle(): Promise<void> {
-  await signIn('google', { redirectTo: await getCallbackUrl() })
+/**
+ * Starts the OAuth flow for one sign-in method.
+ *
+ * The provider id comes from a form value, so it is checked against the
+ * methods this deployment has configured before anything starts. An id that
+ * does not match goes back to the login page with a generic error rather than
+ * reaching the auth library.
+ */
+export async function loginWithProvider(providerId: string): Promise<void> {
+  const provider = parseSignInProvider(providerId)
+  if (!provider) redirect('/login?error=Default')
+  await signIn(provider, { redirectTo: await getCallbackUrl() })
 }
 
 export async function logout(): Promise<void> {

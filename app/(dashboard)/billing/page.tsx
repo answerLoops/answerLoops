@@ -171,6 +171,13 @@ function UsageBar({ used, limit, planId, currentPeriodEnd, cancelAtPeriodEnd, st
         </div>
       </div>
 
+      {status === 'past_due' && (
+        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          Your last invoice could not be paid. Choose Manage subscription below to add or update a
+          payment method and keep your access.
+        </p>
+      )}
+
       {limit === null ? (
         <div className="flex items-end gap-1.5">
           <span className="text-3xl font-bold text-gray-900">{used.toLocaleString()}</span>

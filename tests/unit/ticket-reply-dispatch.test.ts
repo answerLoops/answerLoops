@@ -34,6 +34,9 @@ const {
 }))
 
 vi.mock('@/auth', () => ({ auth }))
+vi.mock('@/lib/auth/org', () => ({
+  requireOrgAccess: vi.fn(async () => ({ ok: true, orgId: 3, userId: 1, role: 'owner' })),
+}))
 vi.mock('@/lib/slack/send', () => ({ sendToSlackChannel }))
 vi.mock('@/lib/telegram/send', () => ({ sendToTelegramChat }))
 vi.mock('@/lib/email/reply', () => ({ sendEmailReply }))

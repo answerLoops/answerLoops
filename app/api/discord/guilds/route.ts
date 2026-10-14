@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
+import { getDiscordGuildByGuildId } from '@/lib/db/queries/discord-guilds'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
@@ -57,8 +58,8 @@ async function fetchGuildChannels(guildId: string, token: string): Promise<{ id:
 // GET /api/discord/guilds?guild_id=... — fetch channels for a connected guild
 // using the platform bot token (no user-supplied token needed)
 export async function GET(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return Response.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
 
   const guildId = req.nextUrl.searchParams.get('guild_id')
   if (!guildId) return Response.json({ error: 'guild_id required' }, { status: 400 })
@@ -67,6 +68,11 @@ export async function GET(req: NextRequest) {
   if (!token) return Response.json({ error: 'Platform bot token not configured' }, { status: 503 })
 
   try {
+    // Only guilds this org has connected may be queried with the platform token.
+    const guild = await getDiscordGuildByGuildId(guildId)
+    if (!guild || guild.org_id !== access.orgId) {
+      return Response.json({ error: 'Guild not found' }, { status: 404 })
+    }
     const channels = await fetchGuildChannels(guildId, token)
     return Response.json({ guildId, channels })
   } catch (err) {
@@ -77,8 +83,8 @@ export async function GET(req: NextRequest) {
 
 // POST /api/discord/guilds — legacy: fetch all guilds using a user-supplied bot token
 export async function POST(req: NextRequest) {
-  const session = await auth()
-  if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return Response.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
 
   try {
     const body = await req.json() as { token?: string }

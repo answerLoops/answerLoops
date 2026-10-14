@@ -113,7 +113,7 @@ describe('lib/ingest/pipeline.ts — ticket-level trial reservation, not per mod
 
   it('threads the same aiPurpose decision into embedText and runAIAgent, not a fresh decision per call', () => {
     const src = read('lib/ingest/pipeline.ts')
-    expect(src).toContain('embedText(`${summary}\\n\\n${content}`, orgId, aiPurpose)')
+    expect(src).toContain('embedText(`${summary}\\n\\n${clampIngestContent(content)}`, orgId, aiPurpose)')
     expect(src).toContain(
       "runAIAgent(ticketId, content, threadId ?? channelId, priorAnswers, orgId, platform, category ?? 'general_question', duplicates, orgTicketNumber, aiPurpose, channelId, threadId)"
     )

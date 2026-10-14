@@ -16,6 +16,12 @@ answerLoops receives webhook events from connected platforms. Each integration h
 | Email | [Email integration](/docs/integrations/email): inbound messages and reply configuration. |
 | Billing | [Stripe integration](/docs/integrations/stripe): subscription events for operators of the hosted service. |
 
+## Request handling
+
+Every inbound endpoint reads the request body with a byte limit (1 MB for most providers, 2 MB for email, 5 MB for GitHub) and answers `413` when it is exceeded. Messages are truncated to 8,000 characters before they are processed, and each workspace has a per-minute budget for inbound events; events over the budget are answered `429` so the provider retries later.
+
+Credentials are matched per channel: a secret created for one integration is only accepted by that channel's endpoint. Stripe events are claimed by event id before they are handled, so a retried or simultaneous delivery of the same event is applied once, and an event older than the last one applied for a workspace is skipped.
+
 ## Verify delivery
 
 1. Complete the integration's setup guide.

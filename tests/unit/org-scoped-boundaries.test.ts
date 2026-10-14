@@ -99,21 +99,6 @@ describe('GET /api/tickets authenticates and scopes by session org', () => {
   })
 })
 
-describe('Notification queries are org-scoped', () => {
-  // lib/actions/notifications.ts (markReadAction/markAllReadAction) was removed
-  // as dead code: notification-bell.tsx never wired up a "mark read" control,
-  // so nothing called it. markNotificationRead/markAllNotificationsRead below
-  // are themselves now unused for the same reason — kept for when the bell
-  // grows that control, not because anything calls them today.
-
-  it('markNotificationRead requires orgId and filters the update on notifications.orgId', () => {
-    const src = read('lib/db/queries/notifications.ts')
-    expect(src).toContain('markNotificationRead(id: number, orgId: number)')
-    const body = src.slice(src.indexOf('function markNotificationRead'))
-    expect(body.slice(0, 300)).toMatch(/and\(eq\(notifications\.id, id\), eq\(notifications\.orgId, orgId\)\)/)
-  })
-})
-
 describe('Dashboard surfaces thread the session org into their queries', () => {
   it('analytics page passes orgId to its stats and CSAT queries', () => {
     const src = read('app/(dashboard)/analytics/page.tsx')

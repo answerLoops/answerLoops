@@ -11,7 +11,7 @@ import { getDb } from '@/lib/db/drizzle'
  */
 export const PLATFORM_KEY_TRIAL_LIMIT = 5
 
-export interface PlatformKeyTrialStatus {
+interface PlatformKeyTrialStatus {
   used: number
   limit: number
   remaining: number

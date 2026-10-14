@@ -14,8 +14,8 @@ export const NOTION_TOKEN_RE = /^(ntn_|secret_)[A-Za-z0-9]{20,}$/
 // hang a sync. Pages and databases have separate budgets — a workspace with
 // thousands of shared pages used to leave nothing for databases, which then
 // silently never synced.
-export const MAX_NOTION_PAGES = 2000
-export const MAX_NOTION_DATABASES = 500
+const MAX_NOTION_PAGES = 2000
+const MAX_NOTION_DATABASES = 500
 
 export interface NotionRichText {
   plain_text?: string
@@ -35,7 +35,7 @@ interface NotionListResponse<T> {
   next_cursor?: string | null
 }
 
-export async function notionFetch(
+async function notionFetch(
   token: string,
   path: string,
   init: RequestInit = {}
@@ -93,14 +93,14 @@ async function paginate<T>(
   return out.slice(0, cap)
 }
 
-export interface NotionObject {
+interface NotionObject {
   object: 'page' | 'database'
   id: string
   properties?: Record<string, unknown>
   title?: NotionRichText[]
 }
 
-export interface NotionSearchResult {
+interface NotionSearchResult {
   pages: NotionObject[]
   databases: NotionObject[]
   /** True when the respective budget was hit and some objects were left out. */

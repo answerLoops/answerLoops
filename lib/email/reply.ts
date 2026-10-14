@@ -35,6 +35,8 @@ function buildThreadingHeaders(fromDomain: string, thread: Thread) {
 
 // channelId for email = "{toAddress}|{messageId}" — legacy fallback only, used
 // when there's no ticketId (or no recorded inbound thread) to resolve from.
+const SIMPLE_EMAIL_RE = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/
+
 export async function sendEmailReply(
   channelId: string,
   content: string,
@@ -43,11 +45,16 @@ export async function sendEmailReply(
 ): Promise<string | null> {
   const [fallbackToAddress] = channelId.split('|')
 
+  // Replies are only sent for orgs that have connected their own email channel.
   const integration = await getIntegration(orgId, 'email')
+  if (!integration || integration.enabled !== 1) {
+    logger.warn('no connected email integration for this org — skipping reply', { module: MOD, orgId })
+    return null
+  }
 
   const thread = ticketId ? await getLatestInboundForTicket(ticketId, orgId) : null
   const toAddress = thread?.from_addr ?? fallbackToAddress
-  if (!toAddress) return null
+  if (!toAddress || !SIMPLE_EMAIL_RE.test(toAddress)) return null
 
   const subjectBase = thread?.subject?.replace(/^\s*re:\s*/i, '').trim() || 'Your support request'
   const subject = `Re: ${subjectBase}`

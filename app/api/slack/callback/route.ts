@@ -1,7 +1,7 @@
 import crypto from 'crypto'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
-import { verifyOAuthState } from '@/lib/oauth/state'
+import { clearOAuthNonceCookie, oauthNonceCookieName, verifyOAuthCallback } from '@/lib/oauth/state'
 import { upsertIntegration, getIntegration } from '@/lib/db/queries/integrations'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { logger } from '@/lib/logger'
@@ -10,28 +10,40 @@ import { getRequestId } from '@/lib/request-id'
 const MOD = 'api/slack/callback'
 
 export async function GET(req: NextRequest) {
-  const access = await requireOrgAccess()
-  if (!access.ok) return Response.redirect(new URL('/login', req.url))
+  const access = await requireOrgAccess(['owner', 'admin'])
+  const baseUrl = process.env.AUTH_URL ?? req.nextUrl.origin
+  if (!access.ok) {
+    if (access.error === 'Unauthorized') return NextResponse.redirect(new URL('/login', baseUrl))
+    const forbidden = new URL('/settings', baseUrl)
+    forbidden.searchParams.set('tab', 'slack')
+    forbidden.searchParams.set('slack_error', 'forbidden')
+    return NextResponse.redirect(forbidden)
+  }
+
+  // The nonce cookie is single use: every outcome below clears it.
+  const finish = (url: URL) => clearOAuthNonceCookie(NextResponse.redirect(url), 'slack')
 
   const { searchParams } = req.nextUrl
   const code = searchParams.get('code')
   const state = searchParams.get('state')
   const error = searchParams.get('error')
 
-  const baseUrl = process.env.AUTH_URL ?? req.nextUrl.origin
-
   let orgId: number
   let from: string | undefined
   try {
-    const decoded = verifyOAuthState(state)
-    if (decoded.orgId !== access.orgId) throw new Error('org mismatch')
+    const decoded = verifyOAuthCallback({
+      provider: 'slack',
+      state,
+      cookieNonce: req.cookies.get(oauthNonceCookieName('slack'))?.value,
+      caller: { userId: access.userId, orgId: access.orgId },
+    })
     orgId = decoded.orgId
     from = decoded.from
   } catch {
     const settingsUrl = new URL('/settings', baseUrl)
     settingsUrl.searchParams.set('tab', 'slack')
     settingsUrl.searchParams.set('slack_error', 'invalid_state')
-    return Response.redirect(settingsUrl)
+    return finish(settingsUrl)
   }
 
   const settingsUrl = new URL(from === 'onboarding' ? '/onboarding' : '/settings', baseUrl)
@@ -39,20 +51,20 @@ export async function GET(req: NextRequest) {
 
   if (error || !code) {
     settingsUrl.searchParams.set('slack_error', error ?? 'cancelled')
-    return Response.redirect(settingsUrl)
+    return finish(settingsUrl)
   }
 
   try {
     if (!(await orgHasFeature(orgId, 'slack_integration'))) {
       settingsUrl.searchParams.set('slack_error', 'plan_required')
-      return Response.redirect(settingsUrl)
+      return finish(settingsUrl)
     }
 
     const clientId = process.env.SLACK_CLIENT_ID
     const clientSecret = process.env.SLACK_CLIENT_SECRET
     if (!clientId || !clientSecret) {
       settingsUrl.searchParams.set('slack_error', 'server_misconfigured')
-      return Response.redirect(settingsUrl)
+      return finish(settingsUrl)
     }
 
     const redirectUri = `${baseUrl}/api/slack/callback`
@@ -78,7 +90,7 @@ export async function GET(req: NextRequest) {
 
     if (!tokenData.ok || !tokenData.access_token || !tokenData.team) {
       settingsUrl.searchParams.set('slack_error', tokenData.error ?? 'token_exchange_failed')
-      return Response.redirect(settingsUrl)
+      return finish(settingsUrl)
     }
 
     // Signing secret is platform-wide — set once in env, not per workspace
@@ -107,10 +119,10 @@ export async function GET(req: NextRequest) {
 
     settingsUrl.searchParams.set('slack_connected', '1')
     settingsUrl.searchParams.set('slack_team', tokenData.team.name)
-    return Response.redirect(settingsUrl)
+    return finish(settingsUrl)
   } catch (err) {
     logger.error('slack oauth callback failed', { module: MOD, orgId, requestId: getRequestId(req), error: err })
     settingsUrl.searchParams.set('slack_error', 'server_error')
-    return Response.redirect(settingsUrl)
+    return finish(settingsUrl)
   }
 }

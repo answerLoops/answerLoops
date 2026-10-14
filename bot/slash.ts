@@ -11,7 +11,7 @@ import { logger } from '../lib/logger'
 
 const MOD = 'bot/slash'
 
-export const SLASH_COMMANDS = [
+const SLASH_COMMANDS = [
   new SlashCommandBuilder()
     .setName('ask')
     .setDescription('Ask the AI a question — answered instantly from the knowledge base')

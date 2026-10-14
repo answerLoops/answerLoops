@@ -6,16 +6,20 @@ import {
   upsertSubscriptionAndClaimWelcome,
   getSubscription,
   getSubscriptionByStripeId,
-  hasProcessedWebhookEvent,
-  markWebhookEventProcessed,
+  claimWebhookEvent,
+  releaseWebhookEventClaim,
   pruneOldWebhookEvents,
 } from '@/lib/db/queries/billing'
 import { priceIdToPlan, getPlan } from '@/lib/billing/plans'
 import { getOrgOwner } from '@/lib/db/queries/members'
 import { sendWelcomeEmail } from '@/lib/email/send'
+import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { logger } from '@/lib/logger'
 
 export const runtime = 'nodejs'
+
+// Stripe event payloads are a few KB; 1 MB is far above any real delivery.
+const MAX_BODY_BYTES = 1_000_000
 
 // Fire-and-forget dedup-table cleanup, time-gated rather than probabilistic —
 // same contract as rateLimitShared's sweep in lib/ratelimit.ts. Webhook
@@ -53,7 +57,10 @@ export async function POST(req: Request) {
 
   let event: Stripe.Event
   try {
-    const body = await req.text()
+    const body = await readBodyCapped(req, MAX_BODY_BYTES)
+    if (body === null) {
+      return NextResponse.json({ error: 'Payload too large' }, { status: 413 })
+    }
     event = getStripe().webhooks.constructEvent(body, sig ?? '', webhookSecret)
   } catch (err) {
     logger.warn('Stripe webhook signature verification failed', { module: 'billing/webhook', error: err })
@@ -66,12 +73,14 @@ export async function POST(req: Request) {
 
   // Stripe retries on any non-2xx response, or on a timeout even after we've
   // already applied the event — so the same event.id can arrive more than
-  // once. Our upserts are individually idempotent, but skipping a known
-  // duplicate outright avoids redundant work and noisy logs on legitimate
-  // retries, and is a hard requirement for the ordering guard below to mean
-  // anything (re-applying the same event would just re-set the same
-  // last_event_created, masking whether ordering was actually checked).
-  if (await hasProcessedWebhookEvent(event.id)) {
+  // once, including two deliveries at the same moment. The id is claimed with a
+  // single INSERT .. ON CONFLICT DO NOTHING RETURNING before anything is
+  // handled: whoever inserts the row owns the event, any other delivery is
+  // acknowledged as a duplicate. The claim is released if handling fails so
+  // Stripe's retry is processed instead of skipped. This is also what makes the
+  // ordering guard below meaningful (re-applying the same event would only
+  // re-set the same last_event_created and mask whether ordering was checked).
+  if (!(await claimWebhookEvent(event.id))) {
     logger.info('Webhook event already processed — skipping', { module: MOD, eventId: event.id, type: event.type })
     return NextResponse.json({ received: true, duplicate: true })
   }
@@ -102,7 +111,21 @@ export async function POST(req: Request) {
             orgId,
             planId: session.metadata?.plan_id,
           })
+          await releaseWebhookEventClaim(event.id).catch(() => {})
           return NextResponse.json({ error: 'Unrecognized plan_id' }, { status: 500 })
+        }
+
+        // A delayed checkout event must not overwrite a newer state already
+        // applied for this org (for example a cancellation recorded after it).
+        const existingForOrg = await getSubscription(orgId)
+        if (isStaleEvent(existingForOrg?.lastEventCreated, event)) {
+          logger.warn('Stale/out-of-order checkout.session.completed event — skipping', {
+            module: MOD,
+            orgId,
+            eventCreated: event.created,
+            lastApplied: existingForOrg?.lastEventCreated,
+          })
+          break
         }
 
         // The read and write must be one transaction. Stripe can deliver two
@@ -321,9 +344,9 @@ export async function POST(req: Request) {
     }
   } catch (err) {
     logger.error('Webhook handler error', { module: MOD, event: event.type, error: err })
+    await releaseWebhookEventClaim(event.id).catch(() => {})
     return NextResponse.json({ error: 'Handler error' }, { status: 500 })
   }
 
-  await markWebhookEventProcessed(event.id)
   return NextResponse.json({ received: true })
 }

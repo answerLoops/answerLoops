@@ -41,17 +41,58 @@ function timingSafeStringEqual(a: string, b: string): boolean {
   return crypto.timingSafeEqual(digestA, digestB)
 }
 
-/** Mint a token proving this widgetToken's current render passed the origin allowlist. */
-export function mintRenderToken(widgetToken: string): string {
+/**
+ * Reduce a client address to the unit a token is bound to: the full address
+ * for IPv4, the /64 prefix for IPv6 (a single device rotates through its
+ * /64 for privacy addressing, so binding to the full address would reject
+ * the device's own follow-up calls).
+ */
+function bindingUnit(ip: string): string {
+  const trimmed = ip.trim().toLowerCase()
+  if (!trimmed.includes(':') || trimmed.includes('.')) return trimmed
+  // Expand `::` so the first four groups are well-defined.
+  const [head, tail = ''] = trimmed.split('::')
+  const headGroups = head ? head.split(':') : []
+  const tailGroups = tail ? tail.split(':') : []
+  const missing = Math.max(0, 8 - headGroups.length - tailGroups.length)
+  const groups = trimmed.includes('::')
+    ? [...headGroups, ...Array(missing).fill('0'), ...tailGroups]
+    : headGroups
+  return groups
+    .slice(0, 4)
+    .map((g) => g.replace(/^0+(?=.)/, ''))
+    .join(':')
+}
+
+/** Short keyed tag of the binding unit; `-` marks a token minted without one. */
+function bindingTag(key: Buffer, ip: string | undefined): string {
+  if (!ip) return '-'
+  return crypto
+    .createHmac('sha256', key)
+    .update(`ip:${bindingUnit(ip)}`)
+    .digest('base64url')
+    .slice(0, 22)
+}
+
+/**
+ * Mint a token proving this widgetToken's current render passed the origin
+ * allowlist. When `ip` is given the token is only accepted from that client
+ * address (see verifyRenderToken).
+ */
+export function mintRenderToken(widgetToken: string, ip?: string): string {
   const key = deriveKey()
   const expiresAt = Date.now() + RENDER_TOKEN_TTL_MS
-  const payload = `${widgetToken}.${expiresAt}`
+  const payload = `${widgetToken}.${expiresAt}.${bindingTag(key, ip)}`
   const payloadB64 = Buffer.from(payload, 'utf8').toString('base64url')
   return `${payloadB64}.${sign(key, payload)}`
 }
 
-/** Verify a render token was minted for this exact widgetToken and has not expired. */
-export function verifyRenderToken(token: unknown, widgetToken: string): boolean {
+/**
+ * Verify a render token was minted for this exact widgetToken, has not
+ * expired, and was minted for the same client address as `ip`. A token minted
+ * without an address only verifies when no `ip` is supplied.
+ */
+export function verifyRenderToken(token: unknown, widgetToken: string, ip?: string): boolean {
   if (typeof token !== 'string' || !token) return false
 
   const parts = token.split('.')
@@ -65,7 +106,9 @@ export function verifyRenderToken(token: unknown, widgetToken: string): boolean 
     return false
   }
 
-  const [tokenWidgetToken, expiresAtRaw] = payload.split('.')
+  const payloadParts = payload.split('.')
+  if (payloadParts.length !== 3) return false
+  const [tokenWidgetToken, expiresAtRaw, tokenBinding] = payloadParts
   const expiresAt = Number(expiresAtRaw)
   if (!tokenWidgetToken || !Number.isFinite(expiresAt)) return false
   if (tokenWidgetToken !== widgetToken) return false
@@ -77,5 +120,6 @@ export function verifyRenderToken(token: unknown, widgetToken: string): boolean 
   } catch {
     return false
   }
-  return timingSafeStringEqual(signature, sign(key, payload))
+  if (!timingSafeStringEqual(signature, sign(key, payload))) return false
+  return timingSafeStringEqual(tokenBinding, bindingTag(key, ip))
 }

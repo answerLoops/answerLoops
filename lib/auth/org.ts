@@ -21,9 +21,9 @@ import { memberships } from '@/lib/db/schema'
  *    destroys long-lived org credentials belongs in the same class.
  */
 
-export type OrgRole = 'owner' | 'admin' | 'member'
+type OrgRole = 'owner' | 'admin' | 'member'
 
-export type OrgAccess =
+type OrgAccess =
   | { ok: true; orgId: number; userId: number; role: OrgRole }
   | { ok: false; error: string }
 

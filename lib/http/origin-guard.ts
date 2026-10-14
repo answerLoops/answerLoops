@@ -36,6 +36,20 @@ export function originVerifyConfigured(): boolean {
 }
 
 /**
+ * True only when ORIGIN_VERIFY_SECRET is configured AND this request carries
+ * the matching header, i.e. it demonstrably came through the edge proxy.
+ * Unlike verifyOriginProxy this never "passes" an unconfigured deployment, so
+ * it is the right check for deciding whether to believe a proxy-supplied
+ * header (see lib/http/client-ip.ts).
+ */
+export function isOriginVerified(req: { headers: Headers }): boolean {
+  const secret = process.env.ORIGIN_VERIFY_SECRET?.trim()
+  if (!secret) return false
+  const provided = req.headers.get(ORIGIN_VERIFY_HEADER)
+  return Boolean(provided) && timingSafeStringEqual(provided as string, secret)
+}
+
+/**
  * Returns a 403 Response if the request should be rejected, or null if it's
  * safe to proceed. Call this before any other work (rate limiting, body
  * reads) on public pre-auth POST routes, mirroring the content-length check

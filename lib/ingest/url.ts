@@ -1,5 +1,6 @@
 import FirecrawlApp from '@mendable/firecrawl-js'
-import { embedText, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { embedText, assertEmbeddingAvailable, EMBEDDING_MODEL } from '@/lib/ai/embed'
+import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { createArticle, createArticleFromSource, countArticles } from '@/lib/db/queries/kb'
 import { createKBSource, getKBSourceByFilename, getExistingSourceFilenames, updateKBSourceChunkCount } from '@/lib/db/queries/kb-sources'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
@@ -125,7 +126,7 @@ async function saveChunks(chunks: Chunk[], orgId: number, sourceId?: number): Pr
   let lastError: unknown
   for (const chunk of budgeted) {
     try {
-      const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`)
+      const embedding = await embedText(`${chunk.question}\n\n${chunk.answer}`, orgId)
       if (sourceId != null) {
         await createArticleFromSource(
           { question: chunk.question, answer: chunk.answer, embedding, model: EMBEDDING_MODEL, sourceId },
@@ -136,6 +137,9 @@ async function saveChunks(chunks: Chunk[], orgId: number, sourceId?: number): Pr
       }
       created++
     } catch (err) {
+      // No provider is configured for this workspace: every remaining chunk
+      // would fail the same way, so stop and let the caller report it.
+      if (err instanceof NoAIProviderConfiguredError) throw err
       lastError = err
     }
   }
@@ -145,6 +149,8 @@ async function saveChunks(chunks: Chunk[], orgId: number, sourceId?: number): Pr
 
 /** Scrape a single URL and save each heading section as a KB article. */
 export async function ingestUrl(url: string, orgId: number): Promise<{ created: number; skipped?: boolean }> {
+  // Refuse before scraping when this workspace has no usable embedding provider.
+  await assertEmbeddingAvailable(orgId)
   if (MOCK_EXTERNALS) {
     const mockMd = `## Mock Page\n\nThis is mock content for ${url}. It contains enough text to be chunked into a KB article for testing purposes.`
     const existing = await getKBSourceByFilename(orgId, url)
@@ -195,6 +201,8 @@ export async function ingestSite(
   orgId: number,
   maxPages = MAX_PAGES,
 ): Promise<{ created: number; pages: number; pagesFound: number; skipped: number; remaining: number; incomplete: boolean }> {
+  // Refuse before crawling when this workspace has no usable embedding provider.
+  await assertEmbeddingAvailable(orgId)
   if (MOCK_EXTERNALS) {
     const mockMd = `## Mock Site Page\n\nThis is mock site content for ${url}. It contains enough text to be chunked into a KB article for testing purposes. The site crawl returns multiple pages.`
     const existing = await getKBSourceByFilename(orgId, url)

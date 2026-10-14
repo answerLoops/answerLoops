@@ -10,6 +10,8 @@ import { getTicketIdByAnswerMessage } from '@/lib/db/queries/feedback'
 import { getTicketIdByCsatMessage, saveCsatRating } from '@/lib/db/queries/csat'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { readBodyCapped } from '@/lib/http/read-body-capped'
+import { isIngestRateLimited, WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -37,8 +39,10 @@ function voteFromReaction(name: string): 'up' | 'down' | null {
 }
 
 export async function POST(request: Request) {
-  // Read the raw body once for both signature verification and JSON parsing
-  const rawBody = await request.text()
+  // Read the raw body once for both signature verification and JSON parsing,
+  // counting bytes as they stream so an oversized body is cut off early.
+  const rawBody = await readBodyCapped(request, WEBHOOK_MAX_BODY_BYTES)
+  if (rawBody === null) return new Response('Payload Too Large', { status: 413 })
 
   // URL verification challenge sent by Slack when first configuring the endpoint.
   // Must respond before any signature check is possible.
@@ -92,6 +96,10 @@ export async function POST(request: Request) {
 
     if (body.type !== 'event_callback') {
       return Response.json({ ok: true })
+    }
+
+    if (await isIngestRateLimited(orgId)) {
+      return Response.json({ error: 'Rate limit exceeded' }, { status: 429 })
     }
 
     const ev = body.event as Record<string, unknown>
@@ -171,7 +179,7 @@ export async function POST(request: Request) {
       // Check if this is a CSAT prompt reaction (1️⃣-5️⃣)
       const csatRating = CSAT_REACTIONS[reaction]
       if (csatRating != null) {
-        const csatTicketId = await getTicketIdByCsatMessage(messageTs)
+        const csatTicketId = await getTicketIdByCsatMessage(messageTs, orgId)
         if (csatTicketId) {
           await saveCsatRating({ ticketId: csatTicketId, orgId, rating: csatRating, platform: 'slack' })
           return Response.json({ ok: true, csat: csatRating, ticket_id: csatTicketId })
@@ -182,7 +190,7 @@ export async function POST(request: Request) {
       const vote = voteFromReaction(reaction)
       if (!vote) return Response.json({ ok: true })
 
-      const ticketId = await getTicketIdByAnswerMessage(messageTs)
+      const ticketId = await getTicketIdByAnswerMessage(messageTs, orgId)
       if (!ticketId) return Response.json({ ok: true })
 
       await saveFeedback({

@@ -61,7 +61,7 @@ describe('saveSlackIntegrationAction (manual form) generates and preserves bot_s
     const fnIdx = src.indexOf('export async function saveSlackIntegrationAction')
     const nextFnIdx = src.indexOf('export async function', fnIdx + 1)
     const fnBody = src.slice(fnIdx, nextFnIdx)
-    expect(fnBody).toContain('existingIntegration?.bot_secret ?? crypto.randomBytes(32).toString')
+    expect(fnBody).toContain('existingIntegration?.bot_secret ?? generateBotSecret()')
     expect(fnBody).toContain('botSecret,')
   })
 })
@@ -69,7 +69,7 @@ describe('saveSlackIntegrationAction (manual form) generates and preserves bot_s
 describe('bot_secret generation behaves like every other platform', () => {
   it('Discord/Telegram/Email save actions already use the same existing-or-generate pattern', () => {
     const src = read('lib/actions/integrations.ts')
-    const occurrences = src.match(/existing(?:Integration)?\?\.bot_secret \?\? crypto\.randomBytes\(32\)\.toString\('hex'\)/g)
+    const occurrences = src.match(/existing(?:Integration)?\?\.bot_secret \?\? generateBotSecret\(\)/g)
     // Discord, Telegram, Email, and now Slack (manual form) — 4 platforms
     // in this file follow the same pattern.
     expect(occurrences?.length).toBeGreaterThanOrEqual(4)
@@ -91,8 +91,13 @@ describe('lib/db/queries/integrations.ts — upsertIntegration actually persists
     })
 
     const { upsertIntegration } = await import('@/lib/db/queries/integrations')
+    const { hashBotSecret } = await import('@/lib/ingest/bot-secret')
     await upsertIntegration({ orgId: 3, platform: 'slack', botToken: 'xoxb-x', botSecret: 'abc123' })
 
-    expect(values).toHaveBeenCalledWith(expect.objectContaining({ botSecret: 'abc123' }))
+    // Stored as a digest plus an encrypted copy — never as plaintext.
+    const written = values.mock.calls[0][0]
+    expect(written.botSecret).toBeNull()
+    expect(written.botSecretHash).toBe(hashBotSecret('abc123'))
+    expect(written.botSecretEnc).toBe('enc:abc123')
   })
 })

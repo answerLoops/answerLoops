@@ -3,6 +3,8 @@ import { getIntegrationByBotSecret, parseChannelIds } from '@/lib/db/queries/int
 import { normalizeCircleContent, fetchCirclePost, fetchCircleComment, type CircleContent } from '@/lib/circle/client'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { decryptToken } from '@/lib/crypto/tokens'
+import { readBodyCapped } from '@/lib/http/read-body-capped'
+import { clampIngestContent, isIngestRateLimited, WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 import { logger } from '@/lib/logger'
 
 const MOD = 'api/circle/webhook'
@@ -67,7 +69,7 @@ export async function POST(req: NextRequest) {
     return new Response('Unauthorized', { status: 401 })
   }
 
-  const integration = await getIntegrationByBotSecret(secret)
+  const integration = await getIntegrationByBotSecret(secret, 'circle')
   if (!integration || integration.platform !== 'circle' || integration.enabled !== 1) {
     logger.warn('Circle webhook token did not match a connected org', { module: MOD })
     return new Response('Unauthorized', { status: 401 })
@@ -85,9 +87,15 @@ export async function POST(req: NextRequest) {
   const kindParam = req.nextUrl.searchParams.get('kind')
   const explicitKind = kindParam === 'post' || kindParam === 'comment' ? kindParam : null
 
+  if (await isIngestRateLimited(integration.org_id)) {
+    return new Response('Too Many Requests', { status: 429 })
+  }
+
+  const raw = await readBodyCapped(req, WEBHOOK_MAX_BODY_BYTES)
+  if (raw === null) return new Response('Payload Too Large', { status: 413 })
   let body: CircleWebhookBody
   try {
-    body = (await req.json()) as CircleWebhookBody
+    body = JSON.parse(raw) as CircleWebhookBody
   } catch {
     return new Response('Bad Request', { status: 400 })
   }
@@ -133,7 +141,7 @@ export async function POST(req: NextRequest) {
   await processCommunityMessage(
     {
       messageId: `circle-${picked.kind}-${content.id}`,
-      content: content.body,
+      content: clampIngestContent(content.body),
       authorId: content.authorId,
       authorName: content.authorName,
       channelId: content.spaceId || content.postId,

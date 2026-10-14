@@ -1,9 +1,8 @@
 'use server'
 
 import { z } from 'zod'
-import { auth } from '@/auth'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { saveOrgROIConfig } from '@/lib/db/queries/orgs'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { revalidatePath } from 'next/cache'
 
 const schema = z.object({
@@ -12,8 +11,9 @@ const schema = z.object({
 })
 
 export async function saveROIConfigAction(_: unknown, formData: FormData) {
-  const session = await auth()
-  const orgId = (session as { orgId?: number }).orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const parsed = schema.safeParse({
     minutesPerTicket: formData.get('minutesPerTicket'),

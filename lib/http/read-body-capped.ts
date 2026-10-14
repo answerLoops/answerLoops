@@ -11,8 +11,18 @@
  * Takes anything with a body — NextRequest and plain Request both qualify.
  */
 export async function readBodyCapped(req: { body: ReadableStream<Uint8Array> | null }, maxBytes: number): Promise<string | null> {
+  const bytes = await readBodyBytesCapped(req, maxBytes)
+  return bytes === null ? null : bytes.toString('utf8')
+}
+
+/**
+ * Same byte-counting read as readBodyCapped, returning the raw bytes — for
+ * bodies that are not UTF-8 text (multipart form data). Returns null when the
+ * cap is exceeded.
+ */
+export async function readBodyBytesCapped(req: { body: ReadableStream<Uint8Array> | null }, maxBytes: number): Promise<Buffer | null> {
   const reader = req.body?.getReader()
-  if (!reader) return ''
+  if (!reader) return Buffer.alloc(0)
   const chunks: Uint8Array[] = []
   let total = 0
   for (;;) {
@@ -25,5 +35,5 @@ export async function readBodyCapped(req: { body: ReadableStream<Uint8Array> | n
     }
     chunks.push(value)
   }
-  return Buffer.concat(chunks).toString('utf8')
+  return Buffer.concat(chunks)
 }

@@ -21,15 +21,15 @@ const VALID_SIG = 'valid-test-signature'
 const {
   upsertSubscription,
   getSubscriptionByStripeId,
-  hasProcessedWebhookEvent,
-  markWebhookEventProcessed,
+  claimWebhookEvent,
+  releaseWebhookEventClaim,
   pruneOldWebhookEvents,
   logger,
 } = vi.hoisted(() => ({
   upsertSubscription: vi.fn(async () => {}),
   getSubscriptionByStripeId: vi.fn(async () => null),
-  hasProcessedWebhookEvent: vi.fn(async () => false),
-  markWebhookEventProcessed: vi.fn(async () => {}),
+  claimWebhookEvent: vi.fn(async () => true),
+  releaseWebhookEventClaim: vi.fn(async () => {}),
   pruneOldWebhookEvents: vi.fn(async () => {}),
   logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }))
@@ -50,8 +50,8 @@ vi.mock('@/lib/db/queries/billing', () => ({
   upsertSubscriptionAndClaimWelcome: vi.fn(async () => true),
   getSubscription: vi.fn(async () => null),
   getSubscriptionByStripeId,
-  hasProcessedWebhookEvent,
-  markWebhookEventProcessed,
+  claimWebhookEvent,
+  releaseWebhookEventClaim,
   pruneOldWebhookEvents,
 }))
 

@@ -38,9 +38,11 @@ describe('the embedded session is the hosted one, minus the redirect', () => {
     expect(embedded.match(/metadata: \{ org_id/g)?.length).toBe(2)
   })
 
-  it('keeps the promotion-code field, which is the whole reason coupons work', () => {
+  it('applies promotion codes itself, because a code typed into Stripe\'s own box arrives too late to change whether a card is needed', () => {
     const embedded = src().slice(src().indexOf('createEmbeddedCheckoutSession'))
-    expect(embedded).toContain('allow_promotion_codes: true')
+    expect(embedded).toContain('resolvePromo(')
+    expect(embedded).toContain('discounts: [{ promotion_code:')
+    expect(embedded).not.toContain('allow_promotion_codes')
   })
 
   it("uses the API version's ui_mode spelling, not the one in most examples", () => {
@@ -72,8 +74,9 @@ describe('the checkout page guards match the ones on /start-trial', () => {
   it('requires a session, and carries the plan and interval through sign-in', () => {
     const s = src()
     expect(s).toContain('if (!session?.user)')
-    expect(s).toContain('/login?plan=')
-    expect(s).toContain('interval=')
+    expect(s).toContain("resumeParams.set('plan', requestedPlan)")
+    expect(s).toContain("resumeParams.set('interval'")
+    expect(s).toContain('/login?${resumeParams}')
   })
 
   it('never lets an org that already pays start a second subscription', () => {
@@ -181,8 +184,8 @@ describe('switching plan cannot mount a stale session', () => {
     expect(s).toContain('if (cancelled) return')
   })
 
-  it('refetches whenever either half of the selection changes', () => {
-    expect(src()).toContain('}, [planId, interval])')
+  it('refetches whenever the plan, the interval or the applied code changes', () => {
+    expect(src()).toContain('}, [planId, interval, appliedCode])')
   })
 
   it('shows a disabled state rather than crashing without a publishable key', () => {

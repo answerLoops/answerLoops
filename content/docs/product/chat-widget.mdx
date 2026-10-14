@@ -171,8 +171,12 @@ The widget chat endpoint is public (no login required), so it enforces limits to
 
 - Up to **100 requests/minute per widget token** (caps total cost exposure for one site even if traffic comes from many IPs)
 - Up to **20 requests/minute per visitor** (token + IP combination)
+- Up to **500 answers/hour and 3,000 answers/day per workspace**, across all visitors and widget tokens
+- Loading the widget panel itself is limited to **30 loads/minute per visitor address** and **600/minute per widget token**
 - Each message capped at **4,000 characters**; at most **50 messages** per request
 - Request bodies capped at **512KB**
+
+Each approved load of the widget panel receives a short-lived session pass that is tied to the visitor's network address; chat and lead capture use it automatically from inside the embed.
 
 The lead-capture endpoint, used when a visitor leaves an email address, is limited separately at **30/minute per token** and **5/minute per visitor**, with a 64KB body cap and a validated address.
 

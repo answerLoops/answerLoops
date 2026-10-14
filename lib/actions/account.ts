@@ -61,7 +61,7 @@ export async function deleteAccountAction(
   return null
 }
 
-export interface AccountDeletionInfo {
+interface AccountDeletionInfo {
   orgName: string
   deletedAt: string
   purgeAt: string

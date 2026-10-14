@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
 import { getPlan, isCloudMisconfigured, parseBillingInterval, stripeConfigured, TRIAL_DAYS } from '@/lib/billing/plans'
 import { orgHasProductAccess } from '@/lib/billing/access'
+import { parsePromoCode } from '@/lib/billing/promo'
 import { BillingMisconfigured } from '@/components/billing/billing-misconfigured'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { logger } from '@/lib/logger'
@@ -43,10 +44,11 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 export default async function StartTrialPage({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string; checkout?: string; interval?: string }>
+  searchParams: Promise<{ plan?: string; checkout?: string; interval?: string; code?: string }>
 }) {
   const session = await auth()
-  const { plan: requestedPlan, checkout, interval: requestedInterval } = await searchParams
+  const { plan: requestedPlan, checkout, interval: requestedInterval, code } = await searchParams
+  const codeParam = parsePromoCode(code) ? `&code=${encodeURIComponent(code as string)}` : ''
 
   // Narrowed here as well as in the sign-in callback: this page is reachable
   // directly, so it cannot assume the value already passed through there.
@@ -57,7 +59,7 @@ export default async function StartTrialPage({
     // the round trip — losing the interval would silently bill monthly to
     // somebody who picked annual.
     const resume = requestedPlan
-      ? `/login?plan=${encodeURIComponent(requestedPlan)}&interval=${interval}`
+      ? `/login?plan=${encodeURIComponent(requestedPlan)}&interval=${interval}${codeParam}`
       : '/login'
     redirect(resume)
   }
@@ -124,5 +126,5 @@ export default async function StartTrialPage({
   // interval without leaving, and a Checkout Session's line items are fixed at
   // creation, so creating one here would be throwing it away on the first
   // switch.
-  redirect(`/checkout?plan=${encodeURIComponent(plan.id)}&interval=${interval}`)
+  redirect(`/checkout?plan=${encodeURIComponent(plan.id)}&interval=${interval}${codeParam}`)
 }

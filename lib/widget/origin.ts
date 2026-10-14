@@ -66,7 +66,7 @@ export function resolveEmbedOrigin(referer: string | null): string | null {
   return normalizeHost(referer)
 }
 
-export interface EmbedDecision {
+interface EmbedDecision {
   allowed: boolean
   /** Populated when refused, for the operator-facing message. */
   reason?: 'not-configured' | 'origin-not-allowed' | 'origin-unknown'

@@ -24,6 +24,13 @@ import { mintRenderToken } from '../lib/widget/render-token'
 // checks — see app/api/widget/chat/route.ts's validateAndPrepare — so these
 // tests have to speak the real wire format to actually exercise it.
 
+// Render tokens are bound to the client address that minted them. The server
+// reads this address from cf-connecting-ip (accepted on self-hosted installs
+// without ORIGIN_VERIFY_SECRET), so every request in this file presents it and
+// every token is minted for it.
+const E2E_CLIENT_IP = '203.0.113.10'
+test.use({ extraHTTPHeaders: { 'cf-connecting-ip': E2E_CLIENT_IP } })
+
 function getToken(): string {
   const data = JSON.parse(fs.readFileSync(WIDGET_TOKEN_FILE, 'utf-8')) as { token: string }
   return data.token
@@ -72,7 +79,7 @@ test.describe('widget: /api/widget/chat', () => {
     const res = await request.post('/api/widget/chat', {
       data: chatEnvelope({
         widgetToken: token,
-        renderToken: mintRenderToken(token),
+        renderToken: mintRenderToken(token, E2E_CLIENT_IP),
         visitorId: 'e2e-visitor-no-messages',
         messages: [],
       }),
@@ -83,7 +90,7 @@ test.describe('widget: /api/widget/chat', () => {
   test('returns 400 for missing visitorId', async ({ request }) => {
     const token = getToken()
     const res = await request.post('/api/widget/chat', {
-      data: chatEnvelope({ widgetToken: token, renderToken: mintRenderToken(token), messages: [chatMsg('hello')] }),
+      data: chatEnvelope({ widgetToken: token, renderToken: mintRenderToken(token, E2E_CLIENT_IP), messages: [chatMsg('hello')] }),
     })
     expect(res.status()).toBe(400)
   })
@@ -97,7 +104,7 @@ test.describe('widget: /api/widget/chat', () => {
     const res = await request.post('/api/widget/chat', {
       data: chatEnvelope({
         widgetToken: fakeToken,
-        renderToken: mintRenderToken(fakeToken),
+        renderToken: mintRenderToken(fakeToken, E2E_CLIENT_IP),
         visitorId: 'e2e-visitor-invalid-token',
         messages: [chatMsg('hello')],
       }),
@@ -110,7 +117,7 @@ test.describe('widget: /api/widget/chat', () => {
     const res = await request.post('/api/widget/chat', {
       data: chatEnvelope({
         widgetToken: token,
-        renderToken: mintRenderToken(token),
+        renderToken: mintRenderToken(token, E2E_CLIENT_IP),
         visitorId: 'e2e-visitor-stream',
         messages: [chatMsg('How do I configure the client?')],
       }),
@@ -125,7 +132,7 @@ test.describe('widget: /api/widget/chat', () => {
     const res = await request.post('/api/widget/chat', {
       data: chatEnvelope({
         widgetToken: token,
-        renderToken: mintRenderToken(token),
+        renderToken: mintRenderToken(token, E2E_CLIENT_IP),
         visitorId: 'e2e-visitor-char-cap',
         messages: [chatMsg(tooLong)],
       }),
@@ -137,7 +144,7 @@ test.describe('widget: /api/widget/chat', () => {
     const token = getToken()
     const messages = Array.from({ length: 51 }, () => chatMsg('hi'))
     const res = await request.post('/api/widget/chat', {
-      data: chatEnvelope({ widgetToken: token, renderToken: mintRenderToken(token), visitorId: 'e2e-visitor-message-cap', messages }),
+      data: chatEnvelope({ widgetToken: token, renderToken: mintRenderToken(token, E2E_CLIENT_IP), visitorId: 'e2e-visitor-message-cap', messages }),
       headers: { 'x-forwarded-for': 'test-ip-message-cap' },
     })
     expect(res.status()).toBe(400)
@@ -148,7 +155,7 @@ test.describe('widget: /api/widget/chat', () => {
     const ip = 'test-ip-rate-limit-unique'
     const payload = chatEnvelope({
       widgetToken: token,
-      renderToken: mintRenderToken(token),
+      renderToken: mintRenderToken(token, E2E_CLIENT_IP),
       visitorId: 'e2e-visitor-rate-limit',
       messages: [chatMsg('hi')],
     })
@@ -193,7 +200,7 @@ test.describe('widget: /api/widget/lead', () => {
   test('returns 400 for invalid email', async ({ request }) => {
     const token = getToken()
     const res = await request.post('/api/widget/lead', {
-      data: { widgetToken: token, renderToken: mintRenderToken(token), email: 'not-an-email' },
+      data: { widgetToken: token, renderToken: mintRenderToken(token, E2E_CLIENT_IP), email: 'not-an-email' },
     })
     expect(res.status()).toBe(400)
   })
@@ -203,7 +210,7 @@ test.describe('widget: /api/widget/lead', () => {
     // well-formed-token and renderToken checks to reach the DB lookup that 404s.
     const fakeToken = 'f'.repeat(48)
     const res = await request.post('/api/widget/lead', {
-      data: { widgetToken: fakeToken, renderToken: mintRenderToken(fakeToken), email: 'user@example.com' },
+      data: { widgetToken: fakeToken, renderToken: mintRenderToken(fakeToken, E2E_CLIENT_IP), email: 'user@example.com' },
     })
     expect(res.status()).toBe(404)
   })
@@ -211,7 +218,7 @@ test.describe('widget: /api/widget/lead', () => {
   test('captures a lead for valid token + email', async ({ request }) => {
     const token = getToken()
     const res = await request.post('/api/widget/lead', {
-      data: { widgetToken: token, renderToken: mintRenderToken(token), email: 'lead@example.com' },
+      data: { widgetToken: token, renderToken: mintRenderToken(token, E2E_CLIENT_IP), email: 'lead@example.com' },
     })
     expect(res.ok()).toBeTruthy()
     expect((await res.json()).ok).toBe(true)
@@ -220,7 +227,7 @@ test.describe('widget: /api/widget/lead', () => {
   test('deduplicates the same lead (upsert)', async ({ request }) => {
     const token = getToken()
     const email = 'dup-lead@example.com'
-    const data = { widgetToken: token, renderToken: mintRenderToken(token), email }
+    const data = { widgetToken: token, renderToken: mintRenderToken(token, E2E_CLIENT_IP), email }
     const first = await request.post('/api/widget/lead', { data })
     expect(first.ok()).toBeTruthy()
     const second = await request.post('/api/widget/lead', { data })

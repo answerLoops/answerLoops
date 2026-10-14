@@ -21,8 +21,12 @@ vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles, createAr
 vi.mock('@/lib/db/queries/kb-sources', () => ({ createKBSource: h.createKBSource, updateKBSourceChunkCount: vi.fn() }))
 vi.mock('@/lib/ingest/file-parsers', () => ({ detectFileType: () => 'txt', parseFile: h.parseFile }))
 vi.mock('@/lib/ingest/url', () => ({ chunkMarkdown: vi.fn(() => []) }))
-vi.mock('@/lib/ai/embed', () => ({ embedText: vi.fn(), EMBEDDING_MODEL: 'fake-embed' }))
-vi.mock('@/lib/ratelimit', () => ({ rateLimit: () => ({ ok: true }) }))
+vi.mock('@/lib/ai/embed', () => ({
+  embedText: vi.fn(),
+  assertEmbeddingAvailable: vi.fn(async () => {}),
+  EMBEDDING_MODEL: 'fake-embed',
+}))
+vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: async () => ({ ok: true }) }))
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }))
 
 function uploadRequest() {

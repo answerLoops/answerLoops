@@ -10,8 +10,8 @@ export const dynamic = 'force-dynamic'
 const MOD = 'api/export/leads'
 
 export async function GET(req: Request) {
-  const access = await requireOrgAccess()
-  if (!access.ok) return new Response(access.error, { status: 401 })
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return new Response(access.error, { status: access.error === 'Unauthorized' ? 401 : 403 })
 
   const orgId = access.orgId
 

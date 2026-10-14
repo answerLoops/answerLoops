@@ -34,7 +34,7 @@ In Circle, go to **Settings → Workflows** and create a workflow:
 - **Trigger:** *New post*
 - **Action:** *Send webhook*
   - **URL:** the Webhook URL from step 2, with `?kind=post` appended
-  - **Header:** `X-AnswerLoops-Token` = the secret from step 2 (use the header whenever the Workflow action supports it — if it can't set headers, append `&token=<secret>` to the URL instead)
+  - **Header:** `X-AnswerLoops-Token` = the secret from step 2 (use the header whenever the Workflow action supports it — if it can't set headers, append `&token=<secret>` to the URL instead; the URL then carries the secret, so treat it as confidential and rotate it if the URL is ever shared)
 
 Create a second workflow the same way for **Trigger:** *New comment*, using `?kind=comment` on its URL instead. Circle's webhook payload shape isn't contractual, so `kind` tells answerLoops which one it's looking at instead of guessing from the payload.
 

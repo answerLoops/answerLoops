@@ -1,8 +1,7 @@
 'use server'
 
 import { refresh } from 'next/cache'
-import { auth } from '@/auth'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { encryptToken } from '@/lib/crypto/tokens'
 import { NOTION_TOKEN_RE, getNotionBotUser } from '@/lib/notion/client'
@@ -14,9 +13,9 @@ export async function saveNotionConnectionAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   const token = String(formData.get('token') ?? '').trim()
   const existing = await getNotionConnectionRow(orgId)
@@ -47,9 +46,9 @@ export async function deleteNotionConnectionAction(
   _prevState: unknown,
   _formData: FormData
 ): Promise<{ error?: string } | null> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   await deleteNotionConnection(orgId)
   // Disconnecting also drops the synced content.

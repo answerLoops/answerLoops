@@ -10,9 +10,24 @@ import {
 import { mintRenderToken } from '@/lib/widget/render-token'
 import { WidgetChat } from './widget-chat'
 import { EmbedRefused } from './embed-refused'
+import { clientIp } from '@/lib/http/client-ip'
+import { rateLimitShared } from '@/lib/ratelimit'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 
 export const dynamic = 'force-dynamic'
+
+// Each allowed render mints a short-lived token that unlocks the chat and lead
+// endpoints, so minting is throttled per client address and per widget.
+// Generous for a real visitor (one render per page view) and tight enough that
+// a script cannot farm tokens.
+const RENDER_IP_MAX = 30
+const RENDER_IP_WINDOW_MS = 60_000
+const RENDER_TOKEN_MAX = 600
+const RENDER_TOKEN_WINDOW_MS = 60_000
+
+// Widget tokens are 48 hex characters (see lib/db/queries/widgets.ts); checked
+// before the value is used as rate-limit key material.
+const WIDGET_TOKEN_PATTERN = /^[0-9a-f]{48}$/
 
 interface Props {
   params: Promise<{ widgetToken: string }>
@@ -20,6 +35,7 @@ interface Props {
 
 export default async function WidgetPage({ params }: Props) {
   const { widgetToken } = await params
+  if (!WIDGET_TOKEN_PATTERN.test(widgetToken)) notFound()
   const org = await getOrgByWidgetToken(widgetToken)
   if (!org) notFound()
 
@@ -43,6 +59,21 @@ export default async function WidgetPage({ params }: Props) {
     return <EmbedRefused reason={decision.reason ?? 'origin-not-allowed'} origin={embedOrigin} />
   }
 
+  const ip = clientIp({ headers: headerList })
+  const [ipLimit, tokenLimit] = await Promise.all([
+    rateLimitShared(`widget-render-ip:${ip}`, RENDER_IP_MAX, RENDER_IP_WINDOW_MS),
+    rateLimitShared(`widget-render-token:${widgetToken}`, RENDER_TOKEN_MAX, RENDER_TOKEN_WINDOW_MS),
+  ])
+  if (!ipLimit.ok || !tokenLimit.ok) {
+    return (
+      <div className="flex h-full items-center justify-center bg-white p-6">
+        <p className="max-w-xs text-center text-sm text-gray-600">
+          This chat is busy right now. Please try again in a minute.
+        </p>
+      </div>
+    )
+  }
+
   const whiteLabel = await orgHasFeature(org.id, 'white_label_widget')
 
   // Only true when this request is embedded on the org's own instance (the
@@ -58,7 +89,9 @@ export default async function WidgetPage({ params }: Props) {
   // Minted only now that isEmbedAllowed() has passed, and required by the
   // chat/lead endpoints on every call — see lib/widget/render-token.ts for
   // why the allowlist above otherwise gates nothing but this page's own render.
-  const renderToken = mintRenderToken(widgetToken)
+  // Bound to this client address: the iframe's later fetches come from the
+  // same browser, so a token copied elsewhere does not verify.
+  const renderToken = mintRenderToken(widgetToken, ip)
 
   return (
     <WidgetChat

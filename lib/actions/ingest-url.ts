@@ -1,10 +1,10 @@
 'use server'
 
 import { z } from 'zod'
-import { auth } from '@/auth'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { ingestUrl, ingestSite, IngestLimitError } from '@/lib/ingest/url'
-import { rateLimit } from '@/lib/ratelimit'
+import { rateLimitShared } from '@/lib/ratelimit'
+import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { logger } from '@/lib/logger'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 
@@ -37,15 +37,15 @@ export async function ingestUrlAction(
   _prevState: unknown,
   formData: FormData,
 ): Promise<IngestUrlResult> {
-  const session = await auth()
-  if (!session?.user) return { error: 'Unauthorized' }
-  const orgId = session.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
 
   if (!MOCK_EXTERNALS && !process.env.FIRECRAWL_API_KEY) {
     return { error: 'URL import is not configured for this workspace. Contact your administrator.' }
   }
 
-  const limit = rateLimit(`ingest:${orgId}`, IMPORT_MAX, IMPORT_WINDOW_MS)
+  const limit = await rateLimitShared(`ingest:${orgId}`, IMPORT_MAX, IMPORT_WINDOW_MS)
   if (!limit.ok) {
     const mins = Math.ceil(limit.retryAfterMs / 60_000)
     return { error: `Import rate limit reached. Try again in ${mins} minute${mins === 1 ? '' : 's'}.` }
@@ -73,6 +73,9 @@ export async function ingestUrlAction(
     }
   } catch (err) {
     if (err instanceof IngestLimitError) return { error: err.message }
+    if (err instanceof NoAIProviderConfiguredError) {
+      return { error: 'No AI provider is set up for this workspace. Add one in Settings → AI Model, then import again.' }
+    }
     const msg = err instanceof Error ? err.message : ''
     if (msg.includes('API key is missing') || msg.includes('AI_LoadAPIKeyError')) {
       return { error: 'No AI provider configured. Add OPENAI_API_KEY to your environment variables, or configure a provider in Settings → AI Model.' }

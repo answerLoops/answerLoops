@@ -9,6 +9,7 @@ import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { reserveGeneration, commitDeflection } from '@/lib/billing/usage'
 import { orgRateLimitPerMinute } from '@/lib/billing/entitlements-server'
 import { rateLimitShared } from '@/lib/ratelimit'
+import { getBearerToken, matchesPlatformBotSecret } from '@/lib/http/bearer-auth'
 import { logger } from '@/lib/logger'
 
 const MOD = 'api/slash/ask'
@@ -20,15 +21,14 @@ const Schema = z.object({
 })
 
 export async function POST(request: Request) {
-  const authHeader = request.headers.get('authorization')
-  const bearerSecret = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+  const bearerSecret = getBearerToken(request)
   if (!bearerSecret) return new Response('Unauthorized', { status: 401 })
 
   let orgId: number
-  const integration = await getIntegrationByBotSecret(bearerSecret)
+  const integration = await getIntegrationByBotSecret(bearerSecret, 'discord')
   if (integration) {
     orgId = integration.org_id
-  } else if (process.env.BOT_SECRET && bearerSecret === process.env.BOT_SECRET) {
+  } else if (matchesPlatformBotSecret(bearerSecret)) {
     orgId = DEFAULT_ORG_ID
   } else {
     return new Response('Unauthorized', { status: 401 })

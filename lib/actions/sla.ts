@@ -2,6 +2,7 @@
 
 import { z } from 'zod'
 import { refresh } from 'next/cache'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { updateSLAConfig } from '@/lib/db/queries/sla'
 import type { Priority } from '@/types'
 
@@ -15,6 +16,9 @@ export async function updateSLAAction(
   _prevState: unknown,
   formData: FormData
 ): Promise<{ error?: string } | null> {
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+
   const parsed = UpdateSLASchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: 'Invalid values' }
 
@@ -23,7 +27,7 @@ export async function updateSLAAction(
     return { error: 'Resolve time must be greater than response time' }
   }
 
-  updateSLAConfig(priority as Priority, responseHours, resolveHours)
+  await updateSLAConfig(access.orgId, priority as Priority, responseHours, resolveHours)
   refresh()
   return null
 }

@@ -3,6 +3,7 @@ import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { getDirectDatabaseUrl } from '@/lib/db/direct-url'
 import { logger } from '@/lib/logger'
 import { isFeedbackWidgetEnabled } from '@/lib/product-feedback/enabled'
+import { acquireStreamSlot } from '@/lib/live-events-limits'
 import postgres from 'postgres'
 import type { NextRequest } from 'next/server'
 
@@ -40,6 +41,12 @@ export async function GET(_request: NextRequest) {
 
   const url = getDirectDatabaseUrl()
   if (!url) return new Response('database not configured', { status: 503 })
+
+  const userKey = String(session.user.id ?? session.user.email ?? 'anonymous')
+  const releaseSlot = acquireStreamSlot(userKey, orgId)
+  if (!releaseSlot) {
+    return new Response('Too many open streams', { status: 429, headers: { 'Retry-After': '30' } })
+  }
 
   const encoder = new TextEncoder()
   // Assigned inside start(); cancel() runs it when the client disconnects.
@@ -101,7 +108,13 @@ export async function GET(_request: NextRequest) {
         // it rather than waiting for the next heartbeat to notice.
         onclose: () => close(),
       }
-      const listener = postgres(url, options)
+      let listener: ReturnType<typeof postgres>
+      try {
+        listener = postgres(url, options)
+      } catch (err) {
+        releaseSlot()
+        throw err
+      }
 
       const keepalive = setInterval(() => send('ping'), KEEPALIVE_MS)
 
@@ -148,6 +161,7 @@ export async function GET(_request: NextRequest) {
         clearInterval(keepalive)
         clearInterval(heartbeat)
         clearTimeout(recycle)
+        releaseSlot()
         listener.end({ timeout: 5 }).catch(() => {})
         try {
           controller.close()
@@ -173,6 +187,9 @@ export async function GET(_request: NextRequest) {
     },
     cancel() {
       teardown()
+      // Idempotent; also covers a cancel that lands before start() assigned
+      // the real teardown.
+      releaseSlot()
     },
   })
 

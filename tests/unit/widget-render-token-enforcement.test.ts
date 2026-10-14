@@ -85,7 +85,7 @@ describe('app/api/widget/chat/route.ts — renderToken is actually enforced', ()
   it('accepts a renderToken actually minted for this widgetToken', async () => {
     const { mintRenderToken } = await import('@/lib/widget/render-token')
     const { POST } = await import('@/app/api/widget/chat/route')
-    const token = mintRenderToken(VALID_TOKEN)
+    const token = mintRenderToken(VALID_TOKEN, '203.0.113.7')
     const res = await POST(
       widgetChatRequest({
         widgetToken: VALID_TOKEN,
@@ -95,6 +95,75 @@ describe('app/api/widget/chat/route.ts — renderToken is actually enforced', ()
       })
     )
     expect(res.status).not.toBe(403)
+  })
+
+  it('rejects a renderToken minted for a different client address', async () => {
+    const { mintRenderToken } = await import('@/lib/widget/render-token')
+    const { POST } = await import('@/app/api/widget/chat/route')
+    const token = mintRenderToken(VALID_TOKEN, '198.51.100.9')
+    const res = await POST(
+      widgetChatRequest({
+        widgetToken: VALID_TOKEN,
+        renderToken: token,
+        visitorId: 'v1',
+        messages: [userMsg('hi')],
+      })
+    )
+    expect(res.status).toBe(403)
+    expect(h.reserveGeneration).not.toHaveBeenCalled()
+  })
+
+  it('rejects visitor ids outside the allowed shape and unknown envelope methods', async () => {
+    const { mintRenderToken } = await import('@/lib/widget/render-token')
+    const { POST } = await import('@/app/api/widget/chat/route')
+    const token = mintRenderToken(VALID_TOKEN, '203.0.113.7')
+    for (const visitorId of ['a:b', 'x'.repeat(65), 'has space', '../x']) {
+      const res = await POST(
+        widgetChatRequest({ widgetToken: VALID_TOKEN, renderToken: token, visitorId, messages: [userMsg('hi')] })
+      )
+      expect(res.status).toBe(400)
+    }
+    const ok = await POST(
+      widgetChatRequest({
+        widgetToken: VALID_TOKEN,
+        renderToken: token,
+        visitorId: crypto.randomUUID(),
+        messages: [userMsg('hi')],
+      })
+    )
+    expect(ok.status).not.toBe(400)
+
+    for (const method of ['agent/connect', 'threads/list', 'memories/list', 'transcribe', undefined]) {
+      const res = await POST(
+        new Request('https://app.test/api/widget/chat', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ method, params: {} }),
+        })
+      )
+      expect(res.status).toBe(404)
+    }
+  })
+
+  it('returns 429 when the org-wide answer cap is exhausted, before reserving quota', async () => {
+    const { mintRenderToken } = await import('@/lib/widget/render-token')
+    const { rateLimitShared } = await import('@/lib/ratelimit')
+    vi.mocked(rateLimitShared).mockImplementation(async (key: string) =>
+      ({ ok: !key.startsWith('widget-org-hour:') }) as never
+    )
+    const { POST } = await import('@/app/api/widget/chat/route')
+    const token = mintRenderToken(VALID_TOKEN, '203.0.113.7')
+    const res = await POST(
+      widgetChatRequest({
+        widgetToken: VALID_TOKEN,
+        renderToken: token,
+        visitorId: 'v1',
+        messages: [userMsg('hi')],
+      })
+    )
+    expect(res.status).toBe(429)
+    expect(h.reserveGeneration).not.toHaveBeenCalled()
+    vi.mocked(rateLimitShared).mockImplementation(async () => ({ ok: true }) as never)
   })
 })
 
@@ -117,7 +186,7 @@ describe('app/api/widget/lead/route.ts — renderToken is actually enforced', ()
   it('accepts a lead post carrying a renderToken minted for this widgetToken', async () => {
     const { mintRenderToken } = await import('@/lib/widget/render-token')
     const { POST } = await import('@/app/api/widget/lead/route')
-    const token = mintRenderToken(VALID_TOKEN)
+    const token = mintRenderToken(VALID_TOKEN, '203.0.113.7')
     const res = await POST(
       leadRequest({ widgetToken: VALID_TOKEN, renderToken: token, email: 'visitor@example.com' })
     )

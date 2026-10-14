@@ -15,6 +15,7 @@ import {
   isCloudMisconfigured,
 } from '@/lib/billing/plans'
 import { orgHasProductAccess } from '@/lib/billing/access'
+import { parsePromoCode } from '@/lib/billing/promo-code'
 import { BillingMisconfigured } from '@/components/billing/billing-misconfigured'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 
@@ -41,16 +42,21 @@ export const metadata: Metadata = {
 export default async function CheckoutPage({
   searchParams,
 }: {
-  searchParams: Promise<{ plan?: string; interval?: string }>
+  searchParams: Promise<{ plan?: string; interval?: string; code?: string }>
 }) {
   const session = await auth()
-  const { plan: requestedPlan, interval: requestedInterval } = await searchParams
+  const { plan: requestedPlan, interval: requestedInterval, code } = await searchParams
+  const promoCode = parsePromoCode(code)
 
   if (!session?.user) {
-    const resume = requestedPlan
-      ? `/login?plan=${encodeURIComponent(requestedPlan)}&interval=${parseBillingInterval(requestedInterval) ?? 'monthly'}`
-      : '/login'
-    redirect(resume)
+    // The promotion code survives sign-in the same way the plan does.
+    const resumeParams = new URLSearchParams()
+    if (requestedPlan) {
+      resumeParams.set('plan', requestedPlan)
+      resumeParams.set('interval', parseBillingInterval(requestedInterval) ?? 'monthly')
+    }
+    if (promoCode) resumeParams.set('code', promoCode)
+    redirect(resumeParams.size ? `/login?${resumeParams}` : '/login')
   }
 
   // A cloud deployment with no Stripe key is a misconfiguration, and it must
@@ -112,8 +118,8 @@ export default async function CheckoutPage({
             Start your {TRIAL_DAYS}-day trial.
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
-            A card is required to start, and nothing is charged for {TRIAL_DAYS} days. Cancel any
-            time before then and you will not be billed at all.
+            Nothing is charged for {TRIAL_DAYS} days. Cancel any time before then and you will not
+            be billed at all.
           </p>
         </div>
 
@@ -122,6 +128,7 @@ export default async function CheckoutPage({
             plans={ORDERED_PLANS}
             initialPlanId={plan.id}
             initialInterval={interval}
+            promoCode={promoCode}
             // STRIPE_PUBLISHABLE_KEY first, and note the missing NEXT_PUBLIC_
             // prefix — that is the entire point. Next substitutes every
             // NEXT_PUBLIC_* read at build time, in server components too, not

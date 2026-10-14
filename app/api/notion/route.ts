@@ -1,5 +1,4 @@
-import { auth } from '@/auth'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { requireOrgAccess } from '@/lib/auth/org'
 import { getNotionConnection } from '@/lib/db/queries/notion'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
@@ -11,9 +10,9 @@ const MOD = 'api/notion'
 /** Connection state for the Settings card and the KB-page Notion panel. Never returns the token. */
 export async function GET(request: Request) {
   try {
-    const session = await auth()
-    if (!session?.user) return Response.json({ error: 'Unauthorized' }, { status: 401 })
-    const orgId = (session as { orgId?: number }).orgId ?? DEFAULT_ORG_ID
+    const access = await requireOrgAccess()
+    if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+    const orgId = access.orgId
 
     const connection = await getNotionConnection(orgId)
     return Response.json({ connection })

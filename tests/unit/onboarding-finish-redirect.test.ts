@@ -40,7 +40,8 @@ describe('completeOnboardingAction no longer throws via redirect()', () => {
   it('returns a plain result the caller can branch on', () => {
     const src = read('lib/actions/onboarding.ts')
     expect(src).toContain('export async function completeOnboardingAction(): Promise<{ error?: string } | null>')
-    expect(src).toContain("return { error: 'Unauthorized' }")
+    expect(src).toContain('requireOrgAccess')
+    expect(src).toContain('return { error: access.error }')
     expect(src).toContain('return null')
   })
 })

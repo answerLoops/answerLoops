@@ -9,8 +9,8 @@ import { logger } from '@/lib/logger'
 const MOD = 'api/billing/portal'
 
 export async function POST() {
-  const access = await requireOrgAccess()
-  if (!access.ok) return NextResponse.json({ error: access.error }, { status: 401 })
+  const access = await requireOrgAccess(['owner'])
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
 
   const orgId = access.orgId
   const sub = await getSubscription(orgId)

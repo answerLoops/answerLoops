@@ -8,7 +8,8 @@ import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { PLANS } from '@/lib/billing/plans'
 import { testAIProviderConnection, type AIConnectionResult } from '@/lib/ai/test-connection'
 import { validateAIConfig } from '@/lib/ai/config-validation'
-import { listModelsForProvider } from '@/lib/ai/list-models'
+import { listModelsForProvider, ModelListError } from '@/lib/ai/list-models'
+import { assertPublicHttpsUrl, UnsafeUrlError } from '@/lib/http/safe-url'
 
 const CHAT_PROVIDERS = ['openai', 'anthropic', 'google', 'groq', 'mistral', 'xai', 'openai-compatible'] as const
 const EMBEDDING_PROVIDERS = ['openai', 'openai-compatible'] as const
@@ -23,6 +24,37 @@ const SaveSchema = z.object({
   embedding_api_key: z.string().max(500).optional(),
   embedding_base_url: z.string().url().max(500).optional().or(z.literal('')),
 })
+
+const UNSAFE_BASE_URL_ERROR = 'The base URL must be a public https address (no credentials, no private or local hosts).'
+
+/**
+ * Bring-your-own-key with a named provider is included on every plan. Only an
+ * arbitrary custom endpoint ('openai-compatible') is the Enterprise-gated
+ * "Custom AI model configuration" row. Shared by save, test and list-models.
+ */
+async function customEndpointEntitlementError(
+  orgId: number,
+  providers: readonly string[]
+): Promise<string | null> {
+  if (!providers.includes('openai-compatible')) return null
+  if (await orgHasFeature(orgId, 'custom_ai_model_config')) return null
+  const requiredPlan = planRequiredFor('custom_ai_model_config')
+  return `Custom AI model configuration is available on the ${PLANS[requiredPlan].name} plan and above.`
+}
+
+/** Returns an error message when any given base URL is not a public https address. */
+async function baseUrlError(urls: (string | null | undefined)[]): Promise<string | null> {
+  for (const u of urls) {
+    if (!u) continue
+    try {
+      await assertPublicHttpsUrl(u)
+    } catch (err) {
+      if (err instanceof UnsafeUrlError) return UNSAFE_BASE_URL_ERROR
+      throw err
+    }
+  }
+  return null
+}
 
 async function resolveOrgForAIConfig() {
   // The org's model provider + API keys are org-wide credentials — same
@@ -48,14 +80,11 @@ export async function saveAIConfigAction(
   const validationError = validateAIConfig(d, existing)
   if (validationError) return { error: validationError }
 
-  // Bring-your-own-key with a named provider is included on every plan. Only an
-  // arbitrary custom endpoint ('openai-compatible') is the Enterprise-gated
-  // "Custom AI model configuration" row.
-  const isCustomEndpoint = d.chat_provider === 'openai-compatible' || d.embedding_provider === 'openai-compatible'
-  if (isCustomEndpoint && !(await orgHasFeature(orgId, 'custom_ai_model_config'))) {
-    const requiredPlan = planRequiredFor('custom_ai_model_config')
-    return { error: `Custom AI model configuration is available on the ${PLANS[requiredPlan].name} plan and above.` }
-  }
+  const entitlementError = await customEndpointEntitlementError(orgId, [d.chat_provider, d.embedding_provider])
+  if (entitlementError) return { error: entitlementError }
+
+  const urlError = await baseUrlError([d.chat_base_url, d.embedding_base_url])
+  if (urlError) return { error: urlError }
 
   // When the provider changed and the key field was left blank (only reachable
   // for a keyless openai-compatible endpoint after validation), wipe the stale
@@ -107,6 +136,9 @@ export async function testAIConfigAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Fill in the form first' }
   const d = parsed.data
 
+  const entitlementError = await customEndpointEntitlementError(access.orgId, [d.chat_provider, d.embedding_provider])
+  if (entitlementError) return { error: entitlementError }
+
   const existing = await getOrgAIConfig(access.orgId)
 
   const result = await testAIProviderConnection({
@@ -153,6 +185,9 @@ export async function listModelsAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Fill in the form first' }
   const d = parsed.data
 
+  const entitlementError = await customEndpointEntitlementError(access.orgId, [d.chat_provider])
+  if (entitlementError) return { error: entitlementError }
+
   const existing = await getOrgAIConfig(access.orgId)
   const apiKey = d.chat_api_key || existing?.chat_api_key || null
   const baseUrl = d.chat_base_url || existing?.chat_base_url || null
@@ -166,9 +201,11 @@ export async function listModelsAction(
     if (models.length === 0) return { error: 'That provider returned no chat models for this key.' }
     return { models }
   } catch (err) {
-    // Cap and strip — upstream error bodies can be arbitrarily long and
-    // aren't guaranteed not to echo request details back.
-    const message = err instanceof Error ? err.message : 'Could not fetch the model list.'
+    // Never relay upstream text: only fixed messages (and a bare status code)
+    // reach the client.
+    let message = 'Could not fetch the model list.'
+    if (err instanceof UnsafeUrlError) message = UNSAFE_BASE_URL_ERROR
+    else if (err instanceof ModelListError) message = `The provider rejected the request (${err.status}).`
     return { error: message.replace(/\s+/g, ' ').trim().slice(0, 200) }
   }
 }

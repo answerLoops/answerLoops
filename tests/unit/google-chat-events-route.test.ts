@@ -9,22 +9,23 @@ import type { PipelineResult } from '@/lib/ingest/pipeline'
 
 const {
   getIntegrationByGoogleChatSpace,
-  getIntegrationByPairingCode,
   completeGoogleChatPairing,
   getTicketByThreadId,
   processCommunityMessage,
 } = vi.hoisted(() => ({
   getIntegrationByGoogleChatSpace: vi.fn(),
-  getIntegrationByPairingCode: vi.fn(),
-  completeGoogleChatPairing: vi.fn(async () => {}),
+  completeGoogleChatPairing: vi.fn(async (_code: string, _space: string): Promise<{ status: string; orgId?: number }> => ({ status: 'invalid' })),
   getTicketByThreadId: vi.fn(async (): Promise<{ id: number } | null> => null),
   processCommunityMessage: vi.fn(async (): Promise<PipelineResult> => ({ ticket_id: 42 })),
 }))
 
 vi.mock('@/lib/db/queries/integrations', () => ({
   getIntegrationByGoogleChatSpace,
-  getIntegrationByPairingCode,
   completeGoogleChatPairing,
+}))
+vi.mock('@/lib/ingest/limits', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/ingest/limits')>()),
+  isIngestRateLimited: vi.fn(async () => false),
 }))
 vi.mock('@/lib/db/queries/tickets', () => ({ getTicketByThreadId }))
 vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage }))
@@ -49,7 +50,7 @@ describe('POST /api/google-chat/events', () => {
   })
 
   it('pairs a valid /connect code to the posting space and replies with confirmation', async () => {
-    getIntegrationByPairingCode.mockResolvedValue({ org_id: 7 })
+    completeGoogleChatPairing.mockResolvedValue({ status: 'paired', orgId: 7 })
     const { POST } = await import('@/app/api/google-chat/events/route')
 
     const res = await POST(req({
@@ -59,13 +60,13 @@ describe('POST /api/google-chat/events', () => {
     }))
 
     const json = await res.json()
-    expect(completeGoogleChatPairing).toHaveBeenCalledWith(7, 'spaces/AAAA')
+    expect(completeGoogleChatPairing).toHaveBeenCalledWith('gc_abc123', 'spaces/AAAA')
     expect(json.text).toContain('connected')
     expect(processCommunityMessage).not.toHaveBeenCalled()
   })
 
-  it('rejects an unrecognized /connect code without pairing anything', async () => {
-    getIntegrationByPairingCode.mockResolvedValue(null)
+  it('rejects an unrecognized, expired or already-used /connect code', async () => {
+    completeGoogleChatPairing.mockResolvedValue({ status: 'invalid' })
     const { POST } = await import('@/app/api/google-chat/events/route')
 
     const res = await POST(req({
@@ -75,8 +76,32 @@ describe('POST /api/google-chat/events', () => {
     }))
 
     const json = await res.json()
-    expect(completeGoogleChatPairing).not.toHaveBeenCalled()
-    expect(json.text).toContain("wasn't recognized")
+    expect(json.text).toContain("wasn't recognized or has expired")
+    expect(getIntegrationByGoogleChatSpace).not.toHaveBeenCalled()
+    expect(processCommunityMessage).not.toHaveBeenCalled()
+  })
+
+  it('tells the admin when the space already belongs to another workspace', async () => {
+    completeGoogleChatPairing.mockResolvedValue({ status: 'space_in_use' })
+    const { POST } = await import('@/app/api/google-chat/events/route')
+
+    const res = await POST(req({
+      type: 'MESSAGE',
+      space: { name: 'spaces/AAAA' },
+      message: { name: 'spaces/AAAA/messages/1', text: '/connect gc_abc123' },
+    }))
+
+    expect((await res.json()).text).toContain('already connected')
+  })
+
+  it('rejects a body larger than the webhook cap before parsing it', async () => {
+    const { POST } = await import('@/app/api/google-chat/events/route')
+    const res = await POST(new Request('https://app.example.com/api/google-chat/events', {
+      method: 'POST',
+      body: 'x'.repeat(1_000_001),
+    }))
+    expect(res.status).toBe(413)
+    expect(processCommunityMessage).not.toHaveBeenCalled()
   })
 
   it('ignores a message from a space that is not paired to any org', async () => {

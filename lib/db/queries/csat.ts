@@ -1,20 +1,30 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { getDb } from '../drizzle'
-import { csatMessages, csatRatings } from '../schema'
+import { csatMessages, csatRatings, tickets } from '../schema'
 import { sql } from 'drizzle-orm'
 
 export async function mapCsatMessage(messageId: string, ticketId: number): Promise<void> {
   await getDb()
     .insert(csatMessages)
     .values({ messageId, ticketId })
-    .onConflictDoUpdate({ target: csatMessages.messageId, set: { ticketId } })
+    .onConflictDoUpdate({
+      target: csatMessages.messageId,
+      set: { ticketId },
+      // Only re-point a mapping that belongs to the same org as the new ticket.
+      setWhere: sql`(SELECT org_id FROM tickets WHERE id = ${csatMessages.ticketId}) = (SELECT org_id FROM tickets WHERE id = ${ticketId})`,
+    })
 }
 
-export async function getTicketIdByCsatMessage(messageId: string): Promise<number | null> {
+/**
+ * Ticket behind a CSAT prompt message, restricted to the given org. Returns
+ * null for an unknown message and for one that belongs to a different org.
+ */
+export async function getTicketIdByCsatMessage(messageId: string, orgId: number): Promise<number | null> {
   const [row] = await getDb()
     .select({ ticketId: csatMessages.ticketId })
     .from(csatMessages)
-    .where(eq(csatMessages.messageId, messageId))
+    .innerJoin(tickets, eq(tickets.id, csatMessages.ticketId))
+    .where(and(eq(csatMessages.messageId, messageId), eq(tickets.orgId, orgId)))
     .limit(1)
   return row?.ticketId ?? null
 }
@@ -36,7 +46,7 @@ export async function saveCsatRating(input: {
     .onConflictDoNothing()
 }
 
-export interface CsatStats {
+interface CsatStats {
   avgRating: number | null
   totalRatings: number
   breakdown: { rating: number; count: number }[]

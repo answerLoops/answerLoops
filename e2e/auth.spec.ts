@@ -33,8 +33,9 @@ test.describe('auth: unauthenticated redirects', () => {
     // ?mode=signin is what renders the sign-in copy this test checks for.
     await page.goto('/login?mode=signin')
     await expect(page.getByText('Sign in to your workspace.')).toBeVisible()
-    // At least one OAuth provider button present
-    await expect(page.getByRole('button').first()).toBeVisible()
+    // The configured provider's button is offered (the e2e server sets Google
+    // credentials; with none configured the page shows an explanation instead).
+    await expect(page.getByRole('button', { name: /sign in with google/i })).toBeVisible()
   })
 })
 

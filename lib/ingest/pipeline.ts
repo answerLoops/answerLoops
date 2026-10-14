@@ -16,6 +16,8 @@ import { orgHasAIKey } from '@/lib/db/queries/ai-config'
 import { reservePlatformKeyTrial } from '@/lib/billing/platform-key-trial'
 import { getDeploymentMode } from '@/lib/billing/plans'
 import { logger } from '@/lib/logger'
+import { isUniqueViolation } from '@/lib/ingest/db-errors'
+import { clampIngestContent } from '@/lib/ingest/limits'
 import { withRetry } from '@/lib/retry'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 import type { Priority, Ticket } from '@/types'
@@ -65,7 +67,10 @@ export async function processCommunityMessage(
   payload: MessagePayload,
   orgId: number
 ): Promise<PipelineResult> {
-  const { messageId, content, authorId, authorName, guildId, channelId, threadId, platform = 'discord', sourceUrl } = payload
+  const { messageId, authorId, authorName, guildId, channelId, threadId, platform = 'discord', sourceUrl } = payload
+  // Bounded once here so every entry point (and the embedding call that
+  // follows) works from the same limit regardless of what the caller sent.
+  const content = clampIngestContent(payload.content)
 
   const existing = await getTicketBySourceMessageId(messageId, orgId)
   if (existing) {
@@ -133,26 +138,41 @@ export async function processCommunityMessage(
   const placeholderSummary =
     contentText.slice(0, 200) || `Shared ${attachments.length} attachment${attachments.length === 1 ? '' : 's'}`
   const placeholderPriority: Priority = 'medium'
-  const { sla_response_deadline, sla_resolve_deadline } = await calculateDeadlines(placeholderPriority)
+  const { sla_response_deadline, sla_resolve_deadline } = await calculateDeadlines(placeholderPriority, orgId)
 
-  const ticket = await createTicket({
-    source_message_id: messageId,
-    discord_guild_id: guildId,
-    source_channel_id: channelId,
-    source_thread_id: threadId,
-    source_author_id: authorId,
-    source_author_name: authorName,
-    source_url: sourceUrl,
-    source_platform: platform,
-    content,
-    category: 'general_question',
-    severity_score: 0.3,
-    ai_summary: placeholderSummary,
-    ai_suggested_priority: placeholderPriority,
-    priority: placeholderPriority,
-    sla_response_deadline: sla_response_deadline ?? undefined,
-    sla_resolve_deadline: sla_resolve_deadline ?? undefined,
-  }, orgId)
+  let ticket: Ticket
+  try {
+    ticket = await createTicket({
+      source_message_id: messageId,
+      discord_guild_id: guildId,
+      source_channel_id: channelId,
+      source_thread_id: threadId,
+      source_author_id: authorId,
+      source_author_name: authorName,
+      source_url: sourceUrl,
+      source_platform: platform,
+      content,
+      category: 'general_question',
+      severity_score: 0.3,
+      ai_summary: placeholderSummary,
+      ai_suggested_priority: placeholderPriority,
+      priority: placeholderPriority,
+      sla_response_deadline: sla_response_deadline ?? undefined,
+      sla_resolve_deadline: sla_resolve_deadline ?? undefined,
+    }, orgId)
+  } catch (err) {
+    // Two deliveries of the same message can both pass the lookup above; the
+    // (org_id, source_message_id) unique index lets exactly one insert win and
+    // the other is reported as the duplicate it is.
+    if (isUniqueViolation(err)) {
+      const winner = await getTicketBySourceMessageId(messageId, orgId)
+      if (winner) {
+        logger.debug('duplicate message — lost insert race', { module: MOD, ticketId: winner.id, messageId })
+        return { ticket_id: winner.id, duplicate: true }
+      }
+    }
+    throw err
+  }
 
   logger.info('ticket created', { module: MOD, ticketId: ticket.id, orgId, platform })
 
@@ -204,7 +224,7 @@ export async function runBackgroundEnrichment(
     try {
       const triage = await withRetry(() => triageMessage(content, orgId, aiPurpose), 'triage', { module: MOD })
       priority = severityToPriority(triage.severity_score)
-      const { sla_response_deadline, sla_resolve_deadline } = await calculateDeadlines(priority)
+      const { sla_response_deadline, sla_resolve_deadline } = await calculateDeadlines(priority, orgId)
       await updateTicketTriage(ticketId, {
         category: triage.category,
         severity_score: triage.severity_score,
@@ -274,7 +294,7 @@ export async function runBackgroundEnrichment(
     try {
       const t1 = Date.now()
       const vector = await withRetry(
-        () => embedText(`${summary}\n\n${content}`, orgId, aiPurpose),
+        () => embedText(`${summary}\n\n${clampIngestContent(content)}`, orgId, aiPurpose),
         'embed',
         { module: MOD, ticketId }
       )

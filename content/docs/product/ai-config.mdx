@@ -23,7 +23,7 @@ the configured provider and model.
 
 Included on every plan for the named providers below. A custom
 OpenAI‑compatible endpoint (your own base URL — Ollama, LM Studio, vLLM, a
-proxy) is part of **Custom AI model configuration**, which is included on Enterprise and in the self-hosted edition.
+proxy) is part of **Custom AI model configuration**, which is included on Enterprise and in the self-hosted edition. On the hosted service a custom base URL must be an https address reachable on the public internet. Self-hosted installs can also use `http` and addresses on their own network, such as a local Ollama server. Link-local and cloud-metadata addresses are never allowed. Every chat and embedding request connects to the address that was checked when the call started.
 
 | Provider | Chat | Embeddings |
 |---|---|---|

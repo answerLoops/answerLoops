@@ -1,6 +1,6 @@
 import type { OrgAIConfig } from '@/lib/db/queries/ai-config'
 
-export const PROVIDER_LABEL: Record<string, string> = {
+const PROVIDER_LABEL: Record<string, string> = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
   google: 'Google Gemini',

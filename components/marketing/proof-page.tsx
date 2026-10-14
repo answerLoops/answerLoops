@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import type { NavState } from './chrome'
 import { PageSchema, type PageSchemaProps } from './page-schema'
 import { MarketingPage, PageHero, TrialCta } from './layout'
-export interface ProofPageProps {
+interface ProofPageProps {
   navState: NavState
   eyebrow: string
   title: string

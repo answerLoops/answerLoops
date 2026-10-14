@@ -73,9 +73,9 @@ describe('Telegram webhook routes', () => {
     expect(src).toContain('export async function POST')
   })
 
-  it('webhook route validates bot_secret before processing', () => {
+  it('webhook route validates the shared secret (per platform) before processing', () => {
     const src = readRoute('app/api/telegram/webhook/route.ts')
-    expect(src).toContain('bot_secret')
+    expect(src).toContain("getIntegrationByBotSecret(secretToken, 'telegram')")
   })
 
   it('webhook route uses ingest pipeline', () => {
