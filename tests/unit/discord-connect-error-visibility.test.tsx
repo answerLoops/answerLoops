@@ -23,6 +23,7 @@ vi.mock('@/lib/actions/integrations', () => ({
   saveDiscordGuildChannelsAction: vi.fn(),
   removeDiscordGuildAction: vi.fn(),
   updateDiscordAutoDeflectAction: vi.fn(),
+  getCurrentDeploymentMode: vi.fn(async () => 'cloud'),
 }))
 
 function mockFetch(inviteUrl?: { ok: boolean; body: unknown }) {

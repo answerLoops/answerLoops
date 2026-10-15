@@ -26,9 +26,15 @@ No Discord Developer Portal access required. answerLoops manages the bot and OAu
 2. Select the server you want to connect in the Discord authorization screen
 3. Approve the requested permissions and click **Authorize**
 4. Back in answerLoops, a channel picker appears showing all text channels and forum channels on your server
-5. Select the channels where the bot should listen and click **Save**
+5. Select the channels where the bot should listen and click **Save channels**
 
 The bot joins your server immediately. No token to copy, no manifest to upload.
+
+<Callout type="warn">
+  **Choosing channels is part of connecting.** answerLoops only reads the channels you select, so until you save at least one channel nothing from that server reaches your tickets. A server with no channels saved shows a **Needs channels** status and a notice that answerLoops is not reading any messages from it yet, and its channel picker opens automatically. Saving with no channel ticked isn't allowed.
+</Callout>
+
+If something goes wrong while connecting, the reason is shown at the top of **Integrations → Discord** and stays there until you dismiss it. See [Troubleshooting](#troubleshooting) for what each message means.
 
 <Tip>
   You can return to **Integrations → Discord** at any time to add or remove channels without re-authorizing.
@@ -135,6 +141,18 @@ pnpm run discord:register-commands
 ## Troubleshooting
 
 <AccordionGroup>
+  <Accordion title="The server is connected but no tickets appear">
+    Check the status on the server's card in **Integrations → Discord**. If it says **Needs channels**, no channel has been saved yet: tick the channels you want answerLoops to read and click **Save channels**, then post a test message in one of them. answerLoops only reads explicitly selected channels, and only from servers connected with the **Add answerLoops to Discord** button.
+  </Accordion>
+  <Accordion title="“That Discord server is already connected to another answerLoops account”">
+    A server can belong to only one answerLoops account at a time. If you own both accounts, sign in to the one that holds the server and remove it from that account's **Integrations → Discord** page, then connect it again from the account you want to use.
+  </Accordion>
+  <Accordion title="“Could not load this server’s channels”">
+    answerLoops asked Discord for the server's channel list and Discord declined. Check that the answerLoops bot is still in the server and can view the channels you expect, then reopen the channel picker. You can also paste channel IDs directly into the box shown under the message.
+  </Accordion>
+  <Accordion title="The integration says Connected but nothing arrives">
+    Servers connected before the one-click button existed used a bot token saved in answerLoops. On the hosted product that older setup no longer connects to Discord, so it receives nothing even though its details are still saved. The card shows **Not receiving** for it. Click **Add answerLoops to Discord**, choose your server, pick your channels, then use **Remove old setup**. Self-hosted deployments are unaffected: a bot token configured there keeps working.
+  </Accordion>
   <Accordion title="Channel picker is empty after authorization">
     `DISCORD_TOKEN` must be set on the **app** service, not only on the bot service. The channel picker fetches the channel list from the Discord API using this token. Restart the app service after adding the variable.
   </Accordion>

@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import {
   saveDiscordIntegrationAction,
   deleteDiscordIntegrationAction,
+  getCurrentDeploymentMode,
   saveDiscordGuildChannelsAction,
   removeDiscordGuildAction,
   updateDiscordAutoDeflectAction,
@@ -24,6 +25,7 @@ interface DiscordIntegration {
   auto_deflect_enabled: number
   enabled: number
   bot_token_last4: string | null
+  has_bot_token: boolean
 }
 
 interface DiscordGuild {
@@ -77,6 +79,9 @@ export function DiscordIntegrationCard() {
   const [inviting, setInviting] = useState(false)
   const [justConnectedGuildId, setJustConnectedGuildId] = useState<string | null>(null)
   const [connectError, setConnectError] = useState<string | null>(null)
+  // Unknown until the server answers; the stale-manual-setup notice only makes
+  // sense on the hosted product, so it waits for a definite "cloud".
+  const [selfHosted, setSelfHosted] = useState<boolean | undefined>(undefined)
   const { toastMessage, toastKind, showToast } = useToast()
   const [, startDeleteTransition] = useTransition()
   const searchParams = useSearchParams()
@@ -132,6 +137,7 @@ export function DiscordIntegrationCard() {
   useEffect(() => {
     reloadIntegration()
     reloadGuilds()
+    getCurrentDeploymentMode().then((mode) => setSelfHosted(mode === 'self-hosted'), () => setSelfHosted(undefined))
   }, [reloadIntegration, reloadGuilds])
 
   // Handle redirect back from Discord OAuth
@@ -179,7 +185,61 @@ export function DiscordIntegrationCard() {
 
   if (integration === undefined || guilds === undefined) return <p className="text-sm text-gray-400">Loading…</p>
 
-  const legacyConnected = integration !== null && integration.enabled === 1
+  // A one-click connect also leaves an org-level row behind (it carries the
+  // shared secret) with no bot token on it. Only a row that actually holds a
+  // token is a manual setup.
+  const legacyConnected = integration !== null && integration.enabled === 1 && integration.has_bot_token
+  // On the hosted product the platform connects to Discord with its own bot,
+  // and only forwards messages for servers connected with the button. A token
+  // saved on a workspace is never used to log in, so a manual setup with no
+  // connected server receives nothing, however active it looks.
+  const manualSetupInactive = legacyConnected && selfHosted === false && guilds.length === 0
+  const serversNeedingChannels = guilds.filter((g) => g.channel_ids.length === 0)
+  const needsChannels = serversNeedingChannels.length > 0
+
+  const statusText = guilds.length > 0
+    ? `${guilds.length} server${guilds.length === 1 ? '' : 's'} connected${
+        needsChannels
+          ? ` · ${serversNeedingChannels.length} ${serversNeedingChannels.length === 1 ? 'needs' : 'need'} channels`
+          : ''
+      }`
+    : manualSetupInactive
+    ? 'Old manual setup · not receiving messages'
+    : legacyConnected
+    ? `Connected · ${integration!.channel_ids.length} channel(s)`
+    : 'Not connected'
+
+  const statusBadge = needsChannels
+    ? { label: 'Needs channels', className: 'bg-amber-100 text-amber-800' }
+    : manualSetupInactive
+    ? { label: 'Not receiving', className: 'bg-amber-100 text-amber-800' }
+    : guilds.length > 0 || legacyConnected
+    ? { label: 'Active', className: 'bg-green-100 text-green-700' }
+    : { label: 'Inactive', className: 'bg-gray-100 text-gray-500' }
+
+  const connectBox = (
+    <div className="rounded-lg bg-brand-50 border border-brand-100 p-4 space-y-3">
+      <p className="text-sm text-gray-700">
+        {guilds.length > 0
+          ? 'Connect another Discord server with one click.'
+          : 'Add answerLoops to your Discord server with one click — no bot token or Developer Portal required.'}
+      </p>
+      <Button type="button" size="sm" disabled={inviting} onClick={handleAddToDiscord}>
+        {inviting ? 'Redirecting…' : 'Add answerLoops to Discord'}
+      </Button>
+    </div>
+  )
+
+  const guildCards = guilds.map((guild) => (
+    <DiscordGuildCard
+      key={guild.id}
+      guild={guild}
+      onChanged={reloadGuilds}
+      showToast={showToast}
+      autoEdit={guild.guild_id === justConnectedGuildId}
+      onAutoEditConsumed={() => setJustConnectedGuildId(null)}
+    />
+  ))
 
   return (
     <>
@@ -201,47 +261,45 @@ export function DiscordIntegrationCard() {
             </button>
           </div>
         )}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 text-sm font-bold">D</div>
-            <div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="w-8 h-8 shrink-0 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 text-sm font-bold">D</div>
+            <div className="min-w-0">
               <p className="text-sm font-medium text-gray-900">Discord</p>
-              <p className="text-xs text-gray-500">
-                {guilds.length > 0
-                  ? `${guilds.length} server${guilds.length === 1 ? '' : 's'} connected`
-                  : legacyConnected
-                  ? `Connected · ${integration!.channel_ids.length} channel(s)`
-                  : 'Not connected'}
-              </p>
+              <p className="text-xs text-gray-500">{statusText}</p>
             </div>
           </div>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${guilds.length > 0 || legacyConnected ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-            {guilds.length > 0 || legacyConnected ? 'Active' : 'Inactive'}
+          <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${statusBadge.className}`}>
+            {statusBadge.label}
           </span>
         </div>
 
-        {/* One-click connect — always available, even with servers already connected */}
-        <div className="rounded-lg bg-brand-50 border border-brand-100 p-4 space-y-3">
-          <p className="text-sm text-gray-700">
-            {guilds.length > 0
-              ? 'Connect another Discord server with one click.'
-              : 'Add answerLoops to your Discord server with one click — no bot token or Developer Portal required.'}
-          </p>
-          <Button type="button" size="sm" disabled={inviting} onClick={handleAddToDiscord}>
-            {inviting ? 'Redirecting…' : 'Add answerLoops to Discord'}
-          </Button>
-        </div>
+        {manualSetupInactive && (
+          <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 space-y-1">
+            <p className="font-medium">answerLoops is not reading any messages from Discord yet.</p>
+            <p className="text-xs">
+              This workspace has an older manual setup with a saved bot token. That setup no longer connects to Discord,
+              so nothing is being received even though the details below are saved. Add answerLoops to your server with
+              the button, pick your channels, then remove the old setup. You will need to choose your channels again.
+            </p>
+          </div>
+        )}
 
-        {guilds.map((guild) => (
-          <DiscordGuildCard
-            key={guild.id}
-            guild={guild}
-            onChanged={reloadGuilds}
-            showToast={showToast}
-            autoEdit={guild.guild_id === justConnectedGuildId}
-            onAutoEditConsumed={() => setJustConnectedGuildId(null)}
-          />
-        ))}
+        {/* Servers that still need channels come first: choosing them is the step
+            that makes the connection do anything, so it should not sit below
+            the connect button and the other settings. */}
+        {needsChannels ? (
+          <>
+            {guildCards}
+            {connectBox}
+          </>
+        ) : (
+          <>
+            {/* One-click connect — always available, even with servers already connected */}
+            {connectBox}
+            {guildCards}
+          </>
+        )}
 
         {/* Automatic Deflections is one setting per org, not per guild — the
             legacy card below can set it, but that card only renders for a
@@ -272,9 +330,14 @@ export function DiscordIntegrationCard() {
           </div>
         )}
 
-        {/* Legacy manual setup — shown only when connected without any OAuth guild */}
+        {/* Legacy manual setup — only a row that really holds a bot token */}
         {legacyConnected && !legacyEditing && (
           <div className="rounded-lg bg-gray-50 border border-gray-100 px-3 py-2 divide-y divide-gray-100">
+            {(manualSetupInactive || (selfHosted === false && guilds.length > 0)) && (
+              <p className="py-1 text-xs font-medium text-amber-800">
+                Old manual setup — not in use. Connected servers above are what answerLoops reads.
+              </p>
+            )}
             <ReadOnlyRow
               label="Bot Token"
               value={integration!.bot_token_last4 ? `••••${integration!.bot_token_last4} (connected)` : '••••••••• (saved)'}
@@ -289,9 +352,11 @@ export function DiscordIntegrationCard() {
               <DeflectionStatusBadge enabled={integration!.auto_deflect_enabled === 1} />
             </div>
             <div className="pt-2 flex gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setLegacyEditing(true)}>
-                Edit channels &amp; deflections
-              </Button>
+              {!manualSetupInactive && (
+                <Button size="sm" variant="secondary" onClick={() => setLegacyEditing(true)}>
+                  Edit channels &amp; deflections
+                </Button>
+              )}
               <Button
                 type="button"
                 size="sm"
@@ -299,7 +364,11 @@ export function DiscordIntegrationCard() {
                 disabled={deletePending}
                 onClick={() => startDeleteTransition(() => { deleteAction(new FormData()) })}
               >
-                {deletePending ? 'Removing…' : 'Disconnect'}
+                {deletePending
+                  ? 'Removing…'
+                  : manualSetupInactive || (selfHosted === false && guilds.length > 0)
+                  ? 'Remove old setup'
+                  : 'Disconnect'}
               </Button>
             </div>
           </div>
@@ -387,8 +456,12 @@ function DiscordGuildCard({
   autoEdit: boolean
   onAutoEditConsumed: () => void
 }) {
-  const [editingChannels, setEditingChannels] = useState(autoEdit)
+  // A server with no channels saved reads nothing, so it opens straight into
+  // the picker rather than waiting for an "Edit channels" click.
+  const hasNoChannels = guild.channel_ids.length === 0
+  const [editingChannels, setEditingChannels] = useState(autoEdit || hasNoChannels)
   const [channels, setChannels] = useState<{ id: string; name: string }[]>([])
+  const [channelsLoad, setChannelsLoad] = useState<'loading' | 'loaded' | 'failed'>('loading')
   const [, startRemoveTransition] = useTransition()
 
   // Open the channel picker automatically right after this specific server
@@ -403,6 +476,12 @@ function DiscordGuildCard({
 
   const [saveState, saveAction, savePending] = useActionState(
     async (prev: unknown, fd: FormData) => {
+      // Saving nothing would leave the server looking connected while reading
+      // no messages — the exact state this step exists to avoid.
+      const picked = fd.getAll('channelIds').flatMap((v) => String(v).split(',')).map((v) => v.trim()).filter(Boolean)
+      if (picked.length === 0) {
+        return { error: 'Choose at least one channel so answerLoops knows where to listen.' }
+      }
       const result = await saveDiscordGuildChannelsAction(prev, fd)
       if (!result?.error) {
         await onChanged()
@@ -425,10 +504,18 @@ function DiscordGuildCard({
 
   useEffect(() => {
     if (!editingChannels || channels.length > 0) return
+    let cancelled = false
+    setChannelsLoad('loading')
     fetch(`/api/discord/guilds?guild_id=${guild.guild_id}`)
-      .then((r) => r.json())
-      .then((data: { channels?: { id: string; name: string }[] }) => setChannels(data.channels ?? []))
-      .catch(() => null)
+      .then(async (r) => {
+        const data = (await r.json()) as { channels?: { id: string; name: string }[] }
+        if (cancelled) return
+        if (!r.ok) { setChannelsLoad('failed'); return }
+        setChannels(data.channels ?? [])
+        setChannelsLoad('loaded')
+      })
+      .catch(() => { if (!cancelled) setChannelsLoad('failed') })
+    return () => { cancelled = true }
   }, [editingChannels, channels.length, guild.guild_id])
 
   return (
@@ -437,8 +524,8 @@ function DiscordGuildCard({
         <p className="text-sm font-medium text-gray-900">{guild.guild_name ?? `Server ${guild.guild_id}`}</p>
         {!editingChannels && (
           <div className="flex gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setEditingChannels(true)}>
-              Edit channels
+            <Button size="sm" variant={hasNoChannels ? 'primary' : 'secondary'} onClick={() => setEditingChannels(true)}>
+              {hasNoChannels ? 'Choose channels' : 'Edit channels'}
             </Button>
             <Button
               type="button"
@@ -457,6 +544,13 @@ function DiscordGuildCard({
         )}
       </div>
 
+      {hasNoChannels && (
+        <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <p className="font-medium">answerLoops is not reading any messages from this server yet.</p>
+          <p className="text-xs mt-0.5">Connecting the server is only the first step. Choose the channels to monitor, then save.</p>
+        </div>
+      )}
+
       {!editingChannels && (
         <div className="divide-y divide-gray-100">
           <ReadOnlyRow label="Server ID" value={guild.guild_id} />
@@ -473,7 +567,7 @@ function DiscordGuildCard({
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">
               Channels to monitor
-              {channels.length === 0 && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
+              {channels.length === 0 && channelsLoad === 'loading' && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
             </label>
             {channels.length > 0 ? (
               <div className="grid grid-cols-2 gap-1 max-h-48 overflow-y-auto rounded border border-gray-200 p-2 bg-white">
@@ -491,13 +585,21 @@ function DiscordGuildCard({
                 ))}
               </div>
             ) : (
-              <input
-                name="channelIds"
-                type="text"
-                defaultValue={guild.channel_ids.join(', ')}
-                placeholder="123456789, 987654321"
-                className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
-              />
+              <>
+                {channelsLoad === 'failed' && (
+                  <p role="alert" className="mb-2 text-xs text-amber-800">
+                    Could not load this server&apos;s channels. Check that answerLoops can view them in Discord, then try
+                    again, or paste the channel IDs below.
+                  </p>
+                )}
+                <input
+                  name="channelIds"
+                  type="text"
+                  defaultValue={guild.channel_ids.join(', ')}
+                  placeholder="123456789, 987654321"
+                  className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
+                />
+              </>
             )}
           </div>
           <hr className="border-gray-100" />

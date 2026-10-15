@@ -39,7 +39,12 @@ const MOCK_CHANNELS: DiscordChannel[] = [
   { id: 'ch-support', name: 'support', type: 0 },
 ]
 
-async function fetchGuildChannels(guildId: string, token: string): Promise<{ id: string; name: string }[]> {
+class DiscordChannelsUnavailableError extends Error {}
+
+// `strict` makes a Discord refusal an error instead of an empty list. The
+// single-server lookup uses it so the page can tell "this server has no text
+// channels" apart from "answerLoops cannot see this server's channels".
+async function fetchGuildChannels(guildId: string, token: string, strict = false): Promise<{ id: string; name: string }[]> {
   if (MOCK_EXTERNALS) {
     return guildId === MOCK_GUILD.id
       ? MOCK_CHANNELS.map(({ id, name }) => ({ id, name }))
@@ -47,7 +52,10 @@ async function fetchGuildChannels(guildId: string, token: string): Promise<{ id:
   }
   const headers = { Authorization: `Bot ${token}`, 'Content-Type': 'application/json' }
   const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/channels`, { headers, signal: AbortSignal.timeout(10_000) })
-  if (!res.ok) return []
+  if (!res.ok) {
+    if (strict) throw new DiscordChannelsUnavailableError(`Discord returned ${res.status}`)
+    return []
+  }
   const channels = await res.json() as DiscordChannel[]
   return channels
     .filter((c) => TEXT_CHANNEL_TYPES.has(c.type) && c.name)
@@ -73,9 +81,13 @@ export async function GET(req: NextRequest) {
     if (!guild || guild.org_id !== access.orgId) {
       return Response.json({ error: 'Guild not found' }, { status: 404 })
     }
-    const channels = await fetchGuildChannels(guildId, token)
+    const channels = await fetchGuildChannels(guildId, token, true)
     return Response.json({ guildId, channels })
   } catch (err) {
+    if (err instanceof DiscordChannelsUnavailableError) {
+      logger.warn('discord channel list unavailable', { module: MOD, guildId, requestId: getRequestId(req), reason: err.message })
+      return Response.json({ error: 'Could not load this server\'s channels' }, { status: 502 })
+    }
     logger.error('failed to fetch discord guild channels', { module: MOD, guildId, requestId: getRequestId(req), error: err })
     return Response.json({ error: 'Internal server error' }, { status: 500 })
   }

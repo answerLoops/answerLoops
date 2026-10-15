@@ -4,6 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import IntegrationsPage from '@/app/(dashboard)/integrations/page'
 import { GoogleChatIntegrationCard } from '@/components/settings/googlechat'
 import { useSearchParams } from 'next/navigation'
+import { getCurrentDeploymentMode } from '@/lib/actions/integrations'
 
 vi.mock('next/navigation', () => ({
   useSearchParams: vi.fn(),
@@ -74,11 +75,13 @@ describe('Integration card deflection badges — always visible, no Edit click r
 
   it('Discord: shows the badge on the connected summary as soon as data loads', async () => {
     setTab('discord')
+    // A manual bot-token setup is a real, working connection on a self-hosted deployment.
+    vi.mocked(getCurrentDeploymentMode).mockResolvedValueOnce('self-hosted')
     vi.stubGlobal(
       'fetch',
       mockFetchByUrl({
         '/api/integrations': [{
-          id: 1, platform: 'discord', channel_ids: ['123'], connected_guild_id: null,
+          id: 1, platform: 'discord', channel_ids: ['123'], connected_guild_id: null, has_bot_token: true,
           escalation_role_id: null, confidence_threshold: 0.8, auto_deflect_enabled: 1, enabled: 1,
         }],
         '/api/discord/guilds/connected': [],
@@ -94,11 +97,13 @@ describe('Integration card deflection badges — always visible, no Edit click r
 
   it('Discord: reflects a disabled state as a red "Off" badge', async () => {
     setTab('discord')
+    // A manual bot-token setup is a real, working connection on a self-hosted deployment.
+    vi.mocked(getCurrentDeploymentMode).mockResolvedValueOnce('self-hosted')
     vi.stubGlobal(
       'fetch',
       mockFetchByUrl({
         '/api/integrations': [{
-          id: 1, platform: 'discord', channel_ids: ['123'], connected_guild_id: null,
+          id: 1, platform: 'discord', channel_ids: ['123'], connected_guild_id: null, has_bot_token: true,
           escalation_role_id: null, confidence_threshold: 0.8, auto_deflect_enabled: 0, enabled: 1,
         }],
         '/api/discord/guilds/connected': [],
