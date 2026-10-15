@@ -33,12 +33,12 @@ The page opens with four stat cards at the top:
 
 | Card | What it shows |
 |---|---|
-| **Total gaps** | All open knowledge gaps across all channels |
+| **Total gaps** | Distinct open knowledge gaps across all channels. Repeats of the same question count once |
 | **Needs human** | Gaps where the AI flagged the question as requiring human handling |
 | **Low confidence** | Gaps where the AI searched but confidence was below 0.6 |
 | **Missing KB article** | Resolved tickets with no covering KB content |
 
-Below the stat cards is the gap list. Each row shows:
+Below the stat cards is the gap list, most-asked questions first. When several tickets ask the same question, they appear as one row with an **Asked N times** badge instead of N separate rows. The row links to the ticket that most needs an article: the one with the lowest AI confidence. Each row shows:
 
 - The original question (truncated)
 - The **reason badge** (Low confidence / Needs human / Missing KB article)
@@ -46,9 +46,11 @@ Below the stat cards is the gap list. Each row shows:
 - The channel source (Discord, GitHub, Slack, etc.)
 - A **+ KB** button to jump directly to the Knowledge Base with the ticket pre-selected
 
+Two tickets count as the same question when their meaning is very close, using the same similarity test answerLoops uses to flag duplicate tickets. Tickets that haven't been embedded yet, or were embedded with a model you've since moved off, aren't merged and show as their own rows.
+
 Gaps are about tickets that were already handled. To turn *unseen* questions (from tickets and from the website widget) into articles before anyone has to resolve them by hand, use the [Review queue](/docs/product/knowledge-base#review-queue) on the Knowledge Base page.
 
-On the right side of the page, the **Category breakdown** sidebar groups gaps by topic category so you can spot clusters — if 12 gaps are all about your API authentication flow, that's your highest-value content to write next.
+On the right side of the page, the **Category breakdown** sidebar groups gaps by topic category (counted per ticket, so repeats of one question each count) so you can spot clusters — if 12 gaps are all about your API authentication flow, that's your highest-value content to write next.
 
 ---
 

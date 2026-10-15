@@ -1,5 +1,5 @@
 import { auth } from '@/auth'
-import { getKnowledgeGaps, getGapCategorySummary } from '@/lib/db/queries/analytics'
+import { getKnowledgeGapClusters, getGapCategorySummary } from '@/lib/db/queries/analytics'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { planRequiredFor } from '@/lib/billing/entitlements'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
@@ -35,15 +35,17 @@ export default async function KnowledgeGapsPage() {
     )
   }
 
-  const [gaps, categorySummary] = await Promise.all([
-    getKnowledgeGaps(50, orgId),
+  const [clusters, categorySummary] = await Promise.all([
+    getKnowledgeGapClusters(50, orgId),
     getGapCategorySummary(orgId),
   ])
 
-  const totalGaps = gaps.length
-  const needsHuman = gaps.filter((g) => g.gap_reason === 'needs_human').length
-  const lowConf = gaps.filter((g) => g.gap_reason === 'low_confidence').length
-  const missingKB = gaps.filter((g) => g.gap_reason === 'no_kb_article').length
+  // One entry per distinct question: a question asked several times is a single
+  // gap here, shown with how many times it came up.
+  const totalGaps = clusters.length
+  const needsHuman = clusters.filter((c) => c.lead.gap_reason === 'needs_human').length
+  const lowConf = clusters.filter((c) => c.lead.gap_reason === 'low_confidence').length
+  const missingKB = clusters.filter((c) => c.lead.gap_reason === 'no_kb_article').length
 
   return (
     <div className="dashboard-page max-w-6xl space-y-7">
@@ -90,10 +92,10 @@ export default async function KnowledgeGapsPage() {
         <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">
             <h2 className="text-sm font-semibold text-gray-900">Gap tickets</h2>
-            <p className="text-xs text-gray-400">Create a KB article to close each gap</p>
+            <p className="text-xs text-gray-400">Most-asked questions first. Create a KB article to close each gap</p>
           </div>
 
-          {gaps.length === 0 ? (
+          {clusters.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-14 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 mb-3">
                 <svg className="h-6 w-6 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -105,26 +107,31 @@ export default async function KnowledgeGapsPage() {
             </div>
           ) : (
             <ul className="divide-y divide-gray-50">
-              {gaps.map((gap) => {
+              {clusters.map(({ lead: gap, count }) => {
                 const reason = REASON_LABEL[gap.gap_reason] ?? REASON_LABEL.no_kb_article
                 const confPct = gap.confidence != null ? Math.round(gap.confidence * 100) : null
                 return (
-                  <li key={gap.id} className="flex items-start gap-3 px-5 py-3.5 hover:bg-gray-50/70 transition-colors group">
+                  <li key={gap.id} className="flex flex-col gap-2 px-5 py-3.5 hover:bg-gray-50/70 transition-colors group sm:flex-row sm:items-start sm:gap-3">
                     <div className="flex-1 min-w-0">
                       <Link href={`/tickets/${gap.org_ticket_number}`} className="text-sm text-gray-800 truncate group-hover:text-gray-900 hover:underline block">
                         {gap.summary}
                       </Link>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
                         {gap.category && (
                           <span className="text-[0.625rem] text-gray-400">{CATEGORY_LABEL[gap.category] ?? gap.category}</span>
                         )}
                         {confPct != null && (
                           <span className="text-[0.625rem] text-gray-400">{confPct}% confidence</span>
                         )}
+                        {count > 1 && (
+                          <span className="whitespace-nowrap rounded bg-amber-100 px-1.5 py-0.5 text-[0.625rem] font-medium text-amber-700">
+                            Asked {count} times
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className={`text-[0.625rem] font-medium px-2 py-0.5 rounded-full ${reason.color}`}>
+                    <div className="flex items-center gap-2 sm:shrink-0">
+                      <span className={`whitespace-nowrap text-[0.625rem] font-medium px-2 py-0.5 rounded-full ${reason.color}`}>
                         {reason.label}
                       </span>
                       <Link
