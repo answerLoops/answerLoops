@@ -269,5 +269,5 @@ export async function deleteArticle(id: number, orgId: number): Promise<void> {
 
 export async function getKBContext(vector: number[], k = 3, orgId: number): Promise<PriorAnswer[]> {
   const results = await searchArticles(vector, k, orgId)
-  return results.map((a) => ({ summary: a.question, answer: a.answer }))
+  return results.map((a) => ({ summary: a.question, answer: a.answer, articleId: a.id }))
 }

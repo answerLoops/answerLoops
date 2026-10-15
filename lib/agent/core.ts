@@ -10,6 +10,7 @@ import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { assessAnswer, shouldAutoDeflect } from '@/lib/ai/assess'
 import { reserveGeneration, commitDeflection } from '@/lib/billing/usage'
 import { logger } from '@/lib/logger'
+import { countArticleUsage } from '@/lib/kb/usage'
 import type { TicketStatus, Priority, TicketCategory } from '@/types'
 
 /**
@@ -295,9 +296,11 @@ export async function generateAnswerCore(
   }
 
   let text: string
+  let groundingContext: { articleId?: number }[] = []
   try {
     const vector = await embedText(question, orgId)
     const priorAnswers = await getKBContext(vector, 3, orgId)
+    groundingContext = priorAnswers
     const context = priorAnswers.length
       ? `\n\nPrior resolved answers for similar questions — prefer reusing these:\n${priorAnswers.map((p, i) => `${i + 1}. Q: ${p.summary}\n   A: ${p.answer}`).join('\n')}`
       : ''
@@ -318,6 +321,8 @@ export async function generateAnswerCore(
     }
     throw e
   }
+
+  await countArticleUsage(orgId, groundingContext)
 
   const assessment = await assessAnswer(question, text, orgId).catch((e) => {
     logger.error('generate_answer assessment failed', { module: MOD, orgId, error: e })

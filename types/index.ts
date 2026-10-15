@@ -142,6 +142,8 @@ export interface RelatedTicket {
 export interface PriorAnswer {
   summary: string
   answer: string
+  /** Set when the answer came from a knowledge-base article, so its use can be counted. */
+  articleId?: number
 }
 
 export interface KBArticle {

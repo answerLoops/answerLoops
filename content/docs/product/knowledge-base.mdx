@@ -162,9 +162,20 @@ Nothing in the queue is searchable or shown to customers until you approve it. O
 
 Approved articles count toward the same 2,000-article limit as every other source.
 
+## Article usage
+
+answerLoops keeps a count of how many answers each article was used for. An article is counted when it was among the matches handed to the assistant as context for an answer that was actually produced: a reply in the website chat widget, a drafted reply to a support ticket, a Discord `/ask` answer, or an answer generated through the Agent API. Searching the knowledge base, running a [simulation](/docs/product/simulation), and bug reports or feature requests (which are never answered from the knowledge base) are not counted.
+
+Two things to keep in mind when reading the numbers:
+
+- The count means the article was given to the assistant, not that the reply quoted it. The assistant decides what to use.
+- Only a number per article per day is stored. The question, the visitor and the ticket are never recorded with it.
+
+Deleting an article, or deleting the workspace, removes its counts.
+
 ## Data persistence
 
-KB articles and source chunks are stored in the `kb_articles` and `kb_sources` tables in PostgreSQL. Questions waiting in the review queue are stored in `kb_review_items` until they are approved or rejected. They persist across Docker restarts as long as you retain the `postgres-data` volume.
+KB articles and source chunks are stored in the `kb_articles` and `kb_sources` tables in PostgreSQL. Questions waiting in the review queue are stored in `kb_review_items` until they are approved or rejected, and the per-article answer counts are stored in `kb_article_usage`. They persist across Docker restarts as long as you retain the `postgres-data` volume.
 
 <Warning>
   Never run `docker compose down -v`. The `-v` flag deletes all Docker volumes, which permanently removes your KB articles, tickets, and all other data. Use `docker compose down` (without `-v`) to stop the stack safely.

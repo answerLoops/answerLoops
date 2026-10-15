@@ -12,6 +12,7 @@ import { orgRateLimitPerMinute } from '@/lib/billing/entitlements-server'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { getBearerToken, matchesPlatformBotSecret } from '@/lib/http/bearer-auth'
 import { logger } from '@/lib/logger'
+import { countArticleUsage } from '@/lib/kb/usage'
 
 const MOD = 'api/slash/ask'
 const RATE_LIMIT_WINDOW_MS = 60_000
@@ -59,9 +60,11 @@ export async function POST(request: Request) {
 
   // Embed question → KB semantic search for context
   let kbContext = ''
+  let kbArticleIds: { articleId: number }[] = []
   try {
     const vector = await embedText(question, orgId)
     const kbResults = await searchArticles(vector, 3, orgId)
+    kbArticleIds = kbResults.map((a) => ({ articleId: a.id }))
     if (kbResults.length) {
       kbContext = `\n\nKnowledge base:\n${kbResults.map((a) => `Q: "${a.question}"\nA: ${a.answer}`).join('\n\n')}`
     }
@@ -88,6 +91,8 @@ If you cite a KB article, reference the question it answered. If you don't know,
     await commitDeflection(orgId, reservation.generationId).catch((e) => {
       logger.error('slash /ask commitDeflection failed', { module: MOD, orgId, error: e })
     })
+
+    await countArticleUsage(orgId, kbArticleIds)
 
     logger.info('slash /ask answered', { module: MOD, orgId })
     return Response.json({ answer: text })

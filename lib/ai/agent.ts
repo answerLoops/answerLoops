@@ -19,6 +19,7 @@ import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
 import { getIntegration } from '@/lib/db/queries/integrations'
 import { updateTicketAIDraftStatus, getTicketById } from '@/lib/db/queries/tickets'
 import { logger } from '@/lib/logger'
+import { countArticleUsage } from '@/lib/kb/usage'
 import type { PriorAnswer, TicketCategory } from '@/types'
 import type { Match } from '@/lib/ai/related'
 
@@ -383,6 +384,8 @@ Guidelines:
 
     logger.info('agent answer generated', { module: MOD, ticketId, durationMs: Date.now() - t0 })
     await updateTicketAIDraft(ticketId, text)
+    // The draft is written, so the articles it was grounded on count as used.
+    await countArticleUsage(orgId, priorAnswers)
 
     let assessment
     try {

@@ -11,6 +11,7 @@ import {
   index,
   jsonb,
   timestamp,
+  date,
   vector,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
@@ -415,6 +416,23 @@ export const kbArticles = pgTable(
     index('idx_kb_articles_source').on(t.sourceTicketId),
     index('idx_kb_articles_source_id').on(t.sourceId),
     index('idx_kb_articles_embedding_vec').using('hnsw', t.embeddingVec.op('vector_cosine_ops')),
+  ]
+)
+
+// How many answers each article was supplied to as context, one row per
+// article per UTC day (see lib/db/queries/kb-usage.ts). A count only: nothing
+// about the question, the visitor or the ticket is stored here.
+export const kbArticleUsage = pgTable(
+  'kb_article_usage',
+  {
+    articleId: integer('article_id').notNull().references(() => kbArticles.id, { onDelete: 'cascade' }),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    day: date('day', { mode: 'string' }).notNull(),
+    answers: integer('answers').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.articleId, t.day] }),
+    index('idx_kb_article_usage_org_day').on(t.orgId, t.day),
   ]
 )
 

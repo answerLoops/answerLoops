@@ -12,6 +12,7 @@ import { buildGenuiTools } from '@/lib/widget/genui-tools'
 import { flattenMastraStream } from '@/lib/widget/mastra-stream'
 import { getKBContext } from '@/lib/db/queries/kb'
 import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
+import { countArticleUsage } from '@/lib/kb/usage'
 import { getOrgByWidgetToken } from '@/lib/db/queries/widgets'
 import { getWidgetChatMemory } from '@/lib/ai/memory'
 import { rateLimitShared } from '@/lib/ratelimit'
@@ -89,7 +90,7 @@ const WIDGET_TOKEN_PATTERN = /^[0-9a-f]{48}$/
 // whole-message cap.
 const MAX_QUERY_CHARS = MAX_MESSAGE_CHARS
 
-type KBContext = { summary: string; answer: string }[]
+type KBContext = { summary: string; answer: string; articleId?: number }[]
 
 export interface PendingRun {
   org: { id: number; name: string }
@@ -455,6 +456,7 @@ If no article below covers the question, answer from general knowledge and don't
       await commitDeflection(org.id, reservationId).catch((e) => {
         logger.error('widget chat commitDeflection failed', { module: MOD, orgId: org.id, error: e })
       })
+      await countArticleUsage(org.id, allContext)
       // No article matched, so whatever was just said came from general
       // knowledge. Queue the question (never the visitor's identity) for a
       // person to review before anything like it is treated as a KB answer.
