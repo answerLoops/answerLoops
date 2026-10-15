@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
+import { clusterGaps, type GapCluster } from '@/lib/ai/gap-clusters'
 
 export interface DeflectionStats {
   totalTickets: number
@@ -180,6 +181,42 @@ export async function getKnowledgeGaps(limit = 50, orgId: number): Promise<Knowl
     has_kb_article: Boolean(r.has_kb_article),
     confidence: r.confidence != null ? Number(r.confidence) : null,
   }))
+}
+
+// How many ranked gaps are pulled in to be clustered. Wider than the number of
+// rows the page shows, so repeats of one question are found even when they are
+// far apart in the ranking.
+const GAP_CLUSTER_POOL = 200
+
+/**
+ * Knowledge gaps with repeats of the same question folded into one entry,
+ * most-asked first. The lead of each cluster is its highest-ranked ticket, so
+ * the row still links to the ticket that most needs an article. Tickets whose
+ * embedding is missing, or was made by a model the workspace has since moved
+ * off, are never merged and appear on their own.
+ */
+export async function getKnowledgeGapClusters(limit = 50, orgId: number): Promise<GapCluster<KnowledgeGap>[]> {
+  const gaps = await getKnowledgeGaps(GAP_CLUSTER_POOL, orgId)
+  if (gaps.length === 0) return []
+
+  const rows = await getDb().execute(sql`
+    SELECT te.ticket_id, te.vector
+    FROM ticket_embeddings te
+    WHERE te.ticket_id IN (${sql.join(gaps.map((g) => sql`${g.id}`), sql`, `)})
+      AND te.model = (SELECT embedding_model_in_use FROM orgs WHERE id = ${orgId})
+  `)
+
+  const vectors = new Map<number, number[]>()
+  for (const r of rows as unknown as Array<{ ticket_id: number; vector: string }>) {
+    try {
+      const parsed: unknown = JSON.parse(r.vector)
+      if (Array.isArray(parsed) && parsed.every((n) => Number.isFinite(n))) vectors.set(Number(r.ticket_id), parsed as number[])
+    } catch {
+      // A corrupt vector just leaves that ticket unmerged.
+    }
+  }
+
+  return clusterGaps(gaps, vectors).slice(0, limit)
 }
 
 export interface GapCategorySummary {
