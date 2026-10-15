@@ -5,6 +5,24 @@ import { getTableConfig } from 'drizzle-orm/pg-core'
 import { tickets, emailMessages, integrations } from '@/lib/db/schema'
 import { telegramSourceMessageId, telegramMessageIdFromSource } from '@/lib/telegram/message-id'
 
+// Module mocks for the Telegram webhook tests below. vitest hoists these
+// either way; they live at the top level so that is where they read as running.
+const h = vi.hoisted(() => ({
+  getIntegrationByBotSecret: vi.fn(),
+  getTicketBySourceMessageInChannel: vi.fn(),
+  processCommunityMessage: vi.fn(async () => ({ ticket_id: 1 })),
+}))
+vi.mock('@/lib/db/queries/integrations', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/db/queries/integrations')>()),
+  getIntegrationByBotSecret: h.getIntegrationByBotSecret,
+}))
+vi.mock('@/lib/db/queries/tickets', () => ({ getTicketBySourceMessageInChannel: h.getTicketBySourceMessageInChannel }))
+vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage: h.processCommunityMessage }))
+vi.mock('@/lib/ingest/limits', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/lib/ingest/limits')>()),
+  isIngestRateLimited: vi.fn(async () => false),
+}))
+
 // Message ids are only unique within one org (and, for Telegram, within one
 // chat), so de-duplication keys are composite and a lost insert race is
 // reported as a duplicate rather than an error.
@@ -76,22 +94,6 @@ describe('Telegram message ids are namespaced by chat for new tickets', () => {
 })
 
 describe('Telegram webhook', () => {
-  const h = vi.hoisted(() => ({
-    getIntegrationByBotSecret: vi.fn(),
-    getTicketBySourceMessageInChannel: vi.fn(),
-    processCommunityMessage: vi.fn(async () => ({ ticket_id: 1 })),
-  }))
-  vi.mock('@/lib/db/queries/integrations', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('@/lib/db/queries/integrations')>()),
-    getIntegrationByBotSecret: h.getIntegrationByBotSecret,
-  }))
-  vi.mock('@/lib/db/queries/tickets', () => ({ getTicketBySourceMessageInChannel: h.getTicketBySourceMessageInChannel }))
-  vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage: h.processCommunityMessage }))
-  vi.mock('@/lib/ingest/limits', async (importOriginal) => ({
-    ...(await importOriginal<typeof import('@/lib/ingest/limits')>()),
-    isIngestRateLimited: vi.fn(async () => false),
-  }))
-
   function update(text = 'a question that is long enough', messageId = 9, chatId = -100777) {
     return new Request('http://localhost/api/telegram/webhook', {
       method: 'POST',

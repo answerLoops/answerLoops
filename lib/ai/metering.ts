@@ -7,12 +7,16 @@ import { logger } from '@/lib/logger'
 const MOD = 'ai/metering'
 
 // Provider-spec types, taken from the AI SDK's own wrap signatures so this
-// module needs no direct dependency on @ai-sdk/provider.
-type LanguageModelV3 = Parameters<typeof wrapLanguageModel>[0]['model']
-type EmbeddingModelV3 = Parameters<typeof wrapEmbeddingModel>[0]['model']
-type GenerateResult = Awaited<ReturnType<LanguageModelV3['doGenerate']>>
-type CallOptions = Parameters<LanguageModelV3['doGenerate']>[0]
-type StreamPart = Awaited<ReturnType<LanguageModelV3['doStream']>>['stream'] extends ReadableStream<infer P> ? P : never
+// module needs no direct dependency on @ai-sdk/provider. The wrappers accept
+// models of any spec version but always return the current one (V4), and that
+// is the version the middleware below is written against.
+type LanguageModelV4 = ReturnType<typeof wrapLanguageModel>
+type EmbeddingModelV4 = ReturnType<typeof wrapEmbeddingModel>
+type LanguageModelInput = Parameters<typeof wrapLanguageModel>[0]['model']
+type EmbeddingModelInput = Parameters<typeof wrapEmbeddingModel>[0]['model']
+type GenerateResult = Awaited<ReturnType<LanguageModelV4['doGenerate']>>
+type CallOptions = Parameters<LanguageModelV4['doGenerate']>[0]
+type StreamPart = Awaited<ReturnType<LanguageModelV4['doStream']>>['stream'] extends ReadableStream<infer P> ? P : never
 type ProviderUsage = GenerateResult['usage']
 
 export interface MeteringTarget {
@@ -56,11 +60,11 @@ function estimateChat(params: CallOptions, outText: string): TokenUsage {
 }
 
 /** Records the priced usage of every generate and stream call on a platform-billed chat model. */
-export function meterLanguageModel(model: LanguageModelV3, target: MeteringTarget): LanguageModelV3 {
+export function meterLanguageModel(model: LanguageModelInput, target: MeteringTarget): LanguageModelV4 {
   return wrapLanguageModel({
     model,
     middleware: {
-      specificationVersion: 'v3',
+      specificationVersion: 'v4',
       wrapGenerate: async ({ doGenerate, params }) => {
         const result = await doGenerate()
         const outText = result.content.map((c) => (c.type === 'text' ? c.text : '')).join('')
@@ -109,11 +113,11 @@ export function meterLanguageModel(model: LanguageModelV3, target: MeteringTarge
 }
 
 /** Records the priced usage of every embed call on a platform-billed embedding model. */
-export function meterEmbeddingModel(model: EmbeddingModelV3, target: MeteringTarget): EmbeddingModelV3 {
+export function meterEmbeddingModel(model: EmbeddingModelInput, target: MeteringTarget): EmbeddingModelV4 {
   return wrapEmbeddingModel({
     model,
     middleware: {
-      specificationVersion: 'v3',
+      specificationVersion: 'v4',
       wrapEmbed: async ({ doEmbed, params }) => {
         const result = await doEmbed()
         let tokens = result.usage?.tokens

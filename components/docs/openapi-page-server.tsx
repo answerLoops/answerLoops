@@ -1,12 +1,11 @@
-import type { OperationItem, WebhookItem } from 'fumadocs-openapi/ui'
+import type { OpenAPIPageProps_Spec } from 'fumadocs-openapi/ui'
 import { openapi } from '@/lib/docs/openapi'
 import { OpenAPIPageClient } from './openapi-page'
 
-interface OpenAPIPageProps {
+// The generated MDX pages pass the spec's file path as `document` plus the
+// operation/webhook selection; everything except `payload` is forwarded as is.
+type OpenAPIPageProps = Omit<OpenAPIPageProps_Spec, 'payload'> & {
   document: string
-  operations?: OperationItem[]
-  webhooks?: WebhookItem[]
-  hasHead?: boolean
 }
 
 // The generated content/docs/reference/api/**\/*.mdx pages (see
