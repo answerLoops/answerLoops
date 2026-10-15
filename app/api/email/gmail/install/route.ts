@@ -9,7 +9,7 @@ const MOD = 'api/email/gmail/install'
 
 export async function GET(req: NextRequest) {
   const settingsUrl = (error: string) => {
-    const url = new URL('/settings', process.env.AUTH_URL ?? req.nextUrl.origin)
+    const url = new URL('/integrations', process.env.AUTH_URL ?? req.nextUrl.origin)
     url.searchParams.set('tab', 'email')
     url.searchParams.set('gmail_error', error)
     return url

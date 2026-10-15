@@ -19,8 +19,14 @@ export async function GET(req: NextRequest) {
   // The nonce cookie is single use: every outcome below clears it.
   const finish = (url: URL) => clearOAuthNonceCookie(NextResponse.redirect(url), 'discord')
 
+  // Every failure below redirects with a short code the page turns into a
+  // message. Record the same code server-side so a failed connect can be
+  // diagnosed without having caught the redirect URL.
+  const rejected = (reason: string, extra: Record<string, unknown> = {}) =>
+    logger.warn('discord connect rejected', { module: MOD, reason, requestId: getRequestId(req), ...extra })
+
   const errorUrl = (code: string) => {
-    const url = new URL('/settings', baseUrl)
+    const url = new URL('/integrations', baseUrl)
     url.searchParams.set('tab', 'discord')
     url.searchParams.set('discord_error', code)
     return url
@@ -28,6 +34,7 @@ export async function GET(req: NextRequest) {
 
   if (!access.ok) {
     if (access.error === 'Unauthorized') return NextResponse.redirect(new URL('/login', baseUrl))
+    rejected('forbidden', { cause: access.error })
     return finish(errorUrl('forbidden'))
   }
 
@@ -51,13 +58,15 @@ export async function GET(req: NextRequest) {
     orgId = decoded.orgId
     from = decoded.from === 'onboarding' ? 'onboarding' : 'settings'
   } catch {
+    rejected('invalid_state', { orgId: access.orgId })
     return finish(errorUrl('invalid_state'))
   }
 
-  const failUrl = new URL(from === 'onboarding' ? '/onboarding' : '/settings', baseUrl)
+  const failUrl = new URL(from === 'onboarding' ? '/onboarding' : '/integrations', baseUrl)
   if (from !== 'onboarding') failUrl.searchParams.set('tab', 'discord')
 
   if (error || !code) {
+    rejected(error ?? 'cancelled', { orgId })
     failUrl.searchParams.set('discord_error', error ?? 'cancelled')
     return finish(failUrl)
   }
@@ -65,6 +74,7 @@ export async function GET(req: NextRequest) {
   let guildId: string
   try {
     if (!(await orgHasFeature(orgId, 'discord_integration'))) {
+      rejected('plan_required', { orgId })
       failUrl.searchParams.set('discord_error', 'plan_required')
       return finish(failUrl)
     }
@@ -73,6 +83,7 @@ export async function GET(req: NextRequest) {
     // authorizing user must manage it and the bot must be in it.
     const verified = await verifyDiscordInstall({ code, redirectUri: `${baseUrl}/api/discord/callback` })
     if (!verified.ok) {
+      rejected(verified.error, { orgId })
       failUrl.searchParams.set('discord_error', verified.error)
       return finish(failUrl)
     }
@@ -91,6 +102,7 @@ export async function GET(req: NextRequest) {
       await addDiscordGuild(orgId, guildId, verified.guildName)
     } catch (err) {
       if (err instanceof DiscordGuildTakenError) {
+        rejected('guild_already_connected', { orgId, guildId })
         failUrl.searchParams.set('discord_error', 'guild_already_connected')
         return finish(failUrl)
       }
@@ -102,7 +114,8 @@ export async function GET(req: NextRequest) {
     return finish(failUrl)
   }
 
-  const successUrl = new URL(from === 'onboarding' ? '/onboarding' : '/settings', baseUrl)
+  logger.info('discord server connected', { module: MOD, orgId, guildId, requestId: getRequestId(req) })
+  const successUrl = new URL(from === 'onboarding' ? '/onboarding' : '/integrations', baseUrl)
   if (from !== 'onboarding') successUrl.searchParams.set('tab', 'discord')
   successUrl.searchParams.set('discord_connected', '1')
   successUrl.searchParams.set('guild_id', guildId)

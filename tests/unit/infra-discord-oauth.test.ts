@@ -48,9 +48,9 @@ describe('Discord OAuth state encoding', () => {
     expect(src).toContain('discord_connected')
   })
 
-  it('callback route redirects to /settings with guild_id param on settings flow', () => {
+  it('callback route redirects to /integrations with guild_id param on settings flow', () => {
     const src = readRoute('app/api/discord/callback/route.ts')
-    expect(src).toContain('/settings')
+    expect(src).toContain('/integrations')
     expect(src).toContain('guild_id')
   })
 

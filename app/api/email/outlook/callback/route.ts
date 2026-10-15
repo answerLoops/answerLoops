@@ -12,7 +12,7 @@ const MOD = 'api/email/outlook/callback'
 export async function GET(req: NextRequest) {
   const access = await requireOrgAccess(['owner', 'admin'])
   const baseUrl = process.env.AUTH_URL ?? req.nextUrl.origin
-  const settingsUrl = new URL('/settings', baseUrl)
+  const settingsUrl = new URL('/integrations', baseUrl)
   settingsUrl.searchParams.set('tab', 'email')
 
   // The nonce cookie is single use: every outcome below clears it.

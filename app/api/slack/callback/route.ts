@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const baseUrl = process.env.AUTH_URL ?? req.nextUrl.origin
   if (!access.ok) {
     if (access.error === 'Unauthorized') return NextResponse.redirect(new URL('/login', baseUrl))
-    const forbidden = new URL('/settings', baseUrl)
+    const forbidden = new URL('/integrations', baseUrl)
     forbidden.searchParams.set('tab', 'slack')
     forbidden.searchParams.set('slack_error', 'forbidden')
     return NextResponse.redirect(forbidden)
@@ -40,13 +40,13 @@ export async function GET(req: NextRequest) {
     orgId = decoded.orgId
     from = decoded.from
   } catch {
-    const settingsUrl = new URL('/settings', baseUrl)
+    const settingsUrl = new URL('/integrations', baseUrl)
     settingsUrl.searchParams.set('tab', 'slack')
     settingsUrl.searchParams.set('slack_error', 'invalid_state')
     return finish(settingsUrl)
   }
 
-  const settingsUrl = new URL(from === 'onboarding' ? '/onboarding' : '/settings', baseUrl)
+  const settingsUrl = new URL(from === 'onboarding' ? '/onboarding' : '/integrations', baseUrl)
   if (from !== 'onboarding') settingsUrl.searchParams.set('tab', 'slack')
 
   if (error || !code) {

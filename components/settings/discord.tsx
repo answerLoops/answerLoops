@@ -35,6 +35,37 @@ interface DiscordGuild {
   enabled: number
 }
 
+// The callback reports why a connect attempt failed as a short code in the
+// redirect URL. Turn each into something the person can act on.
+export function discordConnectErrorMessage(code: string): string {
+  switch (code) {
+    case 'guild_already_connected':
+      return 'That Discord server is already connected to another answerLoops account.'
+    case 'plan_required':
+      return 'Discord needs the Standard plan or above. Upgrade your plan, then connect again.'
+    case 'forbidden':
+      return 'Only workspace owners and admins can connect Discord.'
+    case 'not_guild_admin':
+      return 'To connect a server you need to own it or have the Manage Server permission there.'
+    case 'bot_not_in_guild':
+      return 'answerLoops was not added to that server. Please try again and keep the bot selected.'
+    case 'guild_not_authorized':
+      return 'Discord did not tell us which server you picked. Please try again and choose a server.'
+    case 'invalid_state':
+      return 'That connection attempt expired or was started in a different window. Please try again.'
+    case 'token_exchange_failed':
+      return 'Discord did not accept the authorization. Please try again.'
+    case 'server_misconfigured':
+      return 'Discord is not fully set up on this deployment. Ask whoever runs answerLoops to check the Discord settings.'
+    case 'access_denied':
+    case 'cancelled':
+      return 'The Discord connection was cancelled. Nothing was changed.'
+    case 'server_error':
+      return 'Something went wrong on our side while connecting that server. Please try again.'
+    default:
+      return 'The Discord connection did not complete. Please try again.'
+  }
+}
 
 export function DiscordIntegrationCard() {
   // Legacy manual bot-token connection (self-hosters) — separate from and
@@ -45,7 +76,8 @@ export function DiscordIntegrationCard() {
   const [guilds, setGuilds] = useState<DiscordGuild[] | undefined>(undefined)
   const [inviting, setInviting] = useState(false)
   const [justConnectedGuildId, setJustConnectedGuildId] = useState<string | null>(null)
-  const { toastMessage, showToast } = useToast()
+  const [connectError, setConnectError] = useState<string | null>(null)
+  const { toastMessage, toastKind, showToast } = useToast()
   const [, startDeleteTransition] = useTransition()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -118,11 +150,9 @@ export function DiscordIntegrationCard() {
       url.searchParams.delete('guild_id')
       router.replace(url.pathname + url.search, { scroll: false })
     } else if (error) {
-      showToast(
-        error === 'guild_already_connected'
-          ? 'That Discord server is already connected to another answerLoops account.'
-          : `Discord connection failed: ${error}`
-      )
+      // Kept on screen until dismissed: the reason is the only way to know why
+      // a connect attempt came back with nothing connected.
+      setConnectError(discordConnectErrorMessage(error))
       const url = new URL(window.location.href)
       url.searchParams.delete('discord_error')
       router.replace(url.pathname + url.search, { scroll: false })
@@ -138,11 +168,11 @@ export function DiscordIntegrationCard() {
       if (data.url) {
         window.location.href = data.url
       } else {
-        showToast(data.error ?? 'Failed to get invite URL')
+        setConnectError(data.error ?? 'Could not start the Discord connection. Please try again.')
         setInviting(false)
       }
     } catch {
-      showToast('Failed to get invite URL')
+      setConnectError('Could not start the Discord connection. Please try again.')
       setInviting(false)
     }
   }
@@ -153,8 +183,24 @@ export function DiscordIntegrationCard() {
 
   return (
     <>
-      {toastMessage && <Toast message={toastMessage} />}
+      {toastMessage && <Toast message={toastMessage} kind={toastKind} />}
       <div className="bg-white rounded-lg border border-gray-200 p-4 space-y-4">
+        {connectError && (
+          <div
+            role="alert"
+            className="flex items-start justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800"
+          >
+            <span className="min-w-0 break-words">{connectError}</span>
+            <button
+              type="button"
+              aria-label="Dismiss"
+              onClick={() => setConnectError(null)}
+              className="shrink-0 text-red-600 hover:text-red-800"
+            >
+              ✕
+            </button>
+          </div>
+        )}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-brand-100 flex items-center justify-center text-brand-600 text-sm font-bold">D</div>

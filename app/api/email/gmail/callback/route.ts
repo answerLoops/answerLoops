@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   // on the app subdomain; this keeps the user from landing on the marketing
   // host afterward.
   const baseUrl = appOrigin() ?? process.env.AUTH_URL ?? req.nextUrl.origin
-  const settingsUrl = new URL('/settings', baseUrl)
+  const settingsUrl = new URL('/integrations', baseUrl)
   settingsUrl.searchParams.set('tab', 'email')
 
   // The nonce cookie is single use: every outcome below clears it.

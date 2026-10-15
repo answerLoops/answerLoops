@@ -33,7 +33,7 @@ describe('Discord OAuth callback passes guild_id back to onboarding', () => {
   it('the onboarding redirect includes guild_id, not just discord_connected', () => {
     const src = read('app/api/discord/callback/route.ts')
     const successBlock = src.slice(src.indexOf('const successUrl'))
-    expect(successBlock).toContain("new URL(from === 'onboarding' ? '/onboarding' : '/settings', baseUrl)")
+    expect(successBlock).toContain("new URL(from === 'onboarding' ? '/onboarding' : '/integrations', baseUrl)")
     expect(successBlock).toContain("successUrl.searchParams.set('discord_connected', '1')")
     expect(successBlock).toContain("successUrl.searchParams.set('guild_id', guildId)")
   })
@@ -104,9 +104,9 @@ describe('onboarding wizard routes 1-click Discord connects to the channel picke
 // before letting the user continue.
 
 describe('Slack OAuth callback returns to onboarding when the flow started there', () => {
-  it('redirects to /onboarding, not /settings, when state carries from=onboarding', () => {
+  it('redirects to /onboarding, not /integrations, when state carries from=onboarding', () => {
     const src = read('app/api/slack/callback/route.ts')
-    expect(src).toContain("new URL(from === 'onboarding' ? '/onboarding' : '/settings', baseUrl)")
+    expect(src).toContain("new URL(from === 'onboarding' ? '/onboarding' : '/integrations', baseUrl)")
   })
 
   it('install route encodes the from flag into the OAuth state', () => {
