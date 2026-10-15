@@ -93,7 +93,7 @@ describe('Discord card — channels are the first step', () => {
 
     expect(screen.getByText('Needs channels')).toBeTruthy()
     expect(screen.queryByText('Active')).toBeNull()
-    expect(screen.getByText(/not reading any messages from this server yet/i)).toBeTruthy()
+    expect(screen.getByText(/does not have any channels connected/i)).toBeTruthy()
     // The picker is already open — no "Edit channels" click needed.
     expect(await screen.findByRole('button', { name: 'Save channels' })).toBeTruthy()
     expect(await screen.findByText('#general')).toBeTruthy()
@@ -136,15 +136,15 @@ describe('Discord card — channels are the first step', () => {
     expect(screen.getByText('2 servers connected · 1 needs channels')).toBeTruthy()
   })
 
-  it('after cancelling, offers "Choose channels" instead of silently looking finished', async () => {
+  it('after cancelling, offers "Connect channels" instead of silently looking finished', async () => {
     vi.stubGlobal('fetch', mockFetch({ integrations: [integration()], guilds: [guild()] }))
     const user = userEvent.setup()
 
     await renderCard()
     await user.click(await screen.findByRole('button', { name: 'Cancel' }))
 
-    expect(screen.getByText(/not reading any messages from this server yet/i)).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Choose channels' })).toBeTruthy()
+    expect(screen.getByText(/does not have any channels connected/i)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Connect channels' })).toBeTruthy()
   })
 
   it('will not save with no channel chosen', async () => {

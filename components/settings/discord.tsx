@@ -351,7 +351,7 @@ export function DiscordIntegrationCard() {
               <span className="text-gray-500 shrink-0">Automatic Deflections</span>
               <DeflectionStatusBadge enabled={integration!.auto_deflect_enabled === 1} />
             </div>
-            <div className="pt-2 flex gap-2">
+            <div className="pt-2 flex flex-wrap gap-2">
               {!manualSetupInactive && (
                 <Button size="sm" variant="secondary" onClick={() => setLegacyEditing(true)}>
                   Edit channels &amp; deflections
@@ -424,7 +424,7 @@ export function DiscordIntegrationCard() {
             {(saveState as { error?: string } | null)?.error && (
               <p className="text-xs text-red-600">{(saveState as { error?: string }).error}</p>
             )}
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button type="submit" size="sm" disabled={savePending}>
                 {savePending ? 'Saving…' : 'Save'}
               </Button>
@@ -520,12 +520,12 @@ function DiscordGuildCard({
 
   return (
     <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium text-gray-900">{guild.guild_name ?? `Server ${guild.guild_id}`}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="min-w-0 break-words text-sm font-medium text-gray-900">{guild.guild_name ?? `Server ${guild.guild_id}`}</p>
         {!editingChannels && (
-          <div className="flex gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
             <Button size="sm" variant={hasNoChannels ? 'primary' : 'secondary'} onClick={() => setEditingChannels(true)}>
-              {hasNoChannels ? 'Choose channels' : 'Edit channels'}
+              {hasNoChannels ? 'Connect channels' : 'Edit channels'}
             </Button>
             <Button
               type="button"
@@ -546,8 +546,8 @@ function DiscordGuildCard({
 
       {hasNoChannels && (
         <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          <p className="font-medium">answerLoops is not reading any messages from this server yet.</p>
-          <p className="text-xs mt-0.5">Connecting the server is only the first step. Choose the channels to monitor, then save.</p>
+          <p className="font-medium">This server does not have any channels connected</p>
+          <p className="text-xs mt-0.5">answerLoops only reads the channels you connect. Pick the channels to monitor, then save.</p>
         </div>
       )}
 
@@ -570,9 +570,9 @@ function DiscordGuildCard({
               {channels.length === 0 && channelsLoad === 'loading' && <span className="text-gray-400 font-normal ml-1">(loading…)</span>}
             </label>
             {channels.length > 0 ? (
-              <div className="grid grid-cols-2 gap-1 max-h-48 overflow-y-auto rounded border border-gray-200 p-2 bg-white">
+              <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 max-h-48 overflow-y-auto rounded border border-gray-200 p-2 bg-white">
                 {channels.map((ch) => (
-                  <label key={ch.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
+                  <label key={ch.id} className="flex min-w-0 items-center gap-2 break-all text-sm text-gray-700 cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5">
                     <input
                       type="checkbox"
                       name="channelIds"
@@ -617,7 +617,7 @@ function DiscordGuildCard({
           {(saveState as { error?: string } | null)?.error && (
             <p className="text-xs text-red-600">{(saveState as { error?: string }).error}</p>
           )}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button type="submit" size="sm" disabled={savePending}>
               {savePending ? 'Saving…' : 'Save channels'}
             </Button>
