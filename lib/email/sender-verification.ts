@@ -86,8 +86,14 @@ export function extractHeaderPairs(payload: Record<string, unknown>): HeaderPair
   return []
 }
 
-function resultOf(text: string, method: string): string | null {
-  const m = text.match(new RegExp(`(?:^|[\\s;])${method}\\s*=\\s*([a-z]+)`, 'i'))
+const RESULT_PATTERNS = {
+  dmarc: /(?:^|[\s;])dmarc\s*=\s*([a-z]+)/i,
+  spf: /(?:^|[\s;])spf\s*=\s*([a-z]+)/i,
+  dkim: /(?:^|[\s;])dkim\s*=\s*([a-z]+)/i,
+} as const
+
+function resultOf(text: string, method: keyof typeof RESULT_PATTERNS): string | null {
+  const m = text.match(RESULT_PATTERNS[method])
   return m ? m[1].toLowerCase() : null
 }
 

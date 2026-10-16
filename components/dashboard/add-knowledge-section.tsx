@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useEffect, useState } from 'react'
+import { useActionState, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { addKnowledgeAction, type AddKnowledgeState } from '@/lib/actions/kb'
 
@@ -37,12 +37,15 @@ export function AddKnowledgeSection({
   const [answer, setAnswer] = useState('')
   const [sourceTicketId, setSourceTicketId] = useState<number | null>(null)
 
-  useEffect(() => {
-    if (!draft) return
+  // A new draft replaces the fields once, while rendering, rather than in an
+  // effect, so the form never paints the old text first.
+  const [appliedDraft, setAppliedDraft] = useState<KnowledgeDraft | null>(null)
+  if (draft && draft !== appliedDraft) {
+    setAppliedDraft(draft)
     setQuestion(draft.question)
     setAnswer(draft.answer)
     setSourceTicketId(draft.ticketId)
-  }, [draft])
+  }
 
   const [state, formAction, pending] = useActionState(
     async (prev: AddKnowledgeState, formData: FormData): Promise<AddKnowledgeState> => {
@@ -50,7 +53,9 @@ export function AddKnowledgeSection({
       if (result && 'ok' in result) {
         setQuestion('')
         setAnswer('')
-        if (sourceTicketId !== null) {
+        // Read from what was submitted, not from state, so this holds whichever
+        // render the action closure came from.
+        if (formData.has('sourceTicketId')) {
           setSourceTicketId(null)
           onDraftConsumed?.()
         }

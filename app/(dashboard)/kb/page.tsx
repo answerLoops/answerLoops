@@ -655,15 +655,14 @@ export default function KBPage() {
   // server action re-checks the workspace and role before returning any text.
   const sourceTicketParam = searchParams.get('sourceTicket')
   const [draft, setDraft] = useState<KnowledgeDraft | null>(null)
-  const [draftError, setDraftError] = useState<string | null>(null)
+  const [loadError, setDraftError] = useState<string | null>(null)
+  const sourceTicketValid = sourceTicketParam !== null && /^[1-9]\d{0,9}$/.test(sourceTicketParam)
+  const draftError =
+    sourceTicketParam !== null && !sourceTicketValid ? 'That ticket link is not valid.' : loadError
 
   useEffect(() => {
-    if (sourceTicketParam === null) return
+    if (sourceTicketParam === null || !sourceTicketValid) return
     let cancelled = false
-    if (!/^[1-9]\d{0,9}$/.test(sourceTicketParam)) {
-      setDraftError('That ticket link is not valid.')
-      return
-    }
     getTicketDraftAction(Number(sourceTicketParam))
       .then((result) => {
         if (cancelled) return
@@ -678,7 +677,7 @@ export default function KBPage() {
         if (!cancelled) setDraftError('Could not load that ticket. Try again.')
       })
     return () => { cancelled = true }
-  }, [sourceTicketParam])
+  }, [sourceTicketParam, sourceTicketValid])
 
   function clearSourceTicket() {
     setDraft(null)
