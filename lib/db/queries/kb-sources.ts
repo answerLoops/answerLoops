@@ -1,4 +1,4 @@
-import { eq, and, desc, sql, inArray } from 'drizzle-orm'
+import { eq, ne, and, desc, sql, inArray } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbSources, kbArticles } from '../schema'
 import type { KBSource } from '@/types'
@@ -152,9 +152,25 @@ export async function swapKBSource(input: {
 }): Promise<void> {
   const ts = new Date().toISOString()
   await getDb().transaction(async (tx) => {
+    // Confirm the replacement still exists (and lock it) before retiring the
+    // live source, so a missing replacement can never leave the target empty.
+    const replacement = await tx
+      .select({ id: kbSources.id })
+      .from(kbSources)
+      .where(and(eq(kbSources.id, input.newSourceId), eq(kbSources.orgId, input.orgId)))
+      .for('update')
+    if (replacement.length === 0) {
+      throw new Error('Replacement source no longer exists; the existing source was left in place.')
+    }
     await tx
       .delete(kbSources)
-      .where(and(eq(kbSources.orgId, input.orgId), eq(kbSources.filename, input.targetFilename)))
+      .where(
+        and(
+          eq(kbSources.orgId, input.orgId),
+          eq(kbSources.filename, input.targetFilename),
+          ne(kbSources.id, input.newSourceId)
+        )
+      )
     await tx
       .update(kbSources)
       .set({ filename: input.targetFilename, published: input.published, updatedAt: ts })

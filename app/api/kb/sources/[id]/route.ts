@@ -11,8 +11,8 @@ export async function DELETE(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    const access = await requireOrgAccess()
-    if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+    const access = await requireOrgAccess(['owner', 'admin'])
+    if (!access.ok) return Response.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
     const orgId = access.orgId
     const { id } = await ctx.params
     const sourceId = Number(id)
@@ -31,8 +31,8 @@ export async function PATCH(
   ctx: { params: Promise<{ id: string }> }
 ) {
   try {
-    const access = await requireOrgAccess()
-    if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+    const access = await requireOrgAccess(['owner', 'admin'])
+    if (!access.ok) return Response.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
     const orgId = access.orgId
     const { id } = await ctx.params
     const sourceId = Number(id)

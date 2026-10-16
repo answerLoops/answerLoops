@@ -22,6 +22,7 @@ const h = vi.hoisted(() => ({
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
 vi.mock('@/lib/db/queries/kb-review', () => ({
+  MAX_PENDING_REVIEW_ITEMS: 500,
   countReviewItems: h.countReviewItems,
   listReviewItems: h.listReviewItems,
   approveReviewItem: h.approveReviewItem,
@@ -67,6 +68,24 @@ describe('GET /api/kb/review', () => {
     expect(h.listReviewItems).not.toHaveBeenCalled()
   })
 
+  it('403s and reads nothing for a member who is not an owner or admin', async () => {
+    h.requireOrgAccess.mockResolvedValue({ ok: false, error: 'You do not have permission to do that.' })
+    const { GET } = await import('@/app/api/kb/review/route')
+    const res = await GET(getReq())
+    expect(res.status).toBe(403)
+    expect(h.requireOrgAccess).toHaveBeenCalledWith(['owner', 'admin'])
+    expect(h.countReviewItems).not.toHaveBeenCalled()
+    expect(h.listReviewItems).not.toHaveBeenCalled()
+  })
+
+  it('reports full when the pending queue is at its ceiling', async () => {
+    h.countReviewItems.mockResolvedValue({ pending: 500, approved: 0, rejected: 0 })
+    const { GET } = await import('@/app/api/kb/review/route')
+    expect(await (await GET(getReq())).json()).toMatchObject({ full: true })
+    h.countReviewItems.mockResolvedValue({ pending: 499, approved: 0, rejected: 0 })
+    expect(await (await GET(getReq())).json()).toMatchObject({ full: false })
+  })
+
   it('402s with the required plan, and reads nothing, when the plan lacks the feature', async () => {
     h.orgHasFeature.mockResolvedValue(false)
     const { GET } = await import('@/app/api/kb/review/route')
@@ -84,7 +103,7 @@ describe('GET /api/kb/review', () => {
     expect(res.status).toBe(200)
     expect(h.listReviewItems).toHaveBeenCalledWith(7, 'pending', 100)
     expect(h.countReviewItems).toHaveBeenCalledWith(7)
-    expect(await res.json()).toEqual({ counts, items: [{ id: 1, question: 'q' }] })
+    expect(await res.json()).toEqual({ counts, items: [{ id: 1, question: 'q' }], full: false })
   })
 
   it('honours the status filter and clamps limit to its ceiling', async () => {
@@ -97,7 +116,7 @@ describe('GET /api/kb/review', () => {
     const { GET } = await import('@/app/api/kb/review/route')
     const res = await GET(getReq('?limit=0'))
     expect(h.listReviewItems).not.toHaveBeenCalled()
-    expect(await res.json()).toEqual({ counts, items: [] })
+    expect(await res.json()).toEqual({ counts, items: [], full: false })
   })
 
   it('400s on an unknown status', async () => {

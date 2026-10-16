@@ -74,6 +74,8 @@ A few things worth knowing about how the pipeline handles the messy realities of
 
 - **Idempotent by construction.** Every inbound email is keyed on its RFC `Message-ID`, so a provider webhook retry is a no-op, never a duplicate ticket.
 - **Mail-loop guarded.** `Auto-Submitted`, `Precedence`, `X-Auto-Response-Suppress`, `List-Id`, and no-reply sender patterns are all detected and rejected before a reply is ever generated. A per-sender reply throttle backstops anything that slips through.
+- **Sender checks.** Messages whose sender check does not pass are held for review and do not join an existing conversation. The check passes when the provider reports a passing DMARC result in the `Authentication-Results` header, or passing SPF and DKIM together (or the equivalent `spf`, `dkim` and `dmarc` fields for providers that report them in the payload). A message without a passing result still creates a ticket, which is marked as needing a person and receives no automated answer; staff are notified.
+- **Bounded storage.** The stored copy of each inbound payload keeps selected fields and headers and is capped at 64 KB; text appended to an existing ticket is capped at 8,000 characters, the same as a new ticket.
 - **Spam-tolerant, fail-open.** Provider spam signals are honored when present, but their absence never blocks a legitimate email.
 - **HTML fallback.** HTML-only emails are converted to plain text rather than silently dropped.
 - **Delivery-status visibility.** Bounces, spam complaints, and delivery failures on outbound replies are tracked against the ticket and surfaced as a badge on the ticket detail page.

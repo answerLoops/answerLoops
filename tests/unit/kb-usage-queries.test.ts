@@ -113,3 +113,23 @@ describe('getArticleUsage', () => {
     ])
   })
 })
+
+describe('pruneArticleUsage', () => {
+  it('deletes day rows older than the retention window and returns the count', async () => {
+    responses.push([{ '?column?': 1 }, { '?column?': 1 }])
+    const { pruneArticleUsage, ARTICLE_USAGE_RETENTION_DAYS } = await import('@/lib/db/queries/kb-usage')
+
+    expect(ARTICLE_USAGE_RETENTION_DAYS).toBe(400)
+    expect(await pruneArticleUsage()).toBe(2)
+    expect(calls[0].sql).toContain('DELETE FROM kb_article_usage')
+    expect(calls[0].sql).toContain('day <')
+    expect(calls[0].params).toContain(400)
+  })
+
+  it('rejects a non-positive retention instead of deleting everything', async () => {
+    const { pruneArticleUsage } = await import('@/lib/db/queries/kb-usage')
+    await expect(pruneArticleUsage(0)).rejects.toThrow()
+    await expect(pruneArticleUsage(Number.NaN)).rejects.toThrow()
+    expect(calls).toHaveLength(0)
+  })
+})

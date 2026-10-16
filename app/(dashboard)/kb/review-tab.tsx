@@ -20,8 +20,9 @@ const SOURCE_LABEL: Record<KBReviewItem['source'], string> = {
 type LoadState =
   | { kind: 'loading' }
   | { kind: 'locked'; requiredPlan: PlanId }
+  | { kind: 'forbidden' }
   | { kind: 'error'; message: string }
-  | { kind: 'ready'; items: KBReviewItem[]; counts: ReviewCounts }
+  | { kind: 'ready'; items: KBReviewItem[]; counts: ReviewCounts; full: boolean }
 
 function ReviewCard({
   item,
@@ -67,6 +68,11 @@ function ReviewCard({
     <li className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-600">{SOURCE_LABEL[item.source]}</span>
+        {item.source === 'widget' && (
+          <span className="rounded bg-slate-100 px-1.5 py-0.5 font-medium text-slate-500">
+            Unverified visitor-supplied text
+          </span>
+        )}
         {item.occurrences > 1 && (
           <span className="rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-700">Asked {item.occurrences} times</span>
         )}
@@ -116,7 +122,10 @@ function ReviewCard({
         </div>
       ) : (
         <div className="mt-3 space-y-2">
-          <p className="break-words text-sm font-medium text-slate-900">{item.question}</p>
+          {item.question && <p className="break-words text-sm font-medium text-slate-900">{item.question}</p>}
+          {item.question === '' && item.answer === '' && (
+            <p className="text-xs text-slate-400">The text of this item has been removed.</p>
+          )}
           {item.answer && <p className="whitespace-pre-wrap break-words text-sm text-slate-600">{item.answer}</p>}
           {item.status === 'approved' ? (
             <p className="text-xs text-emerald-700">Published to the knowledge base.</p>
@@ -141,15 +150,17 @@ async function fetchQueue(status: ReviewStatus, signal: AbortSignal): Promise<Lo
     const data = (await res.json().catch(() => ({}))) as {
       items?: KBReviewItem[]
       counts?: ReviewCounts
+      full?: boolean
       error?: string
       locked?: boolean
       requiredPlan?: PlanId
     }
     if (res.status === 402 && data.locked) return { kind: 'locked', requiredPlan: data.requiredPlan ?? 'pro' }
+    if (res.status === 403) return { kind: 'forbidden' }
     if (!res.ok || !data.items || !data.counts) {
       return { kind: 'error', message: data.error ?? 'Could not load the review queue.' }
     }
-    return { kind: 'ready', items: data.items, counts: data.counts }
+    return { kind: 'ready', items: data.items, counts: data.counts, full: data.full === true }
   } catch {
     return { kind: 'error', message: 'Could not load the review queue.' }
   }
@@ -177,6 +188,14 @@ export function ReviewTab({ onCountsChange }: { onCountsChange?: (counts: Review
 
   if (state.kind === 'locked') {
     return <LockedFeature requiredPlan={state.requiredPlan} featureLabel="The review queue" />
+  }
+
+  if (state.kind === 'forbidden') {
+    return (
+      <p className="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-500">
+        Only workspace owners and admins can review these questions.
+      </p>
+    )
   }
 
   const counts = state.kind === 'ready' ? state.counts : null
@@ -211,6 +230,11 @@ export function ReviewTab({ onCountsChange }: { onCountsChange?: (counts: Review
         ))}
       </div>
 
+      {state.kind === 'ready' && state.full && (
+        <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          The review queue is full, so new questions are not being added. Approve or reject some items to make room.
+        </p>
+      )}
       {state.kind === 'loading' && <p className="text-sm text-slate-500">Loading…</p>}
       {state.kind === 'error' && (
         <p role="alert" className="text-sm text-red-600">{state.message}</p>

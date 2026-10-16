@@ -16,6 +16,12 @@ const MOD = 'api/github/webhook'
 
 const GITHUB_MAX_BODY_BYTES = 5 * WEBHOOK_MAX_BODY_BYTES
 
+// Minimum gap between knowledge-base re-syncs of one repo triggered by pushes.
+// A push that lands inside the window still produces a sync, queued to start
+// when the window ends; further pushes until then fold into that queued job.
+// A push that arrives while a sync is running queues one follow-up run.
+const PUSH_SYNC_COOLDOWN_MS = 2 * 60 * 1000
+
 // Repo owners/members/collaborators filing an issue are doing work tracking,
 // not asking for help — ingesting those inflates the staff queue and skews
 // the deflection metric with tickets that were never deflectable. GitHub
@@ -94,8 +100,16 @@ export async function POST(req: NextRequest) {
         // Enqueue and return fast. The old inline syncRepoToKB blew GitHub's
         // ~10s delivery deadline, so GitHub retried and two full
         // delete-and-recreate syncs raced; the queue's one-active debounce
-        // collapses a retry (or a burst of pushes) to a single job.
-        const job = await enqueueKbSyncJob({ orgId: actualOrgId, kind: 'github_repo', repoId: dbRepo.id })
+        // collapses a retry (or a burst of pushes) to a single job, and the
+        // cooldown spaces runs apart so serial pushes don't re-embed the repo
+        // continuously.
+        const job = await enqueueKbSyncJob({
+          orgId: actualOrgId,
+          kind: 'github_repo',
+          repoId: dbRepo.id,
+          cooldownMs: PUSH_SYNC_COOLDOWN_MS,
+          rerunIfRunning: true,
+        })
         logger.info('github push kb sync queued', { module: MOD, owner, repo: repoName, jobId: job.id, queued: job.created })
       } catch (err) {
         logger.error('failed to queue github push kb sync', { module: MOD, error: err })

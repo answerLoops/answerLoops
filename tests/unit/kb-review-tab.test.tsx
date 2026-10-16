@@ -167,4 +167,82 @@ describe('ReviewTab', () => {
     await renderTab()
     expect((await screen.findByRole('alert')).textContent).toContain('Internal server error')
   })
+
+  it('marks widget items as unverified visitor text and ticket items as not', async () => {
+    queue([item({ id: 1, source: 'widget' }), item({ id: 2, source: 'ticket' })])
+    await renderTab()
+    await screen.findAllByText('Support ticket')
+    expect(screen.getAllByText('Unverified visitor-supplied text')).toHaveLength(1)
+  })
+
+  it('tells the reviewer when the queue is full', async () => {
+    h.fetchMock.mockImplementation(() => json({ items: [item()], counts: { pending: 500, approved: 0, rejected: 0 }, full: true }))
+    await renderTab()
+    expect(await screen.findByText(/review queue is full/i)).toBeTruthy()
+  })
+
+  it('shows no full notice while there is room', async () => {
+    queue([item()])
+    await renderTab()
+    await screen.findByText('Unverified visitor-supplied text')
+    expect(screen.queryByText(/review queue is full/i)).toBeNull()
+  })
+
+  it('shows a plain notice instead of the queue for a member without access', async () => {
+    h.fetchMock.mockImplementation(() => json({ error: 'You do not have permission to do that.' }, 403))
+    const onCounts = vi.fn()
+    await renderTab(onCounts)
+    expect(await screen.findByText(/only workspace owners and admins/i)).toBeTruthy()
+    expect(screen.queryByRole('tablist')).toBeNull()
+    expect(onCounts).not.toHaveBeenCalled()
+  })
+
+  it('shows a removed-text message for a purged finished item, and no approve action', async () => {
+    const user = userEvent.setup()
+    h.fetchMock.mockImplementation((url: string) =>
+      url.includes('status=rejected')
+        ? json({ items: [item({ id: 5, status: 'rejected', question: '', answer: '' })], counts })
+        : json({ items: [], counts })
+    )
+    await renderTab()
+    await user.click(await screen.findByRole('tab', { name: /rejected/i }))
+    expect(await screen.findByText(/text of this item has been removed/i)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /approve and add/i })).toBeNull()
+  })
+
+  it('does not show the removed-text message for an item that still has text', async () => {
+    queue([item()])
+    await renderTab()
+    await screen.findByDisplayValue('Do you ship to Canada?')
+    expect(screen.queryByText(/text of this item has been removed/i)).toBeNull()
+  })
+
+  it('keeps Approve disabled for a pending item with no text left', async () => {
+    queue([item({ question: '', answer: '' })])
+    await renderTab()
+    const approve = (await screen.findByRole('button', { name: /approve and add/i })) as HTMLButtonElement
+    expect(approve.disabled).toBe(true)
+    expect(h.fetchMock.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false)
+  })
+
+  it('shows no tag on a ticket item when it is the only item', async () => {
+    queue([item({ id: 2, source: 'ticket' })])
+    await renderTab()
+    await screen.findByText('Support ticket')
+    expect(screen.queryByText('Unverified visitor-supplied text')).toBeNull()
+  })
+
+  it('treats a full flag that is not exactly true as not full', async () => {
+    h.fetchMock.mockImplementation(() => json({ items: [item()], counts, full: 'yes' }))
+    await renderTab()
+    await screen.findByDisplayValue('Do you ship to Canada?')
+    expect(screen.queryByText(/review queue is full/i)).toBeNull()
+  })
+
+  it('does not show the access message to a member who can load the queue', async () => {
+    queue([item()])
+    await renderTab()
+    await screen.findByRole('tablist')
+    expect(screen.queryByText(/only workspace owners and admins/i)).toBeNull()
+  })
 })

@@ -14,7 +14,7 @@ let respond: (c: Call) => unknown[][]
 
 function install() {
   const fakeDb = drizzle(async (sqlText: string, params: unknown[], method: 'all' | 'execute' | 'get' | 'values' | 'run') => {
-    const call = { sql: sqlText.toLowerCase(), params, method }
+    const call = { sql: sqlText.replace(/\s+/g, ' ').trim().toLowerCase(), params, method }
     calls.push(call)
     return { rows: respond(call) }
   })
@@ -80,17 +80,19 @@ describe('recordReviewItem', () => {
     expect(dup.params).toEqual(expect.arrayContaining([3, 'pending', 'rejected']))
     expect(dup.params).not.toContain('approved')
     const upd = calls.find(isUpdate)!
-    expect(upd.sql).toContain('"occurrences" = "kb_review_items"."occurrences" + 1')
+    expect(upd.sql).toContain('occurrences = occurrences + 1')
     expect(upd.params).toEqual(expect.arrayContaining([99, 3]))
     expect(calls.some(isInsert)).toBe(false)
   })
 
-  it("returns 'full' and inserts nothing once the pending queue is at the ceiling", async () => {
-    const { MAX_PENDING_REVIEW_ITEMS, recordReviewItem } = await import('@/lib/db/queries/kb-review')
-    respond = (c) => (isSelectFrom(c) && c.sql.includes('count(*)') ? [[MAX_PENDING_REVIEW_ITEMS]] : [])
-    const out = await recordReviewItem(input(), 3)
-    expect(out).toBe('full')
-    expect(calls.some(isInsert)).toBe(false)
+  it('caps the per-day occurrence increments in the same statement that bumps the count', async () => {
+    respond = (c) => (isSelectFrom(c) && c.sql.includes('<=') ? [[99]] : [])
+    const { recordReviewItem, MAX_DAILY_OCCURRENCE_INCREMENTS } = await import('@/lib/db/queries/kb-review')
+    await recordReviewItem(input(), 3)
+    const upd = calls.find(isUpdate)!
+    expect(upd.sql).toContain('merge_day_count < $')
+    expect(upd.sql).toContain('merge_day is distinct from')
+    expect(upd.params).toContain(MAX_DAILY_OCCURRENCE_INCREMENTS)
   })
 
   it("a duplicate still merges when the queue is full (merge is checked before the ceiling)", async () => {
@@ -99,21 +101,32 @@ describe('recordReviewItem', () => {
     expect(await recordReviewItem(input(), 3)).toBe('merged')
   })
 
-  it("returns 'created' and inserts one org-scoped row just below the ceiling", async () => {
+  it("returns 'created' from one guarded INSERT ... SELECT run under a per-org advisory lock", async () => {
+    respond = (c) => (c.sql.startsWith('insert into kb_review_items') ? [[1]] : [])
     const { MAX_PENDING_REVIEW_ITEMS, recordReviewItem } = await import('@/lib/db/queries/kb-review')
-    respond = (c) => (isSelectFrom(c) && c.sql.includes('count(*)') ? [[MAX_PENDING_REVIEW_ITEMS - 1]] : [])
     const out = await recordReviewItem(input({ source: 'ticket', ticketId: 8, confidence: 0.4 }), 3)
     expect(out).toBe('created')
-    const ins = calls.find(isInsert)!
-    expect(ins.sql).toContain('insert into "kb_review_items"')
-    expect(ins.params).toEqual(expect.arrayContaining([3, 'ticket', 8, 'q?', 'a', 0.4]))
+    const ins = calls.find((c) => c.sql.startsWith('insert into kb_review_items'))!
+    expect(ins.sql).toContain('select count(*) from kb_review_items')
+    expect(ins.sql).toContain('returning id')
+    expect(ins.params).toEqual(expect.arrayContaining([3, 'ticket', 8, 'q?', 'a', 0.4, MAX_PENDING_REVIEW_ITEMS]))
+    const names = calls.map((c) => c.sql)
+    const lock = names.findIndex((q) => q.includes('pg_advisory_xact_lock'))
+    expect(lock).toBeGreaterThan(names.indexOf('begin'))
+    expect(lock).toBeLessThan(names.indexOf(ins.sql))
+  })
+
+  it("returns 'full' when the guarded insert adds no row", async () => {
+    respond = () => []
+    const { recordReviewItem } = await import('@/lib/db/queries/kb-review')
+    expect(await recordReviewItem(input(), 3)).toBe('full')
   })
 
   it('stores a null ticket id and confidence for a widget question', async () => {
-    respond = (c) => (isSelectFrom(c) && c.sql.includes('count(*)') ? [[0]] : [])
+    respond = (c) => (c.sql.startsWith('insert into kb_review_items') ? [[1]] : [])
     const { recordReviewItem } = await import('@/lib/db/queries/kb-review')
     await recordReviewItem(input(), 3)
-    const ins = calls.find(isInsert)!
+    const ins = calls.find((c) => c.sql.startsWith('insert into kb_review_items'))!
     expect(ins.params).toContain(null)
     expect(ins.params).toContain('widget')
   })
@@ -223,5 +236,21 @@ describe('reads', () => {
     const { getReviewItem } = await import('@/lib/db/queries/kb-review')
     expect(await getReviewItem(5, 3)).toBeNull()
     expect(calls[0].params).toEqual(expect.arrayContaining([5, 3]))
+  })
+})
+
+describe('purgeExpiredReviewText', () => {
+  it('clears text of rejected items and of approved items past the retention window', async () => {
+    respond = (c) => (isUpdate(c) ? [[1], [2], [3]] : [])
+    const { purgeExpiredReviewText, REVIEW_TEXT_RETENTION_DAYS } = await import('@/lib/db/queries/kb-review')
+    const now = new Date('2026-10-01T00:00:00.000Z')
+    expect(await purgeExpiredReviewText(now)).toBe(3)
+    const upd = calls.find(isUpdate)!
+    expect(upd.sql).toContain('"question" = $')
+    expect(upd.params).toEqual(expect.arrayContaining(['', 'rejected', 'approved']))
+    const cutoff = new Date(now.getTime() - REVIEW_TEXT_RETENTION_DAYS * 86_400_000).toISOString()
+    expect(upd.params).toContain(cutoff)
+    // idempotent: only rows that still hold text are touched
+    expect(upd.sql).toContain(`"question" <> ''`)
   })
 })

@@ -14,7 +14,10 @@ export async function getKnowledgeCoverage(orgId: number): Promise<Coverage> {
       id: kbArticles.id,
       title: kbArticles.question,
       published: kbArticles.published,
-      searchable: sql<boolean>`${kbArticles.embeddingVec} IS NOT NULL`,
+      // Mirrors retrieval (searchArticles): an article is only found when it has
+      // a vector AND that vector was made by the workspace's pinned embedding
+      // model. One from any other model waits for the re-embed job.
+      searchable: sql<boolean>`(${kbArticles.embeddingVec} IS NOT NULL AND ${kbArticles.model} = (SELECT embedding_model_in_use FROM orgs WHERE id = ${orgId})) IS TRUE`,
       sourceId: kbArticles.sourceId,
       sourceTicketId: kbArticles.sourceTicketId,
       sourceName: kbSources.filename,

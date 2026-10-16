@@ -2,8 +2,10 @@ import { z } from 'zod'
 import {
   getKbSyncJob,
   finishKbSyncJob,
+  heartbeatKbSyncJob,
   updateKbSyncJobProgress,
 } from '@/lib/db/queries/kb-sync-jobs'
+import { KbSyncUserError, KbSyncLeaseLostError, KB_SYNC_GENERIC_FAILURE } from '@/lib/kb-sync/errors'
 import { throttleProgress } from '@/lib/kb-sync/progress'
 import { getRepoById } from '@/lib/db/queries/github'
 import { syncNotionToKB } from '@/lib/notion/kb-sync'
@@ -17,6 +19,13 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const MOD = 'api/kb/sync-jobs/run'
+
+// How often a running job refreshes its heartbeat between progress writes. Well
+// inside the sweep's reclaim window, so a slow page or file never looks stale.
+const HEARTBEAT_INTERVAL_MS = 30_000
+
+// Wait before the follow-up run a trigger-during-run asks for.
+const FOLLOW_UP_DELAY_MS = 2 * 60 * 1000
 
 const RunSchema = z.object({ jobId: z.number() })
 
@@ -46,13 +55,29 @@ export async function POST(request: Request) {
     return Response.json({ ok: true, ran: false, reason: job.status })
   }
 
-  // Progress writes are best-effort and throttled — a lost one just lags the
-  // KB page's number by a beat. `void` the promise so a slow write never
-  // stalls the sync loop.
+  // The attempt number identifies this worker's claim. Every write below is
+  // conditional on it, so a worker whose job was reclaimed cannot overwrite
+  // the newer run.
   const jobId = job.id
-  const progress = throttleProgress((done, total, item) => {
-    void updateKbSyncJobProgress(jobId, done, total, item)
+  const attempt = job.attempts
+
+  // Progress writes are throttled and not awaited, so a slow write never
+  // stalls the sync loop. A write that matches no row means the lease is gone;
+  // the next progress call from the sync throws and the sync unwinds.
+  let leaseLost = false
+  const noteWrite = (p: Promise<boolean>) => {
+    p.then((owned) => { if (!owned) leaseLost = true }).catch((err) => {
+      logger.warn('kb sync progress write failed', { module: MOD, jobId, error: err })
+    })
+  }
+  const throttled = throttleProgress((done, total, item) => {
+    noteWrite(updateKbSyncJobProgress(jobId, attempt, done, total, item))
   })
+  const progress = (done: number, total: number, item?: string) => {
+    if (leaseLost) throw new KbSyncLeaseLostError(jobId)
+    throttled(done, total, item)
+  }
+  const heartbeat = setInterval(() => noteWrite(heartbeatKbSyncJob(jobId, attempt)), HEARTBEAT_INTERVAL_MS)
 
   try {
     let syncedCount = 0
@@ -71,7 +96,7 @@ export async function POST(request: Request) {
     } else if (job.kind === 'github_repo') {
       if (!job.repo_id) throw new Error('github_repo job has no repo_id')
       const repo = await getRepoById(job.repo_id, job.org_id)
-      if (!repo) throw new Error('repo not found')
+      if (!repo) throw new KbSyncUserError('That repository is no longer connected — reconnect it and sync again.')
       // Sequential: both paths read-modify-write the repo's kbChunkCount.
       // Discussion progress is offset past the repo-files total so the KB
       // page's bar keeps climbing across the two phases.
@@ -88,17 +113,37 @@ export async function POST(request: Request) {
       throw new Error(`unknown kb sync job kind: ${job.kind}`)
     }
 
-    await finishKbSyncJob(job.id, { status: 'succeeded', detail, syncedCount })
-    logger.info('kb sync job done', { module: MOD, jobId: job.id, kind: job.kind, syncedCount })
+    if (leaseLost) throw new KbSyncLeaseLostError(jobId)
+    const recorded = await finishKbSyncJob(jobId, attempt, { status: 'succeeded', detail, syncedCount }, FOLLOW_UP_DELAY_MS)
+    if (!recorded) {
+      logger.warn('kb sync job result discarded — job no longer owned', { module: MOD, jobId, kind: job.kind })
+      return Response.json({ ok: true, ran: true, superseded: true })
+    }
+    logger.info('kb sync job done', { module: MOD, jobId, kind: job.kind, syncedCount })
     return Response.json({ ok: true, ran: true, syncedCount })
   } catch (err) {
-    const message = err instanceof NoAIProviderConfiguredError
-      ? aiUnavailableMessage(err, 'No AI provider is set up for this workspace — add one in Settings → AI Model, then sync again.')
-      : err instanceof Error ? err.message : 'Sync failed'
-    await finishKbSyncJob(job.id, { status: 'failed', detail: message })
-    logger.error('kb sync job failed', { module: MOD, jobId: job.id, kind: job.kind, error: err })
+    if (err instanceof KbSyncLeaseLostError) {
+      // Another worker owns the job now; it records the outcome.
+      logger.warn('kb sync stopped — job no longer owned', { module: MOD, jobId, kind: job.kind })
+      return Response.json({ ok: true, ran: true, superseded: true })
+    }
+    // The real error stays in the server log; the job row only ever holds
+    // text written for the workspace owner.
+    const message = userFacingFailure(err)
+    await finishKbSyncJob(jobId, attempt, { status: 'failed', detail: message }, FOLLOW_UP_DELAY_MS)
+    logger.error('kb sync job failed', { module: MOD, jobId, kind: job.kind, error: err })
     // 200 on purpose — the job is recorded as failed; a 500 would just make
     // the bot retry this POST for a job that is already terminal.
     return Response.json({ ok: true, ran: true, failed: true })
+  } finally {
+    clearInterval(heartbeat)
   }
+}
+
+function userFacingFailure(err: unknown): string {
+  if (err instanceof NoAIProviderConfiguredError) {
+    return aiUnavailableMessage(err, 'No AI provider is set up for this workspace — add one in Settings → AI Model, then sync again.')
+  }
+  if (err instanceof KbSyncUserError) return err.message
+  return KB_SYNC_GENERIC_FAILURE
 }

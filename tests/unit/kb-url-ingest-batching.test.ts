@@ -84,7 +84,7 @@ describe('site ingest sends exactly one batch-scrape request per import', () => 
     const batchIdx = src.indexOf('app.batchScrape(')
     const between = src.slice(mapIdx, batchIdx)
     expect(between).not.toContain('for (const pageUrl of mappedUrls)')
-    expect(between).toContain('getExistingSourceFilenames(orgId, mappedUrls)')
+    expect(between).toContain('getExistingSourceFilenames(orgId, lookupNames)')
   })
 })
 
@@ -126,7 +126,7 @@ describe('a failed or partial batch-scrape does not silently report full success
 
   it('returns pagesFound (total discovered) alongside pages (actually scraped) and incomplete', () => {
     const src = read('lib/ingest/url.ts')
-    expect(src).toContain('pagesFound: number; skipped: number; remaining: number; incomplete: boolean')
+    expect(src).toMatch(/pagesFound: number\s+skipped: number\s+remaining: number\s+incomplete: boolean/)
     expect(src).toContain('return { created, pages: scraped, pagesFound, skipped, remaining, incomplete }')
   })
 

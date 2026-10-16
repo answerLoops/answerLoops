@@ -64,7 +64,7 @@ describe('runEmbeddingMigration', () => {
     vi.stubEnv('DEPLOYMENT_MODE', 'cloud')
   })
 
-  function fakeDb(opts: { leased: boolean; articleRows?: { id: number; question: string; answer: string }[]; remaining?: number }) {
+  function fakeDb(opts: { leased: boolean; articleRows?: { id: number; question: string; answer: string }[]; remaining?: number; renewFails?: boolean; staleWrites?: boolean }) {
     const executed: string[] = []
     let articleBatches = opts.articleRows ? 1 : 0
     const text = (q: unknown) => JSON.stringify(q)
@@ -72,7 +72,11 @@ describe('runEmbeddingMigration', () => {
       execute: async (q: unknown) => {
         const t = text(q)
         executed.push(t)
-        if (t.includes('embedding_migration_lease_until = now()') && t.includes('RETURNING')) return opts.leased ? [{ id: 3 }] : []
+        if (t.includes('embedding_migration_attempted_at = now()') && t.includes('RETURNING')) return opts.leased ? [{ token: '1700000000.5' }] : []
+        // Lease renewal (conditional on the token) hands back a fresh token.
+        if (t.includes('extract(epoch') && t.includes('RETURNING')) return opts.renewFails ? [] : [{ token: '1700000001.5' }]
+        // Conditional staging writes report the rows they changed.
+        if (t.includes('UPDATE kb_articles') && t.includes('RETURNING')) return opts.staleWrites ? [] : [{ id: 1 }]
         if (t.includes('FROM kb_articles') && t.includes('ORDER BY id')) return articleBatches-- > 0 ? opts.articleRows : []
         return []
       },
@@ -104,7 +108,7 @@ describe('runEmbeddingMigration', () => {
   const leaseCleared = (executed: string[]) => executed.some((t) => t.includes('embedding_migration_lease_until = NULL'))
 
   it('re-embeds stored text with the target model, never meters, switches when nothing is left, and resets the failure count', async () => {
-    const embedMany = vi.fn(async ({ values }: { values: string[] }) => ({ embeddings: values.map(() => [0.5]) }))
+    const embedMany = vi.fn(async ({ values }: { values: string[] }) => ({ embeddings: values.map(() => new Array(1536).fill(0.5)) }))
     const { db, executed } = fakeDb({ leased: true, articleRows: [{ id: 1, question: 'q', answer: 'a' }] })
     common({ embedMany })
     vi.doMock('@/lib/db/drizzle', () => ({ getDb: () => db }))
@@ -161,6 +165,66 @@ describe('runEmbeddingMigration', () => {
   it('renews the lease as it stages, so a long re-embed is not picked up twice', () => {
     const s = SRC()
     const stage = s.slice(s.indexOf('async function stageArticles'), s.indexOf('async function switchIfComplete'))
-    expect(stage.match(/renewLease\(orgId\)/g)?.length).toBeGreaterThanOrEqual(2)
+    expect(stage.match(/renewLease\(orgId, lease\)/g)?.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('stops before staging anything when the model output does not fit the vector column', async () => {
+    const embedMany = vi.fn(async ({ values }: { values: string[] }) => ({ embeddings: values.map(() => [0.5, 0.5]) }))
+    const { db, executed } = fakeDb({ leased: true, articleRows: [{ id: 1, question: 'q', answer: 'a' }] })
+    common({ embedMany })
+    vi.doMock('@/lib/db/drizzle', () => ({ getDb: () => db }))
+    const { runEmbeddingMigration } = await import('@/lib/kb/embedding-migration')
+    await expect(runEmbeddingMigration(3)).rejects.toThrow(/1536/)
+    expect(executed.some((t) => t.includes('embedding_next ='))).toBe(false)
+    expect(failuresIncremented(executed)).toBe(true)
+  })
+
+  it('does not count or promote a row that was edited between the read and the write', async () => {
+    const embedMany = vi.fn(async ({ values }: { values: string[] }) => ({ embeddings: values.map(() => new Array(1536).fill(0.5)) }))
+    const { db } = fakeDb({ leased: true, articleRows: [{ id: 1, question: 'q', answer: 'a' }], staleWrites: true })
+    common({ embedMany })
+    vi.doMock('@/lib/db/drizzle', () => ({ getDb: () => db }))
+    const { runEmbeddingMigration } = await import('@/lib/kb/embedding-migration')
+    const res = await runEmbeddingMigration(3)
+    expect(res.staged).toBe(0)
+  })
+
+  it('the staging write only applies while the stored text still matches what was embedded', () => {
+    const s = SRC()
+    const stage = s.slice(s.indexOf('async function stageArticles'), s.indexOf('async function stageTickets'))
+    expect(stage).toMatch(/WHERE id = \$\{rows\[i\]\.id\} AND org_id = \$\{orgId\} AND question = \$\{rows\[i\]\.question\} AND answer = \$\{rows\[i\]\.answer\}/)
+    expect(stage).toContain('embedding_next_hash = ${ARTICLE_TEXT_HASH}')
+    const tickets = s.slice(s.indexOf('async function stageTickets'), s.indexOf('async function switchIfComplete'))
+    expect(tickets).toMatch(/t\.content = \$\{rows\[i\]\.content\}/)
+    expect(tickets).toContain('vector_next_hash = ${TICKET_TEXT_HASH}')
+  })
+
+  it('promotes only rows whose staged fingerprint still matches the current text', () => {
+    const s = SRC()
+    const sw = s.slice(s.indexOf('async function switchIfComplete'))
+    expect(sw).toMatch(/model_next = \$\{target\} AND embedding_next_hash = \$\{ARTICLE_TEXT_HASH\}/)
+    expect(sw).toMatch(/te\.vector_next_hash = \$\{TICKET_TEXT_HASH\}/)
+    // stale staged rows count as unfinished, so the pin does not move
+    expect(sw).toMatch(/embedding_next_hash IS DISTINCT FROM \$\{ARTICLE_TEXT_HASH\}/)
+  })
+
+  it('aborts the pass when the lease was taken over, and does not release the other holder\'s lease', async () => {
+    const embedMany = vi.fn()
+    const { db, executed } = fakeDb({ leased: true, articleRows: [{ id: 1, question: 'q', answer: 'a' }], renewFails: true })
+    common({ embedMany })
+    vi.doMock('@/lib/db/drizzle', () => ({ getDb: () => db }))
+    const { runEmbeddingMigration } = await import('@/lib/kb/embedding-migration')
+    await expect(runEmbeddingMigration(3)).rejects.toThrow(/lease/)
+    expect(embedMany).not.toHaveBeenCalled()
+    // release is conditional on the token this pass holds
+    const release = executed.filter((t) => t.includes('embedding_migration_lease_until = NULL'))
+    expect(release.length).toBe(1)
+    expect(release[0]).toContain('extract(epoch')
+  })
+
+  it('renew and release are conditional on the lease token', () => {
+    const s = SRC()
+    const leaseFns = s.slice(s.indexOf('async function acquireLease'), s.indexOf('// A staged vector'))
+    expect(leaseFns.match(/extract\(epoch from embedding_migration_lease_until\)::text = \$\{lease\.token\}/g)?.length).toBe(3)
   })
 })

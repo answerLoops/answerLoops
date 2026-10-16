@@ -173,7 +173,7 @@ export async function getKnowledgeGaps(limit = 50, orgId: number): Promise<Knowl
         OR (a.confidence IS NOT NULL AND a.confidence < 0.6 AND a.auto_deflected = 0)
         OR (t.status IN ('resolved', 'closed') AND t.category IN ('how_to', 'documentation'))
       )
-    ORDER BY a.confidence ASC NULLS LAST, t.created_at DESC
+    ORDER BY (t.ai_draft_status = 'needs_human') DESC, a.confidence ASC NULLS LAST, t.created_at DESC
     LIMIT ${limit}
   `)
   return (rows as unknown as Array<KnowledgeGap & { has_kb_article: boolean | number }>).map((r) => ({
@@ -186,7 +186,7 @@ export async function getKnowledgeGaps(limit = 50, orgId: number): Promise<Knowl
 // How many ranked gaps are pulled in to be clustered. Wider than the number of
 // rows the page shows, so repeats of one question are found even when they are
 // far apart in the ranking.
-const GAP_CLUSTER_POOL = 200
+export const GAP_CLUSTER_POOL = 200
 
 /**
  * Knowledge gaps with repeats of the same question folded into one entry,
@@ -221,16 +221,38 @@ export async function getKnowledgeGapClusters(limit = 50, orgId: number): Promis
 
 export interface GapCategorySummary {
   category: string
+  /** Open gap tickets in the category. */
   count: number
   avg_confidence: number | null
 }
 
-export async function getGapCategorySummary(orgId: number): Promise<GapCategorySummary[]> {
+export interface GapTicketTotals {
+  /** Every open gap ticket, regardless of how many the list shows. */
+  total: number
+  needs_human: number
+  low_confidence: number
+  no_kb_article: number
+  categories: GapCategorySummary[]
+}
+
+/**
+ * Totals over ALL open gap tickets, computed in SQL so they do not depend on
+ * how many tickets the grouped list pulls in. The summary cards and the
+ * category breakdown are both derived from this one result, so they always
+ * agree. The reason buckets use the same precedence as getKnowledgeGaps.
+ */
+export async function getGapTicketTotals(orgId: number): Promise<GapTicketTotals> {
   const rows = await getDb().execute(sql`
     SELECT
       COALESCE(t.category, 'uncategorized') AS category,
+      CASE
+        WHEN t.ai_draft_status = 'needs_human' THEN 'needs_human'
+        WHEN a.confidence IS NOT NULL AND a.confidence < 0.6 THEN 'low_confidence'
+        ELSE 'no_kb_article'
+      END AS gap_reason,
       COUNT(*)::int AS count,
-      AVG(a.confidence) AS avg_confidence
+      COUNT(a.confidence)::int AS conf_n,
+      COALESCE(SUM(a.confidence), 0) AS conf_sum
     FROM tickets t
     LEFT JOIN ai_assessments a ON a.ticket_id = t.id
     LEFT JOIN kb_articles k ON k.source_ticket_id = t.id AND k.org_id = ${orgId}
@@ -242,8 +264,37 @@ export async function getGapCategorySummary(orgId: number): Promise<GapCategoryS
         OR (a.confidence IS NOT NULL AND a.confidence < 0.6 AND a.auto_deflected = 0)
         OR (t.status IN ('resolved', 'closed') AND t.category IN ('how_to', 'documentation'))
       )
-    GROUP BY COALESCE(t.category, 'uncategorized')
-    ORDER BY COUNT(*) DESC
+    GROUP BY 1, 2
   `)
-  return rows as unknown as GapCategorySummary[]
+
+  const totals: GapTicketTotals = { total: 0, needs_human: 0, low_confidence: 0, no_kb_article: 0, categories: [] }
+  const byCategory = new Map<string, { count: number; confSum: number; confN: number }>()
+  for (const r of rows as unknown as Array<{
+    category: string
+    gap_reason: 'needs_human' | 'low_confidence' | 'no_kb_article'
+    count: number | string
+    conf_n: number | string
+    conf_sum: number | string
+  }>) {
+    const count = Number(r.count)
+    totals.total += count
+    if (r.gap_reason in totals) totals[r.gap_reason] += count
+    const entry = byCategory.get(r.category) ?? { count: 0, confSum: 0, confN: 0 }
+    entry.count += count
+    entry.confSum += Number(r.conf_sum)
+    entry.confN += Number(r.conf_n)
+    byCategory.set(r.category, entry)
+  }
+  totals.categories = [...byCategory.entries()]
+    .map(([category, e]) => ({
+      category,
+      count: e.count,
+      avg_confidence: e.confN > 0 ? e.confSum / e.confN : null,
+    }))
+    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category))
+  return totals
+}
+
+export async function getGapCategorySummary(orgId: number): Promise<GapCategorySummary[]> {
+  return (await getGapTicketTotals(orgId)).categories
 }

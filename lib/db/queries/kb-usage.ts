@@ -58,3 +58,22 @@ export async function getArticleUsage(
     recent: Number(r.recent),
   }))
 }
+
+// Usage rows are kept this long; the dashboard only reads the all-time total and
+// a 30-day window, so older day rows are folded into nothing and can go.
+export const ARTICLE_USAGE_RETENTION_DAYS = 400
+
+/**
+ * Deletes day rows older than the retention window and returns how many were
+ * removed. Meant to run from a periodic job.
+ */
+export async function pruneArticleUsage(retentionDays: number = ARTICLE_USAGE_RETENTION_DAYS): Promise<number> {
+  const days = Math.floor(retentionDays)
+  if (!Number.isFinite(days) || days < 1) throw new Error('retentionDays must be a positive integer')
+  const rows = await getDb().execute(sql`
+    DELETE FROM kb_article_usage
+    WHERE day < (now() AT TIME ZONE 'utc')::date - ${days}::int
+    RETURNING 1
+  `)
+  return (rows as unknown as unknown[]).length
+}

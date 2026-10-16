@@ -1,6 +1,6 @@
-import { auth } from '@/auth'
-import { getKnowledgeGapClusters, getGapCategorySummary } from '@/lib/db/queries/analytics'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { redirect } from 'next/navigation'
+import { requireOrgAccess } from '@/lib/auth/org'
+import { getKnowledgeGapClusters, getGapTicketTotals } from '@/lib/db/queries/analytics'
 import { planRequiredFor } from '@/lib/billing/entitlements'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { LockedFeature } from '@/components/billing/locked-feature'
@@ -24,8 +24,9 @@ const CATEGORY_LABEL: Record<string, string> = {
 }
 
 export default async function KnowledgeGapsPage() {
-  const session = await auth()
-  const orgId = session?.orgId ?? DEFAULT_ORG_ID
+  const access = await requireOrgAccess()
+  if (!access.ok) redirect('/login')
+  const orgId = access.orgId
 
   if (!(await orgHasFeature(orgId, 'knowledge_gap_dashboard'))) {
     return (
@@ -35,17 +36,19 @@ export default async function KnowledgeGapsPage() {
     )
   }
 
-  const [clusters, categorySummary] = await Promise.all([
+  // The summary cards and the category breakdown count every open gap ticket
+  // with one SQL aggregate, so they stay accurate and agree with each other at
+  // any workspace size. The list below folds repeats of the same question into
+  // one row and covers the most pressing of them.
+  const [totals, clusters] = await Promise.all([
+    getGapTicketTotals(orgId),
     getKnowledgeGapClusters(50, orgId),
-    getGapCategorySummary(orgId),
   ])
-
-  // One entry per distinct question: a question asked several times is a single
-  // gap here, shown with how many times it came up.
-  const totalGaps = clusters.length
-  const needsHuman = clusters.filter((c) => c.lead.gap_reason === 'needs_human').length
-  const lowConf = clusters.filter((c) => c.lead.gap_reason === 'low_confidence').length
-  const missingKB = clusters.filter((c) => c.lead.gap_reason === 'no_kb_article').length
+  const categorySummary = totals.categories
+  const totalGaps = totals.total
+  const needsHuman = totals.needs_human
+  const lowConf = totals.low_confidence
+  const missingKB = totals.no_kb_article
 
   return (
     <div className="dashboard-page max-w-6xl space-y-7">
@@ -74,7 +77,7 @@ export default async function KnowledgeGapsPage() {
       {/* Summary stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total gaps',        value: totalGaps,  color: 'text-white',      bg: 'bg-[#252525] border-slate-700 [&>p:first-child]:text-blue-200' },
+          { label: 'Open gap tickets',      value: totalGaps,  color: 'text-white',      bg: 'bg-[#252525] border-slate-700 [&>p:first-child]:text-blue-200' },
           { label: 'Needs human',       value: needsHuman, color: 'text-red-700',    bg: 'bg-red-50 border-red-100' },
           { label: 'Low confidence',    value: lowConf,    color: 'text-amber-700',  bg: 'bg-amber-50 border-amber-100' },
           { label: 'Missing KB article',value: missingKB,  color: 'text-blue-700',   bg: 'bg-blue-50 border-blue-100' },
@@ -91,8 +94,12 @@ export default async function KnowledgeGapsPage() {
         {/* Gap list */}
         <div className="lg:col-span-2 rounded-xl border border-gray-200 bg-white overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-900">Gap tickets</h2>
-            <p className="text-xs text-gray-400">Most-asked questions first. Create a KB article to close each gap</p>
+            <h2 className="text-sm font-semibold text-gray-900">Distinct questions</h2>
+            <p className="text-xs text-gray-400">
+              {clusters.length > 0
+                ? `Showing the ${clusters.length} most pressing distinct questions, most-asked first. Create a KB article to close each gap`
+                : 'Most-asked questions first. Create a KB article to close each gap'}
+            </p>
           </div>
 
           {clusters.length === 0 ? (
@@ -152,7 +159,7 @@ export default async function KnowledgeGapsPage() {
         <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100">
             <h2 className="text-sm font-semibold text-gray-900">Gaps by category</h2>
-            <p className="text-xs text-gray-400">Where to focus first</p>
+            <p className="text-xs text-gray-400">Open gap tickets per category</p>
           </div>
           {categorySummary.length === 0 ? (
             <div className="px-5 py-8 text-center text-xs text-gray-400">No data yet</div>

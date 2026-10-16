@@ -119,6 +119,6 @@ describe('site import: dedup stays batched', () => {
     const s = read('lib/ingest/url.ts')
     const batchIdx = s.indexOf('app.batchScrape(')
     const afterBatch = s.slice(batchIdx)
-    expect(afterBatch).toContain('getKBSourceByFilename(orgId, pageUrl)')
+    expect(afterBatch).toContain('sourceExists(orgId, pageUrl, reportedUrl)')
   })
 })

@@ -78,6 +78,16 @@ describe('getIntegrationByBotSecret', () => {
     expect(sql).toMatch(/order by "integrations"\."id"/i)
   })
 
+  it('matches on the digest only, with no comparison against the plaintext column', async () => {
+    const selects: Captured[] = []
+    intercept(PgSelectBase.prototype, () => [], 'select', selects)
+    const { getIntegrationByBotSecret } = await import('@/lib/db/queries/integrations')
+    await getIntegrationByBotSecret('raw-secret', 'telegram')
+    expect(selects[0].sql).not.toContain('"bot_secret" =')
+    expect(selects[0].sql).not.toMatch(/"bot_secret_hash" is null/i)
+    expect(selects[0].params).not.toContain('raw-secret')
+  })
+
   it('accepts a list of platforms', async () => {
     const selects: Captured[] = []
     intercept(PgSelectBase.prototype, () => [], 'select', selects)

@@ -9,6 +9,7 @@ const h = vi.hoisted(() => ({
   createArticleFromSource: vi.fn(),
   createKBSource: vi.fn(),
   updateKBSourceChunkCount: vi.fn(),
+  deleteKBSource: vi.fn(),
   chunks: [{ question: 'q', answer: 'a'.repeat(100) }] as { question: string; answer: string }[],
 }))
 
@@ -18,8 +19,13 @@ vi.mock('@/lib/ai/embed', () => ({
   embedTextWithModel: async (text: string, orgId?: number) => ({ embedding: await h.embedText(text, orgId), model: 'm' }),
   assertEmbeddingAvailable: h.assertEmbeddingAvailable,
 }))
-vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles, createArticleFromSource: h.createArticleFromSource }))
-vi.mock('@/lib/db/queries/kb-sources', () => ({ createKBSource: h.createKBSource, updateKBSourceChunkCount: h.updateKBSourceChunkCount }))
+vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles }))
+vi.mock('@/lib/db/queries/kb-article-cap', () => ({ createArticleFromSourceWithinCap: h.createArticleFromSource }))
+vi.mock('@/lib/db/queries/kb-sources', () => ({
+  createKBSource: h.createKBSource,
+  updateKBSourceChunkCount: h.updateKBSourceChunkCount,
+  deleteKBSource: h.deleteKBSource,
+}))
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }))
 vi.mock('@/lib/ingest/url', () => ({
   chunkMarkdown: () => h.chunks,
@@ -27,6 +33,9 @@ vi.mock('@/lib/ingest/url', () => ({
 vi.mock('@/lib/ingest/file-parsers', () => ({
   detectFileType: (n: string) => (n.endsWith('.txt') ? 'txt' : null),
   parseFile: async () => 'some text',
+  normalizeFileName: (n: string) => n,
+  MAX_EXTRACTED_TEXT_BYTES: 2 * 1024 * 1024,
+  FileParseError: class FileParseError extends Error {},
 }))
 
 import { NoAIProviderConfiguredError, PlatformBudgetExhaustedError } from '@/lib/ai/models'
@@ -46,6 +55,8 @@ beforeEach(() => {
   h.createKBSource.mockResolvedValue({ id: 3 })
   h.chunks = [{ question: 'q', answer: 'a'.repeat(100) }]
   h.embedText.mockResolvedValue([0.1])
+  h.createArticleFromSource.mockResolvedValue({ id: 1 })
+  h.deleteKBSource.mockResolvedValue(undefined)
 })
 
 describe('app/api/kb/upload/route.ts', () => {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useActionState, useState } from 'react'
+import { useActionState, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { addKnowledgeAction, type AddKnowledgeState } from '@/lib/actions/kb'
 
@@ -13,11 +13,36 @@ const ANSWER_MAX = 8000
  * answering immediately, so there is no draft step here — the review queue is
  * where unreviewed answers wait.
  */
-export function AddKnowledgeSection({ onAdded }: { onAdded?: () => void }) {
+export interface KnowledgeDraft {
+  /** The ticket the article is written from; saved with it so the gap closes. */
+  ticketId: number
+  question: string
+  answer: string
+}
+
+export function AddKnowledgeSection({
+  onAdded,
+  draft,
+  onDraftConsumed,
+}: {
+  onAdded?: () => void
+  /** Starting text, for an article written from a ticket. */
+  draft?: KnowledgeDraft | null
+  /** Called once the drafted article is saved, so the caller can drop the draft. */
+  onDraftConsumed?: () => void
+}) {
   // Controlled, because React resets an uncontrolled form after every action —
   // including a failed one, which would throw away what the person just typed.
   const [question, setQuestion] = useState('')
   const [answer, setAnswer] = useState('')
+  const [sourceTicketId, setSourceTicketId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (!draft) return
+    setQuestion(draft.question)
+    setAnswer(draft.answer)
+    setSourceTicketId(draft.ticketId)
+  }, [draft])
 
   const [state, formAction, pending] = useActionState(
     async (prev: AddKnowledgeState, formData: FormData): Promise<AddKnowledgeState> => {
@@ -25,6 +50,10 @@ export function AddKnowledgeSection({ onAdded }: { onAdded?: () => void }) {
       if (result && 'ok' in result) {
         setQuestion('')
         setAnswer('')
+        if (sourceTicketId !== null) {
+          setSourceTicketId(null)
+          onDraftConsumed?.()
+        }
         onAdded?.()
       }
       return result
@@ -48,6 +77,12 @@ export function AddKnowledgeSection({ onAdded }: { onAdded?: () => void }) {
       </p>
 
       <form action={formAction} className="mt-3 space-y-3">
+        {sourceTicketId !== null && <input type="hidden" name="sourceTicketId" value={sourceTicketId} />}
+        {sourceTicketId !== null && (
+          <p role="status" className="text-xs text-slate-600">
+            Started from a ticket. Edit the question and answer, then add it to close the gap.
+          </p>
+        )}
         <div>
           <label htmlFor="add-knowledge-question" className="text-xs font-medium text-slate-600">
             Question or title
