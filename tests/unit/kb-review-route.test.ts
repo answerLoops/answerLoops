@@ -177,7 +177,7 @@ describe('PATCH /api/kb/review/[id]', () => {
     expect(await res.json()).toEqual({ ok: true, articleId: 42 })
     expect(h.embedText).toHaveBeenCalledWith(`${approve.question}\n\n${approve.answer}`, 7)
     expect(h.approveReviewItem).toHaveBeenCalledWith(
-      { id: 5, question: approve.question, answer: approve.answer, embedding: [0.1, 0.2], model: 'test-embedding', reviewedBy: 3 },
+      { id: 5, question: approve.question, answer: approve.answer, embedding: [0.1, 0.2], model: 'test-embedding', reviewedBy: 3, cap: 2000 },
       7
     )
   })
@@ -188,6 +188,28 @@ describe('PATCH /api/kb/review/[id]', () => {
     const res = await PATCH(patchReq(approve), ctx())
     expect(res.status).toBe(400)
     expect(h.approveReviewItem).not.toHaveBeenCalled()
+  })
+
+  it('answers 400 with the full message when the write itself is refused at the limit', async () => {
+    const { ArticleCapReachedError } = await import('@/lib/db/queries/kb-article-cap')
+    h.approveReviewItem.mockRejectedValue(new ArticleCapReachedError())
+    const { PATCH } = await import('@/app/api/kb/review/[id]/route')
+    const res = await PATCH(patchReq(approve), ctx())
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: 'Knowledge base is full (2000 articles). Delete some before approving more.' })
+  })
+
+  it('still answers 500 for any other failure while approving', async () => {
+    h.approveReviewItem.mockRejectedValue(new Error('db down'))
+    const { PATCH } = await import('@/app/api/kb/review/[id]/route')
+    const res = await PATCH(patchReq(approve), ctx())
+    expect(res.status).toBe(500)
+  })
+
+  it('passes the per-org article limit to approveReviewItem', async () => {
+    const { PATCH } = await import('@/app/api/kb/review/[id]/route')
+    await PATCH(patchReq(approve), ctx())
+    expect(h.approveReviewItem.mock.calls[0][0]).toMatchObject({ cap: 2000 })
   })
 
   it('429s when approvals are rate limited, before spending an embedding', async () => {

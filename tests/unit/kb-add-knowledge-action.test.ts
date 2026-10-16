@@ -70,7 +70,8 @@ describe('addKnowledgeAction', () => {
     expect(h.embedText).toHaveBeenCalledWith(`${good.question}\n\n${good.answer}`, 7)
     expect(h.createArticle).toHaveBeenCalledExactlyOnceWith(
       { question: good.question, answer: good.answer, embedding: [0.1, 0.2], model: 'test-embedding' },
-      7
+      7,
+      2000
     )
     expect(h.refresh).toHaveBeenCalledOnce()
   })
@@ -115,6 +116,19 @@ describe('addKnowledgeAction', () => {
     expect(await run()).toMatchObject({ error: expect.stringMatching(/full \(2000 articles\)/) })
     expect(h.embedText).not.toHaveBeenCalled()
     expect(h.createArticle).not.toHaveBeenCalled()
+  })
+
+  it('turns a refusal at write time (a concurrent add filled the last slot) into the full message', async () => {
+    const { ArticleCapReachedError } = await import('@/lib/db/queries/kb-article-cap')
+    h.createArticle.mockRejectedValue(new ArticleCapReachedError())
+    expect(await run()).toEqual({ error: 'Your knowledge base is full (2000 articles). Delete some before adding more.' })
+    expect(h.refresh).not.toHaveBeenCalled()
+    expect(h.loggerError).not.toHaveBeenCalled()
+  })
+
+  it('passes the per-org article limit to createArticle so the write itself enforces it', async () => {
+    await run()
+    expect(h.createArticle.mock.calls[0][2]).toBe(2000)
   })
 
   it('tells the user to connect an AI provider when none is configured', async () => {

@@ -86,7 +86,8 @@ describe('promoteToKBAction', () => {
     expect(h.getTicketById).toHaveBeenCalledWith(12, 7)
     expect(h.createArticle).toHaveBeenCalledWith(
       expect.objectContaining({ question: 'Password reset', answer: ticket.resolution_notes, sourceTicketId: 12 }),
-      7
+      7,
+      2000
     )
   })
 
@@ -110,6 +111,18 @@ describe('promoteToKBAction', () => {
     h.countArticles.mockResolvedValue(MAX_ARTICLES_PER_ORG)
     expect(await promote()).toEqual({ error: expect.stringMatching(/full/i) })
     expect(h.createArticle).not.toHaveBeenCalled()
+  })
+
+  it('turns a refusal at write time into the full message', async () => {
+    const { ArticleCapReachedError } = await import('@/lib/db/queries/kb-article-cap')
+    h.createArticle.mockRejectedValue(new ArticleCapReachedError())
+    expect(await promote()).toEqual({ error: 'Your knowledge base is full (2000 articles). Delete some before adding more.' })
+    expect(h.refresh).not.toHaveBeenCalled()
+  })
+
+  it('passes the per-org article limit to createArticle so the write itself enforces it', async () => {
+    await promote()
+    expect(h.createArticle.mock.calls[0][2]).toBe(2000)
   })
 
   it('refuses an unresolved ticket and a ticket with no answer', async () => {
@@ -178,7 +191,7 @@ describe('addKnowledgeAction with a source ticket', () => {
   it('links the article to an org-scoped ticket', async () => {
     expect(await add(fields)).toEqual({ ok: true, articleId: 42 })
     expect(h.getTicketById).toHaveBeenCalledWith(12, 7)
-    expect(h.createArticle).toHaveBeenCalledWith(expect.objectContaining({ sourceTicketId: 12 }), 7)
+    expect(h.createArticle).toHaveBeenCalledWith(expect.objectContaining({ sourceTicketId: 12 }), 7, 2000)
   })
 
   it('rejects an invalid, foreign or already-covered ticket without writing', async () => {

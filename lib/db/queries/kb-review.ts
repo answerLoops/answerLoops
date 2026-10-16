@@ -1,6 +1,7 @@
 import { and, desc, eq, cosineDistance, inArray, isNotNull, lt, or, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbArticles, kbReviewItems } from '../schema'
+import { assertWithinArticleCap } from './kb-article-cap'
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected'
 export type ReviewSource = 'ticket' | 'widget'
@@ -218,6 +219,8 @@ export async function approveReviewItem(
     embedding: number[]
     model: string
     reviewedBy: number
+    /** Refuses with ArticleCapReachedError (and leaves the item pending) when the workspace is at this many articles. */
+    cap: number
   },
   orgId: number
 ): Promise<ReviewResolution & { articleId?: number }> {
@@ -244,6 +247,8 @@ export async function approveReviewItem(
         .limit(1)
       return { ok: false as const, reason: exists ? ('not_pending' as const) : ('not_found' as const) }
     }
+
+    await assertWithinArticleCap(tx, orgId, input.cap)
 
     const [article] = await tx
       .insert(kbArticles)

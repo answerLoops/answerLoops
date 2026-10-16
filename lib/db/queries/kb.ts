@@ -1,6 +1,7 @@
 import { eq, and, desc, sql, or, ilike, isNotNull, cosineDistance } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbArticles, tickets } from '../schema'
+import { assertWithinArticleCap } from './kb-article-cap'
 import type { KBArticle, KBSearchResult, PriorAnswer } from '@/types'
 
 export const KB_MATCH_THRESHOLD = 0.45
@@ -33,7 +34,11 @@ export async function createArticle(
     model: string
     sourceTicketId?: number
   },
-  orgId: number
+  orgId: number,
+  // When given, a new row is added only while the workspace is under this many
+  // articles (ArticleCapReachedError otherwise). Refreshing an article that
+  // already exists for the ticket adds no row, so it is never refused.
+  cap?: number
 ): Promise<KBArticle> {
   const db = getDb()
 
@@ -66,20 +71,26 @@ export async function createArticle(
     }
   }
 
-  const [row] = await db
-    .insert(kbArticles)
-    .values({
-      orgId,
-      question: input.question,
-      answer: input.answer,
-      embedding: JSON.stringify(input.embedding),
-      embeddingVec: input.embedding,
-      model: input.model,
-      sourceTicketId: input.sourceTicketId ?? null,
-    })
-    .returning()
+  const values = {
+    orgId,
+    question: input.question,
+    answer: input.answer,
+    embedding: JSON.stringify(input.embedding),
+    embeddingVec: input.embedding,
+    model: input.model,
+    sourceTicketId: input.sourceTicketId ?? null,
+  }
 
-  return toArticle(row)
+  if (cap === undefined) {
+    const [row] = await db.insert(kbArticles).values(values).returning()
+    return toArticle(row)
+  }
+
+  return db.transaction(async (tx) => {
+    await assertWithinArticleCap(tx, orgId, cap)
+    const [row] = await tx.insert(kbArticles).values(values).returning()
+    return toArticle(row)
+  })
 }
 
 async function getArticle(id: number): Promise<KBArticle | null> {

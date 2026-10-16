@@ -170,11 +170,11 @@ Nothing in the queue is searchable or shown to customers until you approve it. T
 
 The text of rejected items is removed, and the text of approved items is removed 90 days after review (the approved article keeps its own copy). The item and its counter stay so a repeated question is still recognised.
 
-Approved articles count toward the same 2,000-article limit as every other source.
+Approved articles count toward the same 2,000-article limit as every other source. The limit holds even when several people add articles at the same moment: once a workspace is full, further adds and approvals are declined with a message, and a declined approval stays in the queue.
 
 ## How the assistant uses your articles
 
-Matching articles are passed to the assistant as reference material to answer from.
+Matching articles are passed to the assistant as reference material to answer from. This is the same whether the question arrives through the widget, a channel, email, or the Agent API and MCP `generate_answer`.
 
 ## Article usage
 

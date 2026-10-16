@@ -146,6 +146,7 @@ describe('approveReviewItem', () => {
     embedding: [0.1],
     model: 'embed-model',
     reviewedBy: 12,
+    cap: 2000,
   })
 
   it('claims a pending item, publishes the edited text as an article and links it', async () => {
@@ -184,6 +185,66 @@ describe('approveReviewItem', () => {
     // the existence probe is org-scoped too, so another org's id reads as not_found
     const probe = calls.find(isSelectFrom)!
     expect(probe.params).toEqual(expect.arrayContaining([5, 3]))
+  })
+})
+
+describe('approveReviewItem with an article limit', () => {
+  const withCap = (cap: number) => ({
+    id: 5,
+    question: 'edited q',
+    answer: 'edited a',
+    embedding: [0.1],
+    model: 'embed-model',
+    reviewedBy: 12,
+    cap,
+  })
+  const scripted = (articleCount: number) => (c: Call) => {
+    if (c.sql.includes('count(*)')) return [[articleCount]]
+    if (isUpdate(c) && c.sql.includes('returning')) return [[5]]
+    if (isInsert(c)) return [[321]]
+    return []
+  }
+  const names = () => calls.map((c) => c.sql)
+
+  it('claims the item, takes the org lock, counts, then inserts, in that order', async () => {
+    respond = scripted(10)
+    const { approveReviewItem } = await import('@/lib/db/queries/kb-review')
+    expect(await approveReviewItem(withCap(2000), 3)).toEqual({ ok: true, articleId: 321 })
+    const claim = names().findIndex((q) => q.startsWith('update') && q.includes('returning'))
+    const lock = names().findIndex((q) => q.includes('pg_advisory_xact_lock'))
+    const count = names().findIndex((q) => q.includes('count(*)'))
+    const insert = names().findIndex((q) => q.startsWith('insert into "kb_articles"'))
+    expect(claim).toBeGreaterThan(names().indexOf('begin'))
+    expect(lock).toBeGreaterThan(claim)
+    expect(count).toBeGreaterThan(lock)
+    expect(insert).toBeGreaterThan(count)
+    expect(calls.find((c) => c.sql.includes('count(*)'))!.params).toContain(3)
+  })
+
+  it('publishes when exactly one slot is left', async () => {
+    respond = scripted(1999)
+    const { approveReviewItem } = await import('@/lib/db/queries/kb-review')
+    expect(await approveReviewItem(withCap(2000), 3)).toEqual({ ok: true, articleId: 321 })
+  })
+
+  it.each([2000, 2400])('refuses with ArticleCapReachedError at %i articles, inserting nothing and never committing', async (n) => {
+    respond = scripted(n)
+    const { approveReviewItem } = await import('@/lib/db/queries/kb-review')
+    const { ArticleCapReachedError } = await import('@/lib/db/queries/kb-article-cap')
+    await expect(approveReviewItem(withCap(2000), 3)).rejects.toBeInstanceOf(ArticleCapReachedError)
+    expect(calls.some(isInsert)).toBe(false)
+    // the claim ran inside the transaction that never committed, so the item stays pending
+    expect(names()).toContain('begin')
+    expect(names()).not.toContain('commit')
+    // exactly one update: the claim. Nothing links an article to the item.
+    expect(calls.filter(isUpdate)).toHaveLength(1)
+  })
+
+  it('does not check the limit for an item that is no longer pending', async () => {
+    respond = (c) => (isUpdate(c) ? [] : isSelectFrom(c) && !c.sql.includes('count(*)') ? [[5]] : [])
+    const { approveReviewItem } = await import('@/lib/db/queries/kb-review')
+    expect(await approveReviewItem(withCap(2000), 3)).toEqual({ ok: false, reason: 'not_pending' })
+    expect(names().some((q) => q.includes('pg_advisory_xact_lock'))).toBe(false)
   })
 })
 
