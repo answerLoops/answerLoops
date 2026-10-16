@@ -1,4 +1,4 @@
-import { eq, and, or, isNull, gt, inArray, asc, sql } from 'drizzle-orm'
+import { eq, and, isNull, gt, inArray, asc, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { integrations } from '../schema'
 import { encryptToken, decryptToken } from '@/lib/crypto/tokens'
@@ -131,8 +131,10 @@ export async function getIntegration(orgId: number, platform: Platform): Promise
  * for one channel never authenticates a request meant for another. Google
  * Chat has no shared secret and can never match here.
  *
- * Matching is by SHA-256 digest. Rows written by an older release (digest not
- * yet recorded) are matched on their legacy column and upgraded on the spot.
+ * Matching is by SHA-256 digest only. Migration 0047 recorded the digest for
+ * every row that held a legacy plaintext secret, and every write since stores
+ * it, so no row needs a plaintext comparison. A row that still carries the
+ * legacy plaintext column is upgraded to the encrypted copy when it is read.
  */
 export async function getIntegrationByBotSecret(
   botSecret: string,
@@ -147,10 +149,7 @@ export async function getIntegrationByBotSecret(
     .from(integrations)
     .where(
       and(
-        or(
-          eq(integrations.botSecretHash, hash),
-          and(isNull(integrations.botSecretHash), eq(integrations.botSecret, botSecret))
-        ),
+        eq(integrations.botSecretHash, hash),
         inArray(integrations.platform, platforms as Platform[]),
         eq(integrations.enabled, 1)
       )

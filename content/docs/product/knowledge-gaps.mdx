@@ -33,24 +33,24 @@ The page opens with four stat cards at the top:
 
 | Card | What it shows |
 |---|---|
-| **Total gaps** | Distinct open knowledge gaps across all channels. Repeats of the same question count once |
+| **Open gap tickets** | Every open gap ticket across all channels, however many there are. Each ticket counts once, so a question asked several times counts once per ticket |
 | **Needs human** | Gaps where the AI flagged the question as requiring human handling |
 | **Low confidence** | Gaps where the AI searched but confidence was below 0.6 |
 | **Missing KB article** | Resolved tickets with no covering KB content |
 
-Below the stat cards is the gap list, most-asked questions first. When several tickets ask the same question, they appear as one row with an **Asked N times** badge instead of N separate rows. The row links to the ticket that most needs an article: the one with the lowest AI confidence. Each row shows:
+The cards count tickets, so they stay accurate for workspaces of any size. Below them is the gap list, which groups tickets by question and shows the most pressing distinct questions, most-asked first. When several tickets ask the same question, they appear as one row with an **Asked N times** badge instead of N separate rows. The row links to the ticket that most needs an article: the one with the lowest AI confidence. Each row shows:
 
 - The original question (truncated)
 - The **reason badge** (Low confidence / Needs human / Missing KB article)
 - The **confidence %** for low-confidence gaps
 - The channel source (Discord, GitHub, Slack, etc.)
-- A **+ KB** button to jump directly to the Knowledge Base with the ticket pre-selected
+- A **+ KB** button that opens the Knowledge Base with the ticket's question and answer filled into the **Write an answer by hand** form (owners and admins)
 
 Two tickets count as the same question when their meaning is very close, using the same similarity test answerLoops uses to flag duplicate tickets. Tickets that haven't been embedded yet, or were embedded with a model you've since moved off, aren't merged and show as their own rows.
 
 Gaps are about tickets that were already handled. To turn *unseen* questions (from tickets and from the website widget) into articles before anyone has to resolve them by hand, use the [Review queue](/docs/product/knowledge-base#review-queue) on the Knowledge Base page.
 
-On the right side of the page, the **Category breakdown** sidebar groups gaps by topic category (counted per ticket, so repeats of one question each count) so you can spot clusters — if 12 gaps are all about your API authentication flow, that's your highest-value content to write next.
+On the right side of the page, the **Category breakdown** sidebar groups gaps by topic category (counted in open gap tickets, the same way as the stat cards, so the two always agree) so you can spot clusters — if 12 gaps are all about your API authentication flow, that's your highest-value content to write next.
 
 ---
 
@@ -64,8 +64,8 @@ On the right side of the page, the **Category breakdown** sidebar groups gaps by
     Click the gap summary to open the full ticket detail. Read the question and the human answer that resolved it (if available).
   </Step>
   <Step title="Add KB content">
-    Click **+ KB** next to the gap. This opens the Knowledge Base with the ticket pre-selected. You can:
-    - **Promote the ticket** — turn the human's resolution into a KB article in one click
+    Click **+ KB** next to the gap. This opens the Knowledge Base with the question and any existing answer from the ticket filled into the **Write an answer by hand** form. Edit the text and add it; the article is linked to the ticket, which closes the gap. Owners and admins can publish articles. You can also:
+    - **Promote the ticket** — from a resolved ticket, turn the human's resolution into a KB article in one click (owners and admins; counts toward the same hourly add limit and article cap as writing an article by hand)
     - **Upload a file** — add a doc that covers the topic
     - **Crawl a URL** — point answerLoops at an existing help article
   </Step>

@@ -47,7 +47,7 @@ describe('app/api/notion/sync-kb/route.ts — manual sync trigger', () => {
   it('exports POST, is auth-gated, and enqueues a background job instead of syncing inline', () => {
     expect(src).toContain('export async function POST')
     expect(src).toContain("requireOrgAccess(['owner', 'admin'])")
-    expect(src).toContain("enqueueKbSyncJob({ orgId: access.orgId, kind: 'notion' })")
+    expect(src).toContain("enqueueKbSyncJob({ orgId: access.orgId, kind: 'notion', pullForward: true })")
     // the heavy sync must not run in the request anymore
     expect(src).not.toContain('syncNotionToKB')
   })
@@ -62,7 +62,7 @@ describe('app/api/kb/sources/[id]/route.ts — publish toggle', () => {
 
   it('exports a PATCH handler that is auth-gated', () => {
     expect(src).toContain('export async function PATCH')
-    expect(src).toContain('requireOrgAccess()')
+    expect(src).toContain("requireOrgAccess(['owner', 'admin'])")
   })
 
   it('rejects any published value that is not exactly 0 or 1', () => {

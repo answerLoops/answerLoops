@@ -17,6 +17,7 @@ const h = vi.hoisted(() => ({
   getKBSourceByFilename: vi.fn(),
   createKBSource: vi.fn(),
   deleteKBSourcesByFilename: vi.fn(),
+  deleteKBSource: vi.fn(),
   updateKBSourceChunkCount: vi.fn(),
   swapKBSource: vi.fn(),
   createArticleFromSource: vi.fn(),
@@ -43,6 +44,7 @@ vi.mock('@/lib/db/queries/kb-sources', () => ({
   getKBSourceByFilename: h.getKBSourceByFilename,
   createKBSource: h.createKBSource,
   deleteKBSourcesByFilename: h.deleteKBSourcesByFilename,
+  deleteKBSource: h.deleteKBSource,
   updateKBSourceChunkCount: h.updateKBSourceChunkCount,
   swapKBSource: h.swapKBSource,
 }))
@@ -61,6 +63,14 @@ vi.mock('@/lib/notion/blocks-to-markdown', () => ({ blocksToMarkdown: h.blocksTo
 const NOTION_SOURCE_FILENAME = 'notion:workspace'
 const STAGING = 'notion:workspace:rebuilding'
 
+// Live source lookup, plus the staging row this worker created (id 200).
+function lookup(live: { id: number; published: number; chunk_count: number } | null) {
+  return async (_org: number, filename: string) => {
+    if (filename === STAGING) return { id: 200, published: 0, chunk_count: 0 }
+    return live
+  }
+}
+
 async function run(orgId = 7, opts?: { onProgress?: (d: number, t: number) => void }) {
   const { syncNotionToKB } = await import('@/lib/notion/kb-sync')
   return syncNotionToKB(orgId, opts)
@@ -70,7 +80,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.resetModules()
   h.getNotionConnectionRow.mockResolvedValue({ accessToken: 'enc:abc' })
-  h.getKBSourceByFilename.mockResolvedValue({ id: 100, published: 1, chunk_count: 12 })
+  h.getKBSourceByFilename.mockImplementation(lookup({ id: 100, published: 1, chunk_count: 12 }))
   h.countArticles.mockResolvedValue(12)
   h.decryptToken.mockReturnValue('ntn_realtoken')
   h.createKBSource.mockResolvedValue({ id: 200 })
@@ -103,7 +113,7 @@ describe('syncNotionToKB — fetch failure never touches the live source', () =>
 
   it('aborts before any source write when the token cannot be decrypted', async () => {
     h.decryptToken.mockReturnValue(null)
-    await expect(run()).rejects.toThrow(/decrypted/)
+    await expect(run()).rejects.toThrow(/could not be read/)
 
     expect(h.createKBSource).not.toHaveBeenCalled()
     expect(h.swapKBSource).not.toHaveBeenCalled()
@@ -124,8 +134,9 @@ describe('syncNotionToKB — fetch failure never touches the live source', () =>
     })
     await expect(run()).rejects.toThrow('chunker exploded')
     expect(h.swapKBSource).not.toHaveBeenCalled()
-    // once to clear a stale row before build, once to bin the failed staging row
-    expect(h.deleteKBSourcesByFilename).toHaveBeenCalledTimes(2)
+    // once by filename to clear a stale row before the build, then only the row this worker created
+    expect(h.deleteKBSourcesByFilename).toHaveBeenCalledTimes(1)
+    expect(h.deleteKBSource).toHaveBeenCalledWith(200, 7)
     for (const call of h.deleteKBSourcesByFilename.mock.calls) expect(call[1]).toBe(STAGING)
   })
 })
@@ -149,7 +160,7 @@ describe('syncNotionToKB — happy path swaps atomically', () => {
   })
 
   it('carries published:0 into the swap when the workspace was never published', async () => {
-    h.getKBSourceByFilename.mockResolvedValue({ id: 100, published: 0, chunk_count: 0 })
+    h.getKBSourceByFilename.mockImplementation(lookup({ id: 100, published: 0, chunk_count: 0 }))
     await run()
     expect(h.swapKBSource).toHaveBeenCalledWith(expect.objectContaining({ published: 0 }))
   })
@@ -166,7 +177,7 @@ describe('syncNotionToKB — happy path swaps atomically', () => {
     // 12 total articles, all 12 belonging to the existing Notion source →
     // full budget still available, sync proceeds.
     h.countArticles.mockResolvedValue(12)
-    h.getKBSourceByFilename.mockResolvedValue({ id: 100, published: 1, chunk_count: 12 })
+    h.getKBSourceByFilename.mockImplementation(lookup({ id: 100, published: 1, chunk_count: 12 }))
     const res = await run()
     expect(res.synced).toBe(1)
     expect(h.createKBSource).toHaveBeenCalled()
@@ -187,5 +198,31 @@ describe('syncNotionToKB — happy path swaps atomically', () => {
     expect(onProgress).toHaveBeenLastCalledWith(2, 2)
     expect(res.pagesCapped).toBe(true)
     expect(res.databasesCapped).toBe(false)
+  })
+})
+
+describe('syncNotionToKB — staging cleanup and lease loss', () => {
+  it('a lease loss never deletes the staging source and rethrows', async () => {
+    const { KbSyncLeaseLostError } = await import('@/lib/kb-sync/errors')
+    await expect(run(7, { onProgress: () => { throw new KbSyncLeaseLostError(1) } })).rejects.toBeInstanceOf(KbSyncLeaseLostError)
+    expect(h.deleteKBSource).not.toHaveBeenCalled()
+    expect(h.swapKBSource).not.toHaveBeenCalled()
+    // only the pre-build leftover clear ran
+    expect(h.deleteKBSourcesByFilename).toHaveBeenCalledTimes(1)
+  })
+
+  it('other errors still clean up the staging row this worker created', async () => {
+    h.chunkMarkdown.mockImplementation(() => { throw new Error('chunker exploded') })
+    await expect(run()).rejects.toThrow('chunker exploded')
+    expect(h.deleteKBSource).toHaveBeenCalledTimes(1)
+    expect(h.deleteKBSource).toHaveBeenCalledWith(200, 7)
+  })
+
+  it('leaves the live source untouched when the staging row has vanished', async () => {
+    h.getKBSourceByFilename.mockImplementation(async (_o: number, f: string) => (f === STAGING ? null : { id: 100, published: 1, chunk_count: 12 }))
+    await expect(run()).rejects.toThrow(/staging source no longer exists/)
+    expect(h.swapKBSource).not.toHaveBeenCalled()
+    expect(h.updateKBSourceChunkCount).not.toHaveBeenCalled()
+    expect(h.updateNotionKbState).not.toHaveBeenCalled()
   })
 })

@@ -44,7 +44,7 @@ describe('lib/db/queries/kb-sync-jobs.ts', () => {
 
   it('reclaim requeues a stuck job, or fails it once attempts are exhausted', () => {
     expect(src).toMatch(/WHEN attempts >= \$\{maxAttempts\} THEN 'failed' ELSE 'queued'/)
-    expect(src).toContain("status = 'running' AND started_at <")
+    expect(src).toContain("COALESCE(heartbeat_at, started_at::timestamptz) <")
   })
 
   it('finish stamps a terminal status and finished_at', () => {
@@ -92,15 +92,15 @@ describe('updateKbSyncJobProgress — current_item threading', () => {
   })
 
   it('binds the given title as current_item', async () => {
-    const execute = vi.fn().mockResolvedValue(undefined)
+    const execute = vi.fn().mockResolvedValue([{ id: 42 }])
     getDb.mockReturnValue({ execute })
 
     const { updateKbSyncJobProgress } = await import('@/lib/db/queries/kb-sync-jobs')
-    await updateKbSyncJobProgress(42, 3, 10, 'Some Title')
+    await updateKbSyncJobProgress(42, 2, 3, 10, 'Some Title')
 
     expect(execute).toHaveBeenCalledTimes(1)
     const query = execute.mock.calls[0][0] as { queryChunks: unknown[] }
-    expect(boundParams(query)).toEqual([3, 10, 'Some Title', 42])
+    expect(boundParams(query)).toEqual([3, 10, 'Some Title', 42, 2])
   })
 
   // Real regression this guards against: existing GitHub sync call sites
@@ -111,24 +111,24 @@ describe('updateKbSyncJobProgress — current_item threading', () => {
   // current_item would NOT be cleared back to null on a job that previously
   // had a title (e.g. reused across kinds), leaving a stale title on screen.
   it('defaults current_item to null (not undefined/omitted) when no title is passed', async () => {
-    const execute = vi.fn().mockResolvedValue(undefined)
+    const execute = vi.fn().mockResolvedValue([{ id: 42 }])
     getDb.mockReturnValue({ execute })
 
     const { updateKbSyncJobProgress } = await import('@/lib/db/queries/kb-sync-jobs')
-    await updateKbSyncJobProgress(42, 3, 10)
+    await updateKbSyncJobProgress(42, 2, 3, 10)
 
     const query = execute.mock.calls[0][0] as { queryChunks: unknown[] }
     const params = boundParams(query)
-    expect(params).toEqual([3, 10, null, 42])
+    expect(params).toEqual([3, 10, null, 42, 2])
     expect(params[2]).not.toBeUndefined()
   })
 
   it('scopes the write to status = running, so a reclaimed or finished job cannot be resurrected', async () => {
-    const execute = vi.fn().mockResolvedValue(undefined)
+    const execute = vi.fn().mockResolvedValue([{ id: 42 }])
     getDb.mockReturnValue({ execute })
 
     const { updateKbSyncJobProgress } = await import('@/lib/db/queries/kb-sync-jobs')
-    await updateKbSyncJobProgress(7, 1, 5, 'X')
+    await updateKbSyncJobProgress(7, 1, 1, 5, 'X')
 
     const query = execute.mock.calls[0][0] as { queryChunks: { value?: string[] }[] }
     const literalText = query.queryChunks

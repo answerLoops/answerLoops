@@ -7,7 +7,7 @@ import {
 } from '@/lib/db/queries/integrations'
 import { getEmailDomainByDomain } from '@/lib/db/queries/email-domains'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
-import { recordCustomerReply, getTicketById } from '@/lib/db/queries/tickets'
+import { recordCustomerReply, getTicketById, updateTicketAIDraftStatus } from '@/lib/db/queries/tickets'
 import { createNotification } from '@/lib/db/queries/notifications'
 import {
   recordInboundEmail,
@@ -27,6 +27,8 @@ import {
   canonicalMessageId,
   collectThreadIds,
 } from '@/lib/email/inbound'
+import { readSenderVerification, compactRawPayload, extractHeaderPairs } from '@/lib/email/sender-verification'
+import { clampIngestContent } from '@/lib/ingest/limits'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped, readBodyBytesCapped } from '@/lib/http/read-body-capped'
 import { logger } from '@/lib/logger'
@@ -187,7 +189,7 @@ export async function POST(req: NextRequest) {
         return new Response('Bad Request', { status: 400 })
       }
     }
-    headersRaw = data['headers'] ?? null
+    headersRaw = extractHeaderPairs(data)
   }
 
   // Per-org rate limit — a compromised/misbehaving upstream account shouldn't
@@ -234,7 +236,7 @@ export async function POST(req: NextRequest) {
       fromAddr: senderEmail,
       toAddr: toAddress || undefined,
       subject,
-      rawPayload: data,
+      rawPayload: compactRawPayload(data, headersRaw),
     })
     if (rec) await updateEmailMessageStatus(rec.id, 'rejected_loop')
     return Response.json({ ok: true })
@@ -253,7 +255,7 @@ export async function POST(req: NextRequest) {
     toAddr: toAddress || undefined,
     subject,
     spamVerdict,
-    rawPayload: data,
+    rawPayload: compactRawPayload(data, headersRaw),
   })
   if (!recorded) {
     logger.debug('duplicate inbound email — already recorded', { module: MOD, orgId, rfcMessageId })
@@ -304,19 +306,22 @@ export async function POST(req: NextRequest) {
   const threadIds = collectThreadIds(inReplyToHeader, referencesHeader)
   const existingTicketId = threadIds.length > 0 ? await findTicketByMessageIds(threadIds, orgId) : null
 
-  // A reply only joins an existing ticket when it comes from the address that
-  // opened that ticket; Message-IDs alone are not proof of who is writing.
-  // Anything else is handled as a new conversation below.
+  // A reply joins an existing ticket only when it comes from the address that
+  // opened that ticket. Anything else is handled as a new conversation below.
   const existingTicket = existingTicketId ? await getTicketById(existingTicketId, orgId) : null
   const replyMatchesTicketSender =
     !!existingTicket && (existingTicket.source_author_id ?? '').trim().toLowerCase() === senderEmail
 
-  if (existingTicketId && existingTicket && replyMatchesTicketSender) {
+  // Messages whose sender check does not pass are held for review and do not
+  // join an existing conversation.
+  const senderCheck = readSenderVerification(headersRaw, data)
+
+  if (existingTicketId && existingTicket && replyMatchesTicketSender && senderCheck.verified) {
     // Deliberately does NOT re-run the AI agent here — auto-replying to a
     // reply is exactly the shape of a mail loop, and the loop-guard headers
     // above don't catch every case. A staff notification keeps the loop-risk
     // surface minimal; a human decides whether an automated reply is safe.
-    await recordCustomerReply(existingTicketId, cleanText || content)
+    await recordCustomerReply(existingTicketId, clampIngestContent(cleanText || content))
     await setEmailMessageTicket(recorded.id, existingTicketId)
     await updateEmailMessageStatus(recorded.id, 'processed')
     await createNotification(
@@ -342,6 +347,19 @@ export async function POST(req: NextRequest) {
     },
     orgId
   )
+
+  if (!senderCheck.verified && !result.duplicate) {
+    // The ticket is held for a person before any answer is drafted or sent:
+    // the enrichment job runs after this response and stops on this status.
+    await updateTicketAIDraftStatus(result.ticket_id, 'needs_human')
+    await createNotification(
+      'new_question',
+      `Email from ${senderEmail} could not be matched to a verified sender and is waiting for review`,
+      result.ticket_id,
+      orgId
+    )
+    logger.info('inbound email held for review: sender not verified', { module: MOD, orgId, ticketId: result.ticket_id, source: senderCheck.source })
+  }
 
   await setEmailMessageTicket(recorded.id, result.ticket_id)
   await updateEmailMessageStatus(recorded.id, 'processed')

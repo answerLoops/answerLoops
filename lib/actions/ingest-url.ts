@@ -2,7 +2,8 @@
 
 import { z } from 'zod'
 import { requireOrgAccess } from '@/lib/auth/org'
-import { ingestUrl, ingestSite, IngestLimitError } from '@/lib/ingest/url'
+import { ingestValidatedUrl, ingestValidatedSite, IngestLimitError } from '@/lib/ingest/url'
+import { assertImportableUrl, UrlValidationError } from '@/lib/ingest/url-validation'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { aiUnavailableMessage } from '@/lib/ai/errors'
@@ -14,8 +15,9 @@ const Schema = z.object({
   mode: z.enum(['page', 'site']),
 })
 
-// Bound how often a workspace can trigger crawls (each one costs Firecrawl +
-// embedding calls). 10 imports per 10 minutes per org.
+// Each workspace can run 10 imports per 10 minutes. The key is distinct from
+// the shared ingest request budget in lib/ingest/limits so the two counters
+// never share a bucket.
 const IMPORT_MAX = 10
 const IMPORT_WINDOW_MS = 10 * 60_000
 
@@ -46,7 +48,7 @@ export async function ingestUrlAction(
     return { error: 'URL import is not configured for this workspace. Contact your administrator.' }
   }
 
-  const limit = await rateLimitShared(`ingest:${orgId}`, IMPORT_MAX, IMPORT_WINDOW_MS)
+  const limit = await rateLimitShared(`kb-url-import:${orgId}`, IMPORT_MAX, IMPORT_WINDOW_MS)
   if (!limit.ok) {
     const mins = Math.ceil(limit.retryAfterMs / 60_000)
     return { error: `Import rate limit reached. Try again in ${mins} minute${mins === 1 ? '' : 's'}.` }
@@ -58,8 +60,11 @@ export async function ingestUrlAction(
   const { url, mode } = parsed.data
 
   try {
+    // Check the address once, with a clear message, before any work starts.
+    // The importers take the checked address so it is not looked up again.
+    const checked = await assertImportableUrl(url, { resolveDns: !MOCK_EXTERNALS })
     if (mode === 'site') {
-      const result = await ingestSite(url, orgId)
+      const result = await ingestValidatedSite(checked, orgId, undefined, url.trim())
       return {
         created: result.created,
         pages: result.pages,
@@ -69,11 +74,11 @@ export async function ingestUrlAction(
         incomplete: result.incomplete,
       }
     } else {
-      const result = await ingestUrl(url, orgId)
+      const result = await ingestValidatedUrl(checked, orgId, url.trim())
       return { created: result.created, skipped: result.skipped ? 1 : 0 }
     }
   } catch (err) {
-    if (err instanceof IngestLimitError) return { error: err.message }
+    if (err instanceof IngestLimitError || err instanceof UrlValidationError) return { error: err.message }
     if (err instanceof NoAIProviderConfiguredError) {
       return { error: aiUnavailableMessage(err, 'No AI provider is set up for this workspace. Add one in Settings → AI Model, then import again.') }
     }

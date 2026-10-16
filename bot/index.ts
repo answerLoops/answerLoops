@@ -30,6 +30,8 @@ import { startSlackPoller, reloadSlackPoller, stopSlackPoller } from '../lib/sla
 import { getOrgsPendingPurge, hardPurgeOrg } from '../lib/db/queries/orgs'
 import { getStuckPendingTickets } from '../lib/db/queries/tickets'
 import { claimNextKbSyncJob, reclaimStuckKbSyncJobs } from '../lib/db/queries/kb-sync-jobs'
+import { purgeExpiredReviewText } from '../lib/db/queries/kb-review'
+import { pruneArticleUsage } from '../lib/db/queries/kb-usage'
 import { getDirectDatabaseUrl } from '../lib/db/direct-url'
 import { getDeploymentMode } from '../lib/billing/plans'
 import { getOrgIdsWithFlag } from '../lib/db/queries/feature-flags'
@@ -40,6 +42,26 @@ const MOD = 'bot'
 // elapsed. Deletion is rare and the check itself is a single indexed query,
 // so a coarse interval is plenty — this only needs to run at all, not fast.
 const ORG_PURGE_SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000
+
+// Daily housekeeping for KB data: blank visitor text on rejected / old approved
+// review items and drop article-usage rows past their retention window.
+const KB_RETENTION_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000
+
+function startKbRetentionSweep(): void {
+  const sweep = async () => {
+    try {
+      const cleared = await purgeExpiredReviewText()
+      const pruned = await pruneArticleUsage()
+      if (cleared > 0 || pruned > 0) {
+        logger.info('kb retention sweep complete', { module: MOD, cleared, pruned })
+      }
+    } catch (err) {
+      logger.error('kb retention sweep failed', { module: MOD, error: err })
+    }
+  }
+  sweep().catch(() => {})
+  setInterval(() => { sweep().catch(() => {}) }, KB_RETENTION_SWEEP_INTERVAL_MS)
+}
 
 function startOrgPurgeSweep(): void {
   const sweep = async () => {
@@ -171,7 +193,10 @@ function startEmbeddingMigrationSweep(): void {
 // that kept the database compute from ever autosuspending, running up
 // compute-hour billing for no work being done.
 const KB_SYNC_SAFETY_SWEEP_INTERVAL_MS = 5 * 60 * 1000
-const KB_SYNC_STUCK_THRESHOLD_MS = 15 * 60 * 1000
+// A running job refreshes its heartbeat every ~30s (and on each progress write);
+// it is reclaimed once the heartbeat is this stale. Jobs held back by a cooldown
+// are picked up by the next safety sweep after they become due.
+const KB_SYNC_STUCK_THRESHOLD_MS = 5 * 60 * 1000
 const KB_SYNC_MAX_ATTEMPTS = 3
 const KB_SYNC_JOBS_PER_TICK = 3
 
@@ -787,6 +812,7 @@ async function main() {
   // before the LISTEN connection, so its `trigger` exists when the
   // kb_sync_job_queued handler is wired.
   startOrgPurgeSweep()
+  startKbRetentionSweep()
   startStuckTicketSweep()
   startEmbeddingMigrationSweep()
 

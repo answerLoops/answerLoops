@@ -121,3 +121,98 @@ describe('AddKnowledgeSection', () => {
     expect(onAdded).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('AddKnowledgeSection started from a ticket', () => {
+  it('prefills the fields, sends the ticket id, and reports the draft consumed on success', async () => {
+    const user = userEvent.setup()
+    const onDraftConsumed = vi.fn()
+    const { AddKnowledgeSection } = await import('@/components/dashboard/add-knowledge-section')
+    render(
+      <AddKnowledgeSection
+        draft={{ ticketId: 12, question: 'Password reset', answer: 'Use the reset link.' }}
+        onDraftConsumed={onDraftConsumed}
+      />
+    )
+    await waitFor(() => expect(questionBox().value).toBe('Password reset'))
+    expect(answerBox().value).toBe('Use the reset link.')
+
+    await user.click(submit())
+    await waitFor(() => expect(h.addKnowledgeAction).toHaveBeenCalledOnce())
+    const formData = h.addKnowledgeAction.mock.calls[0][1] as FormData
+    expect(formData.get('sourceTicketId')).toBe('12')
+    await waitFor(() => expect(onDraftConsumed).toHaveBeenCalledOnce())
+    expect(questionBox().value).toBe('')
+  })
+
+  it('sends no ticket id without a draft', async () => {
+    const user = userEvent.setup()
+    await renderSection()
+    await user.type(questionBox(), 'Q')
+    await user.type(answerBox(), 'A')
+    await user.click(submit())
+    await waitFor(() => expect(h.addKnowledgeAction).toHaveBeenCalledOnce())
+    expect((h.addKnowledgeAction.mock.calls[0][1] as FormData).has('sourceTicketId')).toBe(false)
+  })
+
+  const draft = { ticketId: 12, question: 'Password reset', answer: 'Use the reset link.' }
+
+  it('keeps the person\'s edits to the prefilled text and submits them', async () => {
+    const user = userEvent.setup()
+    const { AddKnowledgeSection } = await import('@/components/dashboard/add-knowledge-section')
+    render(<AddKnowledgeSection draft={draft} />)
+    await waitFor(() => expect(answerBox().value).toBe(draft.answer))
+    await user.type(answerBox(), ' It expires in 1 hour.')
+    expect(answerBox().value).toBe('Use the reset link. It expires in 1 hour.')
+    expect(questionBox().value).toBe('Password reset')
+    await user.click(submit())
+    await waitFor(() => expect(h.addKnowledgeAction).toHaveBeenCalledOnce())
+    const formData = h.addKnowledgeAction.mock.calls[0][1] as FormData
+    expect(formData.get('answer')).toBe('Use the reset link. It expires in 1 hour.')
+    expect(formData.get('sourceTicketId')).toBe('12')
+  })
+
+  it('tells the person the text came from a ticket, and not otherwise', async () => {
+    const { AddKnowledgeSection } = await import('@/components/dashboard/add-knowledge-section')
+    const { unmount } = render(<AddKnowledgeSection />)
+    expect(screen.queryByText(/started from a ticket/i)).toBeNull()
+    unmount()
+    render(<AddKnowledgeSection draft={draft} />)
+    expect(await screen.findByText(/started from a ticket/i)).toBeTruthy()
+  })
+
+  it('does not report the draft consumed when saving fails, and keeps the ticket link for a retry', async () => {
+    const user = userEvent.setup()
+    const onDraftConsumed = vi.fn()
+    h.addKnowledgeAction.mockResolvedValueOnce({ error: 'Try again later.' })
+    const { AddKnowledgeSection } = await import('@/components/dashboard/add-knowledge-section')
+    render(<AddKnowledgeSection draft={draft} onDraftConsumed={onDraftConsumed} />)
+    await waitFor(() => expect(questionBox().value).toBe('Password reset'))
+    await user.click(submit())
+    expect((await screen.findByRole('alert')).textContent).toContain('Try again later.')
+    expect(onDraftConsumed).not.toHaveBeenCalled()
+    expect(questionBox().value).toBe('Password reset')
+
+    await user.click(submit())
+    await waitFor(() => expect(h.addKnowledgeAction).toHaveBeenCalledTimes(2))
+    expect((h.addKnowledgeAction.mock.calls[1][1] as FormData).get('sourceTicketId')).toBe('12')
+    await waitFor(() => expect(onDraftConsumed).toHaveBeenCalledOnce())
+  })
+
+  it('omits the ticket id on a manual add that follows a consumed draft, and fires the callback only once', async () => {
+    const user = userEvent.setup()
+    const onDraftConsumed = vi.fn()
+    const { AddKnowledgeSection } = await import('@/components/dashboard/add-knowledge-section')
+    render(<AddKnowledgeSection draft={draft} onDraftConsumed={onDraftConsumed} />)
+    await waitFor(() => expect(questionBox().value).toBe('Password reset'))
+    await user.click(submit())
+    await waitFor(() => expect(onDraftConsumed).toHaveBeenCalledOnce())
+    await waitFor(() => expect(questionBox().value).toBe(''))
+
+    await user.type(questionBox(), 'Another?')
+    await user.type(answerBox(), 'Yes.')
+    await user.click(submit())
+    await waitFor(() => expect(h.addKnowledgeAction).toHaveBeenCalledTimes(2))
+    expect((h.addKnowledgeAction.mock.calls[1][1] as FormData).has('sourceTicketId')).toBe(false)
+    expect(onDraftConsumed).toHaveBeenCalledOnce()
+  })
+})

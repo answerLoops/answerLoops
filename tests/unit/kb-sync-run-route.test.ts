@@ -50,7 +50,7 @@ describe('app/api/kb/sync-jobs/run/route.ts', () => {
     const closeIdx = src.indexOf('})', throttleIdx)
     const sinkBody = src.slice(throttleIdx, closeIdx + 2)
     expect(sinkBody).toMatch(/\(done,\s*total,\s*item\)\s*=>/)
-    expect(sinkBody).toContain('updateKbSyncJobProgress(jobId, done, total, item)')
+    expect(sinkBody).toContain('updateKbSyncJobProgress(jobId, attempt, done, total, item)')
   })
 
   it('surfaces the Notion page/database caps in the job detail', () => {
@@ -59,8 +59,8 @@ describe('app/api/kb/sync-jobs/run/route.ts', () => {
   })
 
   it('records success/failure on the job and never 500s a terminal job', () => {
-    expect(src).toContain("finishKbSyncJob(job.id, { status: 'succeeded'")
-    expect(src).toContain("finishKbSyncJob(job.id, { status: 'failed'")
+    expect(src).toContain("finishKbSyncJob(jobId, attempt, { status: 'succeeded'")
+    expect(src).toContain("finishKbSyncJob(jobId, attempt, { status: 'failed'")
     // failure path returns 200 (Response.json) not a 500
     expect(src).toMatch(/catch \(err\) \{[\s\S]*finishKbSyncJob[\s\S]*Response\.json\(\{ ok: true, ran: true, failed: true \}\)/)
   })

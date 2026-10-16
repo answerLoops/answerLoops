@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   index,
   jsonb,
+  boolean,
   timestamp,
   date,
   vector,
@@ -360,8 +361,21 @@ export const kbSyncJobs = pgTable(
     createdAt: text('created_at').notNull().default(now),
     startedAt: text('started_at'),
     finishedAt: text('finished_at'),
+    // Bumped by the worker while it runs; the sweep reclaims a running job only
+    // once this goes stale (drizzle/0056_kb_sync_job_lease.sql).
+    heartbeatAt: timestamp('heartbeat_at', { withTimezone: true, mode: 'string' }),
+    // A queued job is not claimed before this time (cooldown between runs).
+    notBefore: timestamp('not_before', { withTimezone: true, mode: 'string' }),
+    // Another trigger arrived while this job was running; finishing it queues
+    // exactly one follow-up run.
+    rerunRequested: boolean('rerun_requested').notNull().default(false),
   },
-  (t) => [index('idx_kb_sync_jobs_status').on(t.status, t.createdAt)]
+  (t) => [
+    index('idx_kb_sync_jobs_status').on(t.status, t.createdAt),
+    uniqueIndex('kb_sync_jobs_one_active')
+      .on(t.orgId, t.kind, sql`COALESCE(${t.repoId}, 0)`)
+      .where(sql`status IN ('queued', 'running')`),
+  ]
 )
 
 // A connected Notion workspace, one row per org. The pasted internal
@@ -413,6 +427,7 @@ export const kbArticles = pgTable(
   },
   (t) => [
     index('idx_kb_articles_published').on(t.published),
+    index('idx_kb_articles_org_published').on(t.orgId, t.published),
     index('idx_kb_articles_source').on(t.sourceTicketId),
     index('idx_kb_articles_source_id').on(t.sourceId),
     index('idx_kb_articles_embedding_vec').using('hnsw', t.embeddingVec.op('vector_cosine_ops')),
@@ -460,6 +475,9 @@ export const kbReviewItems = pgTable(
     model: text('model'),
     confidence: doublePrecision('confidence'),
     occurrences: integer('occurrences').notNull().default(1),
+    // Per-day cap bookkeeping for repeat-question merges.
+    mergeDay: date('merge_day'),
+    mergeDayCount: integer('merge_day_count').notNull().default(0),
     // 'pending' | 'approved' | 'rejected' (CHECK constraint in the migration).
     status: text('status').notNull().default('pending'),
     articleId: integer('article_id').references(() => kbArticles.id, { onDelete: 'set null' }),

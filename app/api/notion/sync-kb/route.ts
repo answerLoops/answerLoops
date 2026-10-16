@@ -14,7 +14,7 @@ export async function POST() {
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
 
   try {
-    const job = await enqueueKbSyncJob({ orgId: access.orgId, kind: 'notion' })
+    const job = await enqueueKbSyncJob({ orgId: access.orgId, kind: 'notion', pullForward: true })
     return NextResponse.json({ jobId: job.id, status: job.status, alreadyQueued: !job.created })
   } catch (err) {
     logger.error('failed to enqueue notion kb sync', { module: MOD, orgId: access.orgId, error: err })

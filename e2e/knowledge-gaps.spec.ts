@@ -64,4 +64,21 @@ test.describe('knowledge gaps page', () => {
     // from them.
     await expect(page.locator(`a[href="/tickets/${ticketId}"]`)).toHaveCount(0)
   })
+
+  test('+ KB opens the add-knowledge form filled in from the ticket', async ({ request, page }) => {
+    const ticketId = await ingest(request, { content: 'How do I configure the client connection?' })
+    await waitForPipeline(request, ticketId)
+
+    await page.goto(`/tickets/${ticketId}`)
+    const statusForm = page.locator('form:has(select[name="status"])')
+    await statusForm.locator('input[name="staffName"]').fill('Sarah')
+    await statusForm.locator('select[name="status"]').selectOption('resolved')
+    await statusForm.getByRole('button', { name: 'Update status' }).click()
+    await waitForTicketField(request, ticketId, 'status', 'resolved')
+
+    await page.goto('/knowledge-gaps')
+    await page.locator(`a[href="/kb?sourceTicket=${ticketId}"]`).click()
+    await expect(page).toHaveURL(new RegExp(`/kb\\?sourceTicket=${ticketId}`))
+    await expect(page.getByLabel('Question or title')).not.toHaveValue('')
+  })
 })

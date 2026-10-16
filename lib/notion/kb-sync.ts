@@ -3,11 +3,13 @@ import { embedTextWithModel } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import { logger } from '@/lib/logger'
+import { KbSyncUserError, KbSyncLeaseLostError } from '@/lib/kb-sync/errors'
 import { decryptToken } from '@/lib/crypto/tokens'
 import { getNotionConnectionRow, updateNotionKbState } from '@/lib/db/queries/notion'
 import {
   createKBSource,
   getKBSourceByFilename,
+  deleteKBSource,
   deleteKBSourcesByFilename,
   updateKBSourceChunkCount,
   swapKBSource,
@@ -63,7 +65,7 @@ export async function syncNotionToKB(
   opts: KbSyncProgressOpts = {},
 ): Promise<NotionSyncResult> {
   const conn = await getNotionConnectionRow(orgId)
-  if (!conn) throw new Error('Notion is not connected')
+  if (!conn) throw new KbSyncUserError('Notion is not connected — connect it in Settings, then sync again.')
 
   let pagesCapped = false
   let databasesCapped = false
@@ -96,7 +98,7 @@ export async function syncNotionToKB(
     workCount = 1
   } else {
     const token = decryptToken(conn.accessToken)
-    if (!token) throw new Error('Notion token could not be decrypted — reconnect the workspace')
+    if (!token) throw new KbSyncUserError('Notion token could not be read — reconnect the workspace, then sync again.')
 
     const search = await notionSearchAll(token)
     const { pages, databases } = search
@@ -182,10 +184,17 @@ export async function syncNotionToKB(
     opts.onProgress?.(docs.length, docs.length)
   } catch (err) {
     // Build blew up entirely — bin the staging row, leave the live source alone.
-    await deleteKBSourcesByFilename(orgId, NOTION_SOURCE_STAGING_FILENAME)
+    // After a lease loss another worker may own the staging source: leave it.
+    // Otherwise remove only the row this worker created.
+    if (!(err instanceof KbSyncLeaseLostError)) await deleteKBSource(source.id, orgId)
     throw err
   }
 
+  // If the staging source vanished, leave the live source untouched.
+  const stagingNow = await getKBSourceByFilename(orgId, NOTION_SOURCE_STAGING_FILENAME)
+  if (!stagingNow || stagingNow.id !== source.id) {
+    throw new Error('staging source no longer exists; sync aborted before replacing the live source')
+  }
   await updateKBSourceChunkCount(source.id, created)
 
   // ---- Swap phase: retire the old source and promote the new one atomically. ----

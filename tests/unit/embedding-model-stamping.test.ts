@@ -78,8 +78,8 @@ describe('the KB review queue (kb_review_items) follows the same model rules', (
   })
 
   it('a new review item is stamped with the workspace pin', () => {
-    const insert = recordFn().slice(recordFn().indexOf('db.insert(kbReviewItems)'))
-    expect(insert).toMatch(/model: sql`\(SELECT embedding_model_in_use FROM orgs WHERE id = \$\{orgId\}\)`/)
+    const insert = recordFn().slice(recordFn().indexOf('INSERT INTO kb_review_items'))
+    expect(insert).toMatch(/\(SELECT embedding_model_in_use FROM orgs WHERE id = \$\{orgId\}\)/)
   })
 
   it('approving a review item stamps the article with the model that made its vector', () => {

@@ -39,6 +39,13 @@ describe('embedQueryCached', () => {
     expect(h.embedText).toHaveBeenCalledTimes(2)
   })
 
+  it('serves a repeat query from the cache while the org still has no pin', async () => {
+    h.pin = null
+    await embedQueryCached('pricing', 1)
+    await embedQueryCached('pricing', 1)
+    expect(h.embedText).toHaveBeenCalledTimes(1)
+  })
+
   it('caches the first vector for an org with no pin yet under the model that made it', async () => {
     h.pin = null
     await embedQueryCached('pricing', 1)

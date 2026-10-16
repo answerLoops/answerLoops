@@ -1,12 +1,13 @@
 import { NextRequest } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
-import { detectFileType, parseFile } from '@/lib/ingest/file-parsers'
+import { detectFileType, parseFile, FileParseError, MAX_EXTRACTED_TEXT_BYTES, normalizeFileName } from '@/lib/ingest/file-parsers'
 import { chunkMarkdown } from '@/lib/ingest/url'
 import { embedTextWithModel, assertEmbeddingAvailable } from '@/lib/ai/embed'
 import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
-import { countArticles, createArticleFromSource } from '@/lib/db/queries/kb'
-import { createKBSource, updateKBSourceChunkCount } from '@/lib/db/queries/kb-sources'
+import { countArticles } from '@/lib/db/queries/kb'
+import { createArticleFromSourceWithinCap } from '@/lib/db/queries/kb-article-cap'
+import { createKBSource, deleteKBSource, updateKBSourceChunkCount } from '@/lib/db/queries/kb-sources'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyBytesCapped } from '@/lib/http/read-body-capped'
 import { logger } from '@/lib/logger'
@@ -21,8 +22,8 @@ const TOO_LARGE_MESSAGE = 'File too large. Max size is 10 MB.'
 const MAX_CHUNKS_PER_FILE = 200
 
 export async function POST(req: NextRequest) {
-  const access = await requireOrgAccess()
-  if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return Response.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
   const orgId = access.orgId
 
   const limit = await rateLimitShared(`kb-upload:${orgId}`, 10, 10 * 60_000)
@@ -60,7 +61,12 @@ export async function POST(req: NextRequest) {
     return Response.json({ error: TOO_LARGE_MESSAGE }, { status: 413 })
   }
 
-  const fileType = detectFileType(file.name)
+  const fileName = normalizeFileName(file.name)
+  if (!fileName) {
+    return Response.json({ error: 'The file needs a name.' }, { status: 400 })
+  }
+
+  const fileType = detectFileType(fileName)
   if (!fileType) {
     return Response.json({ error: 'Unsupported file type. Supported: PDF, DOCX, MD, TXT, CSV.' }, { status: 400 })
   }
@@ -89,15 +95,23 @@ export async function POST(req: NextRequest) {
   try {
     text = await parseFile(buffer, fileType)
   } catch (err) {
-    logger.error('file parse failed', { module: MOD, filename: file.name, error: err })
-    return Response.json({ error: 'Failed to parse file. Check the file is not corrupted.' }, { status: 400 })
+    logger.error('file parse failed', { module: MOD, filename: fileName, error: err })
+    const message = err instanceof FileParseError ? err.message : 'Failed to parse file. Check the file is not corrupted.'
+    return Response.json({ error: message }, { status: 400 })
+  }
+
+  if (Buffer.byteLength(text, 'utf-8') > MAX_EXTRACTED_TEXT_BYTES) {
+    return Response.json(
+      { error: 'This file contains too much text to import (limit 2 MB of text). Split it into smaller files.' },
+      { status: 400 },
+    )
   }
 
   if (!text.trim()) {
     return Response.json({ error: 'File appears to be empty or contains no extractable text.' }, { status: 400 })
   }
 
-  const chunks = chunkMarkdown(text, file.name.replace(/\.[^.]+$/, '')).slice(0, MAX_CHUNKS_PER_FILE)
+  const chunks = chunkMarkdown(text, fileName.replace(/\.[^.]+$/, '')).slice(0, MAX_CHUNKS_PER_FILE)
 
   if (chunks.length === 0) {
     return Response.json({ error: 'No content chunks could be extracted from this file.' }, { status: 400 })
@@ -105,7 +119,7 @@ export async function POST(req: NextRequest) {
 
   const source = await createKBSource({
     orgId,
-    filename: file.name,
+    filename: fileName,
     fileType,
     sizeBytes: file.size,
   })
@@ -119,13 +133,17 @@ export async function POST(req: NextRequest) {
   for (const chunk of chunks.slice(0, budget)) {
     try {
       const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
-      await createArticleFromSource({
+      const row = await createArticleFromSourceWithinCap({
         question: chunk.question,
         answer: chunk.answer,
         embedding,
         model,
         sourceId: source.id,
-      }, orgId)
+      }, orgId, MAX_ARTICLES_PER_ORG)
+      if (!row) {
+        stoppedBecause = `Knowledge base is full (${MAX_ARTICLES_PER_ORG} articles). Delete some before uploading more.`
+        break
+      }
       created++
     } catch (err) {
       if (err instanceof NoAIProviderConfiguredError) {
@@ -136,20 +154,31 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (created === 0) {
+    // Nothing landed: remove the empty source so uploading the file again is
+    // not blocked by a leftover record.
+    await deleteKBSource(source.id, orgId).catch((err) =>
+      logger.warn('could not remove empty upload source', { module: MOD, sourceId: source.id, error: err }),
+    )
+    return Response.json(
+      { error: stoppedBecause ?? 'None of the content in this file could be added. Try again in a moment.' },
+      { status: stoppedBecause ? 400 : 502 },
+    )
+  }
+
   await updateKBSourceChunkCount(source.id, created)
 
-  logger.info('file ingested', { module: MOD, filename: file.name, created, sourceId: source.id, stopped: !!stoppedBecause })
+  logger.info('file ingested', { module: MOD, filename: fileName, created, sourceId: source.id, stopped: !!stoppedBecause })
 
   if (stoppedBecause) {
-    if (created === 0) return Response.json({ error: stoppedBecause }, { status: 400 })
     // Some of the file made it in: keep it and say how far the upload got.
     return Response.json({
       created,
       sourceId: source.id,
-      filename: file.name,
-      error: `Added ${created} of ${budget} sections from ${file.name}. ${stoppedBecause}`,
+      filename: fileName,
+      error: `Added ${created} of ${budget} sections from ${fileName}. ${stoppedBecause}`,
     })
   }
 
-  return Response.json({ created, sourceId: source.id, filename: file.name })
+  return Response.json({ created, sourceId: source.id, filename: fileName })
 }

@@ -51,7 +51,7 @@ test.describe('knowledge base', () => {
 
   test('search returns nothing for a blank query', async ({ request }) => {
     const res = await request.get('/api/kb/search?q=')
-    expect(await res.json()).toEqual([])
+    expect(await res.json()).toEqual({ results: [], degraded: false })
   })
 
   test('the KB page renders promoted articles', async ({ request, page }) => {
