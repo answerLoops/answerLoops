@@ -17,7 +17,7 @@ describe('github push webhook — branch filter + enqueue', () => {
   })
 
   it('enqueues a job instead of running syncRepoToKB inline', () => {
-    expect(src).toContain("enqueueKbSyncJob({ orgId: actualOrgId, kind: 'github_repo', repoId: dbRepo.id })")
+    expect(src).toMatch(/enqueueKbSyncJob\(\{\s*orgId: actualOrgId,\s*kind: 'github_repo',\s*repoId: dbRepo\.id,/)
     // no inline sync call left in the push branch
     expect(src).not.toContain('await syncRepoToKB(')
   })

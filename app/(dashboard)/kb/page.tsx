@@ -9,7 +9,8 @@ import { ingestUrlAction } from '@/lib/actions/ingest-url'
 import type { IngestUrlResult } from '@/lib/actions/ingest-url'
 import { runKbSync } from '@/lib/kb/sync-client'
 import { NotionKBSection } from '@/components/dashboard/notion-kb-section'
-import { AddKnowledgeSection } from '@/components/dashboard/add-knowledge-section'
+import { AddKnowledgeSection, type KnowledgeDraft } from '@/components/dashboard/add-knowledge-section'
+import { getTicketDraftAction } from '@/lib/actions/kb'
 import { CoverageTab } from './coverage-tab'
 import { ReviewTab } from './review-tab'
 import type { ReviewCounts } from '@/lib/db/queries/kb-review'
@@ -49,11 +50,60 @@ async function fetchKbSources(): Promise<KBSource[] | null> {
   return res.ok ? ((await res.json()) as KBSource[]) : null
 }
 
+const DELETE_FORBIDDEN_MESSAGE = 'Only workspace owners and admins can delete knowledge base content.'
+
+interface BulkDeleteResult {
+  deletedIds: number[]
+  failedIds: number[]
+  forbidden: boolean
+}
+
+/** Deletes each id and reports which ones the server actually removed. */
+async function deleteEach(basePath: string, ids: number[]): Promise<BulkDeleteResult> {
+  const outcomes = await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const res = await fetch(`${basePath}/${id}`, { method: 'DELETE' })
+        return { id, ok: res.ok, status: res.status }
+      } catch {
+        return { id, ok: false, status: 0 }
+      }
+    })
+  )
+  return {
+    deletedIds: outcomes.filter((o) => o.ok).map((o) => o.id),
+    failedIds: outcomes.filter((o) => !o.ok).map((o) => o.id),
+    forbidden: outcomes.some((o) => o.status === 403),
+  }
+}
+
+function deleteErrorMessage(result: BulkDeleteResult, noun: string): string {
+  const total = result.deletedIds.length + result.failedIds.length
+  const partial =
+    result.deletedIds.length > 0
+      ? `Deleted ${result.deletedIds.length} of ${total} ${noun}${total !== 1 ? 's' : ''}. `
+      : ''
+  const reason = result.forbidden
+    ? DELETE_FORBIDDEN_MESSAGE
+    : `Could not delete ${result.failedIds.length === 1 ? 'one' : result.failedIds.length} ${noun}${result.failedIds.length !== 1 ? 's' : ''}. Try again.`
+  return partial + reason
+}
+
+function DeleteError({ message }: { message: string | null }) {
+  if (!message) return null
+  return (
+    <p role="alert" className="break-words rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+      {message}
+    </p>
+  )
+}
+
 function SourcesList({ onDeleted }: { onDeleted: () => void }) {
   const [sources, setSources] = useState<KBSource[]>([])
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [confirmBulk, setConfirmBulk] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   async function load() {
     const data = await fetchKbSources()
@@ -90,11 +140,20 @@ function SourcesList({ onDeleted }: { onDeleted: () => void }) {
 
   async function handleDeleteSelected() {
     setBulkDeleting(true)
-    await Promise.all([...selected].map(id => fetch(`/api/kb/sources/${id}`, { method: 'DELETE' })))
+    setDeleteError(null)
+    const result = await deleteEach('/api/kb/sources', [...selected])
     setBulkDeleting(false)
     setConfirmBulk(false)
-    await load()
-    onDeleted()
+    if (result.deletedIds.length > 0) {
+      // Reload so the list shows what is really left, then keep only the
+      // sources that failed selected so they can be retried.
+      await load()
+      onDeleted()
+    }
+    if (result.failedIds.length > 0) {
+      setSelected(new Set(result.failedIds))
+      setDeleteError(deleteErrorMessage(result, 'source'))
+    }
   }
 
   if (sources.length === 0) return null
@@ -132,6 +191,7 @@ function SourcesList({ onDeleted }: { onDeleted: () => void }) {
           )
         )}
       </div>
+      {deleteError && <div className="px-4 pt-3"><DeleteError message={deleteError} /></div>}
       <ul className="divide-y divide-gray-100">
         {sources.map((s) => (
           <li key={s.id} className="flex items-center gap-3 px-4 py-3">
@@ -466,6 +526,7 @@ function ArticlesList({ articles, onDeleted }: { articles: (Article | KBSearchRe
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [confirmBulk, setConfirmBulk] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const allChecked = articles.length > 0 && selected.size === articles.length
   const someChecked = selected.size > 0
@@ -484,11 +545,14 @@ function ArticlesList({ articles, onDeleted }: { articles: (Article | KBSearchRe
 
   async function handleDeleteSelected() {
     setBulkDeleting(true)
-    await Promise.all([...selected].map(id => fetch(`/api/kb/articles/${id}`, { method: 'DELETE' })))
+    setDeleteError(null)
+    const result = await deleteEach('/api/kb/articles', [...selected])
     setBulkDeleting(false)
     setConfirmBulk(false)
-    setSelected(new Set())
-    onDeleted()
+    // Keep only the articles that failed selected so they can be retried.
+    setSelected(new Set(result.failedIds))
+    if (result.failedIds.length > 0) setDeleteError(deleteErrorMessage(result, 'article'))
+    if (result.deletedIds.length > 0) onDeleted()
   }
 
   return (
@@ -522,6 +586,7 @@ function ArticlesList({ articles, onDeleted }: { articles: (Article | KBSearchRe
           )
         )}
       </div>
+      <DeleteError message={deleteError} />
       <ul className="space-y-2">
         {articles.map((a) => (
           <li key={a.id} className="flex items-start gap-3 bg-white rounded-lg border border-gray-200 p-4">
@@ -585,6 +650,42 @@ export default function KBPage() {
       .catch(() => {})
     return () => { cancelled = true }
   }, [])
+
+  // "+ KB" on the Knowledge Gaps page links here with ?sourceTicket=<id>; the
+  // server action re-checks the workspace and role before returning any text.
+  const sourceTicketParam = searchParams.get('sourceTicket')
+  const [draft, setDraft] = useState<KnowledgeDraft | null>(null)
+  const [loadError, setDraftError] = useState<string | null>(null)
+  const sourceTicketValid = sourceTicketParam !== null && /^[1-9]\d{0,9}$/.test(sourceTicketParam)
+  const draftError =
+    sourceTicketParam !== null && !sourceTicketValid ? 'That ticket link is not valid.' : loadError
+
+  useEffect(() => {
+    if (sourceTicketParam === null || !sourceTicketValid) return
+    let cancelled = false
+    getTicketDraftAction(Number(sourceTicketParam))
+      .then((result) => {
+        if (cancelled) return
+        if (result.ok) {
+          setDraftError(null)
+          setDraft({ ticketId: result.ticketId, question: result.question, answer: result.answer })
+        } else {
+          setDraftError(result.error)
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDraftError('Could not load that ticket. Try again.')
+      })
+    return () => { cancelled = true }
+  }, [sourceTicketParam, sourceTicketValid])
+
+  function clearSourceTicket() {
+    setDraft(null)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('sourceTicket')
+    const qs = params.toString()
+    router.replace(qs ? `/kb?${qs}` : '/kb', { scroll: false })
+  }
 
   function setTab(id: KBTabId) {
     const params = new URLSearchParams(searchParams.toString())
@@ -704,7 +805,12 @@ export default function KBPage() {
       ) : (
         <>
 
-      <AddKnowledgeSection onAdded={loadAll} />
+      {draftError && (
+        <p role="alert" className="break-words rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          {draftError}
+        </p>
+      )}
+      <AddKnowledgeSection onAdded={loadAll} draft={draft} onDraftConsumed={clearSourceTicket} />
       <GitHubKBSection onSynced={loadAll} />
       <NotionKBSection onSynced={() => { loadAll(); refreshSources() }} />
       <FileUploadSection onImported={() => { loadAll(); refreshSources() }} />

@@ -10,6 +10,7 @@ import { chatModel, DEFAULT_FAST_MODEL, NoAIProviderConfiguredError } from '@/li
 import { embedQueryCached } from '@/lib/widget/embed-cache'
 import { buildGenuiTools } from '@/lib/widget/genui-tools'
 import { flattenMastraStream } from '@/lib/widget/mastra-stream'
+import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import { getKBContext } from '@/lib/db/queries/kb'
 import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
 import { countArticleUsage } from '@/lib/kb/usage'
@@ -412,9 +413,9 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
 
   const allContext = await (run.context ?? retrieveContext(query, org.id))
   const contextBlock = allContext.length
-    ? `\n\nKnowledge base context — use this to answer:\n${allContext
-        .map((c, i) => `${i + 1}. Title: "${c.summary}"\n   Answer: ${c.answer}`)
-        .join('\n')}`
+    ? `\n\nKnowledge base context — use this to answer. ${REFERENCE_MATERIAL_NOTICE}\n${renderReferenceBlock(
+        allContext.map((c) => ({ question: c.summary, answer: c.answer }))
+      )}`
     : ''
 
   // resourceId scopes memory to this org+visitor; threadId reuses the same

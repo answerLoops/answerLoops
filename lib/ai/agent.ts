@@ -21,6 +21,7 @@ import { updateTicketAIDraftStatus, getTicketById } from '@/lib/db/queries/ticke
 import { logger } from '@/lib/logger'
 import { countArticleUsage } from '@/lib/kb/usage'
 import type { PriorAnswer, TicketCategory } from '@/types'
+import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import type { Match } from '@/lib/ai/related'
 
 const MOD = 'ai/agent'
@@ -163,6 +164,18 @@ export async function runAIAgent(
   slackChannelId?: string,
   slackThreadTs?: string
 ): Promise<void> {
+  // A ticket already held for a person gets no draft and no automated message.
+  let held: Awaited<ReturnType<typeof getTicketById>> | null = null
+  try {
+    held = await getTicketById(ticketId, orgId)
+  } catch {
+    held = null
+  }
+  if (held?.ai_draft_status === 'needs_human') {
+    logger.info('ticket held for review — skipping automated answer', { module: MOD, ticketId, orgId })
+    return
+  }
+
   // Load escalation config for this platform (github/mcp have no integrations row — returns null)
   const integration = platform === 'github' || platform === 'mcp'
     ? null
@@ -297,9 +310,7 @@ export async function runAIAgent(
 
   // Prior resolved answers for similar questions — prefer reusing these.
   const priorContext = priorAnswers.length
-    ? `\n\nThe team has already answered similar questions before. Prefer reusing and adapting these resolved answers when they fit${hasCodeSearch ? '; only search the source code if they don’t fully cover the question' : ''}:\n${priorAnswers
-        .map((p, i) => `${i + 1}. Q: ${p.summary}\n   A: ${p.answer}`)
-        .join('\n')}`
+    ? `\n\nThe team has already answered similar questions before. Prefer reusing and adapting these resolved answers when they fit${hasCodeSearch ? '; only search the source code if they don’t fully cover the question' : ''}:\n\n${REFERENCE_MATERIAL_NOTICE}\n${renderReferenceBlock(priorAnswers.map((p) => ({ question: p.summary, answer: p.answer })))}`
     : ''
 
   const system = hasCodeSearch

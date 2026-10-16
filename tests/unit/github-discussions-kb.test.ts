@@ -61,7 +61,7 @@ describe('lib/github/kb-sync.ts — discussion sync', () => {
 
   it('dedups KB articles per discussion via sourcePage = discussion number, not by re-creating on every sync', () => {
     // Backfill (fresh source each run — create is correct here)
-    expect(src).toMatch(/createArticleFromSource\(\s*\{ question: article\.question, answer: article\.answer, embedding, model, sourceId: source\.id, sourcePage: d\.number \}/)
+    expect(src).toMatch(/createArticleFromSource\(\s*\{ question: article\.question, answer: article\.answer, embedding, model, sourceId: source\.id, sourcePage: d\.number, published: 0 \}/)
     // Webhook path (persistent source — must upsert, not duplicate on re-answer)
     expect(src).toContain('upsertArticleFromSource(')
     expect(src).toMatch(/sourcePage: discussion\.number/)
@@ -125,7 +125,7 @@ describe('KB sync worker backfills discussions too', () => {
   // enqueues a job, and the bot-driven run route does both syncs.
   it('the enqueue route no longer runs the sync inline', () => {
     const src = read('app/api/github/sync-kb/route.ts')
-    expect(src).toContain("enqueueKbSyncJob({ orgId: access.orgId, kind: 'github_repo', repoId: repo.id })")
+    expect(src).toContain("enqueueKbSyncJob({ orgId: access.orgId, kind: 'github_repo', repoId: repo.id, pullForward: true })")
     expect(src).not.toContain('syncRepoToKB')
     expect(src).not.toContain('syncDiscussionsToKB')
   })

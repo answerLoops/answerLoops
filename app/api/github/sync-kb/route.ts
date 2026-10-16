@@ -10,8 +10,8 @@ const MOD = 'api/github/sync-kb'
 // and discussion sync work runs in the bot-driven job, off the request path
 // (see app/api/kb/sync-jobs/run/route.ts).
 export async function POST(req: NextRequest) {
-  const access = await requireOrgAccess()
-  if (!access.ok) return NextResponse.json({ error: access.error }, { status: 401 })
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
 
   const repoId = Number(req.nextUrl.searchParams.get('repo_id'))
   if (!repoId) return NextResponse.json({ error: 'Missing repo_id' }, { status: 400 })
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   if (!repo) return NextResponse.json({ error: 'Repo not found' }, { status: 404 })
 
   try {
-    const job = await enqueueKbSyncJob({ orgId: access.orgId, kind: 'github_repo', repoId: repo.id })
+    const job = await enqueueKbSyncJob({ orgId: access.orgId, kind: 'github_repo', repoId: repo.id, pullForward: true })
     return NextResponse.json({ jobId: job.id, status: job.status, alreadyQueued: !job.created })
   } catch (err) {
     logger.error('failed to enqueue github kb sync', { module: MOD, orgId: access.orgId, repoId, error: err })

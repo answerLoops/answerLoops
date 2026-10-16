@@ -1,9 +1,14 @@
-import { eq, and, desc, sql, or, like, isNotNull, cosineDistance } from 'drizzle-orm'
+import { eq, and, desc, sql, or, ilike, isNotNull, cosineDistance } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbArticles, tickets } from '../schema'
 import type { KBArticle, KBSearchResult, PriorAnswer } from '@/types'
 
-const KB_MATCH_THRESHOLD = 0.45
+export const KB_MATCH_THRESHOLD = 0.45
+
+// Candidates the HNSW index examines per query. The default (40) can return
+// fewer rows than asked for once the org/published/model filters discard
+// most of the nearest neighbours, so it is raised for the duration of the scan.
+const HNSW_EF_SEARCH = 200
 
 function toArticle(row: typeof kbArticles.$inferSelect): KBArticle {
   return {
@@ -126,27 +131,89 @@ export async function listArticles(publishedOnly = true, orgId: number): Promise
 // possible for legacy rows written before this column existed — a new write
 // with a mismatched dimension fails at insert instead, see schema.ts) are
 // excluded rather than silently scored as a zero match.
+// Iterative index scans (hnsw.iterative_scan) arrived in pgvector 0.8.0.
+const ITERATIVE_SCAN_MIN_VERSION = [0, 8, 0] as const
+
+export function isIterativeScanVersion(version: string): boolean {
+  const parts = version.trim().split('.').map((p) => Number.parseInt(p, 10))
+  if (parts.length === 0 || parts.some((n, i) => i < 3 && !Number.isFinite(n))) return false
+  for (let i = 0; i < 3; i++) {
+    const have = parts[i] ?? 0
+    const need = ITERATIVE_SCAN_MIN_VERSION[i]
+    if (have !== need) return have > need
+  }
+  return true
+}
+
+let iterativeScanSupport: Promise<boolean> | null = null
+
+/**
+ * Whether the connected pgvector build supports iterative scans. Looked up once
+ * per process; a failed lookup counts as unsupported so search keeps working
+ * with the index's default behaviour.
+ */
+function supportsIterativeScan(): Promise<boolean> {
+  iterativeScanSupport ??= (async () => {
+    try {
+      const res = (await getDb().execute(
+        sql`select extversion from pg_extension where extname = 'vector'`
+      )) as unknown as { rows?: Array<{ extversion?: string }> } | Array<{ extversion?: string }>
+      const rows = Array.isArray(res) ? res : (res.rows ?? [])
+      const version = rows[0]?.extversion
+      return typeof version === 'string' && isIterativeScanVersion(version)
+    } catch {
+      return false
+    }
+  })()
+  return iterativeScanSupport
+}
+
+/** Test hook: forget the cached pgvector capability lookup. */
+export function resetIterativeScanSupportCache(): void {
+  iterativeScanSupport = null
+}
+
+/** Escapes LIKE wildcard characters so a query is matched as literal text. */
+export function escapeLikePattern(text: string): string {
+  return text.replace(/[\\%_]/g, (c) => `\\${c}`)
+}
+
 export async function searchArticles(vector: number[], limit = 10, orgId: number): Promise<KBSearchResult[]> {
   const distance = cosineDistance(kbArticles.embeddingVec, vector)
   const maxDistance = 1 - KB_MATCH_THRESHOLD
 
-  const rows = await getDb()
-    .select({ article: kbArticles, distance })
-    .from(kbArticles)
-    .where(
-      and(
-        eq(kbArticles.published, 1),
-        eq(kbArticles.orgId, orgId),
-        isNotNull(kbArticles.embeddingVec),
-        // Only rows on the workspace's pinned embedding model: a row from any
-        // other model is skipped until the re-embed job moves it, so two
-        // models never meet in one similarity score (lib/ai/embedding-pin.ts).
-        sql`${kbArticles.model} = (SELECT embedding_model_in_use FROM orgs WHERE id = ${orgId})`,
-        sql`${distance} <= ${maxDistance}`
-      )
+  const iterative = await supportsIterativeScan()
+
+  const rows = await getDb().transaction(async (tx) => {
+    // Per-scan settings in one statement (is_local = true, so they end with the
+    // transaction). strict_order keeps exact distance ordering while the index
+    // keeps scanning past rows the org/published/model filters discard.
+    // ef_search exists on every pgvector build with HNSW; iterative_scan only
+    // on the versions detected above.
+    await tx.execute(
+      iterative
+        ? sql`select set_config('hnsw.ef_search', ${String(HNSW_EF_SEARCH)}, true), set_config('hnsw.iterative_scan', 'strict_order', true)`
+        : sql`select set_config('hnsw.ef_search', ${String(HNSW_EF_SEARCH)}, true)`
     )
-    .orderBy(distance)
-    .limit(limit)
+
+    return tx
+      .select({ article: kbArticles, distance })
+      .from(kbArticles)
+      .where(
+        and(
+          eq(kbArticles.published, 1),
+          eq(kbArticles.orgId, orgId),
+          isNotNull(kbArticles.embeddingVec),
+          // Only rows on the workspace's pinned embedding model: a row from any
+          // other model is skipped until the re-embed job moves it, so two
+          // models never meet in one similarity score (lib/ai/embedding-pin.ts).
+          sql`${kbArticles.model} = (SELECT embedding_model_in_use FROM orgs WHERE id = ${orgId})`,
+          sql`${distance} <= ${maxDistance}`
+        )
+      )
+      .orderBy(distance)
+      .limit(limit)
+  })
 
   return rows.map((r) => ({
     ...toArticle(r.article),
@@ -155,7 +222,7 @@ export async function searchArticles(vector: number[], limit = 10, orgId: number
 }
 
 export async function textSearchArticles(query: string, limit = 10, orgId: number): Promise<KBArticle[]> {
-  const pattern = `%${query}%`
+  const pattern = `%${escapeLikePattern(query)}%`
   const rows = await getDb()
     .select()
     .from(kbArticles)
@@ -163,7 +230,7 @@ export async function textSearchArticles(query: string, limit = 10, orgId: numbe
       and(
         eq(kbArticles.published, 1),
         eq(kbArticles.orgId, orgId),
-        or(like(kbArticles.question, pattern), like(kbArticles.answer, pattern))
+        or(ilike(kbArticles.question, pattern), ilike(kbArticles.answer, pattern))
       )
     )
     .orderBy(desc(kbArticles.updatedAt))

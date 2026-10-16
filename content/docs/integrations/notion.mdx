@@ -49,7 +49,7 @@ Go to **Integrations → Notion**, paste the access token from step 1, and click
 
 Go to the **Knowledge Base** page. The Notion panel there has a **Sync now** button. Each sync walks every shared page and database, converts the content to text, splits it into chunks, and embeds it — the same pipeline every other KB source uses. Re-syncing **replaces** the previous Notion content (it does not merge), so removing a page from the integration's access and re-syncing removes it from the KB.
 
-Clicking **Sync now** queues a background job — the panel shows it as queued, then `Syncing N/M` as it works through the pages, then done, and it's safe to leave the page. The sync no longer runs inside the button's request, which used to time out on any sizeable workspace. A second **Sync now** while one is still running is a no-op.
+Clicking **Sync now** queues a background job — the panel shows it as queued, then `Syncing N/M` as it works through the pages, then done, and it's safe to leave the page. The sync no longer runs inside the button's request, which used to time out on any sizeable workspace. A second **Sync now** while one is still running is a no-op. A running sync reports a heartbeat; if it stops reporting for several minutes it is picked up again, and the earlier run stops without overwriting the newer one. If a sync fails, the Knowledge Base page shows a plain-language reason and the technical detail is kept in the server log.
 
 Use **Sync now** to refresh imported content after editing your Notion pages.
 

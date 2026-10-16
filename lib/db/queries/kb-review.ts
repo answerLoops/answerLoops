@@ -1,4 +1,4 @@
-import { and, desc, eq, cosineDistance, inArray, isNotNull, sql } from 'drizzle-orm'
+import { and, desc, eq, cosineDistance, inArray, isNotNull, lt, or, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbArticles, kbReviewItems } from '../schema'
 
@@ -33,6 +33,16 @@ export const REVIEW_DUPLICATE_SIMILARITY = 0.85
 // Hard ceiling on unreviewed items per org. Public surfaces (the widget) feed
 // this queue, so it must not be able to grow without bound.
 export const MAX_PENDING_REVIEW_ITEMS = 500
+
+// Most times one item's occurrence count can rise in a single UTC day.
+export const MAX_DAILY_OCCURRENCE_INCREMENTS = 20
+
+// Review text of rejected items, and of approved items older than this, is
+// cleared (the approved text lives on in the published article).
+export const REVIEW_TEXT_RETENTION_DAYS = 90
+
+// Advisory-lock namespace for queue inserts, per org.
+const REVIEW_INSERT_LOCK_KEY = 5107
 
 function toItem(row: typeof kbReviewItems.$inferSelect): KBReviewItem {
   return {
@@ -132,33 +142,65 @@ export async function recordReviewItem(
     .limit(1)
 
   if (duplicate) {
-    await db
-      .update(kbReviewItems)
-      .set({ occurrences: sql`${kbReviewItems.occurrences} + 1`, updatedAt: new Date().toISOString() })
-      .where(and(eq(kbReviewItems.id, duplicate.id), eq(kbReviewItems.orgId, orgId)))
+    // Counted at most MAX_DAILY_OCCURRENCE_INCREMENTS times per UTC day; the
+    // count then holds until the next day.
+    await db.execute(sql`
+      UPDATE kb_review_items
+      SET occurrences = occurrences + 1,
+          merge_day_count = CASE WHEN merge_day = (now() AT TIME ZONE 'UTC')::date THEN merge_day_count + 1 ELSE 1 END,
+          merge_day = (now() AT TIME ZONE 'UTC')::date,
+          updated_at = ${new Date().toISOString()}
+      WHERE id = ${duplicate.id}
+        AND org_id = ${orgId}
+        AND (merge_day IS DISTINCT FROM (now() AT TIME ZONE 'UTC')::date
+             OR merge_day_count < ${MAX_DAILY_OCCURRENCE_INCREMENTS})
+    `)
     return 'merged'
   }
 
-  const [{ n: pending }] = await db
-    .select({ n: sql<number>`COUNT(*)::int` })
-    .from(kbReviewItems)
-    .where(and(eq(kbReviewItems.orgId, orgId), eq(kbReviewItems.status, 'pending')))
-  if (pending >= MAX_PENDING_REVIEW_ITEMS) return 'full'
-
-  await db.insert(kbReviewItems).values({
-    orgId,
-    source: input.source,
-    ticketId: input.ticketId ?? null,
-    question: input.question,
-    answer: input.answer,
-    embeddingVec: input.embedding,
-    // Callers embed through the workspace's pin (lib/ai/embed.ts), so the
-    // vector belongs to the pinned model.
-    model: sql`(SELECT embedding_model_in_use FROM orgs WHERE id = ${orgId})`,
-    confidence: input.confidence ?? null,
+  // The queue-size check and the insert are one statement, run under a per-org
+  // lock, so concurrent captures keep the queue within its limit.
+  const inserted = await db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(${REVIEW_INSERT_LOCK_KEY}, ${orgId})`)
+    const rows = (await tx.execute(sql`
+      INSERT INTO kb_review_items (org_id, source, ticket_id, question, answer, embedding_vec, model, confidence)
+      SELECT ${orgId}, ${input.source}, ${input.ticketId ?? null}, ${input.question}, ${input.answer},
+             ${JSON.stringify(input.embedding)}::vector,
+             (SELECT embedding_model_in_use FROM orgs WHERE id = ${orgId}),
+             ${input.confidence ?? null}
+      WHERE (SELECT COUNT(*) FROM kb_review_items WHERE org_id = ${orgId} AND status = 'pending') < ${MAX_PENDING_REVIEW_ITEMS}
+      RETURNING id
+    `)) as unknown as { id: number }[]
+    return rows.length > 0
   })
-  return 'created'
+  return inserted ? 'created' : 'full'
 }
+
+/**
+ * Clears the question and answer text of rejected items and of approved items
+ * reviewed more than REVIEW_TEXT_RETENTION_DAYS ago, across every org. Rows,
+ * counts and similarity vectors stay, so a rejected gap is still recognised
+ * as a repeat. Idempotent. Returns how many rows were cleared. Call it on a
+ * schedule (for example once a day from the bot process).
+ */
+export async function purgeExpiredReviewText(now: Date = new Date()): Promise<number> {
+  const cutoff = new Date(now.getTime() - REVIEW_TEXT_RETENTION_DAYS * 86_400_000).toISOString()
+  const rows = await getDb()
+    .update(kbReviewItems)
+    .set({ question: '', answer: '' })
+    .where(
+      and(
+        or(
+          eq(kbReviewItems.status, 'rejected'),
+          and(eq(kbReviewItems.status, 'approved'), lt(kbReviewItems.reviewedAt, cutoff))
+        ),
+        or(sql`${kbReviewItems.question} <> ''`, sql`${kbReviewItems.answer} <> ''`)
+      )
+    )
+    .returning({ id: kbReviewItems.id })
+  return rows.length
+}
+
 
 export type ReviewResolution = { ok: true } | { ok: false; reason: 'not_pending' | 'not_found' }
 

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { planRequiredFor } from '@/lib/billing/entitlements'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
-import { countReviewItems, listReviewItems, type ReviewStatus } from '@/lib/db/queries/kb-review'
+import { countReviewItems, listReviewItems, MAX_PENDING_REVIEW_ITEMS, type ReviewStatus } from '@/lib/db/queries/kb-review'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -16,12 +16,18 @@ const MAX_LIMIT = 200
  * The review queue: assistant answers that had no knowledge-base coverage,
  * waiting for a person to fine-tune and approve them. Pro-gated like the other
  * improvement tools; the response always carries per-status counts so the tab
- * can show how much is waiting. `limit=0` returns the counts alone.
+ * can show how much is waiting, plus `full` when the pending queue is at its
+ * ceiling and new questions are no longer being captured. `limit=0` returns
+ * the counts alone. Owners and admins only.
  */
 export async function GET(req: NextRequest) {
   try {
-    const access = await requireOrgAccess()
-    if (!access.ok) return Response.json({ error: access.error }, { status: 401 })
+    // Items carry text typed by visitors and customers, so the queue is
+    // limited to owners and admins, the same roles that can act on it.
+    const access = await requireOrgAccess(['owner', 'admin'])
+    if (!access.ok) {
+      return Response.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
+    }
     const orgId = access.orgId
 
     if (!(await orgHasFeature(orgId, 'kb_review_queue'))) {
@@ -42,7 +48,7 @@ export async function GET(req: NextRequest) {
       countReviewItems(orgId),
       limit === 0 ? Promise.resolve([]) : listReviewItems(orgId, statusParam as ReviewStatus, limit),
     ])
-    return Response.json({ counts, items })
+    return Response.json({ counts, items, full: counts.pending >= MAX_PENDING_REVIEW_ITEMS })
   } catch (err) {
     logger.error('failed to load review queue', { module: MOD, requestId: getRequestId(req), error: err })
     return Response.json({ error: 'Internal server error' }, { status: 500 })

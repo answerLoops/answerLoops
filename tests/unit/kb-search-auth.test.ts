@@ -76,10 +76,22 @@ describe('app/api/kb/search/route.ts: GET', () => {
     expect(h.embedText).not.toHaveBeenCalled()
   })
 
-  it('still returns [] for a blank query once authenticated', async () => {
+  it('returns an empty, non-degraded result for a blank query once authenticated', async () => {
     h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 42, userId: 1, role: 'member' })
     const { GET } = await import('@/app/api/kb/search/route')
     const res = await GET(req(''))
-    expect(await res.json()).toEqual([])
+    expect(await res.json()).toEqual({ results: [], degraded: false })
+    expect(h.embedText).not.toHaveBeenCalled()
+  })
+
+  it('accepts a query of exactly 500 characters and rejects 501 with a 400 before embedding', async () => {
+    h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 42, userId: 1, role: 'member' })
+    const { GET } = await import('@/app/api/kb/search/route')
+    expect((await GET(req('a'.repeat(500)))).status).toBe(200)
+    h.embedText.mockClear()
+    const res = await GET(req('a'.repeat(501)))
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: expect.stringContaining('500') })
+    expect(h.embedText).not.toHaveBeenCalled()
   })
 })

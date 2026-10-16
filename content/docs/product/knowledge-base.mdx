@@ -9,7 +9,7 @@ answerLoops searches the knowledge base for material relevant to a question and 
 
 There are four ways to add content to the knowledge base. URL import and file upload embed each chunk for search. On a hosted plan this works without your own AI key, using your workspace's included AI usage; if that is used up for the month, the import stops with a message asking you to add your own provider under **Settings → AI Model**.
 
-If the embedding model behind your knowledge base changes, answerLoops re-embeds your content in the background from what you already added. Search keeps working throughout, and you don't need to re-upload anything.
+If the embedding model behind your knowledge base changes, answerLoops re-embeds your content in the background from what you already added. Search keeps working throughout, and you don't need to re-upload anything. An article you edit while the re-index runs is processed again before it goes live, and the re-index stops with a clear message if the chosen embedding model produces vectors of a size the knowledge base can't store.
 
 ### 1. URL import
 
@@ -25,6 +25,12 @@ Import a web page or an entire documentation site.
 
 Each page becomes a separate source entry. The crawler fetches the rendered content, splits it into chunks, embeds each chunk as a vector, and writes everything to the database.
 
+**Addresses:** imports accept public web addresses only (`http` or `https`). If the address cannot be found, the import stops with a message asking you to check it. Pages on a site that cannot be imported are left out.
+
+**Import limits:** one import run saves at most 150 sections and about 600,000 characters in total across all of its pages, not per page. If a site import reaches that limit, the pages not yet reached stay un-imported and the next run continues from them. Section titles are shortened to 300 characters. Each workspace holds up to 2,000 articles.
+
+If an import fails before any section is saved, no source is left behind, so you can run the same import again.
+
 **Re-import deduplication:** if you import the same URL a second time, pages that were already ingested are skipped automatically. Only new pages are processed. This means you can safely re-run a site import after adding new docs without creating duplicates.
 
 <Note>
@@ -39,11 +45,13 @@ Drag and drop files directly into the KB.
 
 **Maximum file size:** 10 MB per file
 
+**Limits:** the text extracted from a file can be at most 2 MB, and PDFs can have up to 300 pages. Files that are too large or too complex to read are rejected with a message saying so. File names are shortened to their base name (up to 200 characters). Only workspace owners and admins can upload files.
+
 1. Go to **Knowledge Base → Import**
 2. Drag files onto the upload area, or click to open the file picker
 3. Files are processed immediately — each becomes one or more source entries depending on size
 
-Large files are split into chunks automatically. Each chunk is embedded and indexed for semantic search.
+Large files are split into chunks automatically. Each chunk is embedded and indexed for semantic search. If no chunk can be saved, the file's source entry is removed so you can upload the file again.
 
 ### 3. GitHub repo sync
 
@@ -56,7 +64,7 @@ Connect a GitHub repository and sync its markdown files into the KB.
 
 The sync respects the repo's file tree. Each markdown file becomes its own source entry.
 
-GitHub and Notion syncs run as background jobs — the Knowledge Base page shows each one as queued, then `Syncing N/M` as it works through the files or pages, then done, and you can navigate away while it runs. Re-triggering a sync for the same source while one is still in progress does nothing; the running job finishes on its own.
+GitHub and Notion syncs run as background jobs — the Knowledge Base page shows each one as queued, then `Syncing N/M` as it works through the files or pages, then done, and you can navigate away while it runs. Re-triggering a sync for the same source while one is still in progress does nothing; the running job finishes on its own. Each sync builds its replacement alongside the live content and swaps it in only when complete, so a failed sync leaves your existing content in place. Starting a sync, deleting a source, toggling a source's publish state and deleting an article require an owner or admin role.
 
 <Note>
   Install the GitHub App for the repositories you want to sync. Self-hosted operators must also configure the app credentials; see [GitHub setup](/docs/integrations/github).
@@ -136,7 +144,7 @@ The **Knowledge coverage** tab shows exactly what your chat assistant is able to
 
 - **Counts.** Live articles, sources, and any articles the assistant can't use.
 - **Titles by source.** Every article title, grouped by where it came from: each uploaded file or imported page, synced sources, tickets you promoted, and articles added by hand.
-- **Status per article.** An article is **live** when it is published and searchable. **Unpublished** articles are kept private and are not used by the assistant unless you publish them. This is the right state for internal documents, such as a Notion workspace you only want your team to see. **Not searchable** articles have no search index entry (usually because embedding failed during import), so the assistant can never find them. Re-import the source to fix it.
+- **Status per article.** An article is **live** when it is published and searchable. **Unpublished** articles are kept private and are not used by the assistant unless you publish them. This is the right state for internal documents, such as a Notion workspace you only want your team to see. **Not searchable** articles are missing a search index entry (usually because embedding failed during import) or were indexed with an embedding model other than the one your workspace currently uses, so the assistant cannot find them yet. Articles on an older model are re-indexed automatically after you switch models; for a failed import, re-import the source.
 - **Try a customer question.** Type a question and the tab runs the same lookup the chat widget uses. It shows which articles the assistant would draw on, with a match score, or tells you that nothing covers the question. If semantic search is unavailable, it says so instead of guessing.
 
 If a question doesn't closely match any live article, the assistant answers from general knowledge instead, and that answer can be wrong. Use the tab to find those gaps before your customers do, then add or edit an article to cover them. The tab is available on every plan.
@@ -148,7 +156,7 @@ The **Review** tab turns questions your knowledge base couldn't answer into new 
 When the assistant answers a question that nothing in your knowledge base (or your team's earlier answers) covered, the question lands in the queue instead of disappearing:
 
 - **Support tickets** from your connected channels are added after the assistant has replied, so capturing a question never delays an answer. If the assistant's draft fully answered the question, it comes along as a starting point. If it didn't, the item is marked **No usable answer** and you write one.
-- **Website chat widget** questions are added when no article matched. The widget keeps no record of who asked, so the queue shows the question and the answer the assistant gave, never the visitor.
+- **Website chat widget** questions are added when no article matched. The widget keeps no record of who asked, so the queue shows the question and the answer the assistant gave, never the visitor. Email addresses, phone numbers and long digit runs are replaced with markers before the text is stored, and widget items are labelled as visitor-supplied text.
 
 When the same question comes in again, the existing item's counter goes up (**Asked 4 times**) instead of adding a duplicate, and the most-asked questions are listed first. Items you reject stay rejected, and their count keeps rising so you can see if people keep asking.
 
@@ -158,9 +166,15 @@ For each item you can:
 2. Click **Approve and add to knowledge base**. The edited text is saved as a new article and starts answering questions straight away.
 3. Or click **Reject** to dismiss it. A rejected item can be moved back to review at any time.
 
-Nothing in the queue is searchable or shown to customers until you approve it. Owners and admins can approve and reject; every team member can read the queue. The **Review** tab shows how many items are waiting, and each workspace holds up to 500 unreviewed items at a time; new questions are not captured while the queue is full, so clear it regularly.
+Nothing in the queue is searchable or shown to customers until you approve it. The queue is visible to owners and admins only, because items contain text typed by customers and visitors; other team members see a short notice on the tab. The **Review** tab shows how many items are waiting, and each workspace holds up to 500 unreviewed items at a time. When the queue is full the tab says so and new questions are not captured, so clear it regularly.
+
+The text of rejected items is removed, and the text of approved items is removed 90 days after review (the approved article keeps its own copy). The item and its counter stay so a repeated question is still recognised.
 
 Approved articles count toward the same 2,000-article limit as every other source.
+
+## How the assistant uses your articles
+
+Matching articles are passed to the assistant as reference material to answer from.
 
 ## Article usage
 

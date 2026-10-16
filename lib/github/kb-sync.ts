@@ -15,12 +15,36 @@ import {
   getKBSourceByFilename,
   getOrCreateKBSource,
   deleteKBSource,
+  deleteKBSourcesByFilename,
   updateKBSourceChunkCount,
+  swapKBSource,
 } from '@/lib/db/queries/kb-sources'
-import { updateRepoSettings, getRepoById } from '@/lib/db/queries/github'
+import { updateRepoSettings } from '@/lib/db/queries/github'
+import { KbSyncUserError, KbSyncLeaseLostError } from '@/lib/kb-sync/errors'
 import { logger } from '@/lib/logger'
 
-const MOD = 'github/kb-sync'
+/**
+ * Failure cleanup for a staging source this worker created. After a lease loss
+ * another worker may own the staging filename now, so nothing is deleted. For
+ * any other error only the row this worker created (by id) is removed.
+ */
+async function cleanupStaging(orgId: number, sourceId: number, err: unknown): Promise<void> {
+  if (err instanceof KbSyncLeaseLostError) return
+  await deleteKBSource(sourceId, orgId)
+}
+
+/**
+ * Confirms the staging source this worker created is still there before it is
+ * swapped in; if it vanished, the live source is left untouched.
+ */
+async function assertStagingPresent(orgId: number, staging: string, sourceId: number): Promise<void> {
+  const current = await getKBSourceByFilename(orgId, staging)
+  if (!current || current.id !== sourceId) {
+    throw new Error('staging source no longer exists; sync aborted before replacing the live source')
+  }
+}
+
+const MOD =  'github/kb-sync'
 const MAX_FILES = 100
 const MAX_ARTICLES_PER_ORG = 2000
 const MAX_DISCUSSIONS = 300
@@ -38,6 +62,18 @@ function shouldInclude(path: string): boolean {
   if (EXCLUDE_FILES.includes(filename)) return false
   return true
 }
+
+/**
+ * Filename a replacement source is built under before it is swapped into
+ * place. A run that dies mid-build leaves one orphaned; the next run clears
+ * any stale copy before it starts.
+ */
+function stagingFilename(filename: string): string {
+  return `${filename}:rebuilding`
+}
+
+const NOTHING_IMPORTED_MESSAGE =
+  'Nothing could be imported from the repository this time, so the existing knowledge base content was kept. Try again shortly.'
 
 export async function syncRepoToKB(
   repoId: number,
@@ -63,63 +99,86 @@ export async function syncRepoToKB(
 
   logger.info('github kb sync started', { module: MOD, owner, repo, fileCount: mdFiles.length })
 
-  // Delete existing source for this repo to avoid duplicate chunks on re-sync
+  // The replacement is built under a staging filename and swapped in last, so
+  // the live source stays intact until the new one is complete.
   const sourceFilename = `${owner}/${repo}`
+  const staging = stagingFilename(sourceFilename)
   const existing = await getKBSourceByFilename(orgId, sourceFilename)
-  if (existing) {
-    await deleteKBSource(existing.id, orgId)
-  }
+  const existingCount = existing ? await countArticlesForSource(existing.id, orgId) : 0
 
-  const currentCount = await countArticles(orgId)
-  const budget = Math.max(0, MAX_ARTICLES_PER_ORG - currentCount)
+  // Clear any leftover staging row first so its chunks do not count against the budget.
+  await deleteKBSourcesByFilename(orgId, staging)
+
+  // The source being replaced does not count against the cap.
+  const budget = Math.max(0, MAX_ARTICLES_PER_ORG - ((await countArticles(orgId)) - existingCount))
   if (budget === 0) {
     logger.warn('kb full — skipping github sync', { module: MOD, orgId })
-    return 0
+    return existingCount
   }
 
   const source = await createKBSource({
     orgId,
-    filename: sourceFilename,
+    filename: staging,
     fileType: 'github',
     sizeBytes: 0,
+    published: 0,
   })
 
   let created = 0
+  try {
+    for (let fi = 0; fi < mdFiles.length; fi++) {
+      const file = mdFiles[fi]
+      opts.onProgress?.(fi, mdFiles.length)
+      if (created >= budget) break
+      try {
+        const { data } = await octokit.rest.repos.getContent({ owner, repo, path: file.path! })
+        if (Array.isArray(data) || data.type !== 'file') continue
 
-  for (let fi = 0; fi < mdFiles.length; fi++) {
-    const file = mdFiles[fi]
-    opts.onProgress?.(fi, mdFiles.length)
-    if (created >= budget) break
-    try {
-      const { data } = await octokit.rest.repos.getContent({ owner, repo, path: file.path! })
-      if (Array.isArray(data) || data.type !== 'file') continue
+        const content = Buffer.from(data.content, 'base64').toString('utf8')
+        const chunks = chunkMarkdown(content, file.path!.replace(/\.[^.]+$/, ''))
 
-      const content = Buffer.from(data.content, 'base64').toString('utf8')
-      const chunks = chunkMarkdown(content, file.path!.replace(/\.[^.]+$/, ''))
-
-      for (const chunk of chunks) {
-        if (created >= budget) break
-        try {
-          const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
-          await createArticleFromSource({ question: chunk.question, answer: chunk.answer, embedding, model, sourceId: source.id }, orgId)
-          created++
-        } catch (err) {
-          if (err instanceof NoAIProviderConfiguredError) throw err
-          logger.warn('chunk embed failed', { module: MOD, path: file.path, error: err })
+        for (const chunk of chunks) {
+          if (created >= budget) break
+          try {
+            const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
+            await createArticleFromSource({ question: chunk.question, answer: chunk.answer, embedding, model, sourceId: source.id, published: 0 }, orgId)
+            created++
+          } catch (err) {
+            if (err instanceof NoAIProviderConfiguredError) throw err
+            logger.warn('chunk embed failed', { module: MOD, path: file.path, error: err })
+          }
         }
+      } catch (err) {
+        if (err instanceof NoAIProviderConfiguredError) throw err
+        logger.warn('file fetch failed', { module: MOD, path: file.path, error: err })
       }
-    } catch (err) {
-      if (err instanceof NoAIProviderConfiguredError) throw err
-      logger.warn('file fetch failed', { module: MOD, path: file.path, error: err })
     }
+    opts.onProgress?.(mdFiles.length, mdFiles.length)
+
+    // Files were found but not one chunk made it in (provider or network
+    // trouble on every call): keep what is live rather than swapping in nothing.
+    if (created === 0 && existingCount > 0 && mdFiles.length > 0) {
+      throw new KbSyncUserError(NOTHING_IMPORTED_MESSAGE)
+    }
+  } catch (err) {
+    // Build failed — bin the staging row and leave the live source alone.
+    await cleanupStaging(orgId, source.id, err)
+    throw err
   }
 
-  opts.onProgress?.(mdFiles.length, mdFiles.length)
-
+  await assertStagingPresent(orgId, staging, source.id)
   await updateKBSourceChunkCount(source.id, created)
+  await swapKBSource({
+    orgId,
+    newSourceId: source.id,
+    targetFilename: sourceFilename,
+    published: existing ? existing.published : 1,
+  })
+  // The repo's chunk total is its files source plus its discussions source.
+  const discussionsSource = await getKBSourceByFilename(orgId, discussionSourceFilename(owner, repo))
   await updateRepoSettings(repoId, orgId, {
     kbLastSynced: new Date().toISOString(),
-    kbChunkCount: created,
+    kbChunkCount: created + (discussionsSource?.chunk_count ?? 0),
   })
 
   logger.info('github kb sync done', { module: MOD, owner, repo, created })
@@ -258,49 +317,67 @@ export async function syncDiscussionsToKB(
   logger.info('github discussion kb sync started', { module: MOD, owner, repo, count: discussions.length })
 
   const sourceFilename = discussionSourceFilename(owner, repo)
+  const staging = stagingFilename(sourceFilename)
   const existing = await getKBSourceByFilename(orgId, sourceFilename)
-  if (existing) {
-    await deleteKBSource(existing.id, orgId)
-  }
+  const existingCount = existing ? await countArticlesForSource(existing.id, orgId) : 0
 
-  const currentCount = await countArticles(orgId)
-  const budget = Math.max(0, MAX_ARTICLES_PER_ORG - currentCount)
+  await deleteKBSourcesByFilename(orgId, staging)
+
+  const budget = Math.max(0, MAX_ARTICLES_PER_ORG - ((await countArticles(orgId)) - existingCount))
   if (budget === 0) {
     logger.warn('kb full — skipping github discussion sync', { module: MOD, orgId })
-    return 0
+    return existingCount
   }
 
-  const source = await createKBSource({ orgId, filename: sourceFilename, fileType: 'github-discussion', sizeBytes: 0 })
+  const source = await createKBSource({ orgId, filename: staging, fileType: 'github-discussion', sizeBytes: 0, published: 0 })
 
   const toSync = discussions.slice(0, MAX_DISCUSSIONS)
   let created = 0
-  for (let di = 0; di < toSync.length; di++) {
-    const d = toSync[di]
-    opts.onProgress?.(di, toSync.length)
-    if (created >= budget) break
-    const article = buildDiscussionArticle(d)
-    if (!article) continue
-    try {
-      const { embedding, model } = await embedTextWithModel(`${article.question}\n\n${article.answer}`, orgId)
-      await createArticleFromSource(
-        { question: article.question, answer: article.answer, embedding, model, sourceId: source.id, sourcePage: d.number },
-        orgId
-      )
-      created++
-    } catch (err) {
-      if (err instanceof NoAIProviderConfiguredError) throw err
-      logger.warn('discussion embed failed', { module: MOD, number: d.number, error: err })
+  let answered = 0
+  try {
+    for (let di = 0; di < toSync.length; di++) {
+      const d = toSync[di]
+      opts.onProgress?.(di, toSync.length)
+      if (created >= budget) break
+      const article = buildDiscussionArticle(d)
+      if (!article) continue
+      answered++
+      try {
+        const { embedding, model } = await embedTextWithModel(`${article.question}\n\n${article.answer}`, orgId)
+        await createArticleFromSource(
+          { question: article.question, answer: article.answer, embedding, model, sourceId: source.id, sourcePage: d.number, published: 0 },
+          orgId
+        )
+        created++
+      } catch (err) {
+        if (err instanceof NoAIProviderConfiguredError) throw err
+        logger.warn('discussion embed failed', { module: MOD, number: d.number, error: err })
+      }
     }
+    opts.onProgress?.(toSync.length, toSync.length)
+
+    if (created === 0 && answered > 0 && existingCount > 0) {
+      throw new KbSyncUserError(NOTHING_IMPORTED_MESSAGE)
+    }
+  } catch (err) {
+    await cleanupStaging(orgId, source.id, err)
+    throw err
   }
 
-  opts.onProgress?.(toSync.length, toSync.length)
-
+  await assertStagingPresent(orgId, staging, source.id)
   await updateKBSourceChunkCount(source.id, created)
+  await swapKBSource({
+    orgId,
+    newSourceId: source.id,
+    targetFilename: sourceFilename,
+    published: existing ? existing.published : 1,
+  })
 
-  const repoRow = await getRepoById(repoId, orgId)
+  // The repo's chunk total is its files source plus its discussions source.
+  const filesSource = await getKBSourceByFilename(orgId, `${owner}/${repo}`)
   await updateRepoSettings(repoId, orgId, {
     kbLastSynced: new Date().toISOString(),
-    kbChunkCount: (repoRow?.kb_chunk_count ?? 0) - (existing?.chunk_count ?? 0) + created,
+    kbChunkCount: (filesSource?.chunk_count ?? 0) + created,
   })
 
   logger.info('github discussion kb sync done', { module: MOD, owner, repo, created })

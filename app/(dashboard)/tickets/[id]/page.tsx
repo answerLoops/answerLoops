@@ -69,6 +69,8 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
 
   const currentUserId = session?.user?.id ? Number(session.user.id) : null
   const isOwner = members.find((m) => m.user_id === currentUserId)?.role === 'owner'
+  const currentRole = members.find((m) => m.user_id === currentUserId)?.role
+  const canPromote = currentRole === 'owner' || currentRole === 'admin'
 
   // Resolve guild ID: prefer per-ticket value (new tickets), fall back to
   // the channel→guild map auto-saved by the bot on startup (old tickets).
@@ -410,7 +412,7 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
           {(resolved && hasAnswer) || kbArticle ? (
             <div className="bg-white rounded-lg border border-gray-200 p-4">
               <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Knowledge Base</h2>
-              <PromoteKBButton ticketId={ticket.id} articleId={kbArticle?.id} />
+              <PromoteKBButton ticketId={ticket.id} articleId={kbArticle?.id} canPromote={canPromote} />
               {!kbArticle && (
                 <p className="mt-2 text-xs text-gray-400">Publish this answer as a searchable KB article.</p>
               )}

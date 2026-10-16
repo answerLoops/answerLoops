@@ -92,3 +92,56 @@ describe('captureUnansweredQuestion', () => {
     await expect(capture()).resolves.toBeUndefined()
   })
 })
+
+describe('captureUnansweredQuestion — stored text', () => {
+  it('replaces emails, phone numbers and long digit runs in the question and answer', async () => {
+    await capture({
+      question: 'My email is jo@example.com, call +1 (555) 010-2030 about order 123456789',
+      answer: 'We will write to jo@example.com or phone 555.010.2030; reference 9876543210.',
+    })
+    const stored = h.recordReviewItem.mock.calls[0][0]
+    expect(stored.question).toBe('My email is [email], call [phone] about order [number]')
+    expect(stored.answer).toBe('We will write to [email] or phone [phone]; reference [number].')
+  })
+
+  it('leaves digit runs embedded in identifiers alone', async () => {
+    const { scrubPersonalData } = await import('@/lib/kb/review-capture')
+    expect(scrubPersonalData('How do I qz1234567890ab configure build_20261015_x?')).toBe(
+      'How do I qz1234567890ab configure build_20261015_x?'
+    )
+    expect(scrubPersonalData('Order #1234567 and ref 7654321.')).toBe('Order #[number] and ref [number].')
+  })
+
+  it('leaves ordinary numbers and versions alone', async () => {
+    const { scrubPersonalData } = await import('@/lib/kb/review-capture')
+    expect(scrubPersonalData('Upgrade to v2.4.1 within 30 days for 12 seats')).toBe('Upgrade to v2.4.1 within 30 days for 12 seats')
+    expect(scrubPersonalData('Renews on 2026-10-15')).toBe('Renews on 2026-10-15')
+  })
+
+  it('embeds the scrubbed question when no vector was supplied', async () => {
+    await capture({ question: 'Mail jo@example.com about exports' })
+    expect(h.embedText).toHaveBeenCalledWith('Mail [email] about exports', 7)
+  })
+
+  it('does not rewrite dates, times, IP addresses or version strings', async () => {
+    const { scrubPersonalData } = await import('@/lib/kb/review-capture')
+    for (const text of [
+      'It failed on 2026-10-15 12:30 again',
+      'Logged at 2026-10-15T12:30:45 UTC',
+      'At 12:30 2026-10-15 it stopped',
+      'Server at 192.168.100.200 is down',
+      'Windows build 10.0.19045.3693 here',
+      'Ran 1.22.333.4444 yesterday',
+    ]) {
+      expect(scrubPersonalData(text)).toBe(text)
+    }
+  })
+
+  it('still rewrites plausible phone numbers', async () => {
+    const { scrubPersonalData } = await import('@/lib/kb/review-capture')
+    expect(scrubPersonalData('Call +44 20 7946 0958 now')).toBe('Call [phone] now')
+    expect(scrubPersonalData('Call (555) 010-2030 now')).toBe('Call [phone] now')
+    expect(scrubPersonalData('Call 555-010-2030 now')).toBe('Call [phone] now')
+    expect(scrubPersonalData('Call 07911 123456 now')).toBe('Call [phone] now')
+  })
+})

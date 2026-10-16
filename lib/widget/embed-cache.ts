@@ -44,9 +44,15 @@ export async function embedQueryCached(query: string, orgId: number): Promise<nu
     return hit.vector
   }
   const { embedding: vector, model } = await embedTextWithModel(query, orgId)
-  const key = keyFor(orgId, model, query)
-  cache.delete(key)
-  cache.set(key, { vector, expiresAt: Date.now() + TTL_MS })
+  // Store under the key the next lookup will build. While the org has no pin
+  // yet that is the null-pin key, so a repeat query hits instead of embedding
+  // again; the entry is also stored under the model that produced it, so it
+  // is found once the pin is set to that model.
+  const keys = new Set([keyFor(orgId, pinned, query), keyFor(orgId, model, query)])
+  for (const key of keys) {
+    cache.delete(key)
+    cache.set(key, { vector, expiresAt: Date.now() + TTL_MS })
+  }
   while (cache.size > MAX_ENTRIES) {
     const oldest = cache.keys().next().value
     if (oldest === undefined) break

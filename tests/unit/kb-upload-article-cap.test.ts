@@ -17,9 +17,16 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
-vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles, createArticleFromSource: h.createArticleFromSource }))
-vi.mock('@/lib/db/queries/kb-sources', () => ({ createKBSource: h.createKBSource, updateKBSourceChunkCount: vi.fn() }))
-vi.mock('@/lib/ingest/file-parsers', () => ({ detectFileType: () => 'txt', parseFile: h.parseFile }))
+vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles }))
+vi.mock('@/lib/db/queries/kb-article-cap', () => ({ createArticleFromSourceWithinCap: h.createArticleFromSource }))
+vi.mock('@/lib/db/queries/kb-sources', () => ({ createKBSource: h.createKBSource, updateKBSourceChunkCount: vi.fn(), deleteKBSource: vi.fn() }))
+vi.mock('@/lib/ingest/file-parsers', () => ({
+  detectFileType: () => 'txt',
+  parseFile: h.parseFile,
+  normalizeFileName: (n: string) => n,
+  MAX_EXTRACTED_TEXT_BYTES: 2 * 1024 * 1024,
+  FileParseError: class FileParseError extends Error {},
+}))
 vi.mock('@/lib/ingest/url', () => ({ chunkMarkdown: vi.fn(() => []) }))
 vi.mock('@/lib/ai/embed', () => ({
   embedText: vi.fn(),

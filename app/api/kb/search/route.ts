@@ -8,10 +8,12 @@ export const dynamic = 'force-dynamic'
 
 // Matches the sibling kb routes (upload, sources) — every other mutation or
 // listing route here 401s with no session rather than defaulting to org 1.
-// This one didn't, which also meant the embedText call below ran unmetered
-// for anyone, authenticated or not. See Known Issue 125.
+// It requires a membership so the embedText call below is always metered
+// against a real workspace.
 const SEARCH_MAX = 60
 const SEARCH_WINDOW_MS = 60_000
+// Same bound the agent API puts on a search query.
+const MAX_QUERY_LEN = 500
 
 export async function GET(request: Request) {
   const access = await requireOrgAccess()
@@ -25,7 +27,10 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url)
   const q = url.searchParams.get('q')?.trim()
-  if (!q) return Response.json([])
+  if (!q) return Response.json({ results: [], degraded: false })
+  if (q.length > MAX_QUERY_LEN) {
+    return Response.json({ error: `q must be ${MAX_QUERY_LEN} characters or fewer` }, { status: 400 })
+  }
 
   try {
     const vector = await embedText(q, orgId)
