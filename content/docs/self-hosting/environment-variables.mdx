@@ -33,6 +33,7 @@ Only relevant if you're running the dashboard on a separate subdomain from your 
 
 | Variable | Description | Example |
 |---|---|---|
+| `APP_URL` | Public origin of the app. Read at request time, so changing it needs a restart rather than a rebuild. The OpenAPI spec at `/openapi.json` advertises it as its server URL; if it's unset, the spec uses the `x-forwarded-host` and `x-forwarded-proto` headers from your reverse proxy. Takes precedence over `NEXT_PUBLIC_APP_URL`. | `https://app.example.com` |
 | `NEXT_PUBLIC_APP_URL` | Base URL of the dashboard subdomain. When set, marketing-page CTAs link there instead of a relative `/dashboard` path. Leave unset for a single-domain deployment. | `https://app.example.com` |
 | `AUTH_COOKIE_DOMAIN` | Shares the session cookie across every subdomain of your apex domain. Required alongside `NEXT_PUBLIC_APP_URL` — without it, a user signed in on the root domain appears logged out the moment they land on the app subdomain, since a session cookie is host-only by default. Leave unset for a single-domain deployment. | `.example.com` |
 
