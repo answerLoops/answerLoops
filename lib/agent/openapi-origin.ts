@@ -10,6 +10,8 @@ import { appOrigin } from '@/lib/site'
  * request origin as a last resort. With no request (the docs generator) it
  * returns undefined so the spec falls back to the canonical hosted URL.
  */
+export function openApiOrigin(req: Request): string
+export function openApiOrigin(req?: Request): string | undefined
 export function openApiOrigin(req?: Request): string | undefined {
   if (!req) return undefined
 

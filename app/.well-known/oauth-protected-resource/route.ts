@@ -1,3 +1,4 @@
+import { openApiOrigin } from '@/lib/agent/openapi-origin'
 import { ALL_SCOPES, API_SCOPES } from '@/lib/agent/scopes'
 
 /**
@@ -13,12 +14,12 @@ import { ALL_SCOPES, API_SCOPES } from '@/lib/agent/scopes'
  * a separate OAuth authorization server. RFC 9728 makes that field optional.
  *
  * `resource` and the doc link are built from the origin this request came in
- * on, not a hardcoded host, so a self-hosted instance publishes metadata that
+ * on (the configured public origin, else the proxy's forwarded host), not a hardcoded host, so a self-hosted instance publishes metadata that
  * points at itself. Served from `app/.well-known/...` rather than `public/`
  * so `scopes_supported` can never drift from lib/agent/scopes.ts.
  */
 export function GET(req: Request) {
-  const origin = new URL(req.url).origin
+  const origin = openApiOrigin(req)
   return Response.json({
     resource: origin,
     resource_name: 'answerLoops Agent API',
