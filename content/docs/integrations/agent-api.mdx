@@ -52,7 +52,7 @@ Every key carries a set of least-privilege scopes. Each operation requires exact
 | `tickets:write` | Open tickets on behalf of a user | `POST /api/v1/agent/tickets`, MCP `create_ticket` |
 | `answers:write` | Generate grounded answers | `POST /api/v1/agent/answers`, MCP `generate_answer` |
 
-The scope catalogue is also published as machine-readable [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) protected-resource metadata at [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource) (`scopes_supported`), and each MCP tool carries its scope on `_meta.requiredScope` in `tools/list`.
+The scope catalogue is also published as machine-readable [RFC 9728](https://datatracker.ietf.org/doc/html/rfc9728) protected-resource metadata at [`/.well-known/oauth-protected-resource`](/.well-known/oauth-protected-resource) (`scopes_supported`). Its `resource` field is your public origin: `APP_URL` if set, otherwise the host your reverse proxy forwards, so a self-hosted instance publishes its own address. Each MCP tool carries its scope on `_meta.requiredScope` in `tools/list`.
 
 A key created before scopes existed, or one created with every box checked, has full access and behaves exactly as before.
 
