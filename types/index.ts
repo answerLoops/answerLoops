@@ -7,6 +7,18 @@ export type TicketCategory = 'bug' | 'feature_request' | 'documentation' | 'how_
 // configured (in which case ai_draft is null). It is by far the most common
 // non-deflected outcome, so every consumer of this type must handle it.
 export type AIDraftStatus = 'pending' | 'needs_human' | 'posted' | 'approved' | 'overridden'
+// Why a ticket was routed to a person without an AI draft: the workspace hit
+// its included AI limit (monthly or trial), has no active plan, or AI was
+// otherwise unavailable on the platform; or the draft was skipped on purpose
+// for a bug report or feature request, or an email from a sender that could
+// not be verified.
+export type AIDraftSkipReason =
+  | 'ai_limit_reached'
+  | 'trial_ai_limit_reached'
+  | 'no_active_plan'
+  | 'ai_unavailable'
+  | 'bug_or_feature'
+  | 'unverified_sender'
 
 export type SourcePlatform = 'discord' | 'slack' | 'telegram' | 'email' | 'github' | 'mcp' | 'google_chat' | 'discourse' | 'circle'
 
@@ -35,6 +47,7 @@ export interface Ticket {
   // AI agent draft
   ai_draft: string | null
   ai_draft_status: AIDraftStatus
+  ai_draft_skip_reason: AIDraftSkipReason | null
   ai_draft_posted_at: string | null
   // Lifecycle
   priority: Priority

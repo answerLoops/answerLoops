@@ -12,14 +12,14 @@ models an org uses.
 | State | What's used |
 |---|---|
 | A hosted workspace, no key configured | **Included AI usage**, up to a limit — for the whole trial, then monthly on a paid plan |
-| Included usage used up, still no key | That part of AI pauses until you connect a provider (or, on a paid plan, until next month) |
+| AI limit reached, still no key | That part of AI pauses until you connect a provider (or, on a paid plan, until next month) |
 | Own chat key from a provider other than OpenAI, no embedding key | Answers on your key; knowledge‑base processing on included usage until you add an OpenAI embedding key |
 | Self‑hosted | The `OPENAI_API_KEY` in your environment |
 | A workspace with saved model settings | Its configured chat and embedding services |
 
 On included usage, answerLoops chooses the models, and the card lists them
 read‑only. To pick your own models, add your own provider. The card shows
-where you stand — included usage, "included usage used up", or the
+where you stand — included usage, "limit reached", or the
 configured provider and model. See [Billing](/docs/product/billing) for how
 the limits work.
 
@@ -87,7 +87,7 @@ stored key — the field shows "Key saved".
 ## Reset
 
 **Reset to platform default** deletes the org's AI config. A hosted workspace
-falls back to included usage (or, once it's used up, to no AI until next
+falls back to included usage (or, once the limit is reached, to no AI until next
 month); a self‑hosted deployment falls back to its environment key.
 
 If your embedding model changes (you switch it here, or answerLoops changes

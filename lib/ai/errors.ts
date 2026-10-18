@@ -1,3 +1,5 @@
+import type { AIDraftSkipReason } from '@/types'
+
 /**
  * Thrown by chatModel()/embeddingModel() when a workspace has no usable AI
  * provider for a call — instead of silently spending the platform's own key.
@@ -7,9 +9,17 @@
  * bubble up as a generic 500. See lib/ai/models.ts for when it is thrown.
  */
 export class NoAIProviderConfiguredError extends Error {
-  constructor(orgId: number, message = `No AI provider configured for org ${orgId}`) {
+  /** Why drafting was skipped, recorded on the ticket so its page can explain. */
+  readonly skipReason: AIDraftSkipReason
+
+  constructor(
+    orgId: number,
+    message = `No AI provider configured for org ${orgId}`,
+    skipReason: AIDraftSkipReason = 'ai_unavailable'
+  ) {
     super(message)
     this.name = 'NoAIProviderConfiguredError'
+    this.skipReason = skipReason
   }
 }
 
@@ -26,9 +36,15 @@ const KIND_ACTION: Record<BudgetKind, string> = {
   embedding: 'keep importing content and searching your knowledge base',
 }
 
+/** "this month's AI limit for answers" / "your trial AI limit for answers" — how a limit is named to a person. */
+export function aiLimitPhrase(kind: BudgetKind, tier: BudgetTier): string {
+  return tier === 'trial'
+    ? `your trial AI limit for ${KIND_LABEL[kind]}`
+    : `this month's AI limit for ${KIND_LABEL[kind]}`
+}
+
 /**
- * The workspace's included platform AI usage for this kind of call is used
- * up. Subclasses NoAIProviderConfiguredError on purpose: from a caller's point
+ * The workspace has reached its included platform AI limit for this kind of call. Subclasses NoAIProviderConfiguredError on purpose: from a caller's point
  * of view there is no usable provider for this call, and every existing
  * handler for that case already does the right thing. Routes that show the
  * reason to a person use aiUnavailableMessage() to pick up userMessage.
@@ -44,17 +60,18 @@ export class PlatformBudgetExhaustedError extends NoAIProviderConfiguredError {
    * embedding key rather than "add your AI provider".
    */
   constructor(orgId: number, kind: BudgetKind, tier: BudgetTier, options: { ownChatProvider?: boolean } = {}) {
-    super(orgId, `Platform AI ${kind} budget exhausted for org ${orgId} (${tier})`)
+    super(
+      orgId,
+      `Platform AI ${kind} budget exhausted for org ${orgId} (${tier})`,
+      tier === 'trial' ? 'trial_ai_limit_reached' : 'ai_limit_reached'
+    )
     this.name = 'PlatformBudgetExhaustedError'
     this.kind = kind
     this.tier = tier
-    const usage = tier === 'trial'
-      ? `included trial AI usage for ${KIND_LABEL[kind]}`
-      : `included AI usage for ${KIND_LABEL[kind]} this month`
     const fix = kind === 'embedding' && options.ownChatProvider
       ? 'Add an OpenAI embedding key under Embeddings in Settings → AI Model'
       : 'Add your AI provider in Settings → AI Model'
-    this.userMessage = `This workspace has used its ${usage}. ${fix} to ${KIND_ACTION[kind]}.`
+    this.userMessage = `You've reached ${aiLimitPhrase(kind, tier)}. ${fix} to ${KIND_ACTION[kind]}.`
   }
 }
 

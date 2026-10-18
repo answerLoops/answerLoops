@@ -20,7 +20,7 @@ import { getIntegration } from '@/lib/db/queries/integrations'
 import { updateTicketAIDraftStatus, getTicketById } from '@/lib/db/queries/tickets'
 import { logger } from '@/lib/logger'
 import { countArticleUsage } from '@/lib/kb/usage'
-import type { PriorAnswer, TicketCategory } from '@/types'
+import type { AIDraftSkipReason, PriorAnswer, TicketCategory } from '@/types'
 import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import type { Match } from '@/lib/ai/related'
 
@@ -129,9 +129,10 @@ async function postNeedsHumanReview(
   slackChannelId?: string,
   slackThreadTs?: string,
   postDraftPublicly: boolean = true,
-  postToChannel: boolean = true
+  postToChannel: boolean = true,
+  skipReason?: AIDraftSkipReason
 ): Promise<void> {
-  await updateTicketAIDraftStatus(ticketId, 'needs_human')
+  await updateTicketAIDraftStatus(ticketId, 'needs_human', undefined, skipReason)
   if (!postToChannel) {
     await sendKeepAlive(platform, channelId, orgId)
     return
@@ -291,7 +292,8 @@ export async function runAIAgent(
         slackChannelId,
         slackThreadTs,
         true, // this ack is always a static template, never AI-drafted content — safe to post as-is when Automatic Deflections is on
-        autoDeflectEnabled // off means no channel post at all, not even the generic ack
+        autoDeflectEnabled, // off means no channel post at all, not even the generic ack
+        'bug_or_feature'
       )
       logger.info('bug/feature_request routed to human review', { module: MOD, ticketId, category, platform, autoDeflectEnabled })
     } catch (err) {
@@ -500,10 +502,10 @@ Guidelines:
       // No draft attempted — the ticket still exists (ingestion never
       // depended on this), it just needs a human, with a clear reason
       // instead of silently going stale.
-      await updateTicketAIDraftStatus(ticketId, 'needs_human')
+      await updateTicketAIDraftStatus(ticketId, 'needs_human', undefined, err.skipReason)
       await createNotification(
         'ai_draft_ready',
-        `AI answer skipped for ticket #${orgTicketNumber} — connect an AI provider in Settings to enable auto-answers`,
+        `AI answer skipped for ticket #${orgTicketNumber} — open the ticket to see why`,
         ticketId,
         orgId
       )

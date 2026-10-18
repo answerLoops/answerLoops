@@ -15,7 +15,7 @@ import {
   csatRatings,
   kbArticles,
 } from '../schema'
-import type { Ticket, CreateTicketInput, TicketFilters, TicketReply, TicketEvent } from '@/types'
+import type { Ticket, CreateTicketInput, TicketFilters, TicketReply, TicketEvent, AIDraftSkipReason } from '@/types'
 
 function toTicket(row: typeof tickets.$inferSelect): Ticket {
   return {
@@ -37,6 +37,7 @@ function toTicket(row: typeof tickets.$inferSelect): Ticket {
     ai_suggested_priority: row.aiSuggestedPriority as Ticket['ai_suggested_priority'],
     ai_draft: row.aiDraft,
     ai_draft_status: row.aiDraftStatus as Ticket['ai_draft_status'],
+    ai_draft_skip_reason: (row.aiDraftSkipReason ?? null) as Ticket['ai_draft_skip_reason'],
     ai_draft_posted_at: row.aiDraftPostedAt,
     priority: row.priority as Ticket['priority'],
     status: row.status as Ticket['status'],
@@ -336,12 +337,28 @@ export async function updateTicketAIDraft(id: number, draft: string): Promise<vo
   })
 }
 
-export async function updateTicketAIDraftStatus(id: number, status: string, newDraft?: string): Promise<void> {
+/**
+ * Sets a ticket's AI draft status. `skipReason` records why a ticket went to a
+ * person with no draft. An explicit reason is stored as given; otherwise the
+ * stored reason is cleared when the status moves off needs_human, and kept
+ * when it stays needs_human so a later status write cannot erase it.
+ */
+export async function updateTicketAIDraftStatus(
+  id: number,
+  status: string,
+  newDraft?: string,
+  skipReason?: AIDraftSkipReason
+): Promise<void> {
   await getDb()
     .update(tickets)
     .set({
       aiDraftStatus: status,
       ...(newDraft !== undefined ? { aiDraft: newDraft } : {}),
+      ...(skipReason !== undefined
+        ? { aiDraftSkipReason: skipReason }
+        : status !== 'needs_human'
+          ? { aiDraftSkipReason: null }
+          : {}),
       updatedAt: new Date().toISOString(),
     })
     .where(eq(tickets.id, id))

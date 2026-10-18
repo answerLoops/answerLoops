@@ -40,7 +40,7 @@ const PARTIAL = {
   created: 2,
   filename: 'guide.txt',
   sourceId: 3,
-  error: 'Added 2 of 5 sections from guide.txt. This workspace has used its included trial AI usage for knowledge-base processing.',
+  error: "Added 2 of 5 sections from guide.txt. You've reached your trial AI limit for knowledge-base processing.",
 }
 
 function json(body: unknown) {

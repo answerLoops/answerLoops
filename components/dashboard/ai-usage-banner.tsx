@@ -1,10 +1,8 @@
 import Link from 'next/link'
-import { PlatformBudgetExhaustedError, type BudgetKind } from '@/lib/ai/errors'
+import { PlatformBudgetExhaustedError, aiLimitPhrase, type BudgetKind } from '@/lib/ai/errors'
 import type { BudgetStatus } from '@/lib/billing/platform-ai-budget'
 
-const LABEL: Record<BudgetKind, string> = { chat: 'answers', embedding: 'knowledge-base processing' }
-
-// The most severe state wins: a used-up budget over one at 80%; answers over
+// The most severe state wins: a reached limit over one at 80%; answers over
 // knowledge-base processing on a tie.
 function pick(status: BudgetStatus): { kind: BudgetKind; exhausted: boolean } | null {
   for (const exhausted of [true, false]) {
@@ -16,25 +14,23 @@ function pick(status: BudgetStatus): { kind: BudgetKind; exhausted: boolean } | 
 }
 
 /**
- * Warns a workspace on included AI usage at 80% of either budget, and again
- * once one is used up. Driven by fractions and flags only; never shows an
+ * Warns a workspace on included AI usage at 80% of either limit, and again
+ * once one is reached. Driven by fractions and flags only; never shows an
  * amount. Gone once the workspace adds its own provider (status is null).
  */
 export function AIUsageBanner({ status }: { status: BudgetStatus }) {
   const hit = pick(status)
   if (!hit) return null
 
-  const usage = status.tier === 'trial'
-    ? `included trial AI usage for ${LABEL[hit.kind]}`
-    : `included AI usage for ${LABEL[hit.kind]} this month`
+  const limit = aiLimitPhrase(hit.kind, status.tier)
   // A workspace whose answers already run on its own key only lacks an
   // embedding key; tell it that instead of "add your AI provider".
   const embeddingKeyFix = hit.kind === 'embedding' && status.ownChatProvider
   const message = hit.exhausted
     ? new PlatformBudgetExhaustedError(0, hit.kind, status.tier, { ownChatProvider: status.ownChatProvider }).userMessage
     : embeddingKeyFix
-      ? `You've used 80% of your ${usage}. Add an OpenAI embedding key under Embeddings in Settings → AI Model so it keeps running when it runs out.`
-      : `You've used 80% of your ${usage}. Add your AI provider so it keeps running when it runs out.`
+      ? `You're at 80% of ${limit}. Add an OpenAI embedding key under Embeddings in Settings → AI Model so it keeps running past the limit.`
+      : `You're at 80% of ${limit}. Add your AI provider so it keeps running past the limit.`
   const tone = hit.exhausted ? 'border-red-200 bg-red-50 text-red-900' : 'border-amber-200 bg-amber-50 text-amber-900'
   const icon = hit.exhausted ? 'text-red-500' : 'text-amber-500'
   const button = hit.exhausted ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-600 hover:bg-amber-700'

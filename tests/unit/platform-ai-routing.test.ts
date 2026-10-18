@@ -67,13 +67,19 @@ describe('chatModel', () => {
 
   it('an unusable platform model is refused, not metered', async () => {
     const t = await load({ tier: 'plan', env: { PLATFORM_AI_CHAT_MODEL: 'gpt-unknown' } })
-    await expect(t.models.chatModel(t.models.DEFAULT_CHAT_MODEL, 1)).rejects.toMatchObject({ name: 'NoAIProviderConfiguredError' })
+    await expect(t.models.chatModel(t.models.DEFAULT_CHAT_MODEL, 1)).rejects.toMatchObject({
+      name: 'NoAIProviderConfiguredError',
+      skipReason: 'ai_unavailable',
+    })
     expect(t.meterLanguageModel).not.toHaveBeenCalled()
   })
 
   it('no live subscription: refused before any budget check', async () => {
     const t = await load({ tier: null })
-    await expect(t.models.chatModel(t.models.DEFAULT_CHAT_MODEL, 1)).rejects.toMatchObject({ name: 'NoAIProviderConfiguredError' })
+    await expect(t.models.chatModel(t.models.DEFAULT_CHAT_MODEL, 1)).rejects.toMatchObject({
+      name: 'NoAIProviderConfiguredError',
+      skipReason: 'no_active_plan',
+    })
     expect(t.assertBudget).not.toHaveBeenCalled()
   })
 

@@ -75,7 +75,7 @@ async function meteredPlatformModel<M>(
   budgetOptions?: BudgetCheckOptions,
 ): Promise<M> {
   const tier = await getBillingTier(orgId)
-  if (!tier) throw new NoAIProviderConfiguredError(orgId)
+  if (!tier) throw new NoAIProviderConfiguredError(orgId, undefined, 'no_active_plan')
   if (budgetOptions) await assertBudget(orgId, kind, tier, budgetOptions)
   else await assertBudget(orgId, kind, tier)
   return meter(build(modelId), { orgId, tier, modelId })

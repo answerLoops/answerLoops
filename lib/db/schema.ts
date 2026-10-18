@@ -143,6 +143,10 @@ export const tickets = pgTable(
     aiSuggestedPriority: text('ai_suggested_priority'),
     aiDraft: text('ai_draft'),
     aiDraftStatus: text('ai_draft_status').notNull().default('pending'),
+    // Why a ticket was routed to a person with no draft (see AIDraftSkipReason
+    // in types/index.ts). Null on tickets that have a draft, on tickets that
+    // predate the column, and whenever the status moves off needs_human.
+    aiDraftSkipReason: text('ai_draft_skip_reason'),
     aiDraftPostedAt: text('ai_draft_posted_at'),
     priority: text('priority').notNull().default('medium'),
     status: text('status').notNull().default('open'),
