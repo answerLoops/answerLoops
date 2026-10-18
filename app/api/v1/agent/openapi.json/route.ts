@@ -1,4 +1,5 @@
 import { buildAgentOpenApiSpec } from '@/lib/agent/openapi-spec'
+import { openApiOrigin } from '@/lib/agent/openapi-origin'
 
 /**
  * GET /api/v1/agent/openapi.json
@@ -13,6 +14,5 @@ import { buildAgentOpenApiSpec } from '@/lib/agent/openapi-spec'
  * came in on (self-hosting), without one we fall back to the canonical URL.
  */
 export function GET(req?: Request) {
-  const origin = req ? new URL(req.url).origin : undefined
-  return Response.json(buildAgentOpenApiSpec(origin))
+  return Response.json(buildAgentOpenApiSpec(openApiOrigin(req)))
 }

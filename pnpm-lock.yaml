@@ -81,11 +81,11 @@ importers:
         specifier: ^11.6.0
         version: 11.6.0(@babel/core@7.29.7)(next@16.4.0(@babel/core@7.29.7)(@opentelemetry/api@1.9.1)(@playwright/test@1.64.0)(@types/node@22.20.4)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)(webpack@5.110.3(esbuild@0.28.1))
       '@stripe/react-stripe-js':
-        specifier: ^6.12.0
-        version: 6.12.0(@stripe/stripe-js@9.17.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: ^7.0.0
+        version: 7.0.0(@stripe/stripe-js@10.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@stripe/stripe-js':
-        specifier: ^9.17.0
-        version: 9.17.0
+        specifier: ^10.0.0
+        version: 10.0.0
       ai:
         specifier: ^7.0.135
         version: 7.0.137(zod@4.6.5)
@@ -141,8 +141,8 @@ importers:
         specifier: ^6.32.1
         version: 6.32.1
       stripe:
-        specifier: ^22.6.2
-        version: 22.6.2(@types/node@22.20.4)
+        specifier: ^23.0.0
+        version: 23.0.0(@types/node@22.20.4)
       web-push:
         specifier: ^3.6.7
         version: 3.6.7
@@ -3034,15 +3034,15 @@ packages:
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
 
-  '@stripe/react-stripe-js@6.12.0':
-    resolution: {integrity: sha512-5RVfx92MTb66+ELuQTreUqX2oFvma5wybZ7MaifoNo0QgrjbJiLZcysGw5kIHU7p1TCd1Lx5JnasoqteSwlUsg==}
+  '@stripe/react-stripe-js@7.0.0':
+    resolution: {integrity: sha512-wKw6YM0p/IpGj7hcwdJL7UAb7s0hlO8kLJIXn0CezewYILQ8j/A7j55EHuHHjF6dV+cr4yZhbhg4QLRjovfM4A==}
     peerDependencies:
-      '@stripe/stripe-js': '>=9.16.0 <10.0.0'
+      '@stripe/stripe-js': '>=10.0.0 <11.0.0'
       react: '>=16.8.0 <20.0.0'
       react-dom: '>=16.8.0 <20.0.0'
 
-  '@stripe/stripe-js@9.17.0':
-    resolution: {integrity: sha512-uidL4OJum5kivsOAQnVfQmYLJ2zdgirtmT0zWgskASZ4TPXxpXQ0MNrzW4NsXB90uEqmPHpSEtciLFbF1QQvNA==}
+  '@stripe/stripe-js@10.0.0':
+    resolution: {integrity: sha512-y5LKFTtnz1ciM+IQfrDfHcpjGlsm5Ao4onaUn4scurI/B6rNhrmV+ScTPDo+3Ges5oF8ol4tBkBAIZyVXVBIXw==}
     engines: {node: '>=12.16'}
 
   '@swc/helpers@0.5.23':
@@ -6952,11 +6952,11 @@ packages:
     resolution: {integrity: sha512-6fPc+R4ihwqP6N/aIv2f1gMH8lOVtWQHoqC4yK6oSDVVocumAsfCqjkXnqiYMhmMwS/mEHLp7Vehlt3ql6lEig==}
     engines: {node: '>=8'}
 
-  stripe@22.6.2:
-    resolution: {integrity: sha512-PwRE2scocvXqDKPiskMa5vRJEAEkq46W69XyUYmAwrNSLr675lQnfqLwnsndAWizwgihOWw/irLmoFRo3ez7ew==}
-    engines: {node: '>=18'}
+  stripe@23.0.0:
+    resolution: {integrity: sha512-MDE2A5ZVVluYURORaZEVghSmnLJc3w6aHAlZSxDQMsOjOb3V0O6ro/CiaeFlJS4N7uIVmsg98ocRsPmUK6YfyA==}
+    engines: {node: '>=20'}
     peerDependencies:
-      '@types/node': '>=18'
+      '@types/node': '>=20'
     peerDependenciesMeta:
       '@types/node':
         optional: true
@@ -10610,14 +10610,14 @@ snapshots:
 
   '@standard-schema/spec@1.1.0': {}
 
-  '@stripe/react-stripe-js@6.12.0(@stripe/stripe-js@9.17.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@stripe/react-stripe-js@7.0.0(@stripe/stripe-js@10.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@stripe/stripe-js': 9.17.0
+      '@stripe/stripe-js': 10.0.0
       prop-types: 15.8.1
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
 
-  '@stripe/stripe-js@9.17.0': {}
+  '@stripe/stripe-js@10.0.0': {}
 
   '@swc/helpers@0.5.23':
     dependencies:
@@ -15129,7 +15129,7 @@ snapshots:
 
   strip-json-comments@3.1.1: {}
 
-  stripe@22.6.2(@types/node@22.20.4):
+  stripe@23.0.0(@types/node@22.20.4):
     optionalDependencies:
       '@types/node': 22.20.4
 
