@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="./.github/readme/overview.svg" alt="A question becomes a source-backed draft, checked by a second AI, then approved by your team or sent automatically when enabled. Useful resolutions become knowledge. Works with Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and website chat." width="100%" />
+  <img src="./.github/readme/overview.svg" alt="A question becomes a source-backed draft, checked by a second AI Agent, then approved by your team or sent automatically when enabled. Useful resolutions become knowledge. Works with Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and website chat." width="100%" />
 </p>
 
 <p align="center"><strong>Knowledge:</strong> your docs, files, GitHub, and Notion · <strong>Agents:</strong> MCP, REST, and TypeScript SDK</p>
@@ -39,7 +39,7 @@
 Your docs already cover setup, troubleshooting, and the questions people ask every week. Put that knowledge to work where the conversation happens.
 
 - **Answer from your docs.** Import documentation, files, GitHub repositories, and Notion pages. Draft replies with sources attached.
-- **Review before sending.** A second AI agent checks each draft against its sources. Approve replies yourself, or enable automatic replies for qualifying questions.
+- **Review before sending.** A second AI Agent checks each draft against its sources. Approve replies yourself, or enable automatic replies for qualifying questions.
 - **Keep people in the loop.** Review drafts and escalations in a shared inbox. Questions that need judgment stay with your team.
 - **Make the next answer better.** Save useful resolutions as knowledge-base articles and find the questions your docs don't cover.
 - **Bring your own agents.** Search knowledge, generate answers, and create tickets through MCP, REST, or the TypeScript SDK.
