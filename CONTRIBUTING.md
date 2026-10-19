@@ -112,10 +112,35 @@ Main commands:
 | `pnpm lint` | Run Oxlint |
 | `pnpm test` | Run the Vitest unit and integration suite |
 | `pnpm test:e2e` | Run Playwright end-to-end tests |
+| `pnpm test:e2e:typecheck` | Type-check the Playwright suite |
 | `pnpm build` | Create the production Next.js build |
 
 Full setup detail, every env var, and deployment options are in the
 [self-hosting documentation](https://answerloops.com/docs/quickstart-self-host).
+
+### Repository map
+
+```text
+app/                 Next.js pages, server actions, webhooks, REST, and MCP
+bot/                 Discord gateway and Slack polling listener
+components/          Dashboard, onboarding, marketing, and widget UI
+lib/ai/              Retrieval, agents, embeddings, triage, and review
+lib/ingest/          Shared multi-channel support pipeline
+lib/db/              Drizzle schema, migrations, and org-scoped queries
+lib/agent/           Shared operations behind MCP and REST
+lib/mcp/             MCP tool definitions and protocol
+packages/agent-sdk/  Typed client for the Agent API
+content/docs/        Fumadocs product, integration, and self-hosting docs
+skills/              Installable Claude Code skills (self-host setup, agent operation)
+drizzle/             Ordered PostgreSQL migrations
+tests/unit/          Vitest regression and component tests
+e2e/                 Playwright end-to-end coverage
+public/widget.js     Embeddable widget loader
+```
+
+Production is two processes, `app` and `bot`, built from one multi-stage image
+with PostgreSQL behind them. [`ARCHITECTURE.md`](./ARCHITECTURE.md) goes through
+the pipeline and the data model in detail.
 
 ## Contributing to docs
 
