@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="2400" height="1260" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
 <title id="title">answerLoops — Your docs answer community questions.</title>
-<desc id="desc">Self-hostable AI support for Discord, Slack, and Discourse communities. A question is answered from your documentation, checked by a second AI, and approved by your team before it sends.</desc>
+<desc id="desc">Self-hostable AI support for Discord, Slack, and Discourse communities. A question is answered from your documentation, checked by a second AI Agent, and approved by your team before it sends.</desc>
 <defs>
   <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#082e50" stroke-opacity=".055" stroke-width="1"/></pattern>
   <filter id="shadow" x="-30%" y="-40%" width="160%" height="200%"><feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#082e50" flood-opacity=".07"/></filter>
@@ -16,7 +16,7 @@
   <text x="60" y="331" font-size="65" font-weight="700" letter-spacing="-2.9" fill="#082e50">community questions.</text>
   <rect x="64" y="361" width="64" height="4" rx="2" fill="#168fa3"/>
   <text x="64" y="409" font-size="23" fill="#4c6074">Replies in Discord, Slack, and Discourse,</text>
-  <text x="64" y="442" font-size="23" fill="#4c6074">checked by a second AI, approved by you.</text>
+  <text x="64" y="442" font-size="23" fill="#4c6074">checked by a second AI Agent, approved by you.</text>
   <g transform="translate(770 155)">
     <path d="M175 67V109M175 205V242H84V266M175 242H267V266" fill="none" stroke="#81b6c2" stroke-width="2"/>
     <circle cx="175" cy="242" r="4" fill="#168fa3"/>
@@ -28,7 +28,7 @@
     </g>
     <text x="175" y="41" text-anchor="middle" font-size="20" font-weight="600" fill="#082e50">Community question</text>
     <text x="175" y="149" text-anchor="middle" font-size="24" font-weight="700" letter-spacing="-.5" fill="#fff">Draft from your docs</text>
-    <text x="175" y="178" text-anchor="middle" font-size="15" fill="#d0deeb">A second AI checks every answer</text>
+    <text x="175" y="178" text-anchor="middle" font-size="15" fill="#d0deeb">A second AI Agent checks every answer</text>
     <text x="83" y="298" text-anchor="middle" font-size="20" font-weight="600" fill="#082e50">Team approves</text>
     <text x="83" y="324" text-anchor="middle" font-size="12" fill="#4c6074">Review before it sends</text>
     <text x="266" y="298" text-anchor="middle" font-size="20" font-weight="600" fill="#082e50">Auto-reply</text>
