@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og'
 import { getBlogPost } from '@/lib/blog/posts'
+import { SLACK_LOGO } from '@/lib/marketing/slack-logo'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseSupportCover, DualAgentReviewCover, EmailSupportCover, GitHubSupportCover, GoogleChatSupportCover, McpSupportCover, NotionKnowledgeCover, SlackSupportCover, TelegramSupportCover, MultiplatformSupportCover } from '@/lib/blog/cover-art'
@@ -53,13 +54,8 @@ const INTEGRATION_MARKS: Record<
   },
   'slack-no-admin-approval': {
     color: '#36c5f0',
-    viewBox: '0 0 24 24',
-    paths: [
-      { d: 'M9.1 2.5a2.1 2.1 0 1 0 0 4.2h2.1V4.6a2.1 2.1 0 0 0-2.1-2.1Zm0 6.3H4.6a2.1 2.1 0 1 0 0 4.2h4.5a2.1 2.1 0 1 0 0-4.2Z', fill: '#36c5f0' },
-      { d: 'M21.5 9.1a2.1 2.1 0 1 0-4.2 0v2.1h2.1a2.1 2.1 0 0 0 2.1-2.1Zm-6.3 0v4.5a2.1 2.1 0 1 0 4.2 0V9.1a2.1 2.1 0 0 0-4.2 0Z', fill: '#2eb67d' },
-      { d: 'M14.9 21.5a2.1 2.1 0 1 0 0-4.2h-2.1v2.1a2.1 2.1 0 0 0 2.1 2.1Zm0-6.3h4.5a2.1 2.1 0 1 0 0-4.2h-4.5a2.1 2.1 0 0 0 0 4.2Z', fill: '#ecb22e' },
-      { d: 'M2.5 14.9a2.1 2.1 0 1 0 4.2 0v-2.1H4.6a2.1 2.1 0 0 0-2.1 2.1Zm6.3 0v-4.5a2.1 2.1 0 1 0-4.2 0v4.5a2.1 2.1 0 0 0 4.2 0Z', fill: '#e01e5a' },
-    ],
+    viewBox: SLACK_LOGO.viewBox,
+    paths: [...SLACK_LOGO.paths],
   },
   'discourse-forum-support': {
     color: '#e4572e',
