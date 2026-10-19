@@ -8,7 +8,7 @@
 
 <p align="center"><strong>Turn your docs into answers for your community.</strong></p>
 
-<p align="center">Self-hostable AI support for your community. Source-backed replies, checked by a second AI and approved by your team before they send.<br />Run it on your own infrastructure with your preferred model, use the hosted app, or connect your own agents.</p>
+<p align="center">Self-hostable AI support for your community. Source-backed replies, checked by a second AI agent, and approved by your team before they send.<br />Run it on your own infrastructure with your preferred model, use the hosted app, or connect your own agents.</p>
 
 <p align="center">
   <a href="#get-started"><strong>Self-host →</strong></a> ·
