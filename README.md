@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://answerloops.com">
+  <a href="https://answerloops.com?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=repo&amp;utm_content=hero">
     <img src="./.github/readme/logo.svg" alt="answerLoops logo" width="120" height="120" />
   </a>
 </p>
@@ -12,9 +12,9 @@
 
 <p align="center">
   <a href="#get-started"><strong>Self-host →</strong></a> ·
-  <a href="https://app.answerloops.com"><strong>Try hosted →</strong></a> ·
+  <a href="https://answerloops.com/login?plan=standard&amp;interval=monthly&amp;utm_source=github&amp;utm_medium=readme&amp;utm_campaign=repo&amp;utm_content=hero&amp;ref=readme"><strong>Try hosted →</strong></a> ·
   <a href="#set-up-with-your-agent">Connect your agent</a> ·
-  <a href="https://answerloops.com/docs">Docs</a>
+  <a href="https://answerloops.com/docs?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=repo&amp;utm_content=hero">Docs</a>
 </p>
 
 <p align="center">
@@ -47,7 +47,7 @@ Your docs already cover setup, troubleshooting, and the questions people ask eve
 Use it for a project's support Discord, a course community, or a product's documentation site. The same knowledge powers community replies, website chat, and your own AI tools.
 
 <p align="center">
-  <a href="https://answerloops.com/#main-content">
+  <a href="https://answerloops.com/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=repo&amp;utm_content=stop-answering-the-same-question-from-scratch#main-content">
     <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="100%" />
   </a>
 </p>
@@ -62,11 +62,11 @@ Use it for a project's support Discord, a course community, or a product's docum
 
 | Start with | Best for | First step |
 | --- | --- | --- |
-| **Hosted** | A managed workspace | [Open answerLoops](https://app.answerloops.com), complete onboarding, and add your knowledge. |
+| **Hosted** | A managed workspace | [Start a free trial](https://answerloops.com/login?plan=standard&interval=monthly&utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=get-started&ref=readme), complete onboarding, and add your knowledge. |
 | **Your agent** | Guided setup or an existing workspace | Use the setup and operation skills in the guide below. |
 | **Self-hosted** | Your own infrastructure | Run the CLI below, or expand the manual Docker guide. |
 
-The CLI requires Node.js, Git, and Docker with Compose. You'll also need a PostgreSQL connection, Google OAuth credentials, and AI provider settings. Follow the [configuration guide](https://answerloops.com/docs/quickstart-self-host) for these values.
+The CLI requires Node.js, Git, and Docker with Compose. You'll also need a PostgreSQL connection, Google OAuth credentials, and AI provider settings. Follow the [configuration guide](https://answerloops.com/docs/quickstart-self-host?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=get-started) for these values.
 
 ```bash
 npx @answerloops/agent-sdk setup
@@ -89,7 +89,7 @@ The included skills are packaged for **Claude Code**. Install both without cloni
 npx @answerloops/agent-sdk skills answerloops-setup answerloops-operate
 ```
 
-That writes both into `.claude/skills/` in the current directory. Install just one by naming it alone. See the [skill source](./skills) and [installation guide](https://answerloops.com/docs/integrations/agent-skills) for details. Other MCP-compatible clients can use the [MCP setup guide](https://answerloops.com/docs/integrations/mcp).
+That writes both into `.claude/skills/` in the current directory. Install just one by naming it alone. See the [skill source](./skills) and [installation guide](https://answerloops.com/docs/integrations/agent-skills?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=get-started) for details. Other MCP-compatible clients can use the [MCP setup guide](https://answerloops.com/docs/integrations/mcp?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=get-started).
 
 ### Ask your agent to help you get running
 
@@ -129,7 +129,7 @@ In **Settings → API Keys**, a workspace owner or admin can create a key and ch
 
 `generate_answer` returns an answer without opening a ticket. `create_ticket` sends a question into the shared triage and drafting workflow for your team to review in the dashboard.
 
-[**MCP setup guide →**](https://answerloops.com/docs/integrations/mcp)
+[**MCP setup guide →**](https://answerloops.com/docs/integrations/mcp?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=get-started)
 
 </details>
 
@@ -142,7 +142,7 @@ The published image runs the app and channel listener without a local build. Fir
 curl -fsSLO https://raw.githubusercontent.com/answerLoops/answerLoops/main/docker-compose.ghcr.yml
 ```
 
-Create a `.env` alongside it using the [self-hosting configuration guide](https://answerloops.com/docs/quickstart-self-host). Configure your PostgreSQL connection, app URL, generated secrets, Google OAuth sign-in, and AI provider. Then start the services:
+Create a `.env` alongside it using the [self-hosting configuration guide](https://answerloops.com/docs/quickstart-self-host?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=get-started). Configure your PostgreSQL connection, app URL, generated secrets, Google OAuth sign-in, and AI provider. Then start the services:
 
 ```bash
 docker compose -f docker-compose.ghcr.yml up -d
@@ -197,7 +197,7 @@ For the implementation, see the [shared ingestion pipeline](./lib/ingest/pipelin
 
 The workspace includes a unified inbox, reviewed AI drafts, triage, SLA tracking, human escalation, CSAT, analytics, knowledge gaps, and FAQ digests.
 
-[Explore the integrations →](https://answerloops.com/docs/introduction)
+[Explore the integrations →](https://answerloops.com/docs/introduction?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=connect-your-workspace)
 
 <details>
 <summary><strong>See the unified inbox</strong></summary>
@@ -213,7 +213,7 @@ The workspace includes a unified inbox, reviewed AI drafts, triage, SLA tracking
 
 ## For developers
 
-Build your own integrations or contribute to answerLoops. Start with the [Agent API reference](https://answerloops.com/docs/integrations/agent-api), [TypeScript SDK](./packages/agent-sdk/README.md), or [architecture guide](./ARCHITECTURE.md).
+Build your own integrations or contribute to answerLoops. Start with the [Agent API reference](https://answerloops.com/docs/integrations/agent-api?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=for-developers), [TypeScript SDK](./packages/agent-sdk/README.md), or [architecture guide](./ARCHITECTURE.md).
 
 <details>
 <summary><strong>Build and run from source</strong></summary>
@@ -274,7 +274,7 @@ curl http://localhost:3000/api/health
 > [!WARNING]
 > `docker compose down` stops the stack and preserves your database. Adding `-v` deletes the named Postgres volume and its data.
 
-For deployment, provider-specific setup, and every environment variable, follow the [self-hosting documentation](https://answerloops.com/docs/quickstart-self-host).
+For deployment, provider-specific setup, and every environment variable, follow the [self-hosting documentation](https://answerloops.com/docs/quickstart-self-host?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=for-developers).
 
 </details>
 
@@ -354,7 +354,7 @@ MCP and REST expose the same five operations: knowledge search, FAQ lookup, tick
 
 Generating an answer doesn't open a ticket. Creating a ticket sends the question into the team's triage and drafting workflow.
 
-[MCP setup and permissions](https://answerloops.com/docs/integrations/mcp) · [Agent API reference](https://answerloops.com/docs/integrations/agent-api) · [SDK installation and usage](./packages/agent-sdk/README.md)
+[MCP setup and permissions](https://answerloops.com/docs/integrations/mcp?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=for-developers) · [Agent API reference](https://answerloops.com/docs/integrations/agent-api?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=for-developers) · [SDK installation and usage](./packages/agent-sdk/README.md)
 
 </details>
 
@@ -390,7 +390,7 @@ Self-hosting means your community's questions and your documentation never leave
 
 <div align="center">
 
-[Docs](https://answerloops.com/docs) · [Get started](#get-started) · [Open an issue](https://github.com/answerLoops/answerLoops/issues)
+[Docs](https://answerloops.com/docs?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=footer) · [Get started](#get-started) · [Open an issue](https://github.com/answerLoops/answerLoops/issues)
 
 
 </div>
