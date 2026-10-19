@@ -34,12 +34,12 @@
 
 ## Stop answering the same question from scratch
 
-Your docs already cover setup, troubleshooting, and the questions people ask every week. answerLoops puts that knowledge to work where the conversation happens.
+Your docs already cover setup, troubleshooting, and the questions people ask frequently. answerLoops puts that knowledge to work where the conversation happens.
 
+- **Integrations.** Discord, Slack, Discourse, Circle, GitHub, Telegram, Google Chat, email, and website chat.
 - **Knowledge.** Import your documentation, files, GitHub repositories, and Notion pages. Every reply comes with its sources attached.
 - **Review.** A second AI Agent checks each draft against its sources. Your team approves it, or you turn on auto-reply for questions that pass.
 - **Tickets.** One shared inbox for every channel, with triage, SLAs, human escalation, CSAT, and analytics.
-- **Integrations.** Discord, Slack, Discourse, Circle, GitHub, Telegram, Google Chat, email, and website chat.
 - **Agents.** MCP, REST, OpenAPI, a TypeScript SDK, and Claude Code skills for your own AI tools.
 - **AI providers.** OpenAI, Anthropic, Google Gemini, Groq, Mistral, Ollama, or any OpenAI-compatible endpoint, including local models.
 - **Learning.** Save useful resolutions as knowledge articles, and use knowledge gaps and FAQ digests to see what your docs are missing.
@@ -50,17 +50,18 @@ Your docs already cover setup, troubleshooting, and the questions people ask eve
   </a>
 </p>
 
-<details>
-<summary><strong>See the support dashboard</strong></summary>
 <br />
 <img src="./.github/readme/dashboard-framed.svg" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
-</details>
+<div align="center">
+One dashboard for every support channel
+</div>
 
-<details>
-<summary><strong>See confidence review and escalation</strong></summary>
 <br />
 <img src="./.github/readme/ticket-detail-framed.svg" alt="answerLoops ticket detail with AI confidence review, evidence, and human escalation" width="100%" />
-</details>
+<div align="center">
+See why the AI answered, and hand off when it shouldn't
+</div>
+
 
 ## Get started
 
@@ -84,7 +85,8 @@ npx @answerloops/agent-sdk skills answerloops-setup answerloops-operate
 
 This installs two Claude Code skills, one to set up a new instance and one to operate an existing workspace. Other MCP clients can connect through the [MCP guide](https://answerloops.com/docs/integrations/mcp?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=get-started). Everything your agent can do is in the [agent skills guide](https://answerloops.com/docs/integrations/agent-skills?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=get-started).
 
-If answerLoops helps your community, a ⭐ helps others find it.
+## How can I help
+**If answerLoops helps your community, a ⭐ helps others find it.**
 
 ## How it compares
 
@@ -94,9 +96,10 @@ If answerLoops helps your community, a ⭐ helps others find it.
 | **Community channels** | Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, website widget | Website chat, email, WhatsApp, Telegram, Facebook, Instagram, Slack, SMS — no Discord | Email, chat, phone, WhatsApp, Facebook, Telegram — no Discord or Slack | Discord, Slack, website widget — no Telegram, Discourse, Circle, or email |
 | **AI in the self-hosted tier** | Dual-agent draft-and-review pipeline included, no per-call metering | BYOK AI assistant, gated to paid/Enterprise tiers | Paid add-on even when self-hosted — €0.03 per AI call | Not applicable — hosted only |
 
-Sources: [Chatwoot](https://www.chatwoot.com/pricing/self-hosted-plans), [Zammad](https://zammad.com/en/product/artificial-intelligence), [Kapa.ai](https://docs.kapa.ai/overview/showcase). Reviewed 2026-09-29 against each provider's published information — check current plan details before deciding.
+Sources: [Chatwoot](https://www.chatwoot.com/pricing/self-hosted-plans), [Zammad](https://zammad.com/en/product/artificial-intelligence), [Kapa.ai](https://docs.kapa.ai/overview/showcase).
 
-## FAQ
+<details>
+<summary><strong>FAQ</strong></summary>
 
 **Does answerLoops work with Discord and Slack at the same time?** Yes. Every connected channel shares one knowledge base and one ticket queue.
 
@@ -105,6 +108,7 @@ Sources: [Chatwoot](https://www.chatwoot.com/pricing/self-hosted-plans), [Zammad
 **Does an AI-drafted answer get reviewed before it's sent?** Yes, always. A separate review agent checks every draft against its sources and assigns a confidence score. Automatic replies are off by default per channel. Even a high-confidence draft waits for a person to approve it until you turn that setting on.
 
 **Does answerLoops support MCP?** Yes. An MCP server at `/api/mcp` lets any MCP-compatible agent search knowledge, read the FAQ digest, list and create tickets, and generate answers. REST, OpenAPI, and a TypeScript SDK expose the same operations. See the [Agent API reference](https://answerloops.com/docs/integrations/agent-api?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=faq).
+</details>
 
 ## Learn more
 
