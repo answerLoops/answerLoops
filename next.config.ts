@@ -6,16 +6,12 @@ import { MARKETING_PAGE_PATHS } from "./lib/marketing/website-paths";
 
 const isDev = process.env.NODE_ENV !== 'production'
 
-// Cloudflare Web Analytics, off unless the hosting platform turns it on. When
-// the zone has automatic setup enabled, Cloudflare inserts its beacon script
-// into HTML responses; without these two origins the policy below blocks the
-// script and its report, and the dashboard stays empty. Read when the config
-// loads, so set it where the build runs.
+// Allows Cloudflare Web Analytics when CLOUDFLARE_WEB_ANALYTICS=true.
+// Read when the config loads, so set it where the build runs.
 const cloudflareAnalytics = process.env.CLOUDFLARE_WEB_ANALYTICS === 'true'
 
 // Resource policy for every route except the embeddable widget. Stripe is the
-// only third-party origin the browser talks to (embedded Checkout), plus
-// Cloudflare's analytics beacon when enabled above. Next's
+// only third-party origin the browser talks to (embedded Checkout). Next's
 // inline bootstrap scripts and React inline styles need 'unsafe-inline'
 // because pages are cached at the edge and cannot carry a per-request nonce.
 // No form-action: OAuth sign-in posts a form to this origin and redirects to
