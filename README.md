@@ -8,7 +8,7 @@
 
 <p align="center"><strong>Turn your docs into answers for your community.</strong></p>
 
-<p align="center">Source-backed replies, checked by a second AI and ready for your team to review.<br />Self-host with your preferred model, use the hosted app, or connect your own agents.</p>
+<p align="center">Self-hostable AI support for your community. Source-backed replies, checked by a second AI and approved by your team before they send.<br />Run it on your own infrastructure with your preferred model, use the hosted app, or connect your own agents.</p>
 
 <p align="center">
   <a href="#get-started"><strong>Self-host →</strong></a> ·
@@ -25,6 +25,7 @@
 
 <div align="center">
 
+[![GitHub stars](https://img.shields.io/github/stars/answerLoops/answerLoops?style=flat-square&logo=github&label=stars)](https://github.com/answerLoops/answerLoops/stargazers)
 [![CI](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/security.yml?branch=main&label=security&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/security.yml)
 [![License](https://img.shields.io/github/license/answerLoops/answerLoops?style=flat-square&label=license&color=082e50)](./LICENSE)
@@ -45,29 +46,17 @@ Your docs already cover setup, troubleshooting, and the questions people ask eve
 
 Use it for a project's support Discord, a course community, or a product's documentation site. The same knowledge powers community replies, website chat, and your own AI tools.
 
-<details>
-<summary><strong>Watch the answer loop demo</strong></summary>
-<br />
-<a href="https://answerloops.com/#main-content">
-  <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="100%" />
-</a>
-</details>
+<p align="center">
+  <a href="https://answerloops.com/#main-content">
+    <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="100%" />
+  </a>
+</p>
 
 <details>
 <summary><strong>See the support dashboard</strong></summary>
 <br />
 <img src="./.github/readme/dashboard-framed.svg" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
 </details>
-
-## How it compares
-
-| | answerLoops | Chatwoot | Zammad | Kapa.ai |
-| --- | --- | --- | --- | --- |
-| **License (self-hosted)** | AGPL-3.0 | AGPL-3.0 | AGPL-3.0 | No public self-hosted option |
-| **Community channels** | Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, website widget | Website chat, email, WhatsApp, Telegram, Facebook, Instagram, Slack, SMS — no Discord | Email, chat, phone, WhatsApp, Facebook, Telegram — no Discord or Slack | Discord, Slack, website widget — no Telegram, Discourse, Circle, or email |
-| **AI in the self-hosted tier** | Dual-agent draft-and-review pipeline included, no per-call metering | BYOK AI assistant, gated to paid/Enterprise tiers | Paid add-on even when self-hosted — €0.03 per AI call | Not applicable — hosted only |
-
-Sources: [Chatwoot](https://www.chatwoot.com/pricing/self-hosted-plans), [Zammad](https://zammad.com/en/product/artificial-intelligence), [Kapa.ai](https://docs.kapa.ai/overview/showcase). Reviewed 2026-09-29 against each provider's published information — check current plan details before deciding.
 
 ## Get started
 
@@ -84,6 +73,8 @@ npx @answerloops/agent-sdk setup
 ```
 
 The CLI checks prerequisites, clones the repository if needed, generates app secrets, and starts the published image. If configuration is missing, it tells you what to add to `.env`; add it and rerun the command. Setup verifies `/api/health` before finishing.
+
+If answerLoops helps your community, a ⭐ helps others find it.
 
 <a id="set-up-with-your-agent"></a>
 
@@ -169,6 +160,16 @@ ANSWERLOOPS_IMAGE='ghcr.io/answerloops/answerloops:<release-tag>' \
 To modify the code, use the build-from-source instructions under [For developers](#for-developers).
 
 </details>
+
+## How it compares
+
+| | answerLoops | Chatwoot | Zammad | Kapa.ai |
+| --- | --- | --- | --- | --- |
+| **License (self-hosted)** | AGPL-3.0 | AGPL-3.0 | AGPL-3.0 | No public self-hosted option |
+| **Community channels** | Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, website widget | Website chat, email, WhatsApp, Telegram, Facebook, Instagram, Slack, SMS — no Discord | Email, chat, phone, WhatsApp, Facebook, Telegram — no Discord or Slack | Discord, Slack, website widget — no Telegram, Discourse, Circle, or email |
+| **AI in the self-hosted tier** | Dual-agent draft-and-review pipeline included, no per-call metering | BYOK AI assistant, gated to paid/Enterprise tiers | Paid add-on even when self-hosted — €0.03 per AI call | Not applicable — hosted only |
+
+Sources: [Chatwoot](https://www.chatwoot.com/pricing/self-hosted-plans), [Zammad](https://zammad.com/en/product/artificial-intelligence), [Kapa.ai](https://docs.kapa.ai/overview/showcase). Reviewed 2026-09-29 against each provider's published information — check current plan details before deciding.
 
 ## How it works
 
