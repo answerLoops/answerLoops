@@ -24,6 +24,9 @@ export const START_HREF = process.env.NEXT_PUBLIC_APP_URL
 export const PRICING_HREF = process.env.NEXT_PUBLIC_APP_URL
   ? 'https://dub.sh/pricing-page'
   : '/pricing'
+export const DOCS_HREF = process.env.NEXT_PUBLIC_APP_URL
+  ? 'https://dub.sh/docs-intro'
+  : '/docs'
 
 // Keep the trial and sign-in labels consistent across desktop and mobile.
 export const START_LABEL = 'Start trial'
