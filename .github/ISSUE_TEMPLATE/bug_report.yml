@@ -1,4 +1,4 @@
-name: Bug report
+name: 🐞 Bug report
 description: Something in answerLoops isn't working the way it should.
 labels: ["bug"]
 body:
