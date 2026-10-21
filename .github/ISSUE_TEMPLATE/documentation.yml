@@ -1,0 +1,23 @@
+name: Documentation issue
+description: Something in the docs is missing, unclear, or wrong.
+labels: ["documentation"]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Which page?
+      description: A link to the docs page, README section, or file.
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's wrong or missing?
+      description: Tell us what confused you, what's out of date, or what you expected to find.
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested fix
+      description: Optional. If you know what it should say, write it here. A docs pull request is even better.

@@ -1,0 +1,73 @@
+name: Bug report
+description: Something in answerLoops isn't working the way it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. Please don't include API keys, tokens, passwords, or customer data in this issue. If you think you've found a security problem, report it privately through [SECURITY.md](https://github.com/answerLoops/answerLoops/blob/main/SECURITY.md) instead.
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: Where are you running answerLoops?
+      options:
+        - Hosted (answerloops.com)
+        - Self-hosted (Docker)
+        - Local development
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part is affected?
+      options:
+        - Dashboard / web app
+        - Chat widget
+        - Discord
+        - Slack
+        - Telegram
+        - Google Chat
+        - Email
+        - GitHub
+        - Knowledge base / embeddings
+        - Review queue / knowledge gaps
+        - Agent API / MCP
+        - Docs or marketing site
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Describe the problem and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: The smallest set of steps that triggers it.
+      placeholder: |
+        1. Go to ...
+        2. Click ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs, errors, or screenshots
+      description: Paste error messages or drop in screenshots. Remove any secrets first.
+      render: shell
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: The app version or commit hash, if you're self-hosting.
+  - type: input
+    id: environment
+    attributes:
+      label: Browser / OS
+      description: For dashboard or widget problems.
+      placeholder: Chrome 130 on macOS

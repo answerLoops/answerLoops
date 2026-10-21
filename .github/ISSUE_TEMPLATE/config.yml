@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/answerLoops/answerLoops/blob/main/SECURITY.md
+    about: Please report security issues privately by email (see SECURITY.md). Never open a public issue for them.
+  - name: Ask a question or share an idea
+    url: https://github.com/answerLoops/answerLoops/discussions
+    about: Setup help, how-to questions, and open-ended ideas belong in Discussions.
