@@ -12,7 +12,11 @@ a bug, or add a feature, there's a way to help.
   app, bot, or packages.
 
 Open or link an issue first for anything beyond a small fix, so we can agree on
-the behavior before you spend time building it.
+the behavior before you spend time building it. Use the
+[issue forms](https://github.com/answerLoops/answerLoops/issues/new/choose) for
+bugs, feature requests, new integrations, and docs fixes. Issues are labeled
+`frontend` or `backend`, so you can filter for the part of the stack you want to
+work on.
 
 ## Ground rules
 
