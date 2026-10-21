@@ -80,6 +80,43 @@ describe('next.config: content security policy on ordinary routes', () => {
     })
   })
 
+  describe('Cloudflare Web Analytics', () => {
+    afterEach(() => {
+      vi.unstubAllEnvs()
+      vi.resetModules()
+    })
+
+    async function productionCsp(flag: string | undefined) {
+      vi.stubEnv('NODE_ENV', 'production')
+      if (flag === undefined) vi.stubEnv('CLOUDFLARE_WEB_ANALYTICS', '')
+      else vi.stubEnv('CLOUDFLARE_WEB_ANALYTICS', flag)
+      vi.resetModules()
+      const cfg = (await import('@/next.config')).default
+      const rules = (await cfg.headers?.()) as HeaderRule[]
+      return directives(
+        rules.find(catchAll)!.headers.find((h) => h.key.toLowerCase() === 'content-security-policy')!.value
+      )
+    }
+
+    it('allows the beacon script and its report only when the flag is on', async () => {
+      const csp = await productionCsp('true')
+      expect(csp.get('script-src')).toContain('https://static.cloudflareinsights.com')
+      expect(csp.get('connect-src')).toContain('https://cloudflareinsights.com')
+    })
+
+    it.each([undefined, 'false', 'TRUE', '1'])('keeps the stricter policy when the flag is %s', async (flag) => {
+      const csp = await productionCsp(flag)
+      expect(csp.get('script-src')).not.toContain('cloudflareinsights')
+      expect(csp.get('connect-src')).not.toContain('cloudflareinsights')
+    })
+
+    it('still allows Stripe and nothing broader when the flag is on', async () => {
+      const csp = await productionCsp('true')
+      expect(csp.get('script-src')).toBe("'self' 'unsafe-inline' https://js.stripe.com https://*.js.stripe.com https://static.cloudflareinsights.com")
+      expect(csp.get('connect-src')).toBe("'self' https://api.stripe.com https://cloudflareinsights.com")
+    })
+  })
+
   it('leaves the embeddable widget route without a CSP so customer sites can frame it', async () => {
     const csp = await cspFor((r) => r.source.startsWith('/widget/'))
     expect(csp).toBeUndefined()

@@ -6,6 +6,7 @@ import { requireOrgAccess } from '@/lib/auth/org'
 import { logger } from '@/lib/logger'
 import { getTicketById } from '@/lib/db/queries/tickets'
 import { countArticles, createArticle, getArticleBySourceTicket } from '@/lib/db/queries/kb'
+import { ArticleCapReachedError } from '@/lib/db/queries/kb-article-cap'
 import { embedTextWithModel } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { aiUnavailableMessage } from '@/lib/ai/errors'
@@ -77,8 +78,9 @@ export async function promoteToKBAction(
 
   try {
     const { embedding, model } = await embedTextWithModel(`${question}\n\n${answer}`, orgId)
-    await createArticle({ question, answer, embedding, model, sourceTicketId: ticket.id }, orgId)
+    await createArticle({ question, answer, embedding, model, sourceTicketId: ticket.id }, orgId, MAX_ARTICLES_PER_ORG)
   } catch (err) {
+    if (err instanceof ArticleCapReachedError) return { error: `Your knowledge base is full (${MAX_ARTICLES_PER_ORG} articles). Delete some before adding more.` }
     if (err instanceof NoAIProviderConfiguredError) {
       return { error: aiUnavailableMessage(err, 'Connect an AI provider in Settings → AI Model first, so new articles can be made searchable.') }
     }
@@ -178,10 +180,11 @@ export async function addKnowledgeAction(
     // Same `question\n\nanswer` convention as promote-to-KB, file upload and
     // review-queue approval.
     const { embedding, model } = await embedTextWithModel(`${question}\n\n${answer}`, orgId)
-    const article = await createArticle({ question, answer, embedding, model, ...(sourceTicketId !== undefined ? { sourceTicketId } : {}) }, orgId)
+    const article = await createArticle({ question, answer, embedding, model, ...(sourceTicketId !== undefined ? { sourceTicketId } : {}) }, orgId, MAX_ARTICLES_PER_ORG)
     refresh()
     return { ok: true, articleId: article.id }
   } catch (err) {
+    if (err instanceof ArticleCapReachedError) return { error: `Your knowledge base is full (${MAX_ARTICLES_PER_ORG} articles). Delete some before adding more.` }
     if (err instanceof NoAIProviderConfiguredError) {
       return { error: aiUnavailableMessage(err, 'Connect an AI provider in Settings → AI Model first, so new articles can be made searchable.') }
     }

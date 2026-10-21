@@ -1,3 +1,5 @@
+import { SLACK_LOGO } from '@/lib/marketing/slack-logo'
+
 export function IntegrationIcon({
   name,
   color,
@@ -115,23 +117,10 @@ export function IntegrationIcon({
   }
   if (name === 'Slack') {
     return (
-      <svg className="h-6 w-6" viewBox="0 0 24 24" aria-hidden="true">
-        <path
-          fill="#36c5f0"
-          d="M9.1 2.5a2.1 2.1 0 1 0 0 4.2h2.1V4.6a2.1 2.1 0 0 0-2.1-2.1Zm0 6.3H4.6a2.1 2.1 0 1 0 0 4.2h4.5a2.1 2.1 0 1 0 0-4.2Z"
-        />
-        <path
-          fill="#2eb67d"
-          d="M21.5 9.1a2.1 2.1 0 1 0-4.2 0v2.1h2.1a2.1 2.1 0 0 0 2.1-2.1Zm-6.3 0v4.5a2.1 2.1 0 1 0 4.2 0V9.1a2.1 2.1 0 0 0-4.2 0Z"
-        />
-        <path
-          fill="#ecb22e"
-          d="M14.9 21.5a2.1 2.1 0 1 0 0-4.2h-2.1v2.1a2.1 2.1 0 0 0 2.1 2.1Zm0-6.3h4.5a2.1 2.1 0 1 0 0-4.2h-4.5a2.1 2.1 0 0 0 0 4.2Z"
-        />
-        <path
-          fill="#e01e5a"
-          d="M2.5 14.9a2.1 2.1 0 1 0 4.2 0v-2.1H4.6a2.1 2.1 0 0 0-2.1 2.1Zm6.3 0v-4.5a2.1 2.1 0 1 0-4.2 0v4.5a2.1 2.1 0 0 0 4.2 0Z"
-        />
+      <svg className="h-6 w-6" viewBox={SLACK_LOGO.viewBox} aria-hidden="true">
+        {SLACK_LOGO.paths.map((p) => (
+          <path key={p.fill} fill={p.fill} d={p.d} />
+        ))}
       </svg>
     )
   }

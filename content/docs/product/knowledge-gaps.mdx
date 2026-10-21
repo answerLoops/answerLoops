@@ -22,7 +22,7 @@ Each gap is tagged with one of three reasons:
 | Reason | When it appears | Condition |
 |---|---|---|
 | **Low AI confidence** | The AI searched the KB but wasn't confident enough in any result to post an answer | Confidence score `< 0.6` |
-| **Needs human** | The AI determined the question requires a human to answer (e.g. account-specific, billing, or policy questions) | `ai_draft_status = needs_human` |
+| **Needs human** | The ticket was routed to a person: the AI flagged the question as needing a human (e.g. account-specific, billing, or policy questions), or it is a bug report or feature request, which are never answered automatically | `ai_draft_status = needs_human` |
 | **Missing KB article** | A how-to or docs ticket was resolved by a human but there's no KB article that covers the topic | Resolved ticket with no linked KB content |
 
 ---

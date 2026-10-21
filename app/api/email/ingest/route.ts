@@ -351,7 +351,7 @@ export async function POST(req: NextRequest) {
   if (!senderCheck.verified && !result.duplicate) {
     // The ticket is held for a person before any answer is drafted or sent:
     // the enrichment job runs after this response and stops on this status.
-    await updateTicketAIDraftStatus(result.ticket_id, 'needs_human')
+    await updateTicketAIDraftStatus(result.ticket_id, 'needs_human', undefined, 'unverified_sender')
     await createNotification(
       'new_question',
       `Email from ${senderEmail} could not be matched to a verified sender and is waiting for review`,

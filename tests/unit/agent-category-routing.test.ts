@@ -120,3 +120,17 @@ describe('runBackgroundEnrichment threads category and duplicates into runAIAgen
     expect(declIdx).toBeLessThan(callIdx)
   })
 })
+
+describe('draft-skip reasons are recorded where drafting is skipped', () => {
+  it("the bug/feature_request human-routing call records 'bug_or_feature'", () => {
+    const src = read('lib/ai/agent.ts')
+    const branchStart = src.indexOf("category === 'bug' || category === 'feature_request'")
+    const generateIdx = src.indexOf('supportAgent.generate(')
+    expect(src.slice(branchStart, generateIdx)).toContain("'bug_or_feature'")
+  })
+
+  it('postNeedsHumanReview forwards the reason to the status write', () => {
+    const src = read('lib/ai/agent.ts')
+    expect(src).toContain("updateTicketAIDraftStatus(ticketId, 'needs_human', undefined, skipReason)")
+  })
+})

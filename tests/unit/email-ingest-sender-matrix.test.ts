@@ -100,7 +100,7 @@ describe('inbound sender check at the route', () => {
       const { POST } = await import('@/app/api/email/ingest/route')
       await POST(inbound(headers) as never)
       expect(appended()).toBe(false)
-      expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human')
+      expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human', undefined, 'unverified_sender')
       expect(h.createNotification).toHaveBeenCalledWith('new_question', expect.stringContaining('waiting for review'), 500, 3)
       expect(h.createNotification).not.toHaveBeenCalledWith('new_question', expect.stringContaining('replied to ticket'), expect.anything(), expect.anything())
     })
@@ -110,7 +110,7 @@ describe('inbound sender check at the route', () => {
     const { POST } = await import('@/app/api/email/ingest/route')
     await POST(inbound([...base, ...auth('mx.acme.test; dmarc=fail', 'forwarded.test; dmarc=pass; spf=pass; dkim=pass')]) as never)
     expect(appended()).toBe(false)
-    expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human')
+    expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human', undefined, 'unverified_sender')
   })
 
   it('only the first Authentication-Results header counts: a passing first header is not overridden by a later failing one', async () => {
@@ -124,7 +124,7 @@ describe('inbound sender check at the route', () => {
     const { POST } = await import('@/app/api/email/ingest/route')
     await POST(inbound(base, { spf: 'pass', dkim: 'pass', dmarc: 'fail' }) as never)
     expect(appended()).toBe(false)
-    expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human')
+    expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human', undefined, 'unverified_sender')
   })
 
   describe('provider payload shapes', () => {
@@ -159,7 +159,7 @@ describe('inbound sender check at the route', () => {
       it(`${label}: a failing result holds the new ticket for a person`, async () => {
         await post(build(arFail))
         expect(appended()).toBe(false)
-        expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human')
+        expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human', undefined, 'unverified_sender')
       })
     }
   })

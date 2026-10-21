@@ -23,7 +23,7 @@ describe('AIUsageBanner', () => {
   it('shows an amber warning at 80% for answers, with "this month" on a paid plan', () => {
     render(<AIUsageBanner status={s('plan', warn)} />)
     const banner = screen.getByRole('status')
-    expect(banner).toHaveTextContent("You've used 80% of your included AI usage for answers this month.")
+    expect(banner).toHaveTextContent("You're at 80% of this month's AI limit for answers.")
     expect(banner.className).toMatch(/amber/)
     expect(screen.getByRole('link', { name: 'Add AI key' })).toHaveAttribute('href', '/settings?tab=ai')
   })
@@ -31,14 +31,14 @@ describe('AIUsageBanner', () => {
   it('leaves out "this month" during the trial', () => {
     render(<AIUsageBanner status={s('trial', ok, warn)} />)
     const banner = screen.getByRole('status')
-    expect(banner).toHaveTextContent("You've used 80% of your included trial AI usage for knowledge-base processing.")
+    expect(banner).toHaveTextContent("You're at 80% of your trial AI limit for knowledge-base processing.")
     expect(banner).not.toHaveTextContent('this month')
   })
 
-  it('turns red with the used-up message once a budget is exhausted', () => {
+  it('turns red with the limit-reached message once a budget is exhausted', () => {
     render(<AIUsageBanner status={s('plan', ok, done)} />)
     const banner = screen.getByRole('alert')
-    expect(banner).toHaveTextContent('This workspace has used its included AI usage for knowledge-base processing this month.')
+    expect(banner).toHaveTextContent("You've reached this month's AI limit for knowledge-base processing.")
     expect(banner.className).toMatch(/red/)
   })
 
@@ -56,7 +56,7 @@ describe('AIUsageBanner', () => {
   it('uses the trial wording in red once the trial usage is used up', () => {
     render(<AIUsageBanner status={s('trial', done)} />)
     const banner = screen.getByRole('alert')
-    expect(banner).toHaveTextContent('This workspace has used its included trial AI usage for answers.')
+    expect(banner).toHaveTextContent("You've reached your trial AI limit for answers.")
     expect(banner).not.toHaveTextContent('this month')
     expect(banner.className).toMatch(/red/)
   })
@@ -78,7 +78,7 @@ describe('AIUsageBanner', () => {
   it('a workspace with its own chat key gets an 80% warning about the embedding key too', () => {
     render(<AIUsageBanner status={{ tier: 'plan', ownChatProvider: true, chat: notIncluded, embedding: warn, models }} />)
     const banner = screen.getByRole('status')
-    expect(banner).toHaveTextContent('knowledge-base processing this month')
+    expect(banner).toHaveTextContent("this month's AI limit for knowledge-base processing")
     expect(banner).toHaveTextContent('Add an OpenAI embedding key')
   })
 

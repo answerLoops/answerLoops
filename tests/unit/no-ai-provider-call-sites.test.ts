@@ -68,7 +68,7 @@ describe('lib/ai/agent.ts — main answering path skips drafting cleanly', () =>
     const catchIdx = s.indexOf('if (err instanceof NoAIProviderConfiguredError)')
     expect(catchIdx).toBeGreaterThan(-1)
     const block = s.slice(catchIdx, catchIdx + 700)
-    expect(block).toContain("updateTicketAIDraftStatus(ticketId, 'needs_human')")
+    expect(block).toContain("updateTicketAIDraftStatus(ticketId, 'needs_human', undefined, err.skipReason)")
     expect(block).toContain('createNotification(')
     expect(block).toContain('return')
   })

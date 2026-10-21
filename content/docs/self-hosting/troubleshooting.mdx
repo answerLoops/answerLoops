@@ -59,7 +59,9 @@ Also verify that `AUTH_URL` in your `.env` matches your actual public domain exa
 
 ## AI draft never appears
 
-No AI provider is configured. The draft panel is hidden when there is no valid AI key.
+Open the ticket. Where the draft panel would be, a notice says why there is no draft (see [When a ticket has no draft](/docs/product/tickets#when-a-ticket-has-no-draft)). Bug reports and feature requests are never answered automatically, and an email from an unverified sender is held for a person, so no draft is expected for those.
+
+On a self-hosted deployment, a missing draft on an ordinary question usually means there is no valid AI key.
 
 Fix: go to **Settings → AI Model** and add an API key, or set one of the platform-default env vars (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `GROQ_API_KEY`, or `MISTRAL_API_KEY`) and restart the app.
 

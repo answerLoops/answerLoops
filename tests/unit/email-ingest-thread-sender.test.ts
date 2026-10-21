@@ -124,7 +124,7 @@ describe('email ingest — sender verification', () => {
   it('holds a new ticket for a person and raises a notification when the sender is not verified', async () => {
     const { POST } = await import('@/app/api/email/ingest/route')
     await POST(inbound('Customer <customer@example.com>', unverified) as never)
-    expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human')
+    expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human', undefined, 'unverified_sender')
     expect(h.createNotification).toHaveBeenCalledWith('new_question', expect.stringContaining('customer@example.com'), 500, 3)
   })
 
@@ -134,7 +134,7 @@ describe('email ingest — sender verification', () => {
       headers: { ...unverified.headers, 'authentication-results': 'mx; spf=pass; dkim=pass; dmarc=fail' },
     }) as never)
     expect(h.recordCustomerReply).not.toHaveBeenCalled()
-    expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human')
+    expect(h.updateTicketAIDraftStatus).toHaveBeenCalledWith(500, 'needs_human', undefined, 'unverified_sender')
   })
 
   it('accepts provider payload fields as the sender check when no header is present', async () => {

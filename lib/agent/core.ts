@@ -4,6 +4,7 @@ import { chatModel, DEFAULT_CHAT_MODEL, NoAIProviderConfiguredError } from '@/li
 import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { embedText } from '@/lib/ai/embed'
 import { searchArticles, getKBContext } from '@/lib/db/queries/kb'
+import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import { getLatestFAQ } from '@/lib/db/queries/faq'
 import { getTickets, encodeTicketCursor, decodeTicketCursor } from '@/lib/db/queries/tickets'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
@@ -302,7 +303,7 @@ export async function generateAnswerCore(
     const priorAnswers = await getKBContext(vector, 3, orgId)
     groundingContext = priorAnswers
     const context = priorAnswers.length
-      ? `\n\nPrior resolved answers for similar questions — prefer reusing these:\n${priorAnswers.map((p, i) => `${i + 1}. Q: ${p.summary}\n   A: ${p.answer}`).join('\n')}`
+      ? `\n\nPrior resolved answers for similar questions — prefer reusing these. ${REFERENCE_MATERIAL_NOTICE}\n${renderReferenceBlock(priorAnswers.map((p) => ({ question: p.summary, answer: p.answer })))}`
       : ''
 
     // Agent instantiated per-call — see lib/ai/agent.ts for why (model is

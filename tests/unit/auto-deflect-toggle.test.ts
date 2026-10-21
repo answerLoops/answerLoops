@@ -98,7 +98,7 @@ describe('runAIAgent: Automatic Deflections toggle', () => {
     await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1)
 
     expect(sendToSlackChannel).not.toHaveBeenCalled()
-    expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human')
+    expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human', undefined, undefined)
     expect(reserveAutoDeflect).not.toHaveBeenCalled()
   })
 

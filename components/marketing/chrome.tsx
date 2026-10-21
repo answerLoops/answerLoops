@@ -1,4 +1,4 @@
-import { PRICING_HREF } from '@/components/marketing/nav-shared'
+import { DOCS_HREF, PRICING_HREF } from '@/components/marketing/nav-shared'
 import Link from 'next/link'
 import { LogoMark } from '@/components/logo'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
@@ -40,7 +40,7 @@ const NAV = [
   ['Website chat', '/#website-chat'],
   ['Integrations', '/#integrations'],
   ['Pricing', PRICING_HREF],
-  ['Docs', '/docs'],
+  ['Docs', DOCS_HREF],
   ['Blog', '/blog'],
   ['About', '/about'],
 ]
@@ -106,7 +106,7 @@ const GROUPS = [
   {
     title: 'Resources',
     links: [
-      ['Documentation', '/docs'],
+      ['Documentation', DOCS_HREF],
       ['Architecture', '/architecture'],
       ['Dual-agent review', '/dual-agent-ai-support'],
       ['Self-hosting', '/self-hosted-ai-support'],

@@ -7,7 +7,7 @@ answerLoops searches the knowledge base for material relevant to a question and 
 
 ## Import methods
 
-There are four ways to add content to the knowledge base. URL import and file upload embed each chunk for search. On a hosted plan this works without your own AI key, using your workspace's included AI usage; if that is used up for the month, the import stops with a message asking you to add your own provider under **Settings → AI Model**.
+There are four ways to add content to the knowledge base. URL import and file upload embed each chunk for search. On a hosted plan this works without your own AI key, using your workspace's included AI usage; if you reach this month's limit, the import stops with a message asking you to add your own provider under **Settings → AI Model**.
 
 If the embedding model behind your knowledge base changes, answerLoops re-embeds your content in the background from what you already added. Search keeps working throughout, and you don't need to re-upload anything. An article you edit while the re-index runs is processed again before it goes live, and the re-index stops with a clear message if the chosen embedding model produces vectors of a size the knowledge base can't store.
 
@@ -134,7 +134,7 @@ Use the search bar at the top of the Knowledge Base page to find articles.
 
 **Semantic search** (default when an AI provider is configured or included usage is available): searches by meaning rather than exact words. Asking "how do I reset my password" will surface an article titled "Account recovery steps" even though the words don't match exactly.
 
-**Keyword fallback** (when no AI is available, for example included usage is used up and no key is configured): falls back to exact text matching. An amber warning banner appears at the top of the KB page to indicate that semantic search is unavailable.
+**Keyword fallback** (when no AI is available, for example you've reached your included AI limit and no key is configured): falls back to exact text matching. An amber warning banner appears at the top of the KB page to indicate that semantic search is unavailable.
 
 To clear a search and return to the full article list, click the **×** inside the search field or the **Clear** button.
 
@@ -170,11 +170,11 @@ Nothing in the queue is searchable or shown to customers until you approve it. T
 
 The text of rejected items is removed, and the text of approved items is removed 90 days after review (the approved article keeps its own copy). The item and its counter stay so a repeated question is still recognised.
 
-Approved articles count toward the same 2,000-article limit as every other source.
+Approved articles count toward the same 2,000-article limit as every other source. The limit holds even when several people add articles at the same moment: once a workspace is full, further adds and approvals are declined with a message, and a declined approval stays in the queue.
 
 ## How the assistant uses your articles
 
-Matching articles are passed to the assistant as reference material to answer from.
+Matching articles are passed to the assistant as reference material to answer from. This is the same whether the question arrives through the widget, a channel, email, or the Agent API and MCP `generate_answer`.
 
 ## Article usage
 

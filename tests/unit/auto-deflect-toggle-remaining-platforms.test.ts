@@ -116,7 +116,7 @@ describe.each(cases)('runAIAgent: Automatic Deflections toggle — $platform', (
     } else {
       expect(send).not.toHaveBeenCalled()
     }
-    expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human')
+    expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human', undefined, undefined)
     expect(reserveAutoDeflect).not.toHaveBeenCalled()
   })
 

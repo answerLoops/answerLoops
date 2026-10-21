@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { SLACK_LOGO } from '@/lib/marketing/slack-logo'
 
 // All covers share the public site's palette and a 1200 × 630 canvas.
 export const BLOG_COVER_SIZE = { width: 1200, height: 630 }
@@ -130,11 +131,10 @@ export function SlackSupportCover({ logoSrc }: { logoSrc: string }) {
       </div>
       <div style={{ position: 'absolute', left: 80, top: 354, display: 'flex', fontSize: 24, color: '#496575' }}>Bring your knowledge into Slack.</div>
       <div style={{ position: 'absolute', left: 670, top: 146, width: 384, height: 91, display: 'flex', alignItems: 'center', padding: '0 26px', gap: 16, borderRadius: 18, background: '#fffffff0', border: '2px solid white' }}>
-        <svg width="36" height="36" viewBox="0 0 24 24">
-          <path d="M9.1 2.5a2.1 2.1 0 1 0 0 4.2h2.1V4.6a2.1 2.1 0 0 0-2.1-2.1Zm0 6.3H4.6a2.1 2.1 0 1 0 0 4.2h4.5a2.1 2.1 0 1 0 0-4.2Z" fill="#36c5f0" />
-          <path d="M21.5 9.1a2.1 2.1 0 1 0-4.2 0v2.1h2.1a2.1 2.1 0 0 0 2.1-2.1Zm-6.3 0v4.5a2.1 2.1 0 1 0 4.2 0V9.1a2.1 2.1 0 0 0-4.2 0Z" fill="#2eb67d" />
-          <path d="M14.9 21.5a2.1 2.1 0 1 0 0-4.2h-2.1v2.1a2.1 2.1 0 0 0 2.1 2.1Zm0-6.3h4.5a2.1 2.1 0 1 0 0-4.2h-4.5a2.1 2.1 0 0 0 0 4.2Z" fill="#ecb22e" />
-          <path d="M2.5 14.9a2.1 2.1 0 1 0 4.2 0v-2.1H4.6a2.1 2.1 0 0 0-2.1 2.1Zm6.3 0v-4.5a2.1 2.1 0 1 0-4.2 0v4.5a2.1 2.1 0 0 0 4.2 0Z" fill="#e01e5a" />
+        <svg width="36" height="36" viewBox={SLACK_LOGO.viewBox}>
+          {SLACK_LOGO.paths.map((p) => (
+            <path key={p.fill} d={p.d} fill={p.fill} />
+          ))}
         </svg>
         <span style={{ fontSize: 28 }}># ask-the-team</span>
       </div>

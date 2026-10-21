@@ -114,7 +114,7 @@ describe('lib/ai/agent.ts — postNeedsHumanReview never posts the unreviewed AI
     const src = read('lib/ai/agent.ts')
     const fnIdx = src.indexOf('async function postNeedsHumanReview')
     const fnBody = src.slice(fnIdx, src.indexOf('\n}', fnIdx))
-    const statusIdx = fnBody.indexOf("updateTicketAIDraftStatus(ticketId, 'needs_human')")
+    const statusIdx = fnBody.indexOf("updateTicketAIDraftStatus(ticketId, 'needs_human', undefined, skipReason)")
     // Search from statusIdx onward — postDraftPublicly also appears earlier
     // in the parameter list, which isn't the branch we care about here.
     const ternaryIdx = fnBody.indexOf('postDraftPublicly', statusIdx)
@@ -159,7 +159,7 @@ describe('runAIAgent: low-confidence answers are held for approval, generic ack 
 
     await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1, 'C123', undefined)
 
-    expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human')
+    expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human', undefined, undefined)
   })
 
   it('Automatic Deflections off: genuinely low confidence still sends nothing to Slack', async () => {
@@ -169,6 +169,6 @@ describe('runAIAgent: low-confidence answers are held for approval, generic ack 
     await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 1, 'C123', undefined)
 
     expect(sendToSlackChannel).not.toHaveBeenCalled()
-    expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human')
+    expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human', undefined, undefined)
   })
 })

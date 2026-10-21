@@ -9,6 +9,7 @@ import { getOrgMembers } from '@/lib/db/queries/members'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { ReplyForm } from '@/components/tickets/reply-form'
 import { AIDraftPanel } from '@/components/tickets/ai-draft-panel'
+import { DraftSkippedNotice } from '@/components/tickets/draft-skipped-notice'
 import { getSLAStatus } from '@/lib/sla/engine'
 import { getRelatedTickets } from '@/lib/db/queries/embeddings'
 import { DUPLICATE_THRESHOLD } from '@/lib/ai/related'
@@ -274,9 +275,7 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
             </div>
           )}
           {ticket.ai_draft_status === 'needs_human' && !ticket.ai_draft && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-700">
-              No AI draft was generated for this ticket — connect an AI provider in Settings → AI Model to enable auto-answers.
-            </div>
+            <DraftSkippedNotice reason={ticket.ai_draft_skip_reason} />
           )}
 
           {/* Confidence assessment */}

@@ -9,6 +9,7 @@ import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { countArticles } from '@/lib/db/queries/kb'
 import { approveReviewItem, rejectReviewItem, reopenReviewItem, type ReviewResolution } from '@/lib/db/queries/kb-review'
 import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
+import { ArticleCapReachedError } from '@/lib/db/queries/kb-article-cap'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
@@ -101,10 +102,21 @@ export async function PATCH(req: NextRequest, ctx: { params: Promise<{ id: strin
       return Response.json({ error: 'Could not add this answer to the knowledge base. Try again.' }, { status: 502 })
     }
 
-    const result = await approveReviewItem(
-      { id: itemId, question: body.question, answer: body.answer, embedding, model, reviewedBy: userId },
-      orgId
-    )
+    let result: Awaited<ReturnType<typeof approveReviewItem>>
+    try {
+      result = await approveReviewItem(
+        { id: itemId, question: body.question, answer: body.answer, embedding, model, reviewedBy: userId, cap: MAX_ARTICLES_PER_ORG },
+        orgId
+      )
+    } catch (err) {
+      if (err instanceof ArticleCapReachedError) {
+        return Response.json(
+          { error: `Knowledge base is full (${MAX_ARTICLES_PER_ORG} articles). Delete some before approving more.` },
+          { status: 400 }
+        )
+      }
+      throw err
+    }
     return resolutionResponse(result) ?? Response.json({ ok: true, articleId: result.articleId })
   } catch (err) {
     logger.error('failed to update review item', { module: MOD, requestId: getRequestId(req), error: err })

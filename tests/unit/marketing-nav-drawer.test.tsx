@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Nav, type NavState } from '@/components/marketing/chrome'
-import { PRICING_HREF, SIGNIN_HREF, START_HREF } from '@/components/marketing/nav-shared'
+import { DOCS_HREF, PRICING_HREF, SIGNIN_HREF, START_HREF } from '@/components/marketing/nav-shared'
 
 /**
  * The marketing header has two navigation surfaces, and only one of them is
@@ -86,7 +86,7 @@ describe('the drawer is the only navigation a phone gets', () => {
       [/^product$/i, '/#features'],
       [/^integrations$/i, '/#integrations'],
       [/^pricing$/i, PRICING_HREF],
-      [/^docs$/i, '/docs'],
+      [/^docs$/i, DOCS_HREF],
       [/^about$/i, '/about'],
     ]
 

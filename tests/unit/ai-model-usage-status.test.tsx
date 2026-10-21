@@ -104,9 +104,9 @@ describe('AIModelSection — included AI usage', () => {
     render(<AIModelSection />)
 
     await waitFor(() => {
-      expect(screen.getByText(/Included AI usage is used up — add your provider to keep AI features running/)).toBeInTheDocument()
+      expect(screen.getByText(/You've reached your AI limit — add your own provider to keep AI features running/)).toBeInTheDocument()
     })
-    expect(screen.getByText('Included usage used up')).toBeInTheDocument()
+    expect(screen.getByText('Limit reached')).toBeInTheDocument()
   })
 
   it('never shows an amount', async () => {
@@ -161,7 +161,7 @@ describe('AIModelSection — included AI usage', () => {
     render(<AIModelSection />)
 
     expect(await screen.findByTestId('included-embeddings')).toHaveTextContent(
-      'Included knowledge-base processing is used up — add an OpenAI embedding key under Embeddings to keep importing and searching.',
+      "You've reached your knowledge-base processing limit — add an OpenAI embedding key under Embeddings to keep importing and searching.",
     )
   })
 
