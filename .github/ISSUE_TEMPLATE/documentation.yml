@@ -1,4 +1,4 @@
-name: Documentation issue
+name: 📚 Documentation issue
 description: Something in the docs is missing, unclear, or wrong.
 labels: ["documentation"]
 body:
