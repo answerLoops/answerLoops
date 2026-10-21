@@ -13,6 +13,10 @@ interface SearchParams {
   status?: string
   priority?: string
   category?: string
+  autoDeflected?: string
+  needsReview?: string
+  pendingDraft?: string
+  slaBreached?: string
   cursor?: string
 }
 
@@ -34,6 +38,10 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
     status: searchParams.status as TicketStatus | undefined,
     priority: searchParams.priority as Priority | undefined,
     category: searchParams.category as TicketCategory | undefined,
+    autoDeflected: searchParams.autoDeflected === '1' || undefined,
+    needsReview: searchParams.needsReview === '1' || undefined,
+    pendingDraft: searchParams.pendingDraft === '1' || undefined,
+    slaBreached: searchParams.slaBreached === '1' || undefined,
   }
   const rows = await getTickets(filters, orgId, PAGE_SIZE + 1, cursor ?? undefined)
   const hasMore = rows.length > PAGE_SIZE
@@ -45,6 +53,10 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
   if (filters.status) loadMoreParams.set('status', filters.status)
   if (filters.priority) loadMoreParams.set('priority', filters.priority)
   if (filters.category) loadMoreParams.set('category', filters.category)
+  if (filters.autoDeflected) loadMoreParams.set('autoDeflected', '1')
+  if (filters.needsReview) loadMoreParams.set('needsReview', '1')
+  if (filters.pendingDraft) loadMoreParams.set('pendingDraft', '1')
+  if (filters.slaBreached) loadMoreParams.set('slaBreached', '1')
   if (nextCursor) loadMoreParams.set('cursor', nextCursor)
 
   return (

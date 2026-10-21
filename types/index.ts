@@ -213,6 +213,14 @@ export interface TicketFilters {
   status?: TicketStatus
   priority?: Priority
   category?: TicketCategory
+  /** Tickets with an AI assessment marked as auto-deflected. */
+  autoDeflected?: boolean
+  /** Open tickets whose AI assessment requires human review. */
+  needsReview?: boolean
+  /** Open tickets with an AI draft waiting to be processed. */
+  pendingDraft?: boolean
+  /** Tickets with a breached response or resolution SLA, excluding duplicates. */
+  slaBreached?: boolean
 }
 
 export interface CreateTicketInput {

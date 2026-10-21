@@ -37,29 +37,35 @@ describe('StatsCards', () => {
     expect(within(link).getByText(String(count))).toBeVisible()
   })
 
-  it('links only Open, In Progress and Resolved, and keeps all other metrics noninteractive and out of the tab order', async () => {
+  it.each([
+    ['Auto-Answered', 50, '/tickets?autoDeflected=1'],
+    ['Deflection Rate', '50%', '/analytics'],
+    ['Needs Review', 4, '/tickets?needsReview=1'],
+    ['AI Drafts Pending', 3, '/tickets?pendingDraft=1'],
+    ['SLA Breaches', 2, '/tickets?slaBreached=1'],
+  ])('links the entire %s card to its relevant view', (label, count, href) => {
+    render(<StatsCards {...stats} />)
+
+    const link = screen.getByRole('link', { name: new RegExp(`^${label}\\s+${count}$`) })
+    expect(link).toHaveAttribute('href', href)
+    expect(within(link).getByText(label)).toBeVisible()
+    expect(within(link).getByText(String(count))).toBeVisible()
+  })
+
+  it('makes all eight stat cards keyboard-accessible links', async () => {
     const user = userEvent.setup()
     render(<StatsCards {...stats} />)
 
+    expect(screen.getAllByRole('link')).toHaveLength(8)
     for (const label of [
-      'Auto-Answered', 'Deflection Rate',
-      'Needs Review', 'AI Drafts Pending', 'SLA Breaches',
+      'Auto-Answered', 'Deflection Rate', 'Open', 'In Progress',
+      'Resolved', 'Needs Review', 'AI Drafts Pending', 'SLA Breaches',
     ]) {
-      const metric = screen.getByText(label)
-      expect(metric).toBeVisible()
-      expect(metric.closest('a, button, [role="link"], [role="button"], [tabindex]')).toBeNull()
+      expect(screen.getByText(label).closest('a')).not.toBeNull()
     }
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
-    expect(screen.getAllByRole('link')).toHaveLength(3)
 
     await user.tab()
-    expect(screen.getByRole('link', { name: /^Open\s+12$/ })).toHaveFocus()
-    await user.tab()
-    expect(screen.getByRole('link', { name: /^In Progress\s+8$/ })).toHaveFocus()
-    await user.tab()
-    expect(screen.getByRole('link', { name: /^Resolved\s+30$/ })).toHaveFocus()
-    await user.tab()
-    expect(document.body).toHaveFocus()
+    expect(screen.getByRole('link', { name: /^Auto-Answered\s+50$/ })).toHaveFocus()
   })
 
   it('allows keyboard focus and Enter activation of the Open link', async () => {
@@ -71,7 +77,9 @@ describe('StatsCards', () => {
     const activate = vi.fn((event: Event) => event.preventDefault())
     link.addEventListener('click', activate)
 
-    await user.tab()
+    await user.tab() // Auto-Answered
+    await user.tab() // Deflection Rate
+    await user.tab() // Open
     expect(link).toHaveFocus()
     await user.keyboard('{Enter}')
 

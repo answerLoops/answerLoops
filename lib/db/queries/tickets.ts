@@ -211,6 +211,24 @@ export async function getTickets(
   if (filters.status) conditions.push(eq(tickets.status, filters.status))
   if (filters.priority) conditions.push(eq(tickets.priority, filters.priority))
   if (filters.category) conditions.push(eq(tickets.category, filters.category))
+  if (filters.autoDeflected) {
+    conditions.push(sql`${tickets.status} != 'duplicate' AND EXISTS (
+      SELECT 1 FROM ai_assessments a
+      WHERE a.ticket_id = ${tickets.id} AND a.auto_deflected = 1
+    )`)
+  }
+  if (filters.needsReview) {
+    conditions.push(sql`${tickets.status} = 'open' AND EXISTS (
+      SELECT 1 FROM ai_assessments a
+      WHERE a.ticket_id = ${tickets.id} AND a.auto_deflected = 0
+    )`)
+  }
+  if (filters.pendingDraft) {
+    conditions.push(and(eq(tickets.status, 'open'), eq(tickets.aiDraftStatus, 'pending'))!)
+  }
+  if (filters.slaBreached) {
+    conditions.push(sql`(${tickets.slaResponseMet} = 0 OR ${tickets.slaResolveMet} = 0) AND ${tickets.status} != 'duplicate'`)
+  }
   // Strictly older than the cursor row on the same (created_at, id) ordering
   // the query sorts by, so a page picks up exactly where the previous one
   // stopped regardless of inserts/deletes elsewhere in the table.
@@ -481,13 +499,19 @@ export async function getTicketStats(orgId: number) {
     )
   const [needsReviewRow] = await db.execute(sql`
     SELECT COUNT(*)::int AS n FROM tickets t
-    JOIN ai_assessments a ON a.ticket_id = t.id
-    WHERE a.auto_deflected = 0 AND t.status = 'open' AND t.org_id = ${orgId}
+    WHERE t.status = 'open' AND t.org_id = ${orgId}
+      AND EXISTS (
+        SELECT 1 FROM ai_assessments a
+        WHERE a.ticket_id = t.id AND a.auto_deflected = 0
+      )
   `)
   const [deflectedRow] = await db.execute(sql`
-    SELECT COUNT(*)::int AS n FROM ai_assessments a
-    JOIN tickets t ON t.id = a.ticket_id
-    WHERE a.auto_deflected = 1 AND t.status != 'duplicate' AND t.org_id = ${orgId}
+    SELECT COUNT(*)::int AS n FROM tickets t
+    WHERE t.status != 'duplicate' AND t.org_id = ${orgId}
+      AND EXISTS (
+        SELECT 1 FROM ai_assessments a
+        WHERE a.ticket_id = t.id AND a.auto_deflected = 1
+      )
   `)
 
   return {
