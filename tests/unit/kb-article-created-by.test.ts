@@ -94,7 +94,7 @@ describe('createArticle created_by', () => {
 
   it('keeps the original creator when an existing ticket article is refreshed', async () => {
     // The ticket already has an article, so createArticle updates it in place.
-    respond = () => [articleRow(7)]
+    respond = (c) => (c.sql.startsWith('select "id", "question"') ? [[7, 'old q', 'old a']] : [articleRow(7)])
     const { createArticle } = await import('@/lib/db/queries/kb')
     await createArticle({ ...article, sourceTicketId: 9, createdBy: 99 }, 3)
     expect(calls.some(isInsert)).toBe(false)

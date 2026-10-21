@@ -2,6 +2,8 @@ import { and, desc, eq, cosineDistance, inArray, isNotNull, lt, or, sql } from '
 import { getDb } from '../drizzle'
 import { kbArticles, kbReviewItems } from '../schema'
 import { assertWithinArticleCap } from './kb-article-cap'
+import { recordArticleEvent } from './kb-events'
+import { contentHash } from '@/lib/kb/revision'
 
 export type ReviewStatus = 'pending' | 'approved' | 'rejected'
 export type ReviewSource = 'ticket' | 'widget'
@@ -237,7 +239,7 @@ export async function approveReviewItem(
         updatedAt: now,
       })
       .where(and(eq(kbReviewItems.id, input.id), eq(kbReviewItems.orgId, orgId), eq(kbReviewItems.status, 'pending')))
-      .returning({ id: kbReviewItems.id })
+      .returning({ id: kbReviewItems.id, ticketId: kbReviewItems.ticketId })
 
     if (!claimed) {
       const [exists] = await tx
@@ -264,6 +266,16 @@ export async function approveReviewItem(
       .returning({ id: kbArticles.id })
 
     await tx.update(kbReviewItems).set({ articleId: article.id }).where(eq(kbReviewItems.id, input.id))
+    await recordArticleEvent(tx, {
+      orgId,
+      articleId: article.id,
+      type: 'review_approved',
+      actorUserId: input.reviewedBy,
+      origin: 'review_queue',
+      sourceTicketId: claimed.ticketId ?? null,
+      reviewItemId: input.id,
+      contentHash: contentHash(input.question, input.answer),
+    })
     return { ok: true as const, articleId: article.id }
   })
 }
@@ -277,17 +289,31 @@ async function transition(
 ): Promise<ReviewResolution> {
   const db = getDb()
   const now = new Date().toISOString()
-  const [row] = await db
-    .update(kbReviewItems)
-    .set({
-      status: to,
-      reviewedBy: to === 'pending' ? null : reviewedBy,
-      reviewedAt: to === 'pending' ? null : now,
-      updatedAt: now,
+  // The state change and its history event commit together. Reject and reopen
+  // happen before any article exists, so the event is linked through the item.
+  const changed = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(kbReviewItems)
+      .set({
+        status: to,
+        reviewedBy: to === 'pending' ? null : reviewedBy,
+        reviewedAt: to === 'pending' ? null : now,
+        updatedAt: now,
+      })
+      .where(and(eq(kbReviewItems.id, id), eq(kbReviewItems.orgId, orgId), eq(kbReviewItems.status, from)))
+      .returning({ id: kbReviewItems.id })
+    if (!row) return false
+    await recordArticleEvent(tx, {
+      orgId,
+      articleId: null,
+      type: to === 'rejected' ? 'review_rejected' : 'review_reopened',
+      actorUserId: reviewedBy,
+      origin: 'review_queue',
+      reviewItemId: id,
     })
-    .where(and(eq(kbReviewItems.id, id), eq(kbReviewItems.orgId, orgId), eq(kbReviewItems.status, from)))
-    .returning({ id: kbReviewItems.id })
-  if (row) return { ok: true }
+    return true
+  })
+  if (changed) return { ok: true }
 
   const [exists] = await db
     .select({ id: kbReviewItems.id })

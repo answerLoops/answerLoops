@@ -499,6 +499,40 @@ export const kbReviewItems = pgTable(
   ]
 )
 
+// Append-only history of what happened to knowledge-base articles: who made
+// them, who changed them, and each review decision. Rows are never updated.
+// `content_hash` is a fingerprint of the question and answer at that moment
+// (lib/kb/revision.ts), never a copy of the text, so history survives the review
+// text retention purge and does not duplicate article content. Review
+// rejections and reopenings happen before any article exists, so `article_id`
+// is null for them and `review_item_id` links them to the article once an
+// approval creates it. `type` and `origin` are CHECK-constrained in the
+// migration. Deleting an article deletes its history, the same as
+// kb_article_usage.
+export const kbArticleEvents = pgTable(
+  'kb_article_events',
+  {
+    id: serial('id').primaryKey(),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    articleId: integer('article_id').references(() => kbArticles.id, { onDelete: 'cascade' }),
+    // 'created' | 'promoted' | 'edited' | 'review_approved' | 'review_rejected' | 'review_reopened'
+    type: text('type').notNull(),
+    // Null for automated events (imports and syncs) and for users since deleted.
+    actorUserId: integer('actor_user_id').references(() => users.id, { onDelete: 'set null' }),
+    // 'manual' | 'ticket_promotion' | 'review_queue' | 'import' | 'sync'
+    origin: text('origin').notNull(),
+    sourceTicketId: integer('source_ticket_id').references(() => tickets.id, { onDelete: 'set null' }),
+    reviewItemId: integer('review_item_id').references(() => kbReviewItems.id, { onDelete: 'set null' }),
+    contentHash: text('content_hash'),
+    createdAt: text('created_at').notNull().default(now),
+  },
+  (t) => [
+    index('idx_kb_article_events_article').on(t.articleId, t.createdAt),
+    index('idx_kb_article_events_review_item').on(t.reviewItemId),
+    index('idx_kb_article_events_org').on(t.orgId),
+  ]
+)
+
 export const integrations = pgTable(
   'integrations',
   {
