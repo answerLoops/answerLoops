@@ -163,6 +163,9 @@ describe('approveReviewItem', () => {
     expect(claim.params).toEqual(expect.arrayContaining(['approved', 'edited q', 'edited a', 12, 5, 3, 'pending']))
     const article = calls.find((c) => c.sql.startsWith('insert into "kb_articles"'))!
     expect(article.params).toEqual(expect.arrayContaining([3, 'edited q', 'edited a', 'embed-model']))
+    // The approving reviewer is recorded as the article's creator.
+    expect(article.sql).toContain('"created_by"')
+    expect(article.params).toContain(12)
     const link = calls.filter(isUpdate).at(-1)!
     expect(link.params).toContain(321)
     expect(calls.map((c) => c.sql.split(' ')[0])).toEqual(expect.arrayContaining(['begin', 'commit']))

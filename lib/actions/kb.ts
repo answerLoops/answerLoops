@@ -78,7 +78,7 @@ export async function promoteToKBAction(
 
   try {
     const { embedding, model } = await embedTextWithModel(`${question}\n\n${answer}`, orgId)
-    await createArticle({ question, answer, embedding, model, sourceTicketId: ticket.id }, orgId, MAX_ARTICLES_PER_ORG)
+    await createArticle({ question, answer, embedding, model, sourceTicketId: ticket.id, createdBy: access.userId }, orgId, MAX_ARTICLES_PER_ORG)
   } catch (err) {
     if (err instanceof ArticleCapReachedError) return { error: `Your knowledge base is full (${MAX_ARTICLES_PER_ORG} articles). Delete some before adding more.` }
     if (err instanceof NoAIProviderConfiguredError) {
@@ -180,7 +180,7 @@ export async function addKnowledgeAction(
     // Same `question\n\nanswer` convention as promote-to-KB, file upload and
     // review-queue approval.
     const { embedding, model } = await embedTextWithModel(`${question}\n\n${answer}`, orgId)
-    const article = await createArticle({ question, answer, embedding, model, ...(sourceTicketId !== undefined ? { sourceTicketId } : {}) }, orgId, MAX_ARTICLES_PER_ORG)
+    const article = await createArticle({ question, answer, embedding, model, createdBy: access.userId, ...(sourceTicketId !== undefined ? { sourceTicketId } : {}) }, orgId, MAX_ARTICLES_PER_ORG)
     refresh()
     return { ok: true, articleId: article.id }
   } catch (err) {

@@ -426,6 +426,10 @@ export const kbArticles = pgTable(
     sourceId: integer('source_id'),
     sourcePage: integer('source_page'),
     published: integer('published').notNull().default(1),
+    // The team member who added the article by hand, promoted a ticket or
+    // approved a review item. Null means unknown or automated: articles made
+    // before this column existed, and imports and syncs (those carry source_id).
+    createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
     createdAt: text('created_at').notNull().default(now),
     updatedAt: text('updated_at').notNull().default(now),
   },

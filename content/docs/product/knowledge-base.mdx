@@ -176,6 +176,12 @@ Approved articles count toward the same 2,000-article limit as every other sourc
 
 Matching articles are passed to the assistant as reference material to answer from. This is the same whether the question arrives through the widget, a channel, email, or the Agent API and MCP `generate_answer`.
 
+## Who added an article
+
+When a team member adds an article by hand (including from the Knowledge Gaps page), promotes a resolved ticket, or approves a question from the review queue, answerLoops records that person as the article's creator. This is separate from whoever originally answered the ticket: promoting or approving an answer does not make its first responder the creator.
+
+Some articles have no recorded creator, and that means unknown, not nobody. Articles that existed before this was recorded keep an unknown creator, and articles made by file upload, URL import or a synced source are created by the import itself. Refreshing a ticket's article later does not change who is recorded as its creator, and removing a team member keeps their articles.
+
 ## Article usage
 
 answerLoops keeps a count of how many answers each article was used for. An article is counted when it was among the matches handed to the assistant as context for an answer that was actually produced: a reply in the website chat widget, a drafted reply to a support ticket, a Discord `/ask` answer, or an answer generated through the Agent API. Searching the knowledge base, running a [simulation](/docs/product/simulation), and bug reports or feature requests (which are never answered from the knowledge base) are not counted.

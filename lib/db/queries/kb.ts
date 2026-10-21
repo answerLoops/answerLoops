@@ -33,6 +33,9 @@ export async function createArticle(
     embedding: number[]
     model: string
     sourceTicketId?: number
+    // The signed-in user adding the article. Stored on a new row only; refreshing
+    // an existing ticket article keeps whoever added it first.
+    createdBy?: number
   },
   orgId: number,
   // When given, a new row is added only while the workspace is under this many
@@ -79,6 +82,7 @@ export async function createArticle(
     embeddingVec: input.embedding,
     model: input.model,
     sourceTicketId: input.sourceTicketId ?? null,
+    createdBy: input.createdBy ?? null,
   }
 
   if (cap === undefined) {

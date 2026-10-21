@@ -259,6 +259,7 @@ export async function approveReviewItem(
         embedding: JSON.stringify(input.embedding),
         embeddingVec: input.embedding,
         model: input.model,
+        createdBy: input.reviewedBy,
       })
       .returning({ id: kbArticles.id })
 
