@@ -88,6 +88,8 @@ updates:
       - dependency-name: "proxy-addr"
       - dependency-name: "source-map-js"
       - dependency-name: "@modelcontextprotocol/sdk"
+      - dependency-name: "follow-redirects"
+      - dependency-name: "vite"
       - dependency-name: "@graphql-tools/utils"
       - dependency-name: "dompurify"
       - dependency-name: "katex"

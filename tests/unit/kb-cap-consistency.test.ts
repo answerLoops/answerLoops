@@ -12,7 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const h = vi.hoisted(() => ({
   log: [] as string[],
   count: 0,
-  existing: null as { id: number } | null,
+  existing: null as { id: number; question?: string; answer?: string } | null,
   inserted: [] as unknown[],
   txOpened: 0,
   instructions: [] as string[],
@@ -52,6 +52,12 @@ function makeExecutor() {
           h.log.push('insert')
           h.inserted.push(v)
           return [{ id: 77, orgId: 3, question: 'q', answer: 'a', model: 'm', published: 1, createdAt: '', updatedAt: '' }]
+        },
+        // a history event is inserted with no RETURNING, so it is awaited directly
+        then: (res: (v: unknown) => unknown) => {
+          h.log.push('insert')
+          h.inserted.push(v)
+          return Promise.resolve().then(res)
         },
       }),
     })),
@@ -96,8 +102,10 @@ describe('createArticle with an article limit', () => {
     const row = await createArticle(input, 3, 2000)
     expect(row.id).toBe(77)
     expect(h.txOpened).toBe(1)
-    expect(h.log).toEqual(['begin', 'lock', 'count', 'insert'])
+    // the article row, then its history event, in the same transaction
+    expect(h.log).toEqual(['begin', 'lock', 'count', 'insert', 'insert'])
     expect(h.inserted[0]).toMatchObject({ orgId: 3, question: 'q', model: 'm', sourceTicketId: null })
+    expect(h.inserted[1]).toMatchObject({ orgId: 3, articleId: 77, type: 'created' })
   })
 
   it('inserts when exactly one slot is left', async () => {
@@ -115,20 +123,18 @@ describe('createArticle with an article limit', () => {
     expect(h.log).not.toContain('insert')
   })
 
-  it('refreshes the article already linked to the ticket without a transaction, count or refusal, even when full', async () => {
+  it('refreshes the article already linked to the ticket without a lock, count or refusal, even when full', async () => {
     h.count = 5000
-    h.existing = { id: 9 }
+    h.existing = { id: 9, question: 'old q', answer: 'old a' }
     const { createArticle } = await import('@/lib/db/queries/kb')
-    // the refresh re-reads the row through getArticle; a missing row is fine for this assertion
-    await createArticle({ ...input, sourceTicketId: 12 }, 3, 2000).catch((e) => {
-      // only a failure of the re-read may surface, never a refusal
-      expect((e as Error).name).not.toBe('ArticleCapReachedError')
-    })
+    await expect(createArticle({ ...input, sourceTicketId: 12 }, 3, 2000)).resolves.toBeDefined()
     expect(h.log).toContain('update')
     expect(h.log).not.toContain('count')
     expect(h.log).not.toContain('lock')
-    expect(h.txOpened).toBe(0)
-    expect(h.inserted).toHaveLength(0)
+    // the refresh and its history event share one transaction; no new article row is added
+    expect(h.txOpened).toBe(1)
+    expect(h.inserted.filter((v) => 'question' in (v as object))).toHaveLength(0)
+    expect(h.inserted).toEqual([expect.objectContaining({ articleId: 9, type: 'edited' })])
   })
 
   it('applies the limit to a ticket-linked article that does not exist yet', async () => {
@@ -139,12 +145,15 @@ describe('createArticle with an article limit', () => {
     expect(h.inserted).toHaveLength(0)
   })
 
-  it('inserts directly with no transaction, lock or count when no limit is given', async () => {
+  it('inserts with no lock or count when no limit is given', async () => {
     h.count = 99999
     const { createArticle } = await import('@/lib/db/queries/kb')
     await expect(createArticle(input, 3)).resolves.toMatchObject({ id: 77 })
-    expect(h.txOpened).toBe(0)
-    expect(h.log).toEqual(['insert'])
+    // still one transaction, so the article and its history event commit together
+    expect(h.txOpened).toBe(1)
+    expect(h.log).toEqual(['begin', 'insert', 'insert'])
+    expect(h.log).not.toContain('lock')
+    expect(h.log).not.toContain('count')
   })
 })
 

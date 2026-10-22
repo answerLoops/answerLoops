@@ -17,6 +17,9 @@ RUN pnpm install --frozen-lockfile
 FROM deps AS build
 WORKDIR /app
 COPY . .
+# next.config.ts reads this while it builds, so the build stage has to see it.
+ARG CLOUDFLARE_WEB_ANALYTICS
+ENV CLOUDFLARE_WEB_ANALYTICS=$CLOUDFLARE_WEB_ANALYTICS
 RUN pnpm build
 
 # ── runner ────────────────────────────────────────────────────────────

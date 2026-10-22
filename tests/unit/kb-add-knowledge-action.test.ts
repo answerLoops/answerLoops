@@ -69,11 +69,16 @@ describe('addKnowledgeAction', () => {
     expect(res).toEqual({ ok: true, articleId: 42 })
     expect(h.embedText).toHaveBeenCalledWith(`${good.question}\n\n${good.answer}`, 7)
     expect(h.createArticle).toHaveBeenCalledExactlyOnceWith(
-      { question: good.question, answer: good.answer, embedding: [0.1, 0.2], model: 'test-embedding' },
+      { question: good.question, answer: good.answer, embedding: [0.1, 0.2], model: 'test-embedding', createdBy: 3 },
       7,
       2000
     )
     expect(h.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('records the signed-in user as the creator, whatever the form says', async () => {
+    await run({ ...good, createdBy: '999', created_by: '999' })
+    expect(h.createArticle.mock.calls[0][0]).toMatchObject({ createdBy: 3 })
   })
 
   it('stores trimmed text and never links the article to a ticket', async () => {

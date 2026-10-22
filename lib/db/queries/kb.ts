@@ -2,6 +2,8 @@ import { eq, and, desc, sql, or, ilike, isNotNull, cosineDistance } from 'drizzl
 import { getDb } from '../drizzle'
 import { kbArticles, tickets } from '../schema'
 import { assertWithinArticleCap } from './kb-article-cap'
+import { recordArticleEvent } from './kb-events'
+import { contentHash } from '@/lib/kb/revision'
 import type { KBArticle, KBSearchResult, PriorAnswer } from '@/types'
 
 export const KB_MATCH_THRESHOLD = 0.45
@@ -33,6 +35,10 @@ export async function createArticle(
     embedding: number[]
     model: string
     sourceTicketId?: number
+    // The signed-in user adding the article. Stored on a new row only; refreshing
+    // an existing ticket article keeps whoever added it first. It is also the
+    // actor on the history event this writes.
+    createdBy?: number
   },
   orgId: number,
   // When given, a new row is added only while the workspace is under this many
@@ -40,55 +46,82 @@ export async function createArticle(
   // already exists for the ticket adds no row, so it is never refused.
   cap?: number
 ): Promise<KBArticle> {
-  const db = getDb()
+  // The article and its history event commit together, so a failed write never
+  // leaves a history entry behind.
+  return getDb().transaction(async (tx) => {
+    if (input.sourceTicketId != null) {
+      const [existing] = await tx
+        .select({ id: kbArticles.id, question: kbArticles.question, answer: kbArticles.answer })
+        .from(kbArticles)
+        .where(and(eq(kbArticles.sourceTicketId, input.sourceTicketId), eq(kbArticles.orgId, orgId)))
+        .limit(1)
 
-  if (input.sourceTicketId != null) {
-    const [existing] = await db
-      .select({ id: kbArticles.id })
-      .from(kbArticles)
-      .where(and(eq(kbArticles.sourceTicketId, input.sourceTicketId), eq(kbArticles.orgId, orgId)))
-      .limit(1)
+      if (existing) {
+        await tx
+          .update(kbArticles)
+          .set({
+            question: input.question,
+            answer: input.answer,
+            embedding: JSON.stringify(input.embedding),
+            embeddingVec: input.embedding,
+            model: input.model,
+            // A fresh vector supersedes anything the re-embed job staged from
+            // the old text (lib/kb/embedding-migration.ts).
+            embeddingNext: null,
+            embeddingVecNext: null,
+            modelNext: null,
+            published: 1,
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(kbArticles.id, existing.id))
 
-    if (existing) {
-      await db
-        .update(kbArticles)
-        .set({
-          question: input.question,
-          answer: input.answer,
-          embedding: JSON.stringify(input.embedding),
-          embeddingVec: input.embedding,
-          model: input.model,
-          // A fresh vector supersedes anything the re-embed job staged from
-          // the old text (lib/kb/embedding-migration.ts).
-          embeddingNext: null,
-          embeddingVecNext: null,
-          modelNext: null,
-          published: 1,
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(kbArticles.id, existing.id))
-      return (await getArticle(existing.id))!
+        // Only a change to the words is an edit. Refreshing with identical text
+        // re-embeds the article but adds nothing to its history.
+        const hash = contentHash(input.question, input.answer)
+        if (hash !== contentHash(existing.question, existing.answer)) {
+          await recordArticleEvent(tx, {
+            orgId,
+            articleId: existing.id,
+            type: 'edited',
+            actorUserId: input.createdBy ?? null,
+            origin: 'ticket_promotion',
+            sourceTicketId: input.sourceTicketId,
+            contentHash: hash,
+          })
+        }
+        const [row] = await tx.select().from(kbArticles).where(eq(kbArticles.id, existing.id)).limit(1)
+        return toArticle(row)
+      }
     }
-  }
 
-  const values = {
-    orgId,
-    question: input.question,
-    answer: input.answer,
-    embedding: JSON.stringify(input.embedding),
-    embeddingVec: input.embedding,
-    model: input.model,
-    sourceTicketId: input.sourceTicketId ?? null,
-  }
+    if (cap !== undefined) await assertWithinArticleCap(tx, orgId, cap)
 
-  if (cap === undefined) {
-    const [row] = await db.insert(kbArticles).values(values).returning()
-    return toArticle(row)
-  }
+    const [row] = await tx
+      .insert(kbArticles)
+      .values({
+        orgId,
+        question: input.question,
+        answer: input.answer,
+        embedding: JSON.stringify(input.embedding),
+        embeddingVec: input.embedding,
+        model: input.model,
+        sourceTicketId: input.sourceTicketId ?? null,
+        createdBy: input.createdBy ?? null,
+      })
+      .returning()
 
-  return db.transaction(async (tx) => {
-    await assertWithinArticleCap(tx, orgId, cap)
-    const [row] = await tx.insert(kbArticles).values(values).returning()
+    // An article written from a ticket (promoted, or added from the Knowledge
+    // Gaps page) is a promotion; one written from scratch is created by hand.
+    const fromTicket = input.sourceTicketId != null
+    await recordArticleEvent(tx, {
+      orgId,
+      articleId: row.id,
+      type: fromTicket ? 'promoted' : 'created',
+      actorUserId: input.createdBy ?? null,
+      origin: fromTicket ? 'ticket_promotion' : 'manual',
+      sourceTicketId: input.sourceTicketId ?? null,
+      contentHash: contentHash(input.question, input.answer),
+    })
     return toArticle(row)
   })
 }
@@ -249,6 +282,11 @@ export async function textSearchArticles(query: string, limit = 10, orgId: numbe
   return rows.map(toArticle)
 }
 
+/**
+ * Adds one article made by a source sync (the GitHub and Notion importers). Its
+ * history event is an automated one: origin 'sync', no actor. File and URL
+ * imports go through createArticleFromSourceWithinCap, which records 'import'.
+ */
 export async function createArticleFromSource(
   input: {
     question: string
@@ -263,21 +301,30 @@ export async function createArticleFromSource(
   },
   orgId: number
 ): Promise<KBArticle> {
-  const [row] = await getDb()
-    .insert(kbArticles)
-    .values({
+  return getDb().transaction(async (tx) => {
+    const [row] = await tx
+      .insert(kbArticles)
+      .values({
+        orgId,
+        question: input.question,
+        answer: input.answer,
+        embedding: JSON.stringify(input.embedding),
+        embeddingVec: input.embedding,
+        model: input.model,
+        sourceId: input.sourceId,
+        sourcePage: input.sourcePage ?? null,
+        ...(input.published !== undefined && { published: input.published }),
+      })
+      .returning()
+    await recordArticleEvent(tx, {
       orgId,
-      question: input.question,
-      answer: input.answer,
-      embedding: JSON.stringify(input.embedding),
-      embeddingVec: input.embedding,
-      model: input.model,
-      sourceId: input.sourceId,
-      sourcePage: input.sourcePage ?? null,
-      ...(input.published !== undefined && { published: input.published }),
+      articleId: row.id,
+      type: 'created',
+      origin: 'sync',
+      contentHash: contentHash(input.question, input.answer),
     })
-    .returning()
-  return toArticle(row)
+    return toArticle(row)
+  })
 }
 
 export async function countArticlesForSource(sourceId: number, orgId: number): Promise<number> {
@@ -310,25 +357,40 @@ export async function upsertArticleFromSource(
 ): Promise<KBArticle> {
   const existing = await getArticleBySourceAndPage(input.sourceId, input.sourcePage, orgId)
   if (existing) {
-    const [row] = await getDb()
-      .update(kbArticles)
-      .set({
-        question: input.question,
-        answer: input.answer,
-        embedding: JSON.stringify(input.embedding),
-        embeddingVec: input.embedding,
-        model: input.model,
-        // A fresh vector supersedes anything the re-embed job staged from
-        // the old text (lib/kb/embedding-migration.ts).
-        embeddingNext: null,
-        embeddingVecNext: null,
-        modelNext: null,
-        published: 1,
-        updatedAt: new Date().toISOString(),
-      })
-      .where(eq(kbArticles.id, existing.id))
-      .returning()
-    return toArticle(row)
+    return getDb().transaction(async (tx) => {
+      const [row] = await tx
+        .update(kbArticles)
+        .set({
+          question: input.question,
+          answer: input.answer,
+          embedding: JSON.stringify(input.embedding),
+          embeddingVec: input.embedding,
+          model: input.model,
+          // A fresh vector supersedes anything the re-embed job staged from
+          // the old text (lib/kb/embedding-migration.ts).
+          embeddingNext: null,
+          embeddingVecNext: null,
+          modelNext: null,
+          published: 1,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(eq(kbArticles.id, existing.id))
+        .returning()
+
+      // A sync rewrites every page it visits, most of them unchanged. Only a
+      // change to the words is recorded, as an automated edit with no actor.
+      const hash = contentHash(input.question, input.answer)
+      if (hash !== contentHash(existing.question, existing.answer)) {
+        await recordArticleEvent(tx, {
+          orgId,
+          articleId: existing.id,
+          type: 'edited',
+          origin: 'sync',
+          contentHash: hash,
+        })
+      }
+      return toArticle(row)
+    })
   }
   return createArticleFromSource(input, orgId)
 }

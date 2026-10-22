@@ -1,6 +1,8 @@
 import { eq, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbArticles } from '../schema'
+import { recordArticleEvent } from './kb-events'
+import { contentHash } from '@/lib/kb/revision'
 
 /** Thrown when an article cannot be added because the workspace is at its cap. */
 export class ArticleCapReachedError extends Error {
@@ -38,7 +40,8 @@ export async function assertWithinArticleCap(tx: Executor, orgId: number, cap: n
  * The count and the insert run in one transaction under a per-org lock, so
  * concurrent imports for the same workspace keep the total within the cap.
  * Returns the new article id, or null when the workspace is already at the cap
- * (nothing is written in that case).
+ * (nothing is written in that case). File uploads and URL imports use this, so
+ * the history event it writes has origin 'import' and no actor.
  */
 export async function createArticleFromSourceWithinCap(
   input: {
@@ -75,6 +78,13 @@ export async function createArticleFromSourceWithinCap(
         ...(input.published !== undefined && { published: input.published }),
       })
       .returning({ id: kbArticles.id })
+    await recordArticleEvent(tx, {
+      orgId,
+      articleId: created.id,
+      type: 'created',
+      origin: 'import',
+      contentHash: contentHash(input.question, input.answer),
+    })
     return created
   })
 }

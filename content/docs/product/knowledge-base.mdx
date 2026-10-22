@@ -176,6 +176,24 @@ Approved articles count toward the same 2,000-article limit as every other sourc
 
 Matching articles are passed to the assistant as reference material to answer from. This is the same whether the question arrives through the widget, a channel, email, or the Agent API and MCP `generate_answer`.
 
+## Who added an article
+
+When a team member adds an article by hand (including from the Knowledge Gaps page), promotes a resolved ticket, or approves a question from the review queue, answerLoops records that person as the article's creator. This is separate from whoever originally answered the ticket: promoting or approving an answer does not make its first responder the creator.
+
+Some articles have no recorded creator, and that means unknown, not nobody. Articles that existed before this was recorded keep an unknown creator, and articles made by file upload, URL import or a synced source are created by the import itself. Refreshing a ticket's article later does not change who is recorded as its creator, and removing a team member keeps their articles.
+
+## Article history
+
+answerLoops keeps an append-only history for each article. It records when an article was created, when a resolved ticket was promoted into one, when its question or answer was changed, and each review decision on the question that became the article: approved, rejected, or reopened. Every entry notes who did it and where it came from: added by hand, promoted from a ticket, the review queue, a file or URL import, or a synced source.
+
+A few things to know about what is and is not recorded:
+
+- Changes made by a sync or import are recorded as automated, with no person attached. A sync that rewrites a page with the same content adds nothing.
+- Only a change to the words counts as an edit. Reflowing text or adding trailing whitespace does not.
+- The history stores a fingerprint of the question and answer at each moment, never a copy of the text, so it does not keep old wording and it is unaffected by the review queue's text retention.
+- Articles that existed before the history was introduced start with no entries. Nothing is reconstructed or guessed for them.
+- Deleting an article deletes its history, and deleting a team member keeps their entries with the person removed.
+
 ## Article usage
 
 answerLoops keeps a count of how many answers each article was used for. An article is counted when it was among the matches handed to the assistant as context for an answer that was actually produced: a reply in the website chat widget, a drafted reply to a support ticket, a Discord `/ask` answer, or an answer generated through the Agent API. Searching the knowledge base, running a [simulation](/docs/product/simulation), and bug reports or feature requests (which are never answered from the knowledge base) are not counted.

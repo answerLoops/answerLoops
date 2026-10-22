@@ -1,0 +1,37 @@
+name: ✨ Feature request
+description: Suggest an improvement or a new capability.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. For open-ended brainstorming, [Discussions](https://github.com/answerLoops/answerLoops/discussions) is a better fit. For anything concrete, this form is perfect.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the situation and who it affects, not the solution yet.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to see?
+      description: The behavior you'd expect, in as much detail as you have.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Workarounds you use today or other approaches you thought about.
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to work on this?
+      options:
+        - Yes, I'd like to build it
+        - Yes, with some guidance
+        - No, I'm just suggesting it
+    validations:
+      required: true

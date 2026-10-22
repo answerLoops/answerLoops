@@ -91,6 +91,11 @@ describe('promoteToKBAction', () => {
     )
   })
 
+  it('records the signed-in user as the creator of the promoted article', async () => {
+    await promote()
+    expect(h.createArticle.mock.calls[0][0]).toMatchObject({ createdBy: 3 })
+  })
+
   it('refuses a ticket that already has an article', async () => {
     h.getArticleBySourceTicket.mockResolvedValue({ id: 5 })
     expect(await promote()).toEqual({ error: 'This ticket is already in the knowledge base' })

@@ -172,6 +172,30 @@ export interface KBArticle {
   updated_at: string
 }
 
+export type KBArticleEventType =
+  | 'created'
+  | 'promoted'
+  | 'edited'
+  | 'review_approved'
+  | 'review_rejected'
+  | 'review_reopened'
+
+export type KBArticleEventOrigin = 'manual' | 'ticket_promotion' | 'review_queue' | 'import' | 'sync'
+
+export interface KBArticleEvent {
+  id: number
+  article_id: number | null
+  type: KBArticleEventType
+  /** Null for automated events and for users who have since been deleted. */
+  actor_user_id: number | null
+  origin: KBArticleEventOrigin
+  source_ticket_id: number | null
+  review_item_id: number | null
+  /** Fingerprint of the question and answer at that moment; null for review events with no article yet. */
+  content_hash: string | null
+  created_at: string
+}
+
 export interface KBSource {
   id: number
   org_id: number

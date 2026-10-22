@@ -23,6 +23,7 @@ import {
   kbArticles,
   kbReviewItems,
   kbArticleUsage,
+  kbArticleEvents,
   integrations,
   emailMessages,
   invitations,
@@ -166,6 +167,7 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
 
     // Org+ticket-scoped rows that reference tickets with no cascade/set-null
     // action — must go before the tickets themselves.
+    await tx.delete(kbArticleEvents).where(eq(kbArticleEvents.orgId, orgId))
     await tx.delete(kbReviewItems).where(eq(kbReviewItems.orgId, orgId))
     await tx.delete(kbArticleUsage).where(eq(kbArticleUsage.orgId, orgId))
     await tx.delete(kbArticles).where(eq(kbArticles.orgId, orgId))

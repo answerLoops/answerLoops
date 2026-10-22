@@ -163,6 +163,9 @@ describe('approveReviewItem', () => {
     expect(claim.params).toEqual(expect.arrayContaining(['approved', 'edited q', 'edited a', 12, 5, 3, 'pending']))
     const article = calls.find((c) => c.sql.startsWith('insert into "kb_articles"'))!
     expect(article.params).toEqual(expect.arrayContaining([3, 'edited q', 'edited a', 'embed-model']))
+    // The approving reviewer is recorded as the article's creator.
+    expect(article.sql).toContain('"created_by"')
+    expect(article.params).toContain(12)
     const link = calls.filter(isUpdate).at(-1)!
     expect(link.params).toContain(321)
     expect(calls.map((c) => c.sql.split(' ')[0])).toEqual(expect.arrayContaining(['begin', 'commit']))
@@ -253,18 +256,31 @@ describe('rejectReviewItem / reopenReviewItem', () => {
     respond = (c) => (isUpdate(c) ? [[5]] : [])
     const { rejectReviewItem } = await import('@/lib/db/queries/kb-review')
     expect(await rejectReviewItem(5, 3, 12)).toEqual({ ok: true })
-    const upd = calls[0]
+    const upd = calls.find(isUpdate)!
     expect(upd.params).toEqual(expect.arrayContaining(['rejected', 12, 5, 3, 'pending']))
+  })
+
+  it('reject appends a history event in the same transaction', async () => {
+    respond = (c) => (isUpdate(c) ? [[5]] : [])
+    const { rejectReviewItem } = await import('@/lib/db/queries/kb-review')
+    await rejectReviewItem(5, 3, 12)
+    const seq = calls.map((c) => c.sql.split(' ').slice(0, 3).join(' '))
+    expect(seq).toEqual(['begin', expect.stringMatching(/^update/), 'insert into "kb_article_events"', 'commit'])
+    const event = calls.find((c) => c.sql.startsWith('insert into "kb_article_events"'))!
+    expect(event.params).toEqual(expect.arrayContaining([3, 'review_rejected', 12, 'review_queue', 5]))
   })
 
   it('reopen moves rejected back to pending and clears the reviewer', async () => {
     respond = (c) => (isUpdate(c) ? [[5]] : [])
     const { reopenReviewItem } = await import('@/lib/db/queries/kb-review')
     expect(await reopenReviewItem(5, 3, 12)).toEqual({ ok: true })
-    const upd = calls[0]
+    const upd = calls.find(isUpdate)!
     expect(upd.params).toEqual(expect.arrayContaining(['pending', 5, 3, 'rejected']))
     expect(upd.params).not.toContain(12)
     expect(upd.params.filter((p) => p === null).length).toBeGreaterThanOrEqual(2)
+    // the item's current reviewer is cleared, but who reopened it stays in the history
+    const event = calls.find((c) => c.sql.startsWith('insert into "kb_article_events"'))!
+    expect(event.params).toEqual(expect.arrayContaining([3, 'review_reopened', 12, 'review_queue', 5]))
   })
 
   it("answers 'not_pending' when the row exists in another state, 'not_found' when it does not", async () => {
