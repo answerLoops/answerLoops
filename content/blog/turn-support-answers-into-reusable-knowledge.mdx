@@ -1,0 +1,277 @@
+---
+title: How to turn support answers into a searchable knowledge base
+subtitle: Save the details buried in Discord, Slack, and GitHub threads so the next question gets answered faster
+description: "How answerLoops helps a team save the answers it already gives in support: write an answer by hand, import existing docs, promote resolved tickets, review unanswered questions, and check what the agent can actually find."
+overview: answerLoops is an open-source AI support tool that turns the answers a team gives in Discord, Slack, GitHub, and other channels into knowledge-base articles. Owners and admins can write an answer by hand, import docs, promote a resolved ticket, approve unanswered questions from a review queue, and test whether a customer question finds the article.
+author: Nathan Tarbert
+datePublished: "2026-10-20"
+category: Thought Leadership
+tags:
+  - knowledge-base
+  - open-source
+  - knowledge-gaps
+---
+
+Every support team has answers living in the wrong place: a fix buried in a
+Discord thread, a workaround in a GitHub comment, a setup detail only one
+person remembers. The question gets resolved, the answer stays hidden, and the
+next person who asks starts from scratch.
+
+A knowledge base solves that, but only if saving an answer takes less effort
+than writing it again. Some answers are already in your docs. Others come out
+of a support conversation or are things someone on the team just knows. Your
+team, and any AI agent helping it, needs a straightforward way to save those
+answers, review them, and keep them current.
+
+This post walks through how
+[answerLoops](https://github.com/answerLoops/answerLoops), the open-source AI
+support tool I'm building in public, handles that: writing an answer by hand,
+importing docs you already have, promoting resolved tickets, reviewing
+unanswered questions, and checking that a customer question actually finds the
+article.
+
+I started it from my own work answering community questions in Discord,
+GitHub, and Slack at CopilotKit, then added integrations for more platforms so
+other teams could use it too.
+
+[Explore answerLoops on ⭐ GitHub](https://github.com/answerLoops/answerLoops)
+
+## Answering the question is only part of the work
+
+A question comes in. You find the relevant documentation or resource, figure
+out how it applies to that person's setup, and write a reply.
+
+During that conversation, you might discover something the docs don't cover.
+A missing setup step, a confusing default, or a workaround that deserves its
+own article.
+
+You resolve the question, but that useful detail stays buried in the
+conversation. When someone else asks, the team has to find it again.
+
+I want answerLoops to help with both parts: preparing a useful answer now and
+saving what the team learns for future questions.
+
+## What answerLoops does
+
+![Ticket and website chat workflows in answerLoops](/blog/turn-support-answers-into-reusable-knowledge/chat-workflows.png)
+
+answerLoops is an open-source AI support tool that brings questions from
+Discord, Slack, GitHub, Telegram, and other connected channels into one
+dashboard. It uses your knowledge base to help prepare answers.
+
+For knowledge-based replies in the ticket pipeline, a Mastra agent generates a
+draft and a separate agent scores its confidence and whether it fully answers
+the question. Automatic replies are off by default. When enabled, answers that
+meet the configured criteria can be sent automatically; other drafts remain
+available for human review.
+
+There's also an embeddable website chat widget built with CopilotKit and
+connected to a Mastra support agent. Visitors can ask questions directly, with
+published knowledge-base articles supplied as reference material.
+
+The widget supports richer responses, including step-by-step guides, quick
+replies, callouts, link cards, and contact options.
+
+But the quality of those answers depends on the information available to the
+agent. That's why much of the recent work has been on the knowledge base.
+
+## Add the answer that isn't in your docs
+
+![Entering a question and answer, then publishing it directly to the knowledge base](/blog/turn-support-answers-into-reusable-knowledge/write-an-answer.gif)
+
+Sometimes you don't need to import a documentation site. You just need to
+write down something the agent should know.
+
+An owner or admin can open **Knowledge Base → Manage** and use **Write an
+answer by hand**:
+
+1. Enter a question or title.
+2. Write the answer or context.
+3. Click **Add to knowledge base**.
+
+For example, a customer might ask whether changing a configuration requires a
+restart. Someone on your team knows the answer, but it isn't documented
+anywhere.
+
+The article is published and indexed when it's saved, making it available for
+subsequent questions. There's no draft step in this form, so the answer should
+be suitable for customers to read.
+
+Adding an article doesn't retrain the model. It gives the agent another
+reference to retrieve when a relevant question comes in.
+
+Articles added this way appear under **Added by hand** in the Knowledge
+coverage tab.
+
+It's a small feature, but it gives the person with the answer a direct way to
+improve what the agent knows.
+
+## Bring in the knowledge you already have
+
+![Knowledge sources including documentation, files, GitHub, Notion, manual answers, and resolved tickets](/blog/turn-support-answers-into-reusable-knowledge/knowledge-sources.png)
+
+You can also populate the knowledge base from existing content:
+
+- **Documentation URLs:** import a page or crawl a documentation site.
+- **Files:** upload PDF, DOCX, Markdown, text, or CSV files.
+- **GitHub:** sync Markdown and MDX files, with optional syncs when changes
+  are pushed to the default branch.
+- **Notion:** connect pages and databases your team wants to use.
+
+Notion content imports unpublished. Your team can inspect it before making it
+available for customer-facing answers, and that publishing choice is preserved
+across syncs.
+
+The manual-entry form sits alongside these sources. If an answer already
+exists in your docs, import it. If it only exists in someone's head, write it
+down.
+
+## Turn a resolved ticket into reusable knowledge
+
+Closing a ticket helps the person who asked. Turning that resolution into a
+knowledge-base article makes the explanation available for future questions.
+
+The **Promote to KB** action lets an owner or admin turn that ticket's
+question and answer into a knowledge-base article.
+
+Before promoting it, check that the answer applies beyond the original
+conversation. Remove account-specific details and make the explanation useful
+to someone encountering the same problem later.
+
+This matters for the website widget in particular. Its retrieved reference
+material comes from published KB articles, rather than raw resolved tickets.
+
+Promoting an answer gives it a place in the shared knowledge base where the
+widget can find it.
+
+## Let customer questions help you decide what to write
+
+You won't know every gap in your documentation ahead of time.
+
+The **Review** tab captures questions that weren't covered by the available
+knowledge. On hosted plans, this queue is available on Pro and above.
+
+A usable draft can come along as a starting point. If there isn't one, the
+item is marked **No usable answer**, and someone can write it.
+
+Owners and admins can edit the question and answer, then choose **Approve and
+add to knowledge base**. If the item shouldn't become an article, they can
+reject it instead.
+
+Nothing in the queue becomes searchable customer-facing knowledge until it's
+approved.
+
+When the same question comes in again, its counter increases instead of
+creating another copy. The most-asked questions appear first.
+
+If several people ask about the same setup step, that's a useful signal about
+what your knowledge base is missing. The queue gives your team a question to
+work from and a place to review the answer before publishing it.
+
+## Go from a knowledge gap to a new article
+
+![The review queue and Knowledge Gaps provide separate paths to adding published articles](/blog/turn-support-answers-into-reusable-knowledge/review-queue-and-gaps.png)
+
+The **Knowledge Gaps** page provides another view of where support needs
+attention.
+
+It surfaces tickets with low-confidence answers, tickets that need a person,
+and resolved questions without a covering KB article.
+
+Repeated questions are grouped with an **Asked N times** badge, so you can see
+recurring topics without reading every ticket separately.
+
+The **+ KB** action opens the manual-entry form with the ticket's question and
+any existing answer filled in. Review the text, add the article, and it's
+linked back to the ticket to close that gap.
+
+You don't have to leave the question behind and start a blank document
+somewhere else.
+
+## Check what the agent can actually find
+
+![Knowledge coverage shows article availability and lets you test the widget's retrieval](/blog/turn-support-answers-into-reusable-knowledge/knowledge-coverage.png)
+
+Importing a document doesn't tell you whether it will help with a particular
+question.
+
+The **Knowledge coverage** tab shows articles grouped by source, including
+whether they're live, unpublished, or not searchable.
+
+There's also a **Try a customer question** field. It runs the same lookup the
+website widget uses and shows which articles match, or that nothing covers the
+question.
+
+After adding an answer, try the original customer question and a few
+variations. Does the lookup find the article you just wrote? If it doesn't,
+you have something concrete to investigate before judging the generated reply.
+
+This checks retrieval, not whether every generated reply will be correct. You
+still need to review the answers themselves. But it gives you a way to
+investigate whether the intended information is being found.
+
+The KB is the source of product knowledge your team maintains for the agent.
+If no article matches, the assistant can fall back to general knowledge, which
+may not fit your product. Finding those gaps and adding the right material is
+part of maintaining it.
+
+## See which articles are being used
+
+![Article usage tracks references supplied for generated answers, excluding searches and simulations](/blog/turn-support-answers-into-reusable-knowledge/article-usage.png)
+
+answerLoops also tracks article usage.
+
+It counts when an article is supplied as context for an answer that is
+actually produced, including website replies and ticket drafts.
+
+The distinction matters: this means the article was given to the agent, not
+necessarily that the final reply quoted it.
+
+Searches and simulations don't increase the count.
+
+Together with the coverage view and repeated-question counts, this helps you
+understand what information is being retrieved and where more work might be
+useful.
+
+## Where CopilotKit and Mastra fit
+
+I work in DevRel at CopilotKit, so part of building answerLoops is putting the
+tools I work with into a product and sharing what I learn.
+
+Mastra runs the agents behind the support drafts and website conversation,
+including the chat agent's thread memory.
+
+CopilotKit provides the foundation for the custom widget interface. The
+application connects that interface to the agent and supplies the relevant
+knowledge-base context.
+
+The product also has its own workflows around those pieces: importing sources,
+reviewing unanswered questions, publishing articles, and handling staff
+actions on tickets.
+
+Those workflows are where the team gets to improve the information the agent
+uses. Someone can spot a missing answer, write it, publish it, and check
+whether a future question retrieves it.
+
+That's become a much bigger part of answerLoops as I've kept building.
+
+## Try it and tell me what's missing
+
+I started this to help with my own community work. I'm sharing it so other
+developers and support teams can try it in theirs.
+
+The code and setup instructions are on
+[GitHub](https://github.com/answerLoops/answerLoops). You can explore how
+retrieval, the review queue, and the integrations work, or run answerLoops
+yourself. The
+[knowledge-base documentation](/docs/product/knowledge-base) walks through the
+workflows in this article.
+
+If it looks useful, give the repo a ⭐. If you try it, tell me what worked and
+what got in your way.
+
+New to contributing to open source? Reach out, I'd be happy to help you find a
+place to start.
+
+Where does your team keep the useful answers that haven't made it into the
+docs yet?
