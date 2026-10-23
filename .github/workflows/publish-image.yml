@@ -22,6 +22,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+# Deny by default. Every job below declares the permissions it needs.
+permissions: {}
+
 env:
   REGISTRY: ghcr.io
   # Lowercased, not ${{ github.repository }} directly. This repository's name is
@@ -41,7 +44,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
-      packages: write
+      packages: write # push the per-platform image by digest to GHCR
     strategy:
       fail-fast: false
       matrix:
@@ -151,7 +154,7 @@ jobs:
     needs: [build]
     permissions:
       contents: read
-      packages: write
+      packages: write # publish the multi-platform manifest and tags to GHCR
 
     steps:
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
