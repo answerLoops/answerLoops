@@ -58,15 +58,17 @@ export async function getArticleUsage(
 }
 
 /**
- * Deletes day rows older than the retention window and returns how many were
- * removed. Meant to run from a periodic job.
+ * Deletes day rows outside the retention window and returns how many were
+ * removed. The window is `retentionDays` UTC days with today included, so the
+ * row dated exactly `retentionDays` ago is already out. Meant to run from a
+ * periodic job.
  */
 export async function pruneArticleUsage(retentionDays: number = ARTICLE_USAGE_RETENTION_DAYS): Promise<number> {
   const days = Math.floor(retentionDays)
   if (!Number.isFinite(days) || days < 1) throw new Error('retentionDays must be a positive integer')
   const rows = await getDb().execute(sql`
     DELETE FROM kb_article_usage
-    WHERE day < (now() AT TIME ZONE 'utc')::date - ${days}::int
+    WHERE day <= (now() AT TIME ZONE 'utc')::date - ${days}::int
     RETURNING 1
   `)
   return (rows as unknown as unknown[]).length

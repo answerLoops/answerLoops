@@ -123,7 +123,9 @@ describe('pruneArticleUsage', () => {
     expect(ARTICLE_USAGE_RETENTION_DAYS).toBe(400)
     expect(await pruneArticleUsage()).toBe(2)
     expect(calls[0].sql).toContain('DELETE FROM kb_article_usage')
-    expect(calls[0].sql).toContain('day <')
+    // Inclusive bound: a row dated exactly 400 days ago is pruned, so at most
+    // 400 UTC days (today included) are kept.
+    expect(calls[0].sql).toMatch(/day <= /)
     expect(calls[0].params).toContain(400)
   })
 
