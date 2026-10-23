@@ -11,10 +11,15 @@ import path from 'node:path'
 const h = vi.hoisted(() => ({
   requireOrgAccess: vi.fn(),
   getKnowledgeCoverage: vi.fn(),
+  getArticleUsage: vi.fn(),
+  loggerError: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
 vi.mock('@/lib/db/queries/kb-coverage', () => ({ getKnowledgeCoverage: h.getKnowledgeCoverage }))
+vi.mock('@/lib/db/queries/kb-usage', () => ({ getArticleUsage: h.getArticleUsage }))
+vi.mock('@/lib/logger', () => ({ logger: { error: h.loggerError } }))
+vi.mock('@/lib/request-id', () => ({ getRequestId: () => 'req-test' }))
 
 const req = () => new Request('https://app.test/api/kb/coverage')
 
@@ -25,6 +30,7 @@ beforeEach(() => {
     groups: [],
     truncated: false,
   })
+  h.getArticleUsage.mockResolvedValue([])
 })
 
 describe('GET /api/kb/coverage', () => {
@@ -34,6 +40,7 @@ describe('GET /api/kb/coverage', () => {
     const res = await GET(req())
     expect(res.status).toBe(401)
     expect(h.getKnowledgeCoverage).not.toHaveBeenCalled()
+    expect(h.getArticleUsage).not.toHaveBeenCalled()
   })
 
   it("reads coverage for the caller's own org only", async () => {
@@ -42,10 +49,28 @@ describe('GET /api/kb/coverage', () => {
     const res = await GET(req())
     expect(res.status).toBe(200)
     expect(h.getKnowledgeCoverage).toHaveBeenCalledExactlyOnceWith(7)
-    expect((await res.json()).summary.total).toBe(0)
+    expect(h.getArticleUsage).toHaveBeenCalledExactlyOnceWith(7)
+    expect(await res.json()).toMatchObject({ summary: { total: 0 }, articleUsage: [], articleUsageAvailable: true })
+    expect(h.loggerError).not.toHaveBeenCalled()
   })
 
-  it('answers 500 with a generic message when the read fails', async () => {
+  it('returns coverage with zero usage when the usage read fails', async () => {
+    h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 7 })
+    h.getArticleUsage.mockRejectedValue(new Error('usage db down'))
+    const { GET } = await import('@/app/api/kb/coverage/route')
+    const res = await GET(req())
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ summary: { total: 0 }, articleUsage: [], articleUsageAvailable: false })
+    expect(h.getArticleUsage).toHaveBeenCalledExactlyOnceWith(7)
+    expect(h.loggerError).toHaveBeenCalledWith('failed to load knowledge article usage', expect.objectContaining({
+      module: 'api/kb/coverage',
+      requestId: 'req-test',
+      orgId: 7,
+      error: expect.any(Error),
+    }))
+  })
+
+  it('answers 500 with a generic message when the coverage read fails', async () => {
     h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 7 })
     h.getKnowledgeCoverage.mockRejectedValue(new Error('db down'))
     const { GET } = await import('@/app/api/kb/coverage/route')

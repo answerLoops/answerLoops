@@ -13,6 +13,12 @@
 
 export type CoverageStatus = 'live' | 'unpublished' | 'not_searchable'
 
+/** Shared article-usage reporting window, in days. */
+export const ARTICLE_USAGE_WINDOW_DAYS = 30
+
+/** Usage older than this many days is pruned from storage. */
+export const ARTICLE_USAGE_RETENTION_DAYS = 400
+
 export interface CoverageRow {
   id: number
   title: string

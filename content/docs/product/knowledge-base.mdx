@@ -196,12 +196,14 @@ A few things to know about what is and is not recorded:
 
 ## Article usage
 
-answerLoops keeps a count of how many answers each article was used for. An article is counted when it was among the matches handed to the assistant as context for an answer that was actually produced: a reply in the website chat widget, a drafted reply to a support ticket, a Discord `/ask` answer, or an answer generated through the Agent API. Searching the knowledge base, running a [simulation](/docs/product/simulation), and bug reports or feature requests (which are never answered from the knowledge base) are not counted.
+The **Knowledge coverage** tab shows each article's **Supplied as context** count, covering up to 400 days of recorded counts, with older counts removed automatically, and the last 30 days. An article is counted when it was among the matches handed to the assistant as context for an answer that was actually produced: a reply in the website chat widget, a drafted reply to a support ticket, a Discord `/ask` answer, or an answer generated through the Agent API. Searching the knowledge base, running a [simulation](/docs/product/simulation), and bug reports or feature requests (which are never answered from the knowledge base) are not counted.
 
 Two things to keep in mind when reading the numbers:
 
 - The count means the article was given to the assistant, not that the reply quoted it. The assistant decides what to use.
 - Only a number per article per day is stored. The question, the visitor and the ticket are never recorded with it.
+- When usage data loads successfully, an article with no recorded usage shows zero. If usage cannot be loaded, the tab shows **Usage unavailable** instead of treating the missing data as zero; coverage information remains available.
+- Up to 400 days of recorded counts are retained, and older counts are automatically removed.
 
 Deleting an article, or deleting the workspace, removes its counts.
 

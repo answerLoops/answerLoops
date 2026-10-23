@@ -2,7 +2,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import type { Coverage } from '@/lib/kb/coverage'
+import { ARTICLE_USAGE_RETENTION_DAYS, ARTICLE_USAGE_WINDOW_DAYS, type Coverage } from '@/lib/kb/coverage'
+import type { ArticleUsage } from '@/lib/db/queries/kb-usage'
 
 /**
  * The Knowledge coverage tab: what it tells an owner about their assistant, and
@@ -10,7 +11,7 @@ import type { Coverage } from '@/lib/kb/coverage'
  * per URL so each test controls both endpoints.
  */
 
-const coverage: Coverage = {
+const coverage: Coverage & { articleUsage: ArticleUsage[] } = {
   summary: { total: 4, live: 2, unpublished: 1, notSearchable: 1, sources: 2 },
   groups: [
     {
@@ -37,6 +38,10 @@ const coverage: Coverage = {
     },
   ],
   truncated: false,
+  articleUsage: [
+    { article_id: 4, total: 2, recent: 1 },
+    { article_id: 1, total: 12, recent: 3 },
+  ],
 }
 
 const h = vi.hoisted(() => ({ fetchMock: vi.fn() }))
@@ -78,6 +83,8 @@ describe('CoverageTab: what the assistant knows', () => {
   })
 
   it('lists every title under its source, flagging the ones the assistant cannot use', async () => {
+    expect(ARTICLE_USAGE_RETENTION_DAYS).toBe(400)
+    expect(ARTICLE_USAGE_WINDOW_DAYS).toBe(30)
     route({})
     await renderTab()
     const group = (await screen.findByText('help-center.pdf')).closest('details')!
@@ -91,6 +98,14 @@ describe('CoverageTab: what the assistant knows', () => {
     expect(within(rows[1]).getByText('Unpublished')).toBeTruthy()
     expect(within(rows[2]).getByText('Not searchable')).toBeTruthy()
     expect(screen.getByText('Opening hours')).toBeTruthy()
+
+    expect(within(rows[0]).getByText('Supplied as context')).toBeTruthy()
+    expect(within(rows[0]).getByText(`Recorded (up to ${ARTICLE_USAGE_RETENTION_DAYS} days): 12 · Last ${ARTICLE_USAGE_WINDOW_DAYS} days: 3`)).toBeTruthy()
+    expect(within(rows[1]).getByText(`Recorded (up to ${ARTICLE_USAGE_RETENTION_DAYS} days): 0 · Last ${ARTICLE_USAGE_WINDOW_DAYS} days: 0`)).toBeTruthy()
+    expect(within(rows[2]).getByText(`Recorded (up to ${ARTICLE_USAGE_RETENTION_DAYS} days): 0 · Last ${ARTICLE_USAGE_WINDOW_DAYS} days: 0`)).toBeTruthy()
+    const manualRow = screen.getByText('Opening hours').closest('li')!
+    expect(within(manualRow).getByText(`Recorded (up to ${ARTICLE_USAGE_RETENTION_DAYS} days): 2 · Last ${ARTICLE_USAGE_WINDOW_DAYS} days: 1`)).toBeTruthy()
+    expect(screen.getByText(/counts answers an article was given to, not answers that quoted it/i)).toBeTruthy()
   })
 
   it('says plainly that an empty knowledge base gives the assistant nothing to answer from', async () => {
@@ -98,6 +113,30 @@ describe('CoverageTab: what the assistant knows', () => {
     await renderTab()
     expect(await screen.findByText(/no articles to answer from/i)).toBeTruthy()
     expect(screen.getByRole('link', { name: /add sources/i }).getAttribute('href')).toBe('/kb')
+  })
+
+  it('shows usage counts without an unavailable banner when usage loaded successfully', async () => {
+    route({ coverage: { ...coverage, articleUsageAvailable: true } })
+    await renderTab()
+    expect(screen.queryByText(/article usage could not be loaded/i)).toBeNull()
+    const row = (await screen.findByText('How do I reset my password?')).closest('li')!
+    expect(within(row).getByText('Recorded (up to 400 days): 12 · Last 30 days: 3')).toBeTruthy()
+  })
+
+  it('shows usage unavailable rather than zero when the usage query failed', async () => {
+    route({ coverage: { ...coverage, articleUsage: [], articleUsageAvailable: false } })
+    await renderTab()
+    expect(await screen.findByText(/article usage could not be loaded/i)).toBeTruthy()
+    const row = screen.getByText('How do I reset my password?').closest('li')!
+    expect(within(row).getByText('Usage unavailable')).toBeTruthy()
+    expect(within(row).queryByText('Recorded (up to 400 days): 0 · Last 30 days: 0')).toBeNull()
+  })
+
+  it('shows zero counts when the response has no usage field', async () => {
+    route({ coverage: { summary: { total: 1, live: 1, unpublished: 0, notSearchable: 0, sources: 0 }, groups: [{ key: 'manual', kind: 'manual', label: 'Added by hand', sourceType: null, total: 1, live: 1, items: [{ id: 99, title: 'No usage field', status: 'live' }] }], truncated: false } })
+    await renderTab()
+    const row = (await screen.findByText('No usage field')).closest('li')!
+    expect(within(row).getByText(`Recorded (up to ${ARTICLE_USAGE_RETENTION_DAYS} days): 0 · Last ${ARTICLE_USAGE_WINDOW_DAYS} days: 0`)).toBeTruthy()
   })
 
   it('notes when the list was cut off', async () => {

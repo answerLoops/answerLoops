@@ -1,16 +1,14 @@
 import { sql } from 'drizzle-orm'
+import { ARTICLE_USAGE_RETENTION_DAYS, ARTICLE_USAGE_WINDOW_DAYS } from '@/lib/kb/coverage'
 import { getDb } from '../drizzle'
 
 export interface ArticleUsage {
   article_id: number
-  /** Answers this article was supplied to, all time. */
+  /** Answers this article was supplied to within the retained usage window. */
   total: number
   /** The same, over the last `windowDays` days (today included). */
   recent: number
 }
-
-// How many days the "recent" figure covers.
-export const ARTICLE_USAGE_WINDOW_DAYS = 30
 
 /**
  * Counts one answer for each of the given articles, on today's UTC row.
@@ -59,20 +57,18 @@ export async function getArticleUsage(
   }))
 }
 
-// Usage rows are kept this long; the dashboard only reads the all-time total and
-// a 30-day window, so older day rows are folded into nothing and can go.
-export const ARTICLE_USAGE_RETENTION_DAYS = 400
-
 /**
- * Deletes day rows older than the retention window and returns how many were
- * removed. Meant to run from a periodic job.
+ * Deletes day rows outside the retention window and returns how many were
+ * removed. The window is `retentionDays` UTC days with today included, so the
+ * row dated exactly `retentionDays` ago is already out. Meant to run from a
+ * periodic job.
  */
 export async function pruneArticleUsage(retentionDays: number = ARTICLE_USAGE_RETENTION_DAYS): Promise<number> {
   const days = Math.floor(retentionDays)
   if (!Number.isFinite(days) || days < 1) throw new Error('retentionDays must be a positive integer')
   const rows = await getDb().execute(sql`
     DELETE FROM kb_article_usage
-    WHERE day < (now() AT TIME ZONE 'utc')::date - ${days}::int
+    WHERE day <= (now() AT TIME ZONE 'utc')::date - ${days}::int
     RETURNING 1
   `)
   return (rows as unknown as unknown[]).length
