@@ -25,6 +25,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: publish-agent-sdk-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     name: Build, verify, and publish
@@ -38,7 +42,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.0.0 # zizmor: ignore[cache-poisoning]
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # zizmor: ignore[cache-poisoning]
         with:
           node-version: 22
           registry-url: 'https://registry.npmjs.org'

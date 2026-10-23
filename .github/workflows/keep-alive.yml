@@ -6,6 +6,13 @@ on:
     - cron: '0 12 */3 * *'
   workflow_dispatch: {}
 
+# Deny by default. Every job below declares the permissions it needs.
+permissions: {}
+
+concurrency:
+  group: keep-alive
+  cancel-in-progress: false
+
 jobs:
   ping:
     name: Ping production health endpoint

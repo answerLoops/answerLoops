@@ -8,6 +8,9 @@ on:
   schedule:
     - cron: '0 6 * * 1'  # weekly Monday 6am UTC
 
+# Deny by default. Every job below declares the permissions it needs.
+permissions: {}
+
 concurrency:
   group: security-${{ github.ref }}
   cancel-in-progress: true
@@ -154,10 +157,19 @@ jobs:
         # Catches script-injection via untrusted ${{ github.event.* }} interpolation,
         # unpinned third-party actions (tag/branch instead of commit SHA — the exact
         # class of thing this repo's own actions are pinned against below), overly
-        # broad `permissions:`, and unsafe pull_request_target usage. Regular persona
-        # (not --pedantic) to match this pipeline's existing bar — blocking on real
-        # findings, not code-smell-level nitpicks like missing concurrency groups.
-        run: zizmor .github/workflows/
+        # broad `permissions:`, and unsafe pull_request_target usage.
+        #
+        # The token is read-only (this job has `contents: read`) and is what turns
+        # on zizmor's online audits: a pinned SHA that only exists in a fork
+        # (impostor commits), actions with known vulnerabilities, and tag/branch
+        # confusion. Without it those audits are silently skipped.
+        #
+        # Auditor persona with a medium severity floor: it sees everything the
+        # regular persona hides, but low-severity style findings (missing
+        # concurrency groups, stale-looking refs) do not block a merge.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: zizmor --persona auditor --min-severity medium .github/workflows/
 
   trust-policy:
     name: Supply-chain trust audit
