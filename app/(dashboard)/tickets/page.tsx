@@ -27,6 +27,15 @@ interface SearchParams {
 // another page follows, without a second round trip or a COUNT query.
 const PAGE_SIZE = 50
 
+// Filters reached from the dashboard stat cards. They have no dropdown in the
+// filter bar, so they ride along as hidden fields to survive a Filter submit.
+const CARD_FILTERS = [
+  { param: 'autoDeflected', label: 'Auto-Answered' },
+  { param: 'needsReview', label: 'Needs Review' },
+  { param: 'pendingDraft', label: 'AI Drafts Pending' },
+  { param: 'slaBreached', label: 'SLA Breaches' },
+] as const
+
 export default async function TicketsPage(props: { searchParams: Promise<SearchParams> }) {
   const searchParams = await props.searchParams
   const session = await auth()
@@ -58,6 +67,14 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
   if (filters.pendingDraft) loadMoreParams.set('pendingDraft', '1')
   if (filters.slaBreached) loadMoreParams.set('slaBreached', '1')
   if (nextCursor) loadMoreParams.set('cursor', nextCursor)
+
+  const activeCardFilters = CARD_FILTERS.filter(({ param }) => filters[param])
+  const withoutCardFilters = new URLSearchParams()
+  if (filters.status) withoutCardFilters.set('status', filters.status)
+  if (filters.priority) withoutCardFilters.set('priority', filters.priority)
+  if (filters.category) withoutCardFilters.set('category', filters.category)
+  const clearCardFiltersQuery = withoutCardFilters.toString()
+  const clearCardFiltersHref = clearCardFiltersQuery ? `/tickets?${clearCardFiltersQuery}` : '/tickets'
 
   return (
     <div className="dashboard-page max-w-7xl space-y-6">
@@ -99,6 +116,9 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
             <option value="how_to">How-to</option>
             <option value="general_question">General Question</option>
           </select>
+          {activeCardFilters.map(({ param }) => (
+            <input key={param} type="hidden" name={param} value="1" />
+          ))}
           <button type="submit" className="rounded-lg bg-[#082e50] px-4 py-2 text-sm font-medium text-white hover:bg-[#184566]">
             Filter
           </button>
@@ -120,6 +140,20 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
           )}
         </form>
       </div>
+
+      {activeCardFilters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600" data-testid="card-filter-indicator">
+          <span>Filtered by</span>
+          {activeCardFilters.map(({ param, label }) => (
+            <span key={param} className="rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">
+              {label}
+            </span>
+          ))}
+          <Link href={clearCardFiltersHref} className="rounded-full px-3 py-1 text-slate-600 underline hover:bg-gray-50">
+            Clear card filter
+          </Link>
+        </div>
+      )}
 
       <TicketList tickets={tickets} />
 
