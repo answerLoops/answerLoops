@@ -455,3 +455,51 @@ export function DualAgentReviewCover({ logoSrc }: { logoSrc: string }) {
     </BlogCoverFrame>
   )
 }
+
+export function SupportAnswersKnowledgeCover({ logoSrc }: { logoSrc: string }) {
+  return (
+    <BlogCoverFrame
+      logoSrc={logoSrc}
+      caption="Save what your team already knows. Find it when it matters."
+      backgroundImage="radial-gradient(ellipse at 100% 55%, #a9dde0 0%, rgba(169,221,224,0) 62%), radial-gradient(ellipse at 0% 100%, #f0dfbd 0%, rgba(240,223,189,0) 60%), linear-gradient(200deg, #f3effa, #eef7f7 58%)"
+    >
+      <div style={{ position: 'absolute', left: 78, top: 190, display: 'flex', flexDirection: 'column', fontSize: 62, lineHeight: 1.1, letterSpacing: -2 }}>
+        <span>Answers worth</span>
+        <span style={{ color: '#168193' }}>keeping.</span>
+      </div>
+      <div style={{ position: 'absolute', left: 80, top: 350, display: 'flex', fontSize: 24, color: '#496575' }}>Turn support replies into searchable knowledge.</div>
+      <div style={{ position: 'absolute', left: 640, top: 128, width: 470, display: 'flex', gap: 10 }}>
+        {['Docs', 'Discord', 'Slack', 'GitHub'].map((source) => (
+          <div key={source} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 42, flex: 1, borderRadius: 21, background: '#fffffff0', border: '2px solid white', fontSize: 18, color: coverPalette.muted }}>{source}</div>
+        ))}
+      </div>
+      <svg width="470" height="52" viewBox="0 0 470 52" style={{ position: 'absolute', left: 640, top: 176 }}>
+        <path d="M56 4V20Q56 30 66 30H235M178 4V20Q178 30 188 30H235M292 4V20Q292 30 282 30H235M414 4V20Q414 30 404 30H235M235 30V44M227 37L235 47L243 37" fill="none" stroke="#72aeb9" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div style={{ position: 'absolute', left: 640, top: 232, width: 470, height: 164, padding: '24px 28px', display: 'flex', flexDirection: 'column', borderRadius: 20, background: coverPalette.navy, color: 'white', boxShadow: '0 16px 34px #082e5018' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ color: '#b9e0e5', fontSize: 17 }}>Knowledge base</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 14px', borderRadius: 14, background: '#e3f1ef', color: '#176c74', fontSize: 16 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" fill="none" stroke="#168193" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            Published
+          </span>
+        </div>
+        <span style={{ marginTop: 16, fontSize: 30 }}>Getting started</span>
+        <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ height: 7, width: 360, borderRadius: 4, background: '#8cb6c5' }} />
+          <div style={{ height: 7, width: 270, borderRadius: 4, background: '#8cb6c5' }} />
+        </div>
+      </div>
+      <svg width="20" height="40" viewBox="0 0 20 40" style={{ position: 'absolute', left: 865, top: 402 }}>
+        <path d="M10 0V32M3 25L10 36L17 25" fill="none" stroke="#168fa3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <div style={{ position: 'absolute', left: 640, top: 450, width: 470, height: 100, padding: '18px 26px', display: 'flex', flexDirection: 'column', borderRadius: '20px 20px 20px 4px', background: '#fffffff2', border: '2px solid white', boxShadow: '0 10px 26px #082e5010' }}>
+        <span style={{ fontSize: 17, color: coverPalette.muted }}>Customer asks: How do I get started?</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 14, fontSize: 24 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" fill="none" stroke="#168193" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+          <span>Answered from the article</span>
+        </div>
+      </div>
+    </BlogCoverFrame>
+  )
+}
