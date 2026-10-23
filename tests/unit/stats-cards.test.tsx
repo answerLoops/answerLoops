@@ -13,6 +13,8 @@ const stats = {
   pendingDrafts: 3,
   needsReview: 4,
   autoDeflected: 50,
+  // Deliberately not autoDeflected / total, which would be 50.
+  deflectionRate: 75,
 }
 
 describe('StatsCards', () => {
@@ -39,7 +41,7 @@ describe('StatsCards', () => {
 
   it.each([
     ['Auto-Answered', 50, '/tickets?autoDeflected=1'],
-    ['Deflection Rate', '50%', '/analytics'],
+    ['Deflection Rate', '75%', '/analytics'],
     ['Needs Review', 4, '/tickets?needsReview=1'],
     ['AI Drafts Pending', 3, '/tickets?pendingDraft=1'],
     ['SLA Breaches', 2, '/tickets?slaBreached=1'],

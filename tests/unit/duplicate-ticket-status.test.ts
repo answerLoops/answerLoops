@@ -35,7 +35,7 @@ describe('getTicketStats', () => {
     expect(total).toBeDefined()
     expect(excludesDuplicate(total!)).toBe(true)
 
-    const breach = calls.find((c) => c.sql.includes('sla_response_met = 0'))
+    const breach = calls.find((c) => /sla_response_met"? = 0/.test(c.sql))
     expect(breach).toBeDefined()
     expect(excludesDuplicate(breach!)).toBe(true)
 

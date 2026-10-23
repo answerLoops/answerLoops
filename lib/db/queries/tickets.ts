@@ -1,4 +1,4 @@
-import { eq, and, or, inArray, sql, desc, lt, ne } from 'drizzle-orm'
+import { eq, and, or, inArray, sql, desc, lt, ne, type SQL } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import {
   tickets,
@@ -201,6 +201,32 @@ export function decodeTicketCursor(value: unknown): TicketCursor | null | undefi
   return { createdAt, id }
 }
 
+export type TicketCardFilter = 'autoDeflected' | 'needsReview' | 'pendingDraft' | 'slaBreached'
+
+// The dashboard stat cards and the ticket list they link to must agree, so
+// both are built from this one definition: the card counts the rows the list
+// shows. Each condition is written against the tickets table.
+const ticketCardConditions: Record<TicketCardFilter, SQL> = {
+  autoDeflected: sql`${tickets.status} != 'duplicate' AND EXISTS (
+    SELECT 1 FROM ai_assessments a
+    WHERE a.ticket_id = ${tickets.id} AND a.auto_deflected = 1
+  )`,
+  needsReview: sql`${tickets.status} = 'open' AND EXISTS (
+    SELECT 1 FROM ai_assessments a
+    WHERE a.ticket_id = ${tickets.id} AND a.auto_deflected = 0
+  )`,
+  pendingDraft: sql`${tickets.status} = 'open' AND ${tickets.aiDraftStatus} = 'pending'`,
+  slaBreached: sql`(${tickets.slaResponseMet} = 0 OR ${tickets.slaResolveMet} = 0) AND ${tickets.status} != 'duplicate'`,
+}
+
+async function countTicketsMatching(filter: TicketCardFilter, orgId: number): Promise<number> {
+  const [row] = await getDb()
+    .select({ n: sql<number>`COUNT(*)::int` })
+    .from(tickets)
+    .where(and(eq(tickets.orgId, orgId), ticketCardConditions[filter]))
+  return row?.n ?? 0
+}
+
 export async function getTickets(
   filters: TicketFilters = {},
   orgId: number,
@@ -211,23 +237,8 @@ export async function getTickets(
   if (filters.status) conditions.push(eq(tickets.status, filters.status))
   if (filters.priority) conditions.push(eq(tickets.priority, filters.priority))
   if (filters.category) conditions.push(eq(tickets.category, filters.category))
-  if (filters.autoDeflected) {
-    conditions.push(sql`${tickets.status} != 'duplicate' AND EXISTS (
-      SELECT 1 FROM ai_assessments a
-      WHERE a.ticket_id = ${tickets.id} AND a.auto_deflected = 1
-    )`)
-  }
-  if (filters.needsReview) {
-    conditions.push(sql`${tickets.status} = 'open' AND EXISTS (
-      SELECT 1 FROM ai_assessments a
-      WHERE a.ticket_id = ${tickets.id} AND a.auto_deflected = 0
-    )`)
-  }
-  if (filters.pendingDraft) {
-    conditions.push(and(eq(tickets.status, 'open'), eq(tickets.aiDraftStatus, 'pending'))!)
-  }
-  if (filters.slaBreached) {
-    conditions.push(sql`(${tickets.slaResponseMet} = 0 OR ${tickets.slaResolveMet} = 0) AND ${tickets.status} != 'duplicate'`)
+  for (const filter of Object.keys(ticketCardConditions) as TicketCardFilter[]) {
+    if (filters[filter]) conditions.push(ticketCardConditions[filter])
   }
   // Strictly older than the cursor row on the same (created_at, id) ordering
   // the query sorts by, so a page picks up exactly where the previous one
@@ -487,42 +498,22 @@ export async function getTicketStats(orgId: number) {
     .from(tickets)
     .where(and(eq(tickets.orgId, orgId), inArray(tickets.status, ['resolved', 'closed'])))
 
-  const [slaBreachRow] = await db.execute(sql`
-    SELECT COUNT(*)::int AS n FROM tickets
-    WHERE (sla_response_met = 0 OR sla_resolve_met = 0) AND status != 'duplicate' AND org_id = ${orgId}
-  `)
-  const [pendingRow] = await db
-    .select({ n: sql<number>`COUNT(*)::int` })
-    .from(tickets)
-    .where(
-      and(eq(tickets.orgId, orgId), eq(tickets.aiDraftStatus, 'pending'), eq(tickets.status, 'open'))
-    )
-  const [needsReviewRow] = await db.execute(sql`
-    SELECT COUNT(*)::int AS n FROM tickets t
-    WHERE t.status = 'open' AND t.org_id = ${orgId}
-      AND EXISTS (
-        SELECT 1 FROM ai_assessments a
-        WHERE a.ticket_id = t.id AND a.auto_deflected = 0
-      )
-  `)
-  const [deflectedRow] = await db.execute(sql`
-    SELECT COUNT(*)::int AS n FROM tickets t
-    WHERE t.status != 'duplicate' AND t.org_id = ${orgId}
-      AND EXISTS (
-        SELECT 1 FROM ai_assessments a
-        WHERE a.ticket_id = t.id AND a.auto_deflected = 1
-      )
-  `)
+  const [slaBreaches, pendingDrafts, needsReview, autoDeflected] = await Promise.all([
+    countTicketsMatching('slaBreached', orgId),
+    countTicketsMatching('pendingDraft', orgId),
+    countTicketsMatching('needsReview', orgId),
+    countTicketsMatching('autoDeflected', orgId),
+  ])
 
   return {
     total: totRow?.n ?? 0,
     open: openRow?.n ?? 0,
     inProgress: inProgressRow?.n ?? 0,
     resolved: resolvedRow?.n ?? 0,
-    slaBreaches: Number((slaBreachRow as Record<string, unknown>).n ?? 0),
-    pendingDrafts: pendingRow?.n ?? 0,
-    needsReview: Number((needsReviewRow as Record<string, unknown>).n ?? 0),
-    autoDeflected: Number((deflectedRow as Record<string, unknown>).n ?? 0),
+    slaBreaches,
+    pendingDrafts,
+    needsReview,
+    autoDeflected,
   }
 }
 

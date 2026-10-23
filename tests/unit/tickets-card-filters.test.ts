@@ -59,9 +59,9 @@ describe('getTickets card filters', () => {
   })
 
   it('pendingDraft keeps open tickets whose AI draft is pending', async () => {
-    const { sql, params } = await whereFor({ pendingDraft: true })
-    expect(sql).toContain('"tickets"."ai_draft_status" =')
-    expect(params).toEqual(expect.arrayContaining(['open', 'pending']))
+    const { sql } = await whereFor({ pendingDraft: true })
+    expect(sql).toMatch(/"status" = 'open'/)
+    expect(sql).toMatch(/"ai_draft_status" = 'pending'/)
   })
 
   it('slaBreached keeps tickets that missed a response or resolve target, excluding duplicates', async () => {
@@ -77,5 +77,25 @@ describe('getTickets card filters', () => {
     expect(params).toContain(7)
     expect(sql).toMatch(/a\.auto_deflected = 0/)
     expect(sql).toContain('"sla_resolve_met" = 0')
+  })
+})
+
+describe('getTicketStats card counts', () => {
+  it('counts each card with the same condition its ticket list filters on', async () => {
+    const captured = captureSelects()
+    const { getTicketStats } = await import('@/lib/db/queries/tickets')
+    await getTicketStats(7)
+
+    const wheres = captured.map(({ sql }) => sql.slice(sql.indexOf(' where ')))
+    for (const [filter, pattern] of [
+      ['autoDeflected', /a\.auto_deflected = 1/],
+      ['needsReview', /a\.auto_deflected = 0/],
+      ['pendingDraft', /"ai_draft_status" = 'pending'/],
+      ['slaBreached', /"sla_response_met" = 0 OR [\s\S]*"sla_resolve_met" = 0/],
+    ] as const) {
+      const listWhere = (await whereFor({ [filter]: true })).sql
+      expect(listWhere).toMatch(pattern)
+      expect(wheres.some((w) => pattern.test(w) && w.includes('"tickets"."org_id" ='))).toBe(true)
+    }
   })
 })

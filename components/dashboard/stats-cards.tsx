@@ -1,7 +1,6 @@
 import Link from 'next/link'
 
 interface StatsCardsProps {
-  total: number
   open: number
   inProgress: number
   resolved: number
@@ -9,12 +8,10 @@ interface StatsCardsProps {
   pendingDrafts: number
   needsReview: number
   autoDeflected: number
-  deflectionRate?: number
+  deflectionRate: number
 }
 
-export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pendingDrafts, needsReview, autoDeflected, deflectionRate: measuredDeflectionRate }: StatsCardsProps) {
-  const deflectionRate = measuredDeflectionRate ?? (total > 0 ? Math.round((autoDeflected / total) * 100) : 0)
-
+export function StatsCards({ open, inProgress, resolved, slaBreaches, pendingDrafts, needsReview, autoDeflected, deflectionRate }: StatsCardsProps) {
   const cards = [
     {
       label: 'Auto-Answered',
@@ -151,14 +148,10 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
             </div>
           </>
         )
-        return 'href' in card && card.href ? (
+        return (
           <Link key={card.label} href={card.href} className={className}>
             {content}
           </Link>
-        ) : (
-          <div key={card.label} className={className}>
-            {content}
-          </div>
         )
       })}
     </div>
