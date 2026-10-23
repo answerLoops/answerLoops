@@ -11,7 +11,10 @@ describe('llms.txt CI synchronization', () => {
     ])
 
     expect(ci).toContain('node scripts/sync-llms-txt.mjs --check')
-    expect(sync).toContain('permissions:\n  contents: write')
+    // Deny by default at the workflow level; only the sync job may write, and only contents.
+    expect(sync).toMatch(/^permissions: \{\}$/m)
+    expect(sync).toContain('permissions:\n      contents: write')
+    expect(sync).not.toMatch(/^permissions:\n  contents: write/m)
     expect(sync).toContain('persist-credentials: false')
     expect(sync).toContain('gh auth setup-git')
     expect(sync).toContain('git add public/llms.txt')

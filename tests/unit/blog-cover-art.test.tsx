@@ -580,6 +580,50 @@ describe('blog cover image route', () => {
     expect(multiplatform.markup).toContain('color:#082e50')
   })
 
+  it('selects the save-and-find artwork for the published knowledge-base post', async () => {
+    getPage.mockReturnValue(publishedPost('How to turn support answers into a searchable knowledge base'))
+    const { markup, options } = await renderCover('turn-support-answers-into-reusable-knowledge')
+
+    expect(getPage).toHaveBeenCalledWith(['turn-support-answers-into-reusable-knowledge'])
+    for (const label of ['Answers worth', 'keeping.', 'Docs', 'Discord', 'Slack', 'GitHub', 'Knowledge base', 'Published', 'Getting started', 'Customer asks: How do I get started?', 'Answered from the article']) {
+      expect(markup).toContain(label)
+    }
+    expect(markup).toContain('searchable knowledge.')
+    expect(markup).toContain('data:image/png;base64,')
+    expect(markup).not.toContain('Many channels.')
+    expect(options).toEqual({ width: 1200, height: 630 })
+  })
+
+  it.each([
+    ['absent', undefined],
+    ['draft', { data: { ...publishedPost().data, title: 'Unpublished knowledge article', draft: true } }],
+  ])('keeps the generic cover when the knowledge-base post is %s', async (_, page) => {
+    getPage.mockReturnValue(page)
+    const { markup } = await renderCover('turn-support-answers-into-reusable-knowledge')
+
+    expect(markup).toContain('Blog')
+    expect(markup).toContain('answerloops.com/blog')
+    expect(markup).not.toContain('Answers worth')
+    expect(markup).not.toContain('Answered from the article')
+    expect(markup).not.toContain('Unpublished knowledge article')
+    expect(markup).not.toContain('data:image/png;base64,')
+  })
+
+  it('gives the knowledge-base cover a distinct gradient from all earlier covers', async () => {
+    getPage.mockReturnValue(publishedPost())
+    const cover = await renderCover('turn-support-answers-into-reusable-knowledge')
+    const gradient = (markup: string) => markup.match(/background-image:([^;"]+)/)?.[1]
+
+    expect(gradient(cover.markup)).toContain('radial-gradient(')
+    for (const slug of ['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation', 'github-open-source-support', 'google-chat-internal-support', 'notion-knowledge-base-sync', 'slack-no-admin-approval', 'telegram-community-support', 'managing-every-community-platform-from-one-place']) {
+      const previous = await renderCover(slug)
+      expect(gradient(cover.markup)).not.toBe(gradient(previous.markup))
+    }
+    expect(cover.markup).toContain('answerloops.com')
+    expect(cover.markup).toContain('data:image/png;base64,')
+    expect(cover.markup).toContain('color:#082e50')
+  })
+
   it('retains the title and category fallback for posts without bespoke artwork', async () => {
     getPage.mockReturnValue(publishedPost('Support across channels', 'Guides'))
     const { markup } = await renderCover('support-across-channels')
@@ -604,7 +648,7 @@ describe('blog cover image route', () => {
     expect(markup).not.toContain('Good answers deserve')
   })
 
-  it.each(['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation', 'github-open-source-support', 'google-chat-internal-support', 'notion-knowledge-base-sync', 'slack-no-admin-approval', 'telegram-community-support', 'managing-every-community-platform-from-one-place'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
+  it.each(['dual-agent-review', 'mcp-server-for-support', 'circle-community-support', 'discord-community-support', 'discourse-forum-support', 'email-support-automation', 'github-open-source-support', 'google-chat-internal-support', 'notion-knowledge-base-sync', 'slack-no-admin-approval', 'telegram-community-support', 'managing-every-community-platform-from-one-place', 'turn-support-answers-into-reusable-knowledge'])('renders %s through the real image engine as a 1200 × 630 PNG', async (slug) => {
     getPage.mockReturnValue(publishedPost())
     const { element, options } = await renderCover(slug)
     const { ImageResponse } = await vi.importActual<typeof import('next/og')>('next/og')
