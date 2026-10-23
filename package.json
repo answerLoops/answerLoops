@@ -60,7 +60,7 @@
     "google-auth-library": "^10.9.1",
     "lucide-react": "^1.56.0",
     "mammoth": "^1.13.0",
-    "next": "16.4.0",
+    "next": "16.4.1",
     "next-auth": "5.0.0-beta.32",
     "pdf-parse": "^2.4.5",
     "postgres": "^3.4.9",
