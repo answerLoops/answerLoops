@@ -3,7 +3,7 @@ import { getBlogPost } from '@/lib/blog/posts'
 import { SLACK_LOGO } from '@/lib/marketing/slack-logo'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseSupportCover, DualAgentReviewCover, EmailSupportCover, GitHubSupportCover, GoogleChatSupportCover, McpSupportCover, NotionKnowledgeCover, SlackSupportCover, TelegramSupportCover, MultiplatformSupportCover } from '@/lib/blog/cover-art'
+import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseSupportCover, DualAgentReviewCover, EmailSupportCover, GitHubSupportCover, GoogleChatSupportCover, McpSupportCover, NotionKnowledgeCover, SlackSupportCover, TelegramSupportCover, MultiplatformSupportCover, SupportAnswersKnowledgeCover } from '@/lib/blog/cover-art'
 
 const COVER_ART = new Map([
   ['dual-agent-review', DualAgentReviewCover],
@@ -18,6 +18,7 @@ const COVER_ART = new Map([
   ['slack-no-admin-approval', SlackSupportCover],
   ['telegram-community-support', TelegramSupportCover],
   ['managing-every-community-platform-from-one-place', MultiplatformSupportCover],
+  ['turn-support-answers-into-reusable-knowledge', SupportAnswersKnowledgeCover],
 ])
 
 // Auto-generated cover art: a post only needs a `coverImage` in its

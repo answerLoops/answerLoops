@@ -1,7 +1,7 @@
 import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import Image from 'next/image'
+import Image, { type ImageProps } from 'next/image'
 import { notFound } from 'next/navigation'
 import { MarketingPage, PageHero, TrialCta } from '@/components/marketing/layout'
 import { NewsletterForm } from '@/components/marketing/newsletter-form'
@@ -11,6 +11,22 @@ import { getBlogPost, getRelatedPosts, formatPostDate } from '@/lib/blog/posts'
 import { getMDXComponents } from '@/mdx-components'
 import { marketingSiteEnabled, MARKETING_URL } from '@/lib/site'
 
+
+// Markdown images compile to imports of the files under public/, so `src`
+// arrives as a static image object. fumadocs-ui's default `img` only hands
+// that to next/image inside the docs shell's framework provider, which the
+// blog doesn't have; without this the src is stringified to "[object Object]".
+function BlogImage({ src, alt = '', ...props }: React.ComponentProps<'img'>) {
+  return (
+    <Image
+      src={src as ImageProps['src']}
+      alt={alt}
+      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 70vw, 900px"
+      {...(props as Omit<ImageProps, 'src' | 'alt'>)}
+      className="rounded-lg"
+    />
+  )
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -109,7 +125,7 @@ export default async function BlogPostPage({
           */}
           <p className="marketing-post-overview">{overview}</p>
           <article className="space-y-6">
-            <MDXContent components={getMDXComponents()} />
+            <MDXContent components={getMDXComponents({ img: BlogImage })} />
           </article>
         </div>
       </section>
