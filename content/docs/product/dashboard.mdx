@@ -7,18 +7,20 @@ Use the dashboard to review open work, answer outcomes, and response targets. Th
 
 ## Stat cards
 
-| Card | What it shows |
-|---|---|
-| Auto-Answered | Questions resolved automatically by AI |
-| Deflection rate | Deflected / Total — your key efficiency metric |
-| Open | Questions that still need attention |
-| In Progress | Questions currently being handled |
-| Resolved | Completed support conversations |
-| Needs Review | Answers waiting for a human decision |
-| AI Drafts Pending | Draft replies ready to review |
-| SLA Breaches | Tickets past their configured response target |
+| Card | What it shows | Opens |
+|---|---|---|
+| Auto-Answered | Every question the AI resolved automatically | Tickets filtered to auto-answered |
+| Deflection rate | Deflected / Answered — your key efficiency metric | Analytics |
+| Open | Questions that still need attention | Open tickets |
+| In Progress | Questions currently being handled | In-progress tickets |
+| Resolved | Completed support conversations | Resolved tickets |
+| Needs Review | Answers waiting for a human decision | Tickets filtered to needs review |
+| AI Drafts Pending | Draft replies ready to review | Tickets filtered to pending drafts |
+| SLA Breaches | Tickets past their configured response target | Tickets filtered to SLA breaches |
 
-Select the **Open** card to view the ticket list filtered to open tickets.
+Select any card to jump to the matching view. The ticket list shows the same tickets the card counts, and a "Filtered by" label appears above the list while a card filter is active. Pressing **Filter** keeps the card filter along with your status, priority, and category choices. Select **Clear card filter** to drop only the card filter.
+
+The Deflection rate card uses the same figure as the Analytics page, which leaves out bug reports and feature requests. Auto-Answered counts every deflected ticket, so the two numbers won't always line up with each other.
 
 Tickets marked `duplicate` are left out of every stat card, the deflection rate, category breakdown, and SLA figures, so a repeated question is only counted once. Mark a ticket as duplicate from its status form on the ticket page.
 

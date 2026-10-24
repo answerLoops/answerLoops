@@ -38,10 +38,9 @@ describe('dashboard navigation', () => {
 })
 
 describe('dashboard stats', () => {
-  it('calculates the deflection rate and renders the complete operating snapshot', () => {
+  it('renders the measured deflection rate and the the complete operating snapshot', () => {
     render(
       <StatsCards
-        total={20}
         open={4}
         inProgress={3}
         resolved={13}
@@ -49,6 +48,7 @@ describe('dashboard stats', () => {
         pendingDrafts={2}
         needsReview={5}
         autoDeflected={15}
+        deflectionRate={75}
       />,
     )
 
@@ -58,10 +58,9 @@ describe('dashboard stats', () => {
     expect(screen.getAllByText(/./).length).toBeGreaterThan(8)
   })
 
-  it('avoids an invalid percentage when no tickets exist', () => {
+  it('renders a zero rate when nothing has been answered', () => {
     render(
       <StatsCards
-        total={0}
         open={0}
         inProgress={0}
         resolved={0}
@@ -69,6 +68,7 @@ describe('dashboard stats', () => {
         pendingDrafts={0}
         needsReview={0}
         autoDeflected={0}
+        deflectionRate={0}
       />,
     )
 

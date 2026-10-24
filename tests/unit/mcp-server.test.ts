@@ -401,7 +401,8 @@ describe('lib/db/queries/tickets: getTickets supports a DB-level limit', () => {
   it('accepts an optional limit param and applies it with $dynamic().limit(), not a client-side slice', () => {
     const src = readSrc('lib/db/queries/tickets.ts')
     const fnStart = src.indexOf('export async function getTickets')
-    const fnBody = src.slice(fnStart, fnStart + 1400)
+    const fnEnd = src.indexOf('\nexport async function ', fnStart + 1)
+    const fnBody = src.slice(fnStart, fnEnd === -1 ? undefined : fnEnd)
     expect(fnBody).toContain('limit?: number')
     expect(fnBody).toContain('.$dynamic()')
     expect(fnBody).toMatch(/if \(limit\) query = query\.limit\(limit\)/)

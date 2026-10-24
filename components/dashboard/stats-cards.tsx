@@ -1,7 +1,6 @@
 import Link from 'next/link'
 
 interface StatsCardsProps {
-  total: number
   open: number
   inProgress: number
   resolved: number
@@ -9,14 +8,14 @@ interface StatsCardsProps {
   pendingDrafts: number
   needsReview: number
   autoDeflected: number
+  deflectionRate: number
 }
 
-export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pendingDrafts, needsReview, autoDeflected }: StatsCardsProps) {
-  const deflectionRate = total > 0 ? Math.round((autoDeflected / total) * 100) : 0
-
+export function StatsCards({ open, inProgress, resolved, slaBreaches, pendingDrafts, needsReview, autoDeflected, deflectionRate }: StatsCardsProps) {
   const cards = [
     {
       label: 'Auto-Answered',
+      href: '/tickets?autoDeflected=1',
       display: String(autoDeflected),
       icon: (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -29,6 +28,7 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
     },
     {
       label: 'Deflection Rate',
+      href: '/analytics',
       display: `${deflectionRate}%`,
       icon: (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -74,6 +74,7 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
     },
     {
       label: 'Needs Review',
+      href: '/tickets?needsReview=1',
       display: String(needsReview),
       icon: (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -85,6 +86,7 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
     },
     {
       label: 'AI Drafts Pending',
+      href: '/tickets?pendingDraft=1',
       display: String(pendingDrafts),
       icon: (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -96,6 +98,7 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
     },
     {
       label: 'SLA Breaches',
+      href: '/tickets?slaBreached=1',
       display: String(slaBreaches),
       icon: (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -145,14 +148,10 @@ export function StatsCards({ total, open, inProgress, resolved, slaBreaches, pen
             </div>
           </>
         )
-        return 'href' in card && card.href ? (
+        return (
           <Link key={card.label} href={card.href} className={className}>
             {content}
           </Link>
-        ) : (
-          <div key={card.label} className={className}>
-            {content}
-          </div>
         )
       })}
     </div>
