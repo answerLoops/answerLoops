@@ -127,11 +127,13 @@ export function StatsCards({ open, inProgress, resolved, slaBreaches, pendingDra
           <>
             {(isDark || isBlue) && <div className="landing-grid pointer-events-none absolute inset-0 opacity-25" />}
             <div className="relative mb-4 flex items-center justify-between">
-              <p className={`text-[0.6875rem] font-semibold ${isDark || isBlue ? 'text-white/65' : 'text-slate-500'}`}>{card.label}</p>
+              <p className={`text-[0.6875rem] font-semibold ${isDark ? 'text-white/65' : isBlue ? 'text-[#082e50]/70' : 'text-slate-500'}`}>{card.label}</p>
               <div className={`flex h-8 w-8 items-center justify-center rounded-xl ${
-                isDark || isBlue
+                isDark
                   ? 'border border-white/10 bg-white/[0.08] text-cyan-200'
-                  : card.accent
+                  : isBlue
+                    ? 'border border-[#082e50]/10 bg-white/70 text-[#082e50]'
+                    : card.accent
                     ? 'bg-blue-50 text-blue-600'
                     : 'bg-slate-100 text-slate-400'
               }`}>
@@ -139,11 +141,11 @@ export function StatsCards({ open, inProgress, resolved, slaBreaches, pendingDra
               </div>
             </div>
             <p className={`relative text-3xl font-semibold tracking-[-0.045em] ${
-              isDark || isBlue ? 'text-white' : card.accent && card.accentClass ? card.accentClass : 'text-slate-950'
+              isDark ? 'text-white' : isBlue ? 'text-[#082e50]' : card.accent && card.accentClass ? card.accentClass : 'text-slate-950'
             }`}>
               {card.display}
             </p>
-            <div className={`relative mt-3 h-0.5 overflow-hidden rounded-full ${isDark || isBlue ? 'bg-white/10' : 'bg-slate-100'}`}>
+            <div className={`relative mt-3 h-0.5 overflow-hidden rounded-full ${isDark ? 'bg-white/10' : isBlue ? 'bg-[#082e50]/10' : 'bg-slate-100'}`}>
               <div className={`h-full rounded-full ${index < 2 ? 'w-3/4 bg-cyan-300' : 'w-1/3 bg-blue-400/55'}`} />
             </div>
           </>
