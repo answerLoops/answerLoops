@@ -1,9 +1,12 @@
 ---
-title: Self-Host Quickstart
+title: Self-host quickstart
 description: Run answerLoops on your own infrastructure with Docker.
+icon: Terminal
 ---
 
 Use this guide to operate answerLoops on infrastructure you manage. You will configure the application, database, authentication, model services, and channel connections. External model providers and connected platforms still process relevant content; review those services separately from the application’s hosting location.
+
+This is the fast path: one machine, Docker, and the minimum configuration. The [self-hosting guide](/docs/self-hosting/prerequisites) covers everything after it, including every environment variable, channel setup, production deployment, and upgrades.
 
 If you'd rather skip all of this, the [cloud quickstart](/docs/quickstart-cloud) gets you the same product with none of the infrastructure.
 
@@ -13,13 +16,9 @@ If you'd rather skip all of this, the [cloud quickstart](/docs/quickstart-cloud)
   No agent? Run `npx @answerloops/agent-sdk setup` directly — same checks, same steps, plain Node CLI, no Claude Code required.
 </Tip>
 
-## Prerequisites
+## Before you start
 
-- [Node.js 22+](https://nodejs.org)
-- [Docker + Docker Compose](https://docs.docker.com/get-docker/)
-- [pnpm 9+](https://pnpm.io/installation)
-- An AI provider key (OpenAI recommended, or any [supported provider](/docs/self-hosting/ai-providers))
-- A Google OAuth client (see [OAuth setup](/docs/self-hosting/oauth))
+You need Node.js, Docker with Compose, pnpm, an AI provider key, and a Google OAuth client. The [prerequisites page](/docs/self-hosting/prerequisites) has the required versions and a list of accounts to set up first. For the Google client, follow [OAuth setup](/docs/self-hosting/oauth).
 
 ## 1. Clone the repo
 
@@ -55,7 +54,7 @@ OPENAI_API_KEY=<your-openai-api-key>
   This project uses **Auth.js v5**. The env vars are `AUTH_URL` and `AUTH_SECRET` — not `NEXTAUTH_URL` / `NEXTAUTH_SECRET`.
 </Note>
 
-See the full [environment variables reference](/docs/reference/environment-variables) for all options.
+To generate the two secrets, see [Generating secrets](/docs/self-hosting/prerequisites#generating-secrets). The full [environment variables reference](/docs/reference/environment-variables) lists every option.
 
 ## 3. Start with Docker
 
@@ -70,7 +69,7 @@ This starts:
 - **bot** (Discord/Slack listener) connecting to the app
 - **postgres** on `localhost:5432` (data persisted in a named volume)
 
-Drizzle migrations run automatically on first start — no manual migration step.
+Drizzle migrations run automatically on first start — no manual migration step. For published images, pinning a version, logs, and database access, see [Docker setup](/docs/self-hosting/docker).
 
 <Warning>
   Never run `docker compose down -v` — this deletes your database volume and all data.
