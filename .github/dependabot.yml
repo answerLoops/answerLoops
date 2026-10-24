@@ -94,3 +94,12 @@ updates:
       - dependency-name: "dompurify"
       - dependency-name: "katex"
       - dependency-name: "ip-address"
+      - dependency-name: "@vitest/mocker"
+      - dependency-name: "body-parser"
+      - dependency-name: "@azure/msal-node"
+      - dependency-name: "happy-dom"
+      # zod is also a direct dependency on 4.x, which Dependabot should keep
+      # updating; only the 3.x copies pulled in by third-party packages are
+      # pinned by the override, so only 3.x is ignored.
+      - dependency-name: "zod"
+        versions: ["<4.0.0"]
