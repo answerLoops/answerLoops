@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import Image from 'next/image'
+import { LogoMark } from '@/components/logo'
+import { SIGNIN_HREF, SIGNIN_LABEL, START_HREF, START_LABEL } from '@/components/marketing/nav-shared'
 import { RootProvider } from 'fumadocs-ui/provider/next'
 import { DocsLayout } from 'fumadocs-ui/layouts/docs'
 import { docsSource } from '@/lib/docs/source'
@@ -36,8 +37,11 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
         nav={{
           title: (
             <>
-              <Image src="/logo.png" alt="answerLoops" width={24} height={24} />
-              <span className="font-semibold">answerLoops Docs</span>
+              <LogoMark size={28} alt="answerLoops" />
+              <span className="font-semibold">answerLoops</span>
+              <span className="rounded-md bg-fd-accent px-1.5 py-0.5 text-xs font-medium text-fd-muted-foreground">
+                Docs
+              </span>
             </>
           ),
           // Absolute, not relative — this is the docs site's own logo/home
@@ -54,15 +58,11 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
         // context to toggle), which is worse than not having the control.
         themeSwitch={{ enabled: false }}
         links={[
-          {
-            // Docs are mounted inside this same app now, not a separately
-            // hosted Mintlify site — a relative link resolves correctly
-            // wherever this is deployed (local dev, staging, prod, any
-            // self-hosted domain) instead of hardcoding one specific
-            // production hostname that breaks everywhere else.
-            text: 'Dashboard',
-            url: '/dashboard',
-          },
+          // Same entry points as the marketing header, so the docs are not a
+          // dead end for someone who arrived from there. Absolute campaign
+          // links in production, in-app routes in local/dev (nav-shared.ts).
+          { text: SIGNIN_LABEL, url: SIGNIN_HREF },
+          { type: 'button', text: START_LABEL, url: START_HREF },
         ]}
       >
         {widgetToken && (

@@ -10,37 +10,96 @@
 @import 'fumadocs-ui/style.css';
 
 :root {
-  --color-fd-background: var(--background);
-  --color-fd-foreground: var(--foreground);
-  --color-fd-card: var(--surface);
-  --color-fd-card-foreground: var(--foreground);
-  --color-fd-popover: var(--surface);
-  --color-fd-popover-foreground: var(--foreground);
-  --color-fd-border: var(--border);
-  --color-fd-muted: var(--surface-muted);
-  /* Fumadocs applies this directly to unselected sidebar nav items
-     (.text-fd-muted-foreground, no extra opacity) — the app's own
-     --muted (#6b7280, ink-500) reads too light for a full nav list at
-     default size, so the docs theme uses a darker ink shade here rather
-     than changing --muted globally and affecting the dashboard. */
-  --color-fd-muted-foreground: var(--color-ink-600);
-  --color-fd-accent: var(--color-brand-50);
-  --color-fd-accent-foreground: var(--color-brand-700);
-  --color-fd-primary: var(--color-brand-600);
-  --color-fd-primary-foreground: #ffffff;
-  --color-fd-secondary: var(--surface-muted);
-  --color-fd-secondary-foreground: var(--foreground);
-  --color-fd-ring: var(--ring);
+  /* Marketing palette (components/marketing/marketing-theme.css), so a
+     visitor moving from the site into the docs does not see a different
+     product. Light only: the docs have no dark theme. */
+  --docs-navy: #082e50;
+  --docs-link: #315e81;
+  --docs-teal: #168fa3;
+  --docs-aqua: #eef7f7;
+  --docs-aqua-border: #b9e0e5;
+  --docs-border: #dce2e9;
+  --docs-muted: #5d6b7c;
+  --docs-soft: #f5f7fa;
 
-  /* Callout tones — Fumadocs' semantic colors, tuned to the same warm
-     accent-for-badges-only rule the dashboard follows (Brand Style Guide §4). */
+  --color-fd-background: #ffffff;
+  --color-fd-foreground: var(--docs-navy);
+  --color-fd-card: #ffffff;
+  --color-fd-card-foreground: var(--docs-navy);
+  --color-fd-popover: #ffffff;
+  --color-fd-popover-foreground: var(--docs-navy);
+  --color-fd-border: var(--docs-border);
+  --color-fd-muted: var(--docs-soft);
+  /* Fumadocs applies this directly to unselected sidebar items; the
+     marketing muted tone is dark enough to read as a full nav list. */
+  --color-fd-muted-foreground: var(--docs-muted);
+  --color-fd-accent: var(--docs-aqua);
+  --color-fd-accent-foreground: var(--docs-navy);
+  --color-fd-primary: var(--docs-navy);
+  --color-fd-primary-foreground: #ffffff;
+  --color-fd-secondary: var(--docs-soft);
+  --color-fd-secondary-foreground: var(--docs-navy);
+  --color-fd-ring: var(--docs-teal);
+
+  /* Callout tones. */
   --color-fd-warning: var(--accent);
   --color-fd-error: #dc2626;
-  --color-fd-success: var(--color-brand-600);
-  --color-fd-info: var(--color-brand-600);
+  --color-fd-success: var(--docs-teal);
+  --color-fd-info: var(--docs-teal);
   --color-fd-idea: var(--accent);
 
-  --radius-fd: var(--radius-md);
+  --radius-fd: 10px;
+}
+
+/* Header: the same pale aqua rule the marketing site carries above its nav. */
+#nd-nav,
+#nd-subnav {
+  border-top: 5px solid var(--docs-aqua-border);
+}
+
+/* Body links read as links; the navy used for text alone would not. Scoped
+   to links inside running text so buttons and cards keep their own colors. */
+.prose :where(p, li, td, th, blockquote) > a {
+  color: var(--docs-link);
+  text-decoration-color: var(--docs-aqua-border);
+  text-underline-offset: 3px;
+}
+.prose :where(p, li, td, th, blockquote) > a:hover {
+  color: var(--docs-teal);
+}
+
+/* Cards lift and pick up the teal on hover. */
+a[data-card] {
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+a[data-card]:hover {
+  border-color: var(--docs-teal);
+  box-shadow: 0 6px 20px rgb(8 46 80 / 0.08);
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  a[data-card] {
+    transition: none;
+  }
+  a[data-card]:hover {
+    transform: none;
+  }
+}
+
+/* Section labels in the sidebar. */
+#nd-sidebar [data-separator],
+#nd-sidebar p.text-fd-muted-foreground {
+  letter-spacing: 0.04em;
+}
+
+/* Tables and code get the same soft border treatment as cards. */
+.prose table {
+  border-radius: var(--radius-fd);
+}
+figure.shiki,
+.prose pre {
+  border-radius: var(--radius-fd);
+  border-color: var(--docs-border);
 }
 
 body {
@@ -50,4 +109,13 @@ body {
 code,
 pre {
   font-family: var(--font-geist-mono), ui-monospace, monospace;
+}
+
+/* A card whose icon is already a framed logo tile (IntegrationLogo) should
+   not get Fumadocs' own icon box around it as well. */
+a[data-card] > div:has(> [role='img']) {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
 }
