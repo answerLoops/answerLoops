@@ -5,9 +5,12 @@ import { Card, Cards } from 'fumadocs-ui/components/card'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion'
 import { Step, Steps } from 'fumadocs-ui/components/steps'
+import { IntegrationFlow } from '@/components/docs/integration-flow'
+import { IntegrationLogo } from '@/components/docs/integration-logo'
 import OpenAPIPage from '@/components/docs/openapi-page-server'
 import { channelListSentence } from '@/lib/marketing/channels'
 import {
+  icons as lucideIcons,
   Bell,
   CircleHelp,
   GitFork,
@@ -48,13 +51,15 @@ function MintlifyCard({
   icon,
   ...props
 }: React.ComponentProps<typeof Card> & { icon?: React.ReactNode }) {
-  const resolvedIcon =
-    typeof icon === 'string' && icon in mintlifyCardIcons
-      ? (() => {
-          const Icon = mintlifyCardIcons[icon]
-          return <Icon />
-        })()
-      : icon
+  // Mintlify names win (kept for pages ported over), then any lucide icon
+  // name in PascalCase — `icon="Hash"` — so new pages aren't limited to the
+  // handful of aliases above.
+  const resolvedIcon = (() => {
+    if (typeof icon !== 'string') return icon
+    const Icon =
+      mintlifyCardIcons[icon] ?? lucideIcons[icon as keyof typeof lucideIcons]
+    return Icon ? <Icon /> : undefined
+  })()
   return <Card icon={resolvedIcon} {...props} />
 }
 
@@ -83,6 +88,8 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Accordion,
     Steps,
     Step,
+    IntegrationFlow,
+    IntegrationLogo,
     // Blog posts reference the connected-channel list in prose; this keeps
     // it sourced from lib/marketing/channels.ts instead of a hardcoded list
     // in a post's MDX that can drift when a channel is added or renamed.
