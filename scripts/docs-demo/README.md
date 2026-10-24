@@ -86,12 +86,97 @@ const context = await browser.newContext({
 Run `pnpm docs:session` again if the owner row is ever removed. The cookie is
 valid for seven days and is bound to `localhost`.
 
+## Screenshots
+
+`pnpm docs:shots` drives the real app (steps 1 to 4 above must be done and the
+app running) and writes one image per entry in `shots.manifest.ts`, plus a
+machine-readable list of annotated regions for the docs components.
+
+```bash
+pnpm docs:shots                          # every shot
+pnpm docs:shots dashboard billing        # only these ids
+pnpm docs:shots --preview                # also write pin overlays to scripts/docs-demo/.tmp/pins/
+```
+
+Set `DOCS_BASE_URL=<app-url>` if the app is not on `http://localhost:3112`.
+
+What it does: opens Chrome (`channel: 'chrome'`, falling back to the default
+chromium if Chrome is not installed) with the saved storage state, light colour
+scheme, reduced motion and a 2x device scale factor; hides the Next.js dev
+indicator, toasts and the floating feedback button; waits for network idle and
+each `waitFor` selector; then screenshots. It fails loudly on a redirect to
+`/login`, a 404 or other HTTP error, console errors, loading skeletons still on
+screen, a pin selector that matches nothing visible, and any unsafe content
+(see the masking rule). A shot is retried once, because the dev server compiles
+a route on first visit.
+
+Outputs, both meant to be committed:
+
+- `public/docs/shots/<id>.webp`, at most 1600px wide, quality stepped down until
+  it is under about 250 KB. Encoding uses `sharp`, which ships with Next.js and is
+  resolved from there; it is not a direct dependency.
+- `lib/docs/shots.generated.json`, keys sorted by id:
+
+```json
+{
+  "<id>": {
+    "src": "/docs/shots/<id>.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "<alt text>",
+    "pins": [
+      { "id": "<pin-id>", "label": "<pin label>", "x": 21.6, "y": 29.7, "w": 75.5, "h": 8 }
+    ]
+  }
+}
+```
+
+`x`, `y`, `w`, `h` are percentages (one decimal) of the image width and height;
+`x` and `y` are the top-left corner. Pins are the bounding boxes of each pin's
+selector, relative to the captured area and clamped to it. Running a single id
+updates only that entry.
+
+### Adding a shot
+
+Append an object to `SHOTS` in `shots.manifest.ts`:
+
+- `id` (kebab-case, becomes the file name), `route`, `alt`.
+- `viewport` (default 1440x900). The app scrolls inside `<main>`, so full-page
+  capture does not apply: raise the viewport height to include more of a long
+  page, or use `capture: { type: 'element' | 'clip', ... }` to crop.
+- `waitFor`: selectors that must be visible before capture.
+- `actions` (keep these minimal): `click`, `fill`, `scrollTo`, `waitFor`.
+- `pins`: the 3 to 6 most important regions, each `{ id, selector, label }`.
+  Selectors are Playwright selectors (CSS, `text=`, `:has-text()`,
+  `>> xpath=ancestor::div[2]`). Run with `--preview` and look at the overlay
+  image to confirm each box covers the region you meant.
+- `mask` / `textMask` if anything on screen needs hiding (below).
+
+Then run `pnpm docs:shots <id> --preview` and open the output image. Check for
+empty states, error banners, loading skeletons, cut-off text and odd dates
+before committing.
+
+### Masking rule
+
+Seeded integration credentials are random, so their last four characters, the
+Circle setup value, the widget embed token and API key prefixes must never reach
+an image. `DEFAULT_TEXT_MASKS` rewrites those patterns on every shot, whether or
+not they are on screen. Per shot, `mask` replaces or blurs elements by selector
+and `textMask` rewrites extra text. After masking, the script scans the page and
+refuses to capture if it still finds a masked-token tail, a long hex value, an
+API key prefix, a token-shaped string or any email address that is not on
+`example.com` or `example.org`. Crop shots so they do not include the legacy
+manual-setup block on the Integrations page.
+
+`scripts/docs-demo/.tmp/` holds the session cookie and the pin previews. It is
+gitignored; never commit it.
+
 ## Routes
 
 `/dashboard`, `/tickets`, `/tickets/<number>`, `/kb` (Manage, Knowledge
 coverage and Review tabs), `/knowledge-gaps`, `/analytics` (includes CSAT),
 `/faq`, `/leads`, `/integrations?tab=<discord|slack|telegram|discourse|circle|email|github|notion>`,
-`/settings?tab=<general|team|ai|widget|api-keys>`, `/billing`.
+`/settings?tab=<general|team|ai|widget|api-keys>`, `/billing`, `/simulation`.
 
 The product feedback board is a widget (bottom right of every page), not a route.
 

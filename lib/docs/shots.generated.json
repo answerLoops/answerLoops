@@ -1,0 +1,626 @@
+{
+  "ai-model": {
+    "src": "/docs/shots/ai-model.webp",
+    "width": 1600,
+    "height": 844,
+    "alt": "Settings, AI Model tab: the chat provider, model, API key status and embedding model for the workspace.",
+    "pins": [
+      {
+        "id": "settings-tabs",
+        "label": "Settings tabs",
+        "x": 21.6,
+        "y": 29.7,
+        "w": 75.5,
+        "h": 8
+      },
+      {
+        "id": "edit",
+        "label": "Change the model",
+        "x": 27.8,
+        "y": 52.7,
+        "w": 3.5,
+        "h": 4.1
+      },
+      {
+        "id": "chat-provider",
+        "label": "Provider, model and key status",
+        "x": 22.8,
+        "y": 59.1,
+        "w": 73,
+        "h": 19.5
+      },
+      {
+        "id": "embeddings",
+        "label": "Embeddings",
+        "x": 23.8,
+        "y": 70.6,
+        "w": 71.1,
+        "h": 3.4
+      }
+    ]
+  },
+  "analytics": {
+    "src": "/docs/shots/analytics.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "The analytics page: staff time saved, deflection rate and questions handled, above a day-by-day deflection trend.",
+    "pins": [
+      {
+        "id": "time-saved",
+        "label": "Staff time saved",
+        "x": 21.6,
+        "y": 25.3,
+        "w": 24.4,
+        "h": 13.7
+      },
+      {
+        "id": "deflection-rate",
+        "label": "Deflection rate",
+        "x": 47.1,
+        "y": 25.3,
+        "w": 24.4,
+        "h": 13.7
+      },
+      {
+        "id": "questions-handled",
+        "label": "Questions handled",
+        "x": 72.7,
+        "y": 25.3,
+        "w": 24.4,
+        "h": 13.7
+      },
+      {
+        "id": "trend",
+        "label": "Daily deflection trend",
+        "x": 21.6,
+        "y": 42.3,
+        "w": 75.5,
+        "h": 44
+      }
+    ]
+  },
+  "billing": {
+    "src": "/docs/shots/billing.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "The billing page: monthly usage against the plan limit, and the Standard, Pro and Enterprise plans with Pro marked as current.",
+    "pins": [
+      {
+        "id": "usage",
+        "label": "Usage this month",
+        "x": 21.6,
+        "y": 25.3,
+        "w": 75.5,
+        "h": 19.6
+      },
+      {
+        "id": "standard",
+        "label": "Standard plan",
+        "x": 21.6,
+        "y": 54.2,
+        "w": 24.4,
+        "h": 43.6
+      },
+      {
+        "id": "current-plan",
+        "label": "Your current plan",
+        "x": 47.1,
+        "y": 54.2,
+        "w": 24.4,
+        "h": 43.6
+      },
+      {
+        "id": "enterprise",
+        "label": "Enterprise plan",
+        "x": 72.7,
+        "y": 54.2,
+        "w": 24.4,
+        "h": 43.6
+      }
+    ]
+  },
+  "dashboard": {
+    "src": "/docs/shots/dashboard.webp",
+    "width": 1600,
+    "height": 1089,
+    "alt": "The answerLoops dashboard: ticket counts for auto-answered, open, in progress and resolved tickets, with the open tickets list and SLA status below.",
+    "pins": [
+      {
+        "id": "navigation",
+        "label": "Navigation sidebar",
+        "x": 0,
+        "y": 0,
+        "w": 18.7,
+        "h": 100
+      },
+      {
+        "id": "stat-cards",
+        "label": "Ticket counts at a glance",
+        "x": 21.6,
+        "y": 23,
+        "w": 75.5,
+        "h": 29.5
+      },
+      {
+        "id": "auto-answered",
+        "label": "Auto-answered tickets",
+        "x": 21.6,
+        "y": 23,
+        "w": 18.2,
+        "h": 14.1
+      },
+      {
+        "id": "open-tickets",
+        "label": "Oldest unresolved tickets",
+        "x": 21.6,
+        "y": 55.6,
+        "w": 44.7,
+        "h": 44.4
+      },
+      {
+        "id": "sla-status",
+        "label": "SLA breaches",
+        "x": 67.8,
+        "y": 55.6,
+        "w": 29.3,
+        "h": 29.5
+      }
+    ]
+  },
+  "faq-generator": {
+    "src": "/docs/shots/faq-generator.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "The FAQ generator: a frequently asked questions document built from recent tickets, with a Regenerate FAQ button.",
+    "pins": [
+      {
+        "id": "generated-from",
+        "label": "When it was generated and from how many tickets",
+        "x": 22,
+        "y": 19.7,
+        "w": 16,
+        "h": 2.3
+      },
+      {
+        "id": "regenerate",
+        "label": "Regenerate from recent tickets",
+        "x": 88.2,
+        "y": 15.3,
+        "w": 8.5,
+        "h": 3.5
+      },
+      {
+        "id": "faq-body",
+        "label": "The generated FAQ",
+        "x": 22,
+        "y": 25.3,
+        "w": 74.7,
+        "h": 55.5
+      }
+    ]
+  },
+  "feedback-board": {
+    "src": "/docs/shots/feedback-board.webp",
+    "width": 872,
+    "height": 1410,
+    "alt": "The product feedback board: a Feedback tab listing submitted ideas with a team reply, an Updates tab, and a box to leave feedback.",
+    "pins": [
+      {
+        "id": "tabs",
+        "label": "Feedback and Updates tabs",
+        "x": 50,
+        "y": 9.8,
+        "w": 49.8,
+        "h": 6.2
+      },
+      {
+        "id": "feedback-item",
+        "label": "A submitted idea",
+        "x": 3.1,
+        "y": 18,
+        "w": 93.8,
+        "h": 31.1
+      },
+      {
+        "id": "team-reply",
+        "label": "Status set by the team",
+        "x": 55.6,
+        "y": 38.6,
+        "w": 20.1,
+        "h": 3.3
+      },
+      {
+        "id": "compose",
+        "label": "Leave your own feedback",
+        "x": 3.1,
+        "y": 72.4,
+        "w": 93.8,
+        "h": 11.6
+      }
+    ]
+  },
+  "integrations": {
+    "src": "/docs/shots/integrations.webp",
+    "width": 1600,
+    "height": 822,
+    "alt": "The integrations page: a tab for each channel and service, with the Discord tab open showing a connected server.",
+    "pins": [
+      {
+        "id": "channel-tabs",
+        "label": "One tab per channel",
+        "x": 21.6,
+        "y": 30.5,
+        "w": 75.5,
+        "h": 8.2
+      },
+      {
+        "id": "connection-status",
+        "label": "Connection status",
+        "x": 92.1,
+        "y": 46.2,
+        "w": 3.8,
+        "h": 2.8
+      },
+      {
+        "id": "add-server",
+        "label": "Connect with one click",
+        "x": 24.1,
+        "y": 59.4,
+        "w": 13.5,
+        "h": 4
+      },
+      {
+        "id": "connected-server",
+        "label": "A connected server",
+        "x": 22.8,
+        "y": 68.1,
+        "w": 73,
+        "h": 20.1
+      }
+    ]
+  },
+  "knowledge-base": {
+    "src": "/docs/shots/knowledge-base.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "The knowledge base page from the top: the title, the Manage, Knowledge coverage and Review tabs, a form for writing an answer by hand, and the connected GitHub repository below it.",
+    "pins": [
+      {
+        "id": "tabs",
+        "label": "Manage, coverage and review tabs",
+        "x": 21.6,
+        "y": 25.3,
+        "w": 75.5,
+        "h": 6.8
+      },
+      {
+        "id": "write-answer",
+        "label": "Write an answer by hand",
+        "x": 21.6,
+        "y": 12.1,
+        "w": 75.5,
+        "h": 87.9
+      },
+      {
+        "id": "add-article",
+        "label": "Add it to the knowledge base",
+        "x": 22.8,
+        "y": 73.8,
+        "w": 11.4,
+        "h": 3.3
+      },
+      {
+        "id": "github-repos",
+        "label": "Sync a GitHub repository",
+        "x": 22.8,
+        "y": 83.8,
+        "w": 73,
+        "h": 4.4
+      }
+    ]
+  },
+  "knowledge-base-articles": {
+    "src": "/docs/shots/knowledge-base-articles.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "The knowledge base article list: a search box, then each article with its title and content.",
+    "pins": [
+      {
+        "id": "search",
+        "label": "Search the knowledge base",
+        "x": 21.6,
+        "y": 10.2,
+        "w": 75.5,
+        "h": 7
+      },
+      {
+        "id": "article-count",
+        "label": "How many articles",
+        "x": 23.5,
+        "y": 20,
+        "w": 4,
+        "h": 1.9
+      },
+      {
+        "id": "article",
+        "label": "One article",
+        "x": 21.6,
+        "y": 22.8,
+        "w": 75.5,
+        "h": 23.1
+      },
+      {
+        "id": "source-ticket",
+        "label": "The ticket an article came from",
+        "x": 24.7,
+        "y": 68.8,
+        "w": 7.4,
+        "h": 1.9
+      }
+    ]
+  },
+  "knowledge-gaps": {
+    "src": "/docs/shots/knowledge-gaps.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "The knowledge gaps queue: counts of open gap tickets, the most-asked unanswered questions, and a category breakdown.",
+    "pins": [
+      {
+        "id": "summary",
+        "label": "Gap counts",
+        "x": 21.6,
+        "y": 25.3,
+        "w": 75.5,
+        "h": 10
+      },
+      {
+        "id": "questions",
+        "label": "Most-asked unanswered questions",
+        "x": 21.6,
+        "y": 38.5,
+        "w": 49.8,
+        "h": 61.5
+      },
+      {
+        "id": "add-to-kb",
+        "label": "Turn a gap into an article",
+        "x": 67,
+        "y": 48.3,
+        "w": 2.9,
+        "h": 2.4
+      },
+      {
+        "id": "categories",
+        "label": "Gaps by category",
+        "x": 72.9,
+        "y": 38.5,
+        "w": 24.2,
+        "h": 61.5
+      }
+    ]
+  },
+  "simulation": {
+    "src": "/docs/shots/simulation.webp",
+    "width": 1600,
+    "height": 578,
+    "alt": "Simulation mode: the replay controls for choosing how many past tickets to test, which model to use and the deflect threshold, with a Run simulation button.",
+    "pins": [
+      {
+        "id": "tickets-to-replay",
+        "label": "How many tickets to replay",
+        "x": 23.4,
+        "y": 59.7,
+        "w": 23.2,
+        "h": 8.5
+      },
+      {
+        "id": "model",
+        "label": "Which model to test",
+        "x": 47.7,
+        "y": 59.7,
+        "w": 23.2,
+        "h": 8.5
+      },
+      {
+        "id": "threshold",
+        "label": "Deflect threshold",
+        "x": 72.1,
+        "y": 61.4,
+        "w": 23.2,
+        "h": 8.1
+      },
+      {
+        "id": "run",
+        "label": "Run the simulation",
+        "x": 23.4,
+        "y": 79.7,
+        "w": 10.2,
+        "h": 8.1
+      }
+    ]
+  },
+  "team": {
+    "src": "/docs/shots/team.webp",
+    "width": 1600,
+    "height": 1044,
+    "alt": "Settings, Team tab: workspace members with their roles, pending invitations, and a form to invite a teammate.",
+    "pins": [
+      {
+        "id": "members",
+        "label": "Members and roles",
+        "x": 21.6,
+        "y": 33.6,
+        "w": 75.5,
+        "h": 31.9
+      },
+      {
+        "id": "transfer",
+        "label": "Transfer ownership",
+        "x": 80.5,
+        "y": 46.9,
+        "w": 9.7,
+        "h": 3.1
+      },
+      {
+        "id": "remove",
+        "label": "Remove a member",
+        "x": 90.8,
+        "y": 46.9,
+        "w": 5.1,
+        "h": 3.1
+      },
+      {
+        "id": "pending-invites",
+        "label": "Pending invitations",
+        "x": 21.6,
+        "y": 67.3,
+        "w": 75.5,
+        "h": 18.3
+      }
+    ]
+  },
+  "ticket-detail": {
+    "src": "/docs/shots/ticket-detail.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "An auto-answered ticket: the original message, the AI answer marked as approved, a green confidence panel showing 96 percent, and thumbs up and down buttons to rate the answer.",
+    "pins": [
+      {
+        "id": "original-message",
+        "label": "What the customer asked",
+        "x": 21.6,
+        "y": 32.7,
+        "w": 49.8,
+        "h": 9.1
+      },
+      {
+        "id": "ai-draft",
+        "label": "The AI draft answer",
+        "x": 21.6,
+        "y": 44.1,
+        "w": 49.8,
+        "h": 13.3
+      },
+      {
+        "id": "confidence",
+        "label": "Confidence and reasoning",
+        "x": 21.6,
+        "y": 59.7,
+        "w": 49.8,
+        "h": 16.2
+      },
+      {
+        "id": "feedback",
+        "label": "Rate the answer",
+        "x": 22.8,
+        "y": 66.8,
+        "w": 47.3,
+        "h": 7.6
+      },
+      {
+        "id": "details",
+        "label": "Severity and SLA deadlines",
+        "x": 73.1,
+        "y": 32.7,
+        "w": 24,
+        "h": 25.9
+      }
+    ]
+  },
+  "ticket-detail-review": {
+    "src": "/docs/shots/ticket-detail-review.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "A ticket that needs a person: a low-confidence 45 percent AI draft, an amber confidence panel, and a related earlier question.",
+    "pins": [
+      {
+        "id": "status-badges",
+        "label": "Flagged for human review",
+        "x": 38.5,
+        "y": 17.9,
+        "w": 7.6,
+        "h": 2.3
+      },
+      {
+        "id": "ai-draft",
+        "label": "Draft to approve or edit",
+        "x": 21.6,
+        "y": 44.1,
+        "w": 49.8,
+        "h": 11.2
+      },
+      {
+        "id": "confidence",
+        "label": "Why confidence is low",
+        "x": 21.6,
+        "y": 57.7,
+        "w": 49.8,
+        "h": 16.2
+      },
+      {
+        "id": "related",
+        "label": "Similar earlier questions",
+        "x": 73.1,
+        "y": 60.4,
+        "w": 24,
+        "h": 12.1
+      },
+      {
+        "id": "update-status",
+        "label": "Update status",
+        "x": 73.1,
+        "y": 74.4,
+        "w": 24,
+        "h": 25.6
+      }
+    ]
+  },
+  "tickets-list": {
+    "src": "/docs/shots/tickets-list.webp",
+    "width": 1600,
+    "height": 1000,
+    "alt": "The unified ticket inbox: filters for status, priority and category above a table of tickets from Discord, Slack, email and Circle.",
+    "pins": [
+      {
+        "id": "filters",
+        "label": "Filters and CSV export",
+        "x": 55.4,
+        "y": 12.1,
+        "w": 41.6,
+        "h": 12.3
+      },
+      {
+        "id": "source",
+        "label": "Channel the ticket came from",
+        "x": 33.4,
+        "y": 27.8,
+        "w": 7.3,
+        "h": 5.6
+      },
+      {
+        "id": "priority",
+        "label": "Priority",
+        "x": 51.1,
+        "y": 27.8,
+        "w": 6.8,
+        "h": 5.6
+      },
+      {
+        "id": "ai-status",
+        "label": "What the AI did with it",
+        "x": 65.9,
+        "y": 27.8,
+        "w": 9.9,
+        "h": 5.6
+      },
+      {
+        "id": "ticket-row",
+        "label": "One ticket, click to open",
+        "x": 21.7,
+        "y": 33.5,
+        "w": 75.4,
+        "h": 8.2
+      }
+    ]
+  }
+}

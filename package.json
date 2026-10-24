@@ -27,6 +27,7 @@
     "load-test": "tsx scripts/load-test-mcp-agent.ts",
     "docs:seed": "tsx scripts/docs-demo/seed.ts",
     "docs:session": "tsx scripts/docs-demo/session.ts",
+    "docs:shots": "tsx scripts/docs-demo/capture.ts",
     "lint:fix": "oxlint --fix",
     "verify:stripe-prices": "tsx scripts/verify-stripe-prices.ts"
   },

@@ -495,6 +495,156 @@ function buildTickets(now: number): BuiltTicket[] {
     b.events.sort((x, y) => x.at - y.at)
     built.push(b)
   }
+  return polishTickets(built, now)
+}
+
+// Written for the FAQ page, which prints the text as-is: plain sentences, no markdown.
+const FAQ_ENTRIES: Array<[string, string]> = [
+  ['How do I install RoverKit on a Raspberry Pi 5?', 'Create a virtual environment first, activate it, then install RoverKit with pip. Raspberry Pi OS protects its system Python, so installing globally fails with an externally-managed-environment error.'],
+  ['How do I update the firmware on my Atlas-2?', 'Put the board into bootloader mode, then run the firmware flash command from the command-line tool. Keep the board powered until the status light turns solid green.'],
+  ['Why does my arm servo buzz at its end stop?', 'The servo is being driven past its real range. Run the servo calibration wizard with the arm unloaded and it will store safe limits for you.'],
+  ['Can I test my code before the hardware arrives?', 'Yes. The RoverSim simulator runs the same Python API against a virtual robot, so your navigation scripts work unchanged once the board shows up.'],
+  ['Which battery packs does the Atlas-2 support?', 'The Atlas-2 supports 2S and 3S LiPo packs with an XT30 connector. A 4S pack is too high a voltage and is not safe to use.'],
+  ['Why does the command-line tool say device not found?', 'This is usually a serial permission problem. Add your user to the dialout group, then log out and back in.'],
+  ['Does RoverKit support ROS 2?', 'Yes. Install the ROS 2 extra and start the bridge from the command-line tool. It publishes odometry and accepts velocity commands.'],
+  ['How long is the warranty on the Atlas-2?', 'Northwind hardware has a 12-month warranty against manufacturing defects. Damage from over-voltage, reverse polarity and water is not covered.'],
+  ['Can I use RoverKit on macOS?', 'RoverKit installs on macOS 13 or newer, but only the simulator and the command-line tools work there. Hardware access needs Linux.'],
+  ['Do you offer discounts for schools and robotics clubs?', 'Yes. Clubs and schools get 15 percent off orders of five or more Atlas-2 boards. Contact the support team to claim it.'],
+]
+
+/**
+ * Final, deterministic pass (it draws no random numbers, so the tickets above
+ * keep their numbers and topics). It shapes the workspace into a busy, healthy
+ * one for the screenshots:
+ *
+ * - most auto-answered tickets read as answered ("Approved") rather than
+ *   "Posted ... awaiting review"; every fourth stays in the posted state;
+ * - a handful of recent, unanswered, in-window tickets are open, across
+ *   several channels and categories;
+ * - only a few response-time misses remain, all on tickets still unresolved.
+ */
+// Ticket numbers that shots.manifest.ts opens by URL (an auto-answered ticket and
+// one waiting for review); the pass below never changes their state.
+const SHOWCASE_TICKETS = new Set([73, 75])
+
+function polishTickets(built: BuiltTicket[], now: number): BuiltTicket[] {
+  const resolved = (b: BuiltTicket) => b.status === 'resolved' || b.status === 'closed'
+
+  // Open backlog: the newest tickets that no one has answered yet. A recent
+  // auto-answered ticket can be turned into one waiting for a person.
+  const perPlatform = new Map<string, number>()
+  const perCategory = new Map<string, number>()
+  const reopenedDays = new Set<number>()
+  let opened = built.filter((b) => SHOWCASE_TICKETS.has(b.planned.number) && b.status === 'open').length
+  const newestFirst = [...built].sort((a, b) => b.planned.ts - a.planned.ts)
+  for (const b of newestFirst) {
+    if (opened >= 8) break
+    if (SHOWCASE_TICKETS.has(b.planned.number)) continue
+    // Issues keep their priority; questions are low priority (72 hour target).
+    // Nothing older than about four days is reopened.
+    const priority: Priority = b.planned.kind === 'issue' ? b.priority : 'low'
+    if (now - b.planned.ts > 1.3 * SLA_HOURS[priority].response * HOUR) continue
+    // Reopening more than one auto-answered ticket a day would leave a day on the
+    // deflection chart with nothing deflected.
+    const day = Math.floor(b.planned.ts / DAY)
+    if (b.deflected && reopenedDays.has(day)) continue
+    if ((perPlatform.get(b.planned.platform) ?? 0) >= 3 || (perCategory.get(b.category) ?? 0) >= 4) continue
+    perPlatform.set(b.planned.platform, (perPlatform.get(b.planned.platform) ?? 0) + 1)
+    perCategory.set(b.category, (perCategory.get(b.category) ?? 0) + 1)
+    opened++
+    b.priority = priority
+    if (b.deflected) {
+      reopenedDays.add(day)
+      b.deflected = false
+      b.confidence = 0.62 + (b.planned.number % 5) * 0.04
+    }
+    b.status = 'open'
+    b.firstResponseAt = null
+    b.resolvedAt = null
+    b.resolutionNotes = null
+    b.slaResponseMet = null
+    b.slaResolveMet = null
+    b.draftPostedAt = null
+    b.draftStatus = 'needs_human'
+    b.replies = []
+    b.events = b.events.filter((e) => e.type === 'created')
+  }
+
+  // Older answered questions that staff handled by hand: let the assistant have
+  // answered some of them so the deflection rate reads as healthy (about 72%).
+  const assessedCount = built.filter((b) => b.confidence != null && b.category !== 'bug' && b.category !== 'feature_request').length
+  let deflectedCount = built.filter((b) => b.deflected).length
+  for (const b of built) {
+    if (deflectedCount >= Math.ceil(0.72 * assessedCount)) break
+    if (b.planned.kind !== 'answered' || b.deflected || !resolved(b) || now - b.planned.ts < 2 * DAY) continue
+    const fr = b.planned.ts + (1 + (b.planned.number % 3)) * MINUTE
+    const done = fr + (20 + (b.planned.number % 6) * 10) * MINUTE
+    b.deflected = true
+    b.confidence = 0.83 + (b.planned.number % 7) * 0.02
+    b.status = 'resolved'
+    b.firstResponseAt = fr
+    b.resolvedAt = done
+    b.slaResponseMet = 1
+    b.slaResolveMet = 1
+    b.draftPostedAt = iso(fr)
+    b.resolutionNotes = b.draft
+    b.replies = []
+    b.events = [
+      b.events[0],
+      { type: 'ai_draft_posted', oldValue: null, newValue: 'posted', actor: 'system', at: fr },
+      { type: 'status_changed', oldValue: 'open', newValue: 'resolved', actor: 'system', at: done },
+    ]
+    deflectedCount++
+  }
+
+  // Auto-answered tickets read as answered ("Approved") rather than "Posted ...
+  // awaiting review"; every fourth stays in the posted state.
+  for (const b of built) {
+    if (b.deflected) b.draftStatus = b.planned.number % 4 === 0 ? 'posted' : 'approved'
+  }
+
+  // Keep the three newest unresolved misses; clear the rest.
+  const missed = (b: BuiltTicket) => b.slaResponseMet === 0 || b.slaResolveMet === 0
+  const keep = new Set(
+    newestFirst.filter((b) => missed(b) && !resolved(b)).slice(0, 3).map((b) => b.planned.number)
+  )
+  for (const b of built) {
+    if (!missed(b) || keep.has(b.planned.number)) continue
+    const sla = SLA_HOURS[b.priority]
+    const retime = (from: number, to: number) => {
+      for (const r of b.replies) if (r.at === from) r.at = to
+      for (const e of b.events) if (e.at === from) e.at = to
+    }
+    if (b.slaResponseMet === 0 && b.firstResponseAt != null) {
+      const to = b.planned.ts + Math.min(b.firstResponseAt - b.planned.ts, 0.6 * sla.response * HOUR)
+      retime(b.firstResponseAt, to)
+      b.firstResponseAt = to
+    }
+    if (b.firstResponseAt != null) b.slaResponseMet = 1
+    if (b.slaResolveMet === 0) {
+      if (b.resolvedAt != null) {
+        const to = Math.min(
+          Math.max((b.firstResponseAt ?? b.planned.ts) + HOUR, b.planned.ts + 0.8 * sla.resolve * HOUR),
+          b.planned.ts + sla.resolve * HOUR - MINUTE
+        )
+        retime(b.resolvedAt, to)
+        b.resolvedAt = to
+      } else {
+        const to = Math.min(b.planned.ts + 0.8 * sla.resolve * HOUR, now - HOUR)
+        const text = 'Thanks for your patience. This is sorted now, so I am closing it out. Reply here if it comes back.'
+        const staff = b.replies.find((r) => r.staffName !== 'Customer')?.staffName ?? STAFF[0].name
+        b.status = 'resolved'
+        b.resolvedAt = to
+        b.resolutionNotes = text
+        b.replies.push({ staffName: staff, content: text, at: to })
+        b.events.push({ type: 'replied', oldValue: null, newValue: text.slice(0, 100), actor: staff, at: to })
+        b.events.push({ type: 'status_changed', oldValue: 'in_progress', newValue: 'resolved', actor: staff, at: to })
+      }
+      b.slaResolveMet = 1
+    }
+    b.events.sort((x, y) => x.at - y.at)
+    b.replies.sort((x, y) => x.at - y.at)
+  }
   return built
 }
 
@@ -897,6 +1047,11 @@ async function main() {
   for (const b of built.filter((x) => x.deflected).slice(0, 14)) {
     feedbackRows.push({ ticketId: idOf(b), source: 'staff', vote: chance(0.9) ? 'up' : 'down', actor: pick(STAFF).name, createdAt: iso((b.resolvedAt ?? b.planned.ts) + 3 * HOUR) })
   }
+  // The auto-answered ticket shown in the docs has a thumbs-up from a community member.
+  const showcase = built.find((b) => b.deflected && SHOWCASE_TICKETS.has(b.planned.number))
+  if (showcase && !feedbackRows.some((f) => f.ticketId === idOf(showcase) && f.source !== 'staff')) {
+    feedbackRows.push({ ticketId: idOf(showcase), source: 'discord', vote: 'up', actor: 'member-412', createdAt: iso((showcase.firstResponseAt ?? showcase.planned.ts) + 12 * MINUTE) })
+  }
   if (feedbackRows.length) await db.insert(s.ticketFeedback).values(feedbackRows)
 
   // Satisfaction ratings on resolved tickets, skewed positive with a realistic tail.
@@ -1059,14 +1214,15 @@ async function main() {
   const faqRows = [0, 1, 2, 3].map((w) => {
     const end = todayStart - w * 7 * DAY
     const startMs = end - 7 * DAY
-    const topics = shuffle(ANSWERED_TOPICS).slice(0, 5)
+    const entries = FAQ_ENTRIES.slice((w * 2) % FAQ_ENTRIES.length).concat(FAQ_ENTRIES).slice(0, 5)
     return {
       orgId,
       weekStart: new Date(startMs).toISOString().slice(0, 10),
       weekEnd: new Date(end - DAY).toISOString().slice(0, 10),
       ticketCount: randInt(14, 24),
       generatedAt: iso(end + 2 * HOUR),
-      content: `## Frequently asked this week\n\n${topics.map((t, i) => `### ${i + 1}. ${t.question.replace(/\s+/g, ' ')}\n\n${t.answer}\n`).join('\n')}`,
+      // The FAQ page shows this text as-is (no markdown rendering), so keep it plain.
+      content: `Frequently asked this week\n\n${entries.map(([q, a], i) => `${i + 1}. ${q}\n${a}\n`).join('\n')}`,
     }
   })
   await db.insert(s.faqSnapshots).values(faqRows)
