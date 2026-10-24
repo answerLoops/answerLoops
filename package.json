@@ -25,6 +25,8 @@
     "llms:sync": "node scripts/sync-llms-txt.mjs",
     "llms:check": "node scripts/sync-llms-txt.mjs --check",
     "load-test": "tsx scripts/load-test-mcp-agent.ts",
+    "docs:seed": "tsx scripts/docs-demo/seed.ts",
+    "docs:session": "tsx scripts/docs-demo/session.ts",
     "lint:fix": "oxlint --fix",
     "verify:stripe-prices": "tsx scripts/verify-stripe-prices.ts"
   },
