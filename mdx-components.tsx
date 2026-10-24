@@ -5,8 +5,11 @@ import { Card, Cards } from 'fumadocs-ui/components/card'
 import { Tab, Tabs } from 'fumadocs-ui/components/tabs'
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion'
 import { Step, Steps } from 'fumadocs-ui/components/steps'
+import { Hotspots } from '@/components/docs/hotspots'
 import { IntegrationFlow } from '@/components/docs/integration-flow'
 import { IntegrationLogo } from '@/components/docs/integration-logo'
+import { LoopIllustration } from '@/components/docs/loop-illustration'
+import { Screenshot } from '@/components/docs/screenshot'
 import OpenAPIPage from '@/components/docs/openapi-page-server'
 import { channelListSentence } from '@/lib/marketing/channels'
 import {
@@ -85,11 +88,15 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Tabs,
     Tab,
     AccordionGroup: Accordions,
+    Accordions,
     Accordion,
     Steps,
     Step,
     IntegrationFlow,
     IntegrationLogo,
+    LoopIllustration,
+    Screenshot,
+    Hotspots,
     // Blog posts reference the connected-channel list in prose; this keeps
     // it sourced from lib/marketing/channels.ts instead of a hardcoded list
     // in a post's MDX that can drift when a channel is added or renamed.

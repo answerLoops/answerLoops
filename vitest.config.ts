@@ -10,6 +10,10 @@ export default defineConfig({
     env: { COPILOTKIT_TELEMETRY_DISABLED: 'true' },
     setupFiles: ['./tests/unit/setup-dom.ts'],
     include: ['tests/unit/**/*.test.ts', 'tests/unit/**/*.test.tsx'],
+    // fumadocs-ui components import their own .css files, which plain Node
+    // cannot load. Inlining the package lets Vite handle (and ignore) them, so
+    // anything that pulls in mdx-components.tsx still imports under test.
+    server: { deps: { inline: [/fumadocs-ui/] } },
     coverage: {
       provider: 'v8',
       include: ['lib/**/*.ts', 'components/**/*.tsx'],
