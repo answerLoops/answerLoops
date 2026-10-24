@@ -1,7 +1,34 @@
 ---
 title: Ollama
 description: Run answer generation on a local model through Ollama's OpenAI-compatible API.
+icon: HardDrive
 ---
+
+<IntegrationFlow
+  platform="ollama"
+  sourceLogo="channels"
+  sourceLabel="Your channels"
+  source={{
+    title: 'Questions from your channels',
+    text: 'Customers ask in the channels you have connected, such as Slack, Discord, email, or the website widget. Every question goes through the same answering pipeline.',
+  }}
+  trigger={{
+    title: 'Your Ollama server',
+    text: 'In Settings → AI Model you choose the OpenAI-compatible provider, enter your Ollama base URL and model, and leave the key blank. The answerLoops server must be able to reach that URL.',
+  }}
+  steps={[
+    { title: 'Find the answer', text: 'The question is matched against your knowledge base using embeddings. They can come from an Ollama embedding model or from OpenAI, whichever you chose.' },
+    { title: 'Draft the answer', text: 'Your Ollama model writes an answer grounded in what was found. This runs on your own hardware.', logo: 'ollama' },
+    { title: 'Review confidence', text: 'The same Ollama model reviews the draft and scores how confident it is. Your confidence threshold decides which path the answer takes.', logo: 'ollama' },
+  ]}
+  outcomes={[
+    { tone: 'info', title: 'Runs on your machine', text: 'Chat requests go to your Ollama server, so there is no per-token charge from a hosted provider.' },
+    { tone: 'info', title: 'Your choice of embeddings', text: 'Keep embeddings local with an Ollama embedding model, or use OpenAI. Only the OpenAI option sends that text off your network.' },
+    { tone: 'info', title: 'Plan requirement', text: 'A custom endpoint needs the Enterprise plan on the hosted service. Self-hosted installs have it by default.' },
+  ]}
+  outcomesLabel="What you control"
+  replyLabel="Answers are generated on your own Ollama server"
+/>
 
 Ollama runs open models on your own machine and exposes an OpenAI-compatible
 API. answerLoops talks to it through the **OpenAI-compatible** provider option
@@ -13,16 +40,17 @@ API. answerLoops talks to it through the **OpenAI-compatible** provider option
   Self-hosted deployments have it unconditionally.
 </Warning>
 
-Chat runs locally. Embeddings can too (Ollama serves embedding models), or you
-can keep embeddings on OpenAI's hosted API — that's the only part that would
-leave your network.
+Chat runs locally. Embeddings can too, if you serve an embedding model that
+outputs 1536-dimension vectors (the size the knowledge base stores), or you can
+keep embeddings on OpenAI's hosted API — that's the only part that would leave
+your network.
 
 ## 1. Run Ollama
 
 ```bash
 ollama serve
 ollama pull llama3.2
-ollama pull nomic-embed-text   # only if you want local embeddings
+ollama pull <your-1536-dimension-embedding-model>   # only if you want local embeddings
 ```
 
 ## 2. Configure in answerLoops
@@ -34,7 +62,7 @@ ollama pull nomic-embed-text   # only if you want local embeddings
 4. **Model ID:** `llama3.2` (or whatever you pulled).
 5. **API key:** leave blank — Ollama doesn't authenticate.
 6. **Embeddings:** either
-   - **OpenAI-compatible** with the same base URL and model `nomic-embed-text`, or
+   - **OpenAI-compatible** with the same base URL and an embedding model that outputs 1536 dimensions, or
    - **OpenAI** with a hosted key (embeddings then leave your network).
 7. Click **Test connection** — it will fail if the base URL isn't reachable
    from the answerLoops server — then **Save**.

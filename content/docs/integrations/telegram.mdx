@@ -1,7 +1,31 @@
 ---
 title: Telegram
 description: Connect a Telegram bot to answerLoops so questions in your group chats get AI-drafted answers and show up in your ticket list.
+icon: Send
 ---
+
+<IntegrationFlow
+  platform="telegram"
+  source={{
+    title: 'Your Telegram chats',
+    text: 'A member sends a message in a group the bot belongs to, or messages the bot directly. The bot is one you create with @BotFather. In groups, Telegram privacy mode limits what it can see until you turn that off.',
+  }}
+  trigger={{
+    title: 'Webhook',
+    text: 'Telegram sends each new message to answerLoops through a webhook that registers itself when you connect the bot. There is no polling.',
+  }}
+  steps={[
+    { title: 'Create ticket', text: 'Each text message becomes a ticket. Messages from other bots, messages under 10 characters, and chats outside your Chat IDs to monitor list are skipped.' },
+    { title: 'Find the answer', text: 'answerLoops searches your knowledge base for what is relevant to the question and drafts an answer grounded in it.' },
+    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides which path the answer takes.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Posted in the chat', text: 'With Automatic Deflections on and a confident answer, your bot replies in the same chat on its own.' },
+    { tone: 'review', title: 'Held as a draft', text: 'Automatic Deflections is off by default, so even a confident answer waits on your dashboard. Your team approves, edits, or dismisses it, and the chat gets no automatic reply until you do.' },
+    { tone: 'escalate', title: 'Your team is pulled in', text: 'Below the threshold, the draft waits for a person on your dashboard. With Automatic Deflections on, the bot also says a team member will follow up and mentions the escalation username you set.' },
+  ]}
+  replyLabel="Replies and escalation mentions appear in the same Telegram chat"
+/>
 
 To connect Telegram to answerLoops you need a **bot token**, issued by [@BotFather](https://t.me/BotFather) when you create your bot — paste it into **Integrations → Telegram** and answerLoops handles the rest, no OAuth and no platform-wide credential required.
 

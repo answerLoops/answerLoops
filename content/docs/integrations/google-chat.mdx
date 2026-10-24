@@ -1,7 +1,31 @@
 ---
 title: Google Chat
 description: Connect a Google Chat space to answerLoops with a one-time connect code — no OAuth flow required.
+icon: MessageCircle
 ---
+
+<IntegrationFlow
+  platform="Google Chat"
+  source={{
+    title: 'Your Chat space',
+    text: 'A member posts in the Google Chat space you paired with a connect code. The answerLoops Chat app is in that space and replies there.',
+  }}
+  trigger={{
+    title: 'Chat app event',
+    text: 'Google Chat sends each new message in the space to answerLoops as it is posted, and answerLoops immediately answers Chat with a short acknowledgment. There is no polling.',
+  }}
+  steps={[
+    { title: 'Create ticket', text: 'The message becomes a ticket, and a reply inside a thread that already has a ticket is added to it. Attachments are kept as links, and messages under 10 characters with no attachment are skipped.' },
+    { title: 'Find the answer', text: 'answerLoops searches your knowledge base for what is relevant to the question and drafts an answer grounded in it.' },
+    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides which path the answer takes.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Posted in the space', text: 'With Automatic Deflections on and a confident answer, the Chat app replies in the message thread on its own.' },
+    { tone: 'review', title: 'Held as a draft', text: 'Automatic Deflections is off by default, so even a confident answer waits on your dashboard. The space only sees a brief acknowledgment until your team approves, edits, or dismisses the draft.' },
+    { tone: 'escalate', title: 'Your team is pulled in', text: 'Below the threshold, the draft waits for a person on your dashboard. With Automatic Deflections on, the app also says a team member will follow up and mentions the one Chat user you set.' },
+  ]}
+  replyLabel="Replies and escalation mentions appear in the same Google Chat thread"
+/>
 
 ## Overview
 
@@ -34,8 +58,8 @@ In **Settings → Integrations → Google Chat**, click **Generate connect code*
 
 - Requires an organization owner or admin.
 - Checks the org isn't already connected — if a `google_chat` integration row already has a paired space id, the action refuses and returns an error telling you to disconnect first. Regenerating a code for an already-paired org has no legitimate use case, and silently overwriting the pairing would be surprising.
-- Generates a code shaped like `gc_<24 hex chars>` (`crypto.randomBytes(12).toString('hex')`, prefixed).
-- Writes an `integrations` row with **`enabled: false`** that holds the pending code in its own columns, separate from the integration's shared secret: a SHA-256 digest (`pairing_code_hash`, used for matching), an encrypted copy (`pairing_code_enc`, so the Settings card can keep showing it) and an expiry (`pairing_code_expires_at`, 24 hours after it is issued).
+- Generates a one-time connect code beginning with `gc_`.
+- Saves it on a pending integration (`enabled: false`) with a 24-hour expiry, stored protected rather than in plain text, so Settings can keep showing it until it is used or expires.
 
 The code is single-use and expires 24 hours after it is generated. While an unexpired code is outstanding, generating again shows the same code.
 
@@ -80,7 +104,7 @@ Configure these from **Integrations → Google Chat → Edit escalation, confide
 | Field | Format | Notes |
 |---|---|---|
 | Escalation user id | `users/12345678901234567890` | The Chat resource name of the person to notify when AI confidence is below threshold. Google Chat has no role or group-mention equivalent — escalation always targets one specific user. |
-| Confidence threshold | `0`–`1`, default `0.8` | Answers scoring at or above this are eligible to auto-post (if Automatic Deflections is on) or auto-approve as drafts otherwise. |
+| Confidence threshold | `0`–`1`, default `0.8` | Answers scoring at or above this are eligible to auto-post (if Automatic Deflections is on) or are held as drafts otherwise. |
 | Automatic Deflections | on/off, default off | See the callout above. |
 
 <Note>

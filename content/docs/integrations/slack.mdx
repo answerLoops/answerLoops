@@ -1,7 +1,31 @@
 ---
 title: Slack
 description: Connect a Slack workspace to answerLoops via 1-click OAuth, an optional Events API webhook, or polling mode with no admin approval required.
+icon: Hash
 ---
+
+<IntegrationFlow
+  platform="slack"
+  source={{
+    title: 'Your Slack workspace',
+    text: 'A member posts in a channel you selected. The answerLoops bot has joined that channel and replies there.',
+  }}
+  trigger={{
+    title: 'Events API',
+    text: 'Slack sends each new message to answerLoops as it is posted. Self-hosted setups without a public webhook can poll the channel instead, every 60 seconds by default.',
+  }}
+  steps={[
+    { title: 'Create ticket', text: 'The message becomes a ticket, and a reply inside a thread that already has a ticket is added to it. Bot messages, edits, deletions, channel joins, and text-only messages under 10 characters are skipped.' },
+    { title: 'Find the answer', text: 'answerLoops searches your knowledge base for what is relevant to the question and drafts an answer grounded in it.' },
+    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides which path the answer takes.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Posted in Slack', text: 'With Automatic Deflections on and a confident answer, the bot posts it in the channel, or in the thread if the question was asked in one.' },
+    { tone: 'review', title: 'Held as a draft', text: 'Automatic Deflections is off by default, so even a confident answer waits on your dashboard. Your team approves, edits, or dismisses it, and Slack gets no automatic reply until you do.' },
+    { tone: 'escalate', title: 'Your team is pulled in', text: 'Below the threshold, the draft waits for a person on your dashboard. With Automatic Deflections on, the bot also says a team member will follow up and mentions the Slack user or user group you set.' },
+  ]}
+  replyLabel="Replies and escalation mentions appear in the same Slack channel or thread"
+/>
 
 To connect Slack to answerLoops you need a **bot token** (`xoxb-…`), issued either through a 1-click OAuth install or by generating one manually from your Slack app's settings — no separate self-hosting setup path exists, both routes work the same on managed cloud and self-hosted deployments.
 
@@ -15,7 +39,7 @@ answerLoops connects to Slack in one of two ways, and the two are independent of
 Every connected channel appears in the unified ticket list with a Slack source badge. Slack is a Standard-plan-and-above feature — `saveSlackIntegrationAction`, `saveSlackChannelsAction`, and the `/api/slack/install` route all gate on the `slack_integration` entitlement and return an error before touching the workspace if the org's plan doesn't include it.
 
 <Callout type="info">
-  **Automatic Deflections** is off by default for every newly connected platform. While it's off, even a high-confidence AI answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — Slack gets a brief acknowledgment reaction/reply instead of the real answer. Turn it on per-workspace in **Integrations → Slack → Edit channels → Automatic Deflections toggle → Save channels** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
+  **Automatic Deflections** is off by default for every newly connected platform. While it's off, even a high-confidence AI answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — Slack gets no automatic reply. Turn it on per-workspace in **Integrations → Slack → Edit channels → Automatic Deflections toggle → Save channels** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
 </Callout>
 
 ---
@@ -25,7 +49,7 @@ Every connected channel appears in the unified ticket list with a Slack source b
 1. In **Integrations → Slack** (or the onboarding wizard), click **Add to Slack**
 2. answerLoops requests the `channels:history`, `channels:read`, `channels:join`, `chat:write`, `reactions:write`, and `users:read` scopes and redirects to Slack's authorization screen
 3. An admin picks the workspace and approves
-4. Slack redirects back to `/api/slack/callback`, which exchanges the code for a bot token and stores it (along with the team ID and an internally-generated `bot_secret` used to authenticate the bot's own traffic back to answerLoops)
+4. Slack redirects back to `/api/slack/callback`, which exchanges the code for a bot token and stores it securely, along with your workspace ID
 5. The channel picker opens automatically, listing every public channel in the workspace via `conversations.list`
 6. Select the channels to monitor and click **Save channels**
 

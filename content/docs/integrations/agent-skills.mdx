@@ -1,7 +1,32 @@
 ---
 title: Agent Skills
 description: Installable Claude Code skills that set up self-hosted answerLoops and connect an agent to a running workspace.
+icon: Wand
 ---
+
+<IntegrationFlow
+  platform="agent-skills"
+  source={{
+    title: 'Your coding agent',
+    text: 'Claude Code, the agent that reads a skill and follows it. The skills live in the answerLoops repository under skills/.',
+  }}
+  sourceLabel="Your agent"
+  trigger={{
+    title: 'One install command',
+    text: 'Running npx @answerloops/agent-sdk skills answerloops-setup answerloops-operate writes the skills into .claude/skills/. Name just one to install only that one.',
+  }}
+  steps={[
+    { title: 'Read the skill', text: 'Each skill is a SKILL.md file. When you ask your agent to use it, the agent reads the instructions inside instead of improvising.' },
+    { title: 'Follow the procedure', text: 'The agent works through a reviewed set of steps, running the answerloops CLI or calling the MCP server as the skill directs.' },
+    { title: 'Ask you for real values', text: 'Anything that must come from you, such as OAuth app details or AI provider keys, the agent collects in conversation. It never invents a credential.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Self-hosted instance running', text: 'answerloops-setup checks prerequisites, scaffolds .env, starts the published image with Docker Compose, and polls /api/health until it is up.' },
+    { tone: 'post', title: 'Agent connected to a workspace', text: 'answerloops-operate connects your agent to a hosted or self-hosted workspace through the MCP server, using a scoped API key you create.' },
+  ]}
+  outcomesLabel="What a skill sets up"
+  replyLabel="Your agent reports progress and asks for missing values in the conversation"
+/>
 
 answerLoops ships two [Claude Code skills](https://docs.claude.com/en/docs/claude-code/skills)
 directly in this repository, under `skills/`. A skill is a `SKILL.md` file —

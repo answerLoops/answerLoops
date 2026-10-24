@@ -1,7 +1,33 @@
 ---
 title: Stripe
 description: How answerLoops connects billing to Stripe.
+icon: CreditCard
 ---
+
+<IntegrationFlow
+  platform="stripe"
+  source={{
+    title: 'Your workspace',
+    text: 'On the hosted service, you pick a plan and start a trial through Stripe Checkout. A card is required up front, and the trial runs for 14 days.',
+  }}
+  sourceLabel="Your billing"
+  trigger={{
+    title: 'Webhook back to answerLoops',
+    text: 'Stripe sends events such as checkout.session.completed to /api/billing/webhook. The webhook is the source of truth for your subscription, so access can take a moment to appear after Checkout.',
+  }}
+  steps={[
+    { title: 'Start the subscription', text: 'When Checkout completes, answerLoops records your plan as trialing and attaches the Stripe Customer to your workspace. Your welcome email is sent the first time only.' },
+    { title: 'Keep it in sync', text: 'Plan changes, cancellations, and failed payments each arrive as their own event and update the subscription record. Opening or abandoning Checkout does not create a customer.' },
+    { title: 'Check access locally', text: 'Access is read from answerLoops’s own subscription record, not from Stripe on each request. Self-hosted instances have no subscription and are never gated.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Trial and plan active', text: 'Your workspace has access while the subscription is trialing or active. Your billing page shows days left in the trial and usage this month, and owners can open Manage subscription for invoices and payment details.' },
+    { tone: 'review', title: 'Payment past due', text: 'Access continues, and your billing page shows a past-due notice. Choose Manage subscription to add or update a payment method.' },
+    { tone: 'escalate', title: 'Subscription canceled', text: 'When Stripe reports the subscription deleted, answerLoops marks it canceled and access ends.' },
+  ]}
+  outcomesLabel="What it unlocks"
+  replyLabel="Your billing page reflects the subscription state Stripe reported"
+/>
 
 answerLoops uses Stripe Checkout for hosted-plan trials and subscriptions. Stripe
 handles payment details, trial timing, invoices, and the customer portal; the

@@ -1,7 +1,31 @@
 ---
 title: Discourse
 description: Connect a Discourse forum to answerLoops so new topics and replies in watched categories flow through the same confidence-gated support pipeline as every other channel.
+icon: MessagesSquare
 ---
+
+<IntegrationFlow
+  platform="discourse"
+  source={{
+    title: 'Your Discourse forum',
+    text: 'A member starts a topic or replies in one of the categories you chose to watch. A dedicated bot account, which you create, posts the answers.',
+  }}
+  trigger={{
+    title: 'Signed webhook',
+    text: 'Discourse sends a signed event to answerLoops the moment a topic or post is created. There is no polling.',
+  }}
+  steps={[
+    { title: 'Create ticket', text: 'The post becomes a ticket with its topic attached. Posts from the bot account itself, posts under 10 characters, and posts in categories you did not choose are skipped.' },
+    { title: 'Find the answer', text: 'answerLoops searches your knowledge base for what is relevant to the question and drafts an answer grounded in it.' },
+    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides which path the answer takes.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Posted in the topic', text: 'With Automatic Deflections on and a confident answer, the bot account replies in the topic on its own.' },
+    { tone: 'review', title: 'Held as a draft', text: 'Automatic Deflections is off by default, so even a confident answer waits on your dashboard. Your team approves, edits, or dismisses it, and the topic gets no automatic reply until you do.' },
+    { tone: 'escalate', title: 'Your team is pulled in', text: 'Below the threshold, the escalation user you set is mentioned in the topic so a person takes over.' },
+  ]}
+  replyLabel="Replies and escalation mentions appear in the same Discourse topic"
+/>
 
 ## Overview
 

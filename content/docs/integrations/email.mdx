@@ -1,7 +1,32 @@
 ---
 title: Email
 description: Turn a customer-owned support domain into an AI-triaged ticket queue with managed email receiving.
+icon: Mail
 ---
+
+<IntegrationFlow
+  platform="email"
+  sourceLabel="Your customers"
+  source={{
+    title: 'Your support address',
+    text: 'A customer emails the support address on the domain you verified in answerLoops, and the message becomes a ticket.',
+  }}
+  trigger={{
+    title: 'Inbound email event',
+    text: 'Your managed email service notifies answerLoops the moment a message arrives, and answerLoops retrieves the full message. There is no inbox polling.',
+  }}
+  steps={[
+    { title: 'Filter and thread', text: 'Spam, automatic replies, no-reply senders, and senders outside your Allowed senders list are skipped. A customer reply to an existing conversation is added to that ticket for your team instead of triggering a new answer.' },
+    { title: 'Find the answer', text: 'answerLoops searches your knowledge base for what is relevant to the question and drafts an answer grounded in it.' },
+    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides which path the answer takes.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Reply sent', text: 'With Automatic Deflections on and a confident answer, the reply goes out in the same email thread, from your verified domain, your connected Gmail or Outlook mailbox, or the platform default.' },
+    { tone: 'review', title: 'Held as a draft', text: 'Automatic Deflections is off by default, so even a confident answer waits on your dashboard. Your team approves, edits, or dismisses it, and the customer gets no automatic reply until you do.' },
+    { tone: 'escalate', title: 'Flagged for a person', text: 'Below the threshold, the draft is held for review. With Automatic Deflections on, the customer gets a short note that a team member will follow up, naming your escalation email.' },
+  ]}
+  replyLabel="Replies are threaded into the customer's existing email conversation"
+/>
 
 ## Overview
 
@@ -15,7 +40,7 @@ Two things are independent and configured separately:
 All email tickets appear in the unified ticket list with an Email source badge.
 
 <Callout type="info">
-  **Automatic Deflections** is off by default for every newly connected platform, email included. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — the customer gets a brief acknowledgment reply instead of the real answer. Turn it on in **Integrations → Email → Edit sender filters & deflections** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
+  **Automatic Deflections** is off by default for every newly connected platform, email included. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss — the customer gets no automatic reply until your team sends one. Turn it on in **Integrations → Email → Edit sender filters & deflections** once you've reviewed enough approved drafts to trust the AI's answers going out unsupervised.
 </Callout>
 
 ---

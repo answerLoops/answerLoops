@@ -1,7 +1,31 @@
 ---
 title: Circle
 description: Connect Circle posts and comments to your support queue and configure reviewed replies.
+icon: CircleDot
 ---
+
+<IntegrationFlow
+  platform="circle"
+  source={{
+    title: 'Your Circle community',
+    text: 'A member publishes a post or a comment in one of the spaces you chose to watch, or in any space if you left the list blank.',
+  }}
+  trigger={{
+    title: 'Circle Workflow webhook',
+    text: 'Two Workflows you create in Circle, one for new posts and one for new comments, send each event to answerLoops as it happens. If the payload is thin, answerLoops fetches the full text with your Admin API token.',
+  }}
+  steps={[
+    { title: 'Create ticket', text: 'The post or comment becomes a ticket. Content under 10 characters and posts in spaces you did not choose are skipped. A comment on a post that already has a ticket is added to that ticket.' },
+    { title: 'Find the answer', text: 'answerLoops searches your knowledge base for what is relevant to the question and drafts an answer grounded in it.' },
+    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides which path the answer takes.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Reply in Circle', text: 'With automatic replies on and a confident answer, the reply goes out on the post.' },
+    { tone: 'review', title: 'Held as a draft', text: 'Without automatic replies, the draft waits on your dashboard. Your team reviews it and decides what to send.' },
+    { tone: 'escalate', title: 'Flagged for follow-up', text: 'Below the threshold, the draft is flagged as low-confidence on the ticket so the escalation user you set can follow up.' },
+  ]}
+  replyLabel="Replies go back to the same Circle post"
+/>
 
 ## Overview
 

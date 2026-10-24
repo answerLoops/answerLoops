@@ -1,7 +1,34 @@
 ---
 title: MCP Server
 description: Give any AI agent (Claude, Cursor, your own bot) direct access to your knowledge base, FAQ, and tickets via the Model Context Protocol.
+icon: Cable
 ---
+
+<IntegrationFlow
+  platform="mcp"
+  source={{
+    title: 'Your AI agent',
+    text: 'Any agent that speaks MCP, such as Claude, Cursor, or a custom internal bot, asks answerLoops a question or hands it a task.',
+  }}
+  sourceLabel="Your agent"
+  trigger={{
+    title: 'One endpoint, one API key',
+    text: 'The agent sends JSON-RPC requests to /api/mcp with an API key you created under Settings, API Keys. There is nothing to install on the answerLoops side.',
+  }}
+  steps={[
+    { title: 'Match the workspace', text: 'The API key tells answerLoops which workspace the request belongs to. The permissions you ticked when creating the key decide which tools the agent may call.' },
+    { title: 'Run the tool', text: 'Search, FAQ, and ticket tools read your workspace data. Opening a ticket or generating an answer uses the same pipeline as Discord, Slack, and email.' },
+    { title: 'Check the answer', text: 'When an answer is generated, a separate agent checks the draft against the retrieved sources before a confidence score is assigned.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Search the knowledge base', text: 'search_kb returns the closest published articles with a relevance score.' },
+    { tone: 'post', title: 'Read the FAQ and tickets', text: 'get_faq returns the latest weekly FAQ digest, and get_tickets lists tickets, filtered by status, priority, or category.' },
+    { tone: 'post', title: 'Open a ticket', text: 'create_ticket runs the new ticket through triage and auto-draft. Replies are saved on the ticket for the agent to read back with get_tickets.' },
+    { tone: 'post', title: 'Generate an answer', text: 'generate_answer returns a source-grounded answer with a confidence score, without opening a ticket.' },
+  ]}
+  outcomesLabel="What your agent can do"
+  replyLabel="Results come back to your agent as the MCP tool response"
+/>
 
 An MCP server for customer support means an agent — Claude, Cursor, a custom internal bot, anything that speaks [MCP](https://modelcontextprotocol.io) — can search your knowledge base, read tickets, and generate a source-grounded answer directly, without a human opening a chat widget first. answerLoops ships one: any MCP-compatible agent can search your knowledge base, read the latest FAQ, list/create tickets, and generate grounded answers — the same pipeline that powers Discord, Slack, and email.
 

@@ -1,7 +1,32 @@
 ---
 title: Notion
 description: Connect a Notion workspace and sync its pages and databases into the Knowledge Base so the AI can answer from docs your team keeps in Notion.
+icon: NotebookText
 ---
+
+<IntegrationFlow
+  platform="notion"
+  sourceLabel="Your documentation"
+  outcomesLabel="What it powers"
+  source={{
+    title: 'Your Notion workspace',
+    text: 'Every page and database you shared with your Notion connection, including everything nested under them. You choose what syncs by sharing or unsharing in Notion.',
+  }}
+  trigger={{
+    title: 'Sync now',
+    text: 'You start a sync from the Knowledge Base page. It runs as a background job, shows progress, and is safe to leave. Sync again after you edit your Notion pages.',
+  }}
+  steps={[
+    { title: 'Read shared pages', text: 'answerLoops reads each shared page and database and converts it to text. Images, files, and embeds are dropped, and their captions are kept.' },
+    { title: 'Split and embed', text: 'The text is split into chunks and embedded, using the same pipeline as every other knowledge source.' },
+    { title: 'Replace the old copy', text: 'The new import replaces the previous Notion content only once it is fully built. If a sync is interrupted, the previous content stays in place and searchable.' },
+  ]}
+  outcomes={[
+    { tone: 'review', title: 'Held until you publish', text: 'Notion imports unpublished. It is searchable on your dashboard, but it is not used for customer answers or the website widget yet.' },
+    { tone: 'post', title: 'Answers questions', text: 'After you click Publish to widget, the content grounds customer answers and the website widget. Your choice is kept across re-syncs.' },
+  ]}
+  replyLabel="Published content feeds every answer and the website widget"
+/>
 
 ## Overview
 

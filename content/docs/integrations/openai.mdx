@@ -1,7 +1,34 @@
 ---
 title: OpenAI
 description: Use your own OpenAI API key for answer generation and embeddings.
+icon: Cpu
 ---
+
+<IntegrationFlow
+  platform="openai"
+  sourceLogo="channels"
+  sourceLabel="Your channels"
+  source={{
+    title: 'Questions from your channels',
+    text: 'Customers ask in the channels you have connected, such as Slack, Discord, email, or the website widget. Every question goes through the same answering pipeline.',
+  }}
+  trigger={{
+    title: 'Your API key',
+    text: 'In Settings → AI Model you choose OpenAI, pick a model, and paste your key. One key covers both answers and knowledge-base search. Without a key, a hosted workspace runs on included AI usage and a self-hosted install uses the key in its environment.',
+  }}
+  steps={[
+    { title: 'Find the answer', text: 'The question is turned into an embedding and matched against your knowledge base. Embeddings use text-embedding-3-small by default.', logo: 'openai' },
+    { title: 'Draft the answer', text: 'Your chosen OpenAI model writes an answer grounded in what was found.', logo: 'openai' },
+    { title: 'Review confidence', text: 'The same model reviews the draft and scores how confident it is. Your confidence threshold decides which path the answer takes.', logo: 'openai' },
+  ]}
+  outcomes={[
+    { tone: 'info', title: 'Your own usage', text: 'With your own key, usage is billed to your OpenAI account and the included-usage limit no longer applies.' },
+    { tone: 'info', title: 'Included usage', text: 'Without a key, a hosted workspace uses included AI usage up to a limit. That part of AI pauses when the limit is reached.' },
+    { tone: 'info', title: 'Model choice', text: 'You pick the answer model and the embedding model. Test connection checks the key and model before you save.' },
+  ]}
+  outcomesLabel="What you control"
+  replyLabel="Usage is billed to your OpenAI account"
+/>
 
 OpenAI is the default AI provider. It's the one provider that covers **both**
 jobs answerLoops needs a model for — generating answers and creating the

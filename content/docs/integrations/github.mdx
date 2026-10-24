@@ -1,7 +1,32 @@
 ---
 title: GitHub
 description: Ingest GitHub Issues and Discussions as tickets, and sync repo markdown and answered Discussions into the Knowledge Base.
+icon: GitBranch
 ---
+
+<IntegrationFlow
+  platform="github"
+  sourceLabel="Your documentation"
+  outcomesLabel="What it powers"
+  source={{
+    title: 'Your GitHub repository',
+    text: 'Markdown and MDX files on the default branch, plus Discussions that have an accepted answer. The same repository can also send new Issues and Discussions to your support queue as tickets.',
+  }}
+  trigger={{
+    title: 'Push or Sync now',
+    text: 'A push to the default branch queues a sync through the GitHub App webhook. Marking a Discussion as answered syncs it right away. Sync now refreshes everything on demand.',
+  }}
+  steps={[
+    { title: 'Queue a sync', text: 'Syncs run as background jobs, so you can leave the page. Repeated triggers for the same repository collapse into one job, and pushes close together are spaced out.' },
+    { title: 'Split into articles', text: 'Each Markdown file is split into articles and embedded. For an answered Discussion, the title becomes the question and the accepted answer becomes the answer, credited to the person who gave it.' },
+    { title: 'Swap in safely', text: 'The replacement is built next to your live content and swapped in only when it is complete. If a sync fails, your previous content stays in place and searchable.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Grounds your answers', text: 'Synced content is part of the knowledge base the AI draws on when it answers questions on every channel you connect.' },
+    { tone: 'review', title: 'Visible in the Knowledge Base', text: 'Synced files and answered Discussions appear as articles on the Knowledge Base page, next to URL crawls, uploads, and resolved tickets.' },
+  ]}
+  replyLabel="Knowledge flows into every answer, on every channel"
+/>
 
 ## Overview
 
@@ -84,7 +109,7 @@ In your answerLoops dashboard, go to **Integrations → GitHub → Connect GitHu
 Each connected repo has three controls:
 
 - **Monitored events** — choose Issues, Discussions, Both, or None. This governs *ticket ingest* only.
-- **Automatic Deflections** — off by default. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss instead of posting as a GitHub comment automatically — the issue gets a brief acknowledgment comment instead. Turn it on per-repo once you trust the AI's answers going out unsupervised.
+- **Automatic Deflections** — off by default. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss instead of posting as a GitHub comment automatically, and nothing is posted to the issue until your team sends a reply. Turn it on per-repo once you trust the AI's answers going out unsupervised.
 - **Knowledge Base source** — toggle KB sync on/off; **Sync now** queues a sync
 
 When KB sync is enabled: every push **to the default branch** queues a re-embed of all `.md` and `.mdx` files (pushes to other branches, tags, or PR refs are ignored), and every discussion marked as answered syncs into the KB immediately (independent of **Monitored events** — a repo can feed the KB from Discussions even if ticket ingest is set to `Issues` or `None`). **Sync now** queues a re-sync of both markdown files and the full set of currently-answered discussions.

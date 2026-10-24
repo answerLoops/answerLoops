@@ -1,7 +1,34 @@
 ---
 title: Anthropic
 description: Use Anthropic's Claude models for answer generation. Knowledge-base processing (embeddings) runs on OpenAI.
+icon: Cpu
 ---
+
+<IntegrationFlow
+  platform="anthropic"
+  sourceLogo="channels"
+  sourceLabel="Your channels"
+  source={{
+    title: 'Questions from your channels',
+    text: 'Customers ask in the channels you have connected, such as Slack, Discord, email, or the website widget. Every question goes through the same answering pipeline.',
+  }}
+  trigger={{
+    title: 'Your API key',
+    text: 'In Settings → AI Model you choose Anthropic, pick a model, and paste your Anthropic key. Only the answering steps use it.',
+  }}
+  steps={[
+    { title: 'Find the answer', text: 'Searching your knowledge base uses OpenAI embeddings, because Anthropic does not offer embeddings. On a hosted plan this runs on your included AI usage unless you add an OpenAI key. Self-hosted installs enter an OpenAI key.', logo: 'openai' },
+    { title: 'Draft the answer', text: 'Your chosen Anthropic model writes an answer grounded in what was found.', logo: 'anthropic' },
+    { title: 'Review confidence', text: 'The same Anthropic model reviews the draft and scores how confident it is. Your confidence threshold decides which path the answer takes.', logo: 'anthropic' },
+  ]}
+  outcomes={[
+    { tone: 'info', title: 'Billed to you', text: 'Answer drafting and review are billed to your Anthropic account.' },
+    { tone: 'info', title: 'Included usage for search', text: 'Knowledge-base search on a hosted plan uses included AI usage until you add an OpenAI key. Adding one removes that limit.' },
+    { tone: 'info', title: 'Model choice', text: 'You pick the model, and Refresh models lists what your account offers. Test connection checks the key before you save.' },
+  ]}
+  outcomesLabel="What you control"
+  replyLabel="Answering is billed to your Anthropic account"
+/>
 
 Anthropic's Claude models generate the answers answerLoops drafts. Claude handles **chat only**, because Anthropic doesn't offer embeddings.
 
