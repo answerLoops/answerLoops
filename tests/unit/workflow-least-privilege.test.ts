@@ -20,7 +20,6 @@ import path from 'node:path'
 const WRITE_ALLOWLIST: Record<string, Record<string, string[]>> = {
   'publish-image.yml': { build: ['packages'], merge: ['packages'] },
   'publish-agent-sdk.yml': { publish: ['id-token'] },
-  'sync-llms-txt.yml': { sync: ['contents'] },
 }
 
 interface Line {
@@ -133,7 +132,6 @@ describe('workflow least privilege', () => {
         'publish-agent-sdk.yml',
         'publish-image.yml',
         'security.yml',
-        'sync-llms-txt.yml',
       ]),
     )
     for (const wf of wfs) expect(jobsOf(wf).length, `${wf.file} has no parseable jobs`).toBeGreaterThan(0)

@@ -169,9 +169,11 @@ If the diff touches no component files with real logic, skip the skill entirely.
 
 Diff mode only ever sees the current PR's changed files, so it can't surface pre-existing gaps (components shipped before this skill existed). Run `/project:component-test --full` periodically — not on every PR — to scan all of `components/**/*.tsx` for logic-bearing files with no matching test and report gaps for triage before backfilling.
 
-# Update-llms-txt skill — keep public/llms.txt in sync with the docs
+# Update-llms-txt skill — keep public/llms.txt in sync with the code and docs
 
-On any PR that adds/removes a page under `content/docs/integrations/**`, adds/removes a top-level capability in `content/docs/introduction.mdx`'s capability table, or changes the public docs base URL / marketing URL / repo URL / MCP-Agent-API endpoint paths, run `/project:update-llms-txt` **before** opening the PR. `public/llms.txt` is hand-curated (not auto-generated from `content/docs/`), so it silently drifts stale otherwise — a dead link or wrong domain in a file whose whole purpose is being cited by LLM crawlers is worse than not having the file at all.
+On any PR whose diff changes `content/docs/**`, `app/sitemap.ts`, `lib/billing/plans.ts` (prices, allowances, trial), marketing copy that states what the product does or costs, a channel/integration, an MCP tool, or the public URLs and API endpoint paths, run `/project:update-llms-txt` **before** opening the PR. `public/llms.txt` is hand-curated, so it silently drifts stale otherwise — a dead link, wrong price or wrong domain in a file whose whole purpose is being cited by LLM crawlers is worse than not having the file at all.
+
+The skill reads the PR diff, runs `pnpm llms:sync` for the generated link blocks, and edits the hand-written sections. CI then runs `pnpm llms:check` (the "Check llms.txt freshness" job), which fails the PR if the generated blocks are stale, a price or allowance differs from `lib/billing/plans.ts`, a channel in the docs introduction table is missing, an integration docs page is unclassified, or a link no longer resolves. CI only checks; `main` is protected, so nothing pushes a fix-up after merge.
 
 Skip for wording/typo fixes or troubleshooting-section additions that don't change what the product does or where things live.
 

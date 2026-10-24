@@ -1,57 +1,79 @@
-# Update-LLMs-Txt — keep public/llms.txt in sync with the docs
+# Update-LLMs-Txt — keep public/llms.txt in sync with the code and docs
 
-Invoke with `/project:update-llms-txt` on any branch that changes `content/docs/**` — new pages, removed pages, or a materially different description of what the product does (not typo/wording fixes).
-
-`public/llms.txt` is a hand-curated machine-readable summary for AI agents and LLM crawlers (the [llms.txt convention](https://llmstxt.org/) — unrelated to `robots.txt`, which controls crawler *access*, not content). It is **not** auto-generated from `content/docs/` and never should be — it's deliberately shorter and more opinionated than a full doc dump. This skill keeps it from silently drifting out of sync as the real docs change underneath it, without turning it into an auto-generated wall of links.
+Invoke with `/project:update-llms-txt` on any branch whose diff could change what `public/llms.txt` says. That file is a hand-curated, machine-readable summary for AI agents and LLM crawlers (the [llms.txt convention](https://llmstxt.org/) — unrelated to `robots.txt`, which controls crawler *access*). It is deliberately shorter and more opinionated than a docs dump, so it is edited, not generated wholesale. This skill reads the PR diff and makes the edits; the CI check (`pnpm llms:check`) proves they were made.
 
 ---
 
-## What counts as a docs change requiring this skill
+## What triggers this skill
 
-- A new or removed page under `content/docs/integrations/**`
-- A new or removed top-level product capability documented in `content/docs/introduction.mdx`'s "What's actually in the box" table
-- A change to the public docs base URL, the marketing site URL, the GitHub repo URL, or the MCP/Agent API endpoint paths
-- A pricing change reflected in `content/docs/reference/billing-plans.mdx` or similar
+Run it when the diff touches any of:
 
-Skip this skill for wording/typo fixes, troubleshooting-section additions, or any change that doesn't alter what the product *does* or *where things live*.
+- `content/docs/**` — a new, removed or materially changed page
+- `app/sitemap.ts` — public marketing routes
+- `lib/billing/plans.ts` — prices, answer allowances, overage rate, trial length, annual discount
+- `app/(marketing)/**` or other marketing copy that states what the product does or costs
+- A channel, integration, MCP tool or Agent API endpoint being added, removed or renamed
+- The public docs base URL, marketing URL, repo URL, or MCP/Agent API paths
+
+Skip it for typo or wording fixes and troubleshooting additions that change neither what the product does nor where things live. If the check passes and the prose still reads true, say so and stop — no no-op commit.
 
 ---
 
 ## Orchestrator steps
 
-### Step 1 — read both sides
-
-Read `public/llms.txt` in full, then read `content/docs/integrations/meta.json`'s `pages` array and `content/docs/introduction.mdx`'s capability table. Do not read every integration page in full — the goal is a structural diff (what exists vs. what llms.txt claims exists), not a content rewrite.
-
-### Step 2 — check the Integrations list specifically
-
-`llms.txt`'s `## Integrations` section should list every **support-channel integration** — the platforms a community's questions actually arrive from (Discord, Slack, Google Chat, Telegram, Email, GitHub, MCP server, Agent API). It should **not** list AI-provider-key pages (`openai.mdx`, `anthropic.mdx`, `google-gemini.mdx`, `groq.mdx`, `mistral.mdx`, `ollama.mdx`) or `stripe.mdx` — those are configuration references, not ingest channels, and don't belong in a "what can send questions into AnswerLoops" summary. Cross-check the list against `content/docs/integrations/meta.json`'s `pages` array to catch anything added or removed, applying that same channel-vs-config-reference filter.
-
-### Step 3 — check links resolve
-
-For every URL in `llms.txt`, confirm the path actually exists as a page under `content/docs/` (or is a real API route under `app/api/`). A stale link here is worse than no link — an LLM citing a 404 as a source erodes trust in every other claim on the page. Use the same base URL pattern already in the file (`https://answerloops.com/docs/...`) — never `docs.answerloops.com` (that subdomain is not provisioned, see PR #251) and never a stale repo owner/name.
-
-### Step 4 — update, don't rewrite
-
-Make the smallest edit that fixes what's actually stale — add/remove specific lines in the `## Integrations` or `## Links` section, adjust a capability bullet if a described feature no longer matches reality. Do not regenerate the whole file's prose (the "What it does" / "Who it's for" narrative sections) unless the product's actual positioning changed, not just its docs.
-
-### Step 5 — verify
+### Step 1 — read the diff, then llms.txt
 
 ```bash
-pnpm build
+git diff main...HEAD --stat
+git diff main...HEAD -- content/docs app/sitemap.ts lib/billing app/api
 ```
 
-Confirms nothing else broke. `llms.txt` lives in `public/` so it isn't part of the MDX build, but this catches any accidental docs breakage from the same session.
+Then read `public/llms.txt` in full. For each changed fact in the diff, find every place `llms.txt` states it. One change often lands in several sections (a new channel appears in the intro, Core capabilities, all three FAQ answers and Integrations).
 
-### Step 6 — commit
+### Step 2 — regenerate the generated blocks
 
 ```bash
-git add public/llms.txt
-git commit -m "docs: sync llms.txt with <what changed in the docs>
-
-<one sentence on what was stale — new integration page not listed,
-dead link, wrong domain, etc. — and why it matters for LLM crawlers
-citing this file as a source>"
+pnpm llms:sync
 ```
 
-If `llms.txt` was already accurate, say so and skip the commit — don't create a no-op commit.
+This rewrites the two blocks between the `BEGIN/END GENERATED` markers (public links from `app/sitemap.ts`, integrations from `content/docs/integrations/meta.json`). Never edit inside those markers by hand.
+
+A new integration page has to be classified in `scripts/sync-llms-txt.mjs`: add it to `INTEGRATION_ORDER` and `INTEGRATION_LABELS` if it is a channel questions arrive from, or to `NON_CHANNEL_INTEGRATION_PAGES` if it is configuration (AI-provider keys, Stripe, the Notion knowledge source). Until it is classified the check fails on purpose.
+
+### Step 3 — edit the hand-written sections
+
+Make the smallest edit that makes each claim true again. Do not regenerate the narrative ("What it does", "Who it is for") unless the product's positioning actually changed.
+
+- **Pricing** — must agree with `lib/billing/plans.ts`: monthly price, included answers, overage rate, annual total, monthly equivalent, trial length.
+- **Core capabilities / Connected channels** — must name every channel in the "Ingest channels" table of `content/docs/introduction.mdx`.
+- **Frequently asked** — the channel lists repeated in the answers.
+- **Agent onboarding** — MCP tool names, endpoint paths, skill names.
+- **Links** — only `https://answerloops.com/...`, never `docs.answerloops.com` (not provisioned, see PR #251) and never a stale repo owner/name.
+
+Follow the capability-copy rule in `AGENTS.md`: an owner-sanctioned pre-build capability is written in the present tense, with no "coming soon" hedging.
+
+### Step 4 — verify
+
+```bash
+pnpm llms:check
+pnpm test
+```
+
+`llms:check` fails with one line per mismatch. It checks that the generated blocks are fresh, prices and allowances match `plans.ts`, every channel in the docs table is named, every integration page is classified, and every `https://answerloops.com/...` link resolves to a docs page, app route or public file. It cannot judge whether prose is still accurate, so re-read the sections you did not edit against the diff before moving on.
+
+### Step 5 — show the diff and stop
+
+Show `git diff public/llms.txt scripts/sync-llms-txt.mjs` and wait for approval before committing, per the global commit rule.
+
+```bash
+git add public/llms.txt scripts/sync-llms-txt.mjs
+git commit -m "docs: sync llms.txt with <what changed>
+
+<one sentence on what was stale and why it matters for crawlers citing this file as a source>"
+```
+
+---
+
+## Why CI only checks
+
+CI runs `pnpm llms:check` on every pull request as the "Check llms.txt freshness" job. It reports; it does not edit. Rewriting prose is a judgement call, and `main` is protected (pull request plus required checks, enforced on admins), so a bot cannot push a fix-up commit there. The fix always happens on the branch, here, before merge.
