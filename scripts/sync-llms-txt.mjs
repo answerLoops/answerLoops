@@ -128,14 +128,20 @@ export function syncLlmsText(llmsText, sitemapSource, integrationsJson) {
 // ---------------------------------------------------------------------------
 
 function section(llmsText, heading) {
-  const match = llmsText.match(new RegExp(`^## ${heading}\\n([\\s\\S]*?)(?=^## |(?![\\s\\S]))`, 'm'))
-  return match ? match[1] : ''
+  const opener = `\n## ${heading}\n`
+  const start = `\n${llmsText}`.indexOf(opener)
+  if (start < 0) return ''
+  const body = `\n${llmsText}`.slice(start + opener.length)
+  const end = body.indexOf('\n## ')
+  return end < 0 ? body : body.slice(0, end)
 }
 
 function planBlock(plansSource, id) {
-  const match = plansSource.match(new RegExp(`\\n  ${id}: \\{([\\s\\S]*?)\\n  \\},`))
-  if (!match) throw new Error(`Could not find the ${id} plan in lib/billing/plans.ts`)
-  return match[1]
+  const opener = `\n  ${id}: {`
+  const start = plansSource.indexOf(opener)
+  const end = start < 0 ? -1 : plansSource.indexOf('\n  },', start)
+  if (start < 0 || end < 0) throw new Error(`Could not find the ${id} plan in lib/billing/plans.ts`)
+  return plansSource.slice(start + opener.length, end)
 }
 
 /** Reads the plan facts llms.txt repeats out of lib/billing/plans.ts. */
@@ -143,6 +149,7 @@ export function extractPlanFacts(plansSource) {
   const trialDays = Number(plansSource.match(/export const TRIAL_DAYS = (\d+)/)?.[1])
   const discountPct = Number(plansSource.match(/export const ANNUAL_DISCOUNT_PCT = (\d+)/)?.[1])
   if (!trialDays || !discountPct) throw new Error('Could not read TRIAL_DAYS / ANNUAL_DISCOUNT_PCT')
+  /** @type {Record<string, { name: string, monthly: number, quota: number | null, overage: number | null, annualEquivalent: number, annualTotal: number }>} */
   const plans = {}
   for (const id of ['standard', 'pro', 'enterprise']) {
     const block = planBlock(plansSource, id)
