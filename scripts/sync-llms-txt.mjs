@@ -85,6 +85,12 @@ const NON_CHANNEL_INTEGRATION_PAGES = [
   'stripe',
 ]
 
+// meta.json also lists sidebar section labels ("---Channels---"); only the
+// remaining entries are real pages.
+function integrationPages(integrationsJson) {
+  return integrationsJson.pages.filter((page) => !/^---.*---$/.test(page))
+}
+
 function extractStaticRoutes(sitemapSource) {
   const match = sitemapSource.match(/const STATIC_ROUTES[^=]*=\s*\[([\s\S]*?)\n\]/)
   if (!match) throw new Error('Could not find STATIC_ROUTES in app/sitemap.ts')
@@ -109,7 +115,7 @@ function generatedBlock(source, start, end, lines) {
 export function syncLlmsText(llmsText, sitemapSource, integrationsJson) {
   const routes = extractStaticRoutes(sitemapSource)
   const publicLinks = routes.map((route) => `- ${LABELS[route] ?? route}: ${BASE_URL}${route}`)
-  const available = new Set(integrationsJson.pages)
+  const available = new Set(integrationPages(integrationsJson))
   const integrations = INTEGRATION_ORDER
     .filter((slug) => available.has(slug) && slug in INTEGRATION_LABELS)
     .map((slug) => `- ${INTEGRATION_LABELS[slug]}: ${BASE_URL}/docs/integrations/${slug}`)
@@ -237,7 +243,7 @@ export function checkChannels(llmsText, introSource, integrationsJson) {
   }
 
   const known = new Set([...INTEGRATION_ORDER, ...NON_CHANNEL_INTEGRATION_PAGES])
-  for (const page of integrationsJson.pages) {
+  for (const page of integrationPages(integrationsJson)) {
     if (!known.has(page)) {
       errors.push(
         `Integrations: docs page "${page}" is neither in INTEGRATION_ORDER nor NON_CHANNEL_INTEGRATION_PAGES in scripts/sync-llms-txt.mjs`,
@@ -245,7 +251,7 @@ export function checkChannels(llmsText, introSource, integrationsJson) {
     }
   }
   for (const slug of INTEGRATION_ORDER) {
-    if (!integrationsJson.pages.includes(slug)) {
+    if (!integrationPages(integrationsJson).includes(slug)) {
       errors.push(`Integrations: "${slug}" is listed in llms.txt but has no page in content/docs/integrations/meta.json`)
     }
   }

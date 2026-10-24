@@ -1,19 +1,23 @@
 {
-  "title": "Self-Hosting",
+  "title": "Self-hosting guide",
+  "icon": "Server",
   "pages": [
+    "---Set up---",
     "prerequisites",
     "environment-variables",
     "docker",
     "oauth",
     "ai-providers",
+    "---Connect channels---",
     "discord-bot",
     "slack-app",
     "google-chat-app",
     "telegram-bot",
     "email-channel",
+    "---Run in production---",
+    "production",
     "enterprise",
     "security-scanning",
-    "production",
     "upgrading",
     "troubleshooting"
   ]

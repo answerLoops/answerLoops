@@ -1,11 +1,15 @@
 {
   "title": "Reference",
+  "icon": "BookOpen",
   "pages": [
-    "environment-variables",
+    "---Developers---",
     "api",
     "webhooks",
-    "data-model",
+    "---Configuration---",
+    "environment-variables",
     "billing-plans",
+    "---Internals---",
+    "data-model",
     "blog-covers"
   ]
 }

@@ -1,6 +1,9 @@
 {
   "title": "Integrations",
+  "icon": "Plug",
+  "defaultOpen": true,
   "pages": [
+    "---Channels---",
     "discord",
     "slack",
     "discourse",
@@ -8,17 +11,21 @@
     "google-chat",
     "telegram",
     "email",
+    "---Knowledge sources---",
     "github",
     "notion",
-    "mcp",
-    "agent-api",
-    "agent-skills",
+    "---AI providers---",
     "openai",
     "anthropic",
     "google-gemini",
     "groq",
     "mistral",
     "ollama",
+    "---Agents and developers---",
+    "mcp",
+    "agent-api",
+    "agent-skills",
+    "---Billing---",
     "stripe"
   ]
 }

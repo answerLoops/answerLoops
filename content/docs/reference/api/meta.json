@@ -1,5 +1,6 @@
 {
   "title": "Agent API",
+  "icon": "Code",
   "pages": [
     "overview",
     "searchKb",

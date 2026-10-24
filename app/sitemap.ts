@@ -65,12 +65,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority,
   }))
 
-  const docsEntries: MetadataRoute.Sitemap = docsSource.getPages().map((page) => ({
-    url: `${BASE_URL}${page.url}`,
-    lastModified: DEPLOY_TIME,
-    changeFrequency: 'monthly' as ChangeFrequency,
-    priority: 0.5,
-  }))
+  // The docs home (app/docs/page.tsx) is not an MDX page, so getPages() does
+  // not return it. It is listed here rather than in STATIC_ROUTES because
+  // those are the gated marketing pages, and docs stay reachable everywhere.
+  const docsEntries: MetadataRoute.Sitemap = [
+    {
+      url: `${BASE_URL}/docs`,
+      lastModified: DEPLOY_TIME,
+      changeFrequency: 'weekly' as ChangeFrequency,
+      priority: 0.8,
+    },
+    ...docsSource.getPages().map((page) => ({
+      url: `${BASE_URL}${page.url}`,
+      lastModified: DEPLOY_TIME,
+      changeFrequency: 'monthly' as ChangeFrequency,
+      priority: 0.5,
+    })),
+  ]
 
   // Each post is its own MDX file, so this list changes without a code
   // change — a new post should show up in the sitemap on its own, the same
