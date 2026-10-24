@@ -4,79 +4,81 @@ description: Review questions that need better source material or human follow-u
 icon: SearchX
 ---
 
-## What are knowledge gaps?
+A knowledge gap is a question answerLoops received but could not answer well, which usually means your knowledge base is missing something. The **Knowledge Gaps** page collects them in one place and ranks the most-asked first, so you always know which article to write next. Open it from the **Improve** group in the sidebar.
 
-A knowledge gap is a question that answerLoops received but couldn't answer well. Gaps appear when:
+<Callout type="info">
+  Knowledge Gaps needs the Pro plan or above. Self-hosted deployments have every feature unlocked.
+</Callout>
 
-- The AI's confidence score was too low to post an answer
-- The AI flagged the ticket as needing a human
-- A ticket was resolved by a human but no matching KB article exists — meaning the next person with the same question will get the same poor result
+<Hotspots
+  shot="knowledge-gaps"
+  only={['summary', 'questions', 'add-to-kb', 'categories']}
+  notes={{
+    summary: 'Open gap tickets, split by why the AI could not answer. Each ticket counts once.',
+    questions: 'The most-asked distinct questions first. Repeats of the same question are folded into one row.',
+    'add-to-kb': 'Opens the Knowledge Base with this ticket\'s question and answer already filled in.',
+    categories: 'Gaps grouped by topic, so you can spot clusters worth a whole new article.',
+  }}
+/>
 
-The **Knowledge Gaps** page surfaces all three categories in one place so you can prioritize which content to add next.
+## What counts as a gap
 
----
+A ticket shows up here when it matches one of the rules below and no knowledge base article has been linked to it. Tickets marked as duplicates are left out. Each gap is tagged with one of three reasons:
 
-## Gap reasons
-
-Each gap is tagged with one of three reasons:
-
-| Reason | When it appears | Condition |
+| Reason | What happened | Rule |
 |---|---|---|
-| **Low AI confidence** | The AI searched the KB but wasn't confident enough in any result to post an answer | Confidence score `< 0.6` |
-| **Needs human** | The ticket was routed to a person: the AI flagged the question as needing a human (e.g. account-specific, billing, or policy questions), or it is a bug report or feature request, which are never answered automatically | `ai_draft_status = needs_human` |
-| **Missing KB article** | A how-to or docs ticket was resolved by a human but there's no KB article that covers the topic | Resolved ticket with no linked KB content |
+| **Needs human** | The ticket was routed to a person. The AI flagged the question as needing a human (for example account-specific, billing, or policy questions), or it is a bug report or feature request. | The ticket's AI draft status is `needs_human` |
+| **Low AI confidence** | The AI searched the knowledge base but was not confident enough in any result, and did not answer automatically. | Confidence score below `0.6` |
+| **Missing KB article** | A how-to or documentation question was resolved or closed by a person, but no article covers the topic, so the next person with the same question gets the same poor result. | Resolved or closed `how_to` or `documentation` ticket with no linked article |
 
----
+A ticket that fits more than one reason is shown under the first that applies, in the order above.
 
-## The Knowledge Gaps page
+## Read the page
 
-The page opens with four stat cards at the top:
+The page opens with four cards: **Open gap tickets**, **Needs human**, **Low confidence**, and **Missing KB article**. They count tickets across all channels, however many there are, and each ticket counts once, so a question asked several times counts once per ticket.
 
-| Card | What it shows |
-|---|---|
-| **Open gap tickets** | Every open gap ticket across all channels, however many there are. Each ticket counts once, so a question asked several times counts once per ticket |
-| **Needs human** | Gaps where the AI flagged the question as requiring human handling |
-| **Low confidence** | Gaps where the AI searched but confidence was below 0.6 |
-| **Missing KB article** | Resolved tickets with no covering KB content |
+Below them, **Distinct questions** lists the most pressing questions, most-asked first, up to 50 rows. When several tickets ask the same question, they appear as one row with an **Asked N times** badge, and the row links to the ticket that most needs an article: the one with the lowest AI confidence. Each row shows:
 
-The cards count tickets, so they stay accurate for workspaces of any size. Below them is the gap list, which groups tickets by question and shows the most pressing distinct questions, most-asked first. When several tickets ask the same question, they appear as one row with an **Asked N times** badge instead of N separate rows. The row links to the ticket that most needs an article: the one with the lowest AI confidence. Each row shows:
-
-- The original question (truncated)
-- The **reason badge** (Low confidence / Needs human / Missing KB article)
-- The **confidence %** for low-confidence gaps
-- The channel source (Discord, GitHub, Slack, etc.)
+- The question, linking to the ticket
+- The category, and the confidence percentage when the AI recorded one
+- The **reason badge** (Low AI confidence, Needs human, or Missing KB article)
 - A **+ KB** button that opens the Knowledge Base with the ticket's question and answer filled into the **Write an answer by hand** form (owners and admins)
 
-Two tickets count as the same question when their meaning is very close, using the same similarity test answerLoops uses to flag duplicate tickets. Tickets that haven't been embedded yet, or were embedded with a model you've since moved off, aren't merged and show as their own rows.
+On the right, **Gaps by category** counts open gap tickets per topic, the same way as the cards, so the two always agree. Clusters stand out: if 12 gaps are all about your API authentication flow, that is the highest-value content to write next.
 
-Gaps are about tickets that were already handled. To turn *unseen* questions (from tickets and from the website widget) into articles before anyone has to resolve them by hand, use the [Review queue](/docs/product/knowledge-base#review-queue) on the Knowledge Base page.
+<Callout>
+  Two tickets count as the same question when their meaning is very close, using the same similarity test answerLoops uses to flag duplicate tickets. Tickets that have not been embedded yet, or were embedded with a model you have since moved off, are not merged and show as their own rows.
+</Callout>
 
-On the right side of the page, the **Category breakdown** sidebar groups gaps by topic category (counted in open gap tickets, the same way as the stat cards, so the two always agree) so you can spot clusters — if 12 gaps are all about your API authentication flow, that's your highest-value content to write next.
+Gaps are about tickets that were already handled. To turn unseen questions, from tickets and from the website widget, into articles before anyone has to resolve them by hand, use the [Review queue](/docs/product/knowledge-base#review-queue) on the Knowledge Base page.
 
----
-
-## How to close a gap
+## Close a gap
 
 <Steps>
   <Step title="Find the gap">
-    Open **Knowledge Gaps** and sort by reason or category. Start with the highest-volume clusters.
+    Open **Knowledge Gaps** and start with the rows marked **Asked N times**, or with the category that has the most open tickets.
   </Step>
-  <Step title="Review the original ticket">
-    Click the gap summary to open the full ticket detail. Read the question and the human answer that resolved it (if available).
+  <Step title="Check the original ticket">
+    Click the question to open the ticket. Read what was asked and, if a person resolved it, how.
   </Step>
-  <Step title="Add KB content">
-    Click **+ KB** next to the gap. This opens the Knowledge Base with the question and any existing answer from the ticket filled into the **Write an answer by hand** form. Edit the text and add it; the article is linked to the ticket, which closes the gap. Owners and admins can publish articles. You can also:
-    - **Promote the ticket** — from a resolved ticket, turn the human's resolution into a KB article in one click (owners and admins; counts toward the same hourly add limit and article cap as writing an article by hand)
-    - **Upload a file** — add a doc that covers the topic
-    - **Crawl a URL** — point answerLoops at an existing help article
+  <Step title="Write the article">
+    Click **+ KB** on the row. The Knowledge Base opens with the ticket's summary as the question and its resolution notes (or the AI's draft) as the answer, filled into **Write an answer by hand**. Edit the text and click **Add to knowledge base**. The article is linked to the ticket, which closes the gap, and it can answer the next question straight away. Owners and admins can add articles.
   </Step>
-  <Step title="Test the new source">
-    After the import completes, ask a representative question and inspect the draft against the new article.
+  <Step title="Test the result">
+    Open the **Knowledge coverage** tab, type a representative question into **Try a customer question**, and confirm the new article is the one the assistant would draw on.
   </Step>
 </Steps>
 
----
+You can also close a gap from a resolved ticket with **Promote to KB**, which turns the person's resolution into an article in one click. Writing by hand and promoting share the same limit of 30 adds every 10 minutes and the same 2,000-article cap. A file upload or URL import adds knowledge too, but it is not linked to a ticket, so the original gap stays listed.
 
-## Review the result
+<Callout type="warn">
+  Adding content does not guarantee that every related question will now qualify for an automatic reply. Check that the answer uses the intended source and addresses the original problem.
+</Callout>
 
-After adding an article, test a representative question and inspect the new draft. Check that the answer uses the intended source and addresses the original problem. Adding content does not guarantee that every related question will qualify for an automatic reply.
+## Where to go next
+
+<Cards>
+  <Card icon="BookText" title="Knowledge Base" href="/docs/product/knowledge-base">Add, review, and organize the articles that close gaps.</Card>
+  <Card icon="Ticket" title="Tickets" href="/docs/product/tickets">Open the tickets behind a gap and promote good resolutions.</Card>
+  <Card icon="FlaskConical" title="Simulation" href="/docs/product/simulation">Replay past tickets to see whether new articles improve results.</Card>
+</Cards>

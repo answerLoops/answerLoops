@@ -4,9 +4,16 @@ description: Prepare and review answers from your documentation across connected
 icon: Sparkles
 ---
 
-answerLoops collects support questions from connected channels, drafts answers from workspace knowledge, and runs a separate AI review. Your team controls which channels can send qualifying replies automatically.
+answerLoops turns your documentation into support answers wherever your community asks. It collects questions from connected channels, drafts an answer from your workspace knowledge, and has a separate AI review the draft before anything goes out. Your team controls which channels can send qualifying replies automatically, and everything else waits for a person.
 
 It works with developer, art, crypto, course, membership, and general-interest communities. You can also add the [chat widget](/docs/product/chat-widget) to any website or documentation site that supports custom JavaScript.
+
+<LoopIllustration />
+
+<Screenshot
+  shot="ticket-detail"
+  caption="An auto-answered ticket: the original question, the drafted reply, and the reviewer's confidence score."
+/>
 
 ## How it works
 
@@ -16,7 +23,32 @@ It works with developer, art, crypto, course, membership, and general-interest c
 4. **Send or review manually.** Automatic replies must be enabled and meet the configured confidence threshold. Other drafts remain available to your team.
 5. **Maintain knowledge.** Promote useful resolved answers and update articles as your product changes.
 
-A confidence score is an AI assessment, not a guarantee that an answer is correct. Test representative questions before enabling automatic replies.
+<Callout type="warn" title="Confidence is not correctness">
+  A confidence score is an AI assessment, not a guarantee that an answer is correct. Test representative questions before enabling automatic replies.
+</Callout>
+
+## Where it runs
+
+Connect the places your community already asks. Select a logo to open its setup guide.
+
+<div className="not-prose my-6 flex flex-wrap gap-4">
+  <a href="/docs/integrations/discord" aria-label="Discord setup guide"><IntegrationLogo name="discord" size={56} /></a>
+  <a href="/docs/integrations/slack" aria-label="Slack setup guide"><IntegrationLogo name="slack" size={56} /></a>
+  <a href="/docs/integrations/discourse" aria-label="Discourse setup guide"><IntegrationLogo name="discourse" size={56} /></a>
+  <a href="/docs/integrations/circle" aria-label="Circle setup guide"><IntegrationLogo name="circle" size={56} /></a>
+  <a href="/docs/integrations/github" aria-label="GitHub setup guide"><IntegrationLogo name="github" size={56} /></a>
+  <a href="/docs/integrations/telegram" aria-label="Telegram setup guide"><IntegrationLogo name="telegram" size={56} /></a>
+  <a href="/docs/integrations/email" aria-label="Email setup guide"><IntegrationLogo name="email" size={56} /></a>
+  <a href="/docs/integrations/google-chat" aria-label="Google Chat setup guide"><IntegrationLogo name="google-chat" size={56} /></a>
+  <a href="/docs/product/chat-widget" aria-label="Website widget setup guide"><IntegrationLogo name="channels" size={56} /></a>
+</div>
+
+## Who it is for
+
+- **Community managers** who answer the same questions in Discord, Slack, Discourse, or Circle every week and want the repeat questions handled first.
+- **Open-source maintainers** who field questions in GitHub issues and discussions and want drafts grounded in their docs.
+- **Support and success teams** who want one queue for chat, email, and widget conversations, with a person always able to step in.
+- **Course, membership, and creator businesses** who want members to get answers from their own material at any hour.
 
 ## Capabilities
 
@@ -50,12 +82,19 @@ A confidence score is an AI assessment, not a guarantee that an answer is correc
 
 ## Choose a deployment
 
-**Cloud:** choose a plan, sign in with Google, and complete checkout for a 14-day trial. A card is required. AI usage is included up to a limit; connect your own model provider to remove it, and that provider bills you directly.
+<Cards>
+  <Card icon="Cloud" title="Cloud" href="/docs/quickstart-cloud">Choose a plan, sign in with Google, and complete checkout for a 14-day trial. A card is required. AI usage is included up to a limit; connect your own model provider to remove it, and that provider bills you directly.</Card>
+  <Card icon="Server" title="Self-hosted" href="/docs/quickstart-self-host">Operate the application and channel services on your infrastructure under AGPL-3.0. Your team manages setup, backups, updates, and the services you connect. External model and channel providers still process relevant content.</Card>
+</Cards>
 
-**Self-hosted:** operate the application and channel services on your infrastructure under AGPL-3.0. Your team manages setup, backups, updates, and the services you connect. External model and channel providers still process relevant content.
+## Where to go next
 
-- [Cloud quickstart](/docs/quickstart-cloud)
-- [Self-host quickstart](/docs/quickstart-self-host)
-- [Billing plans](/docs/reference/billing-plans)
+<Cards>
+  <Card icon="Rocket" title="Cloud quickstart" href="/docs/quickstart-cloud">Start a trial, connect a channel, and see a first draft.</Card>
+  <Card icon="HardDrive" title="Self-host quickstart" href="/docs/quickstart-self-host">Run answerLoops on your own infrastructure.</Card>
+  <Card icon="LayoutDashboard" title="Product guide" href="/docs/product/dashboard">Learn the dashboard, tickets, knowledge base, and analytics.</Card>
+  <Card icon="Plug" title="Integrations" href="/docs/integrations/discord">Set up each channel and knowledge source.</Card>
+  <Card icon="Receipt" title="Billing plans" href="/docs/reference/billing-plans">Compare plans, allowances, and the trial.</Card>
+</Cards>
 
 For a machine-readable overview, use [/llms.txt](/llms.txt). The full documentation is available at [/llms-full.txt](/llms-full.txt).

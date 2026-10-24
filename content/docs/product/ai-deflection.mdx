@@ -4,51 +4,102 @@ description: Configure answer review and automatic replies for connected channel
 icon: Bot
 ---
 
-An automated answer is called a **deflection** in the dashboard. It uses two AI steps: a draft based on retrieved knowledge, followed by a separate review against the available evidence.
+When someone asks a question in a connected channel, answerLoops drafts an answer from your knowledge base, has a second AI check that draft, and then either posts it for you or holds it for your team. An answer that resolves a question without a person stepping in is called a **deflection**, and you will see that word on the dashboard and in Analytics.
 
-## Dual-agent review
+You decide how much trust to give the AI. Two settings control it: a **confidence threshold** (how sure the reviewer must be) and **Automatic Deflections** (whether qualifying answers are posted for you at all).
 
-We call this two-step design **dual-agent review**: one agent retrieves your documentation and drafts a reply, and a separate agent checks that draft against the retrieved sources before assigning a confidence score. The score reflects whether the review agent found the draft supported by the evidence — not how confident the drafting agent was in its own output. See [why we built it this way](/blog/dual-agent-review) for the reasoning.
+<Hotspots
+  shot="ticket-detail"
+  only={['ai-draft', 'confidence']}
+  notes={{
+    'ai-draft': 'The draft the AI prepared from your knowledge base.',
+    confidence: 'The reviewer\'s confidence score and its reasoning. This score is compared with your threshold.',
+  }}
+/>
 
 ## How an answer is prepared
 
-1. A question arrives through a connected channel.
-2. answerLoops retrieves relevant knowledge.
-3. The drafting step prepares a reply from that material.
-4. A separate review assesses the draft and assigns a confidence score.
-5. Channel settings determine whether a qualifying answer posts automatically or waits for your team.
+<Steps>
+  <Step title="A question arrives">
+    It comes in through any connected channel and becomes a [ticket](/docs/product/tickets).
+  </Step>
+  <Step title="answerLoops finds relevant knowledge">
+    It searches your knowledge base and your team's earlier answers to similar questions. If you have connected GitHub repositories, the AI can also search the code.
+  </Step>
+  <Step title="A drafting step writes a reply">
+    The reply is based on that material.
+  </Step>
+  <Step title="A separate review scores the draft">
+    A second AI step checks the draft against the question and assigns a **confidence score** from 0 to 1. It also judges whether the draft answers the question fully.
+  </Step>
+  <Step title="Your settings decide what happens next">
+    A draft that clears your threshold and fully answers the question is posted automatically when Automatic Deflections is on. Everything else waits for your team in the ticket queue.
+  </Step>
+</Steps>
 
-Connected repositories can provide additional source material. Useful resolutions can also be promoted into the knowledge base. The website widget uses published knowledge.
+### Why there are two AI steps
 
-When a question isn't covered by the knowledge base or your team's earlier answers, it is also added to the [Review queue](/docs/product/knowledge-base#review-queue) (Pro and above) so a person can approve a proper answer for next time.
+We call this **dual-agent review**. The first agent drafts; a separate agent checks that draft before a score is assigned. The score therefore reflects whether the reviewer found the draft supported by the evidence, not how confident the drafting agent was in its own output. See [why we built it this way](/blog/dual-agent-review).
 
-## Confidence threshold
+<Callout type="info">
+  When a question is not covered by your knowledge base or your team's earlier answers, it is also added to the [Review queue](/docs/product/knowledge-base#review-queue) (Pro and above) so a person can approve a proper answer for next time.
+</Callout>
 
-The default threshold is **0.8** on a scale from 0 to 1. Configure it in the relevant integration's settings.
+## Set how much the AI posts on its own
 
-A higher threshold makes automatic replies more selective; a lower threshold lets more drafts qualify. Neither setting guarantees that the answer is correct. Inspect the draft and its sources when deciding whether to change the threshold.
+### Confidence threshold
 
-## Automatic Deflections
+The default threshold is **0.8** on a scale from 0 to 1. A higher threshold makes automatic replies more selective. A lower one lets more drafts qualify. Neither setting guarantees an answer is correct, so inspect the draft and its sources before you change it.
 
-**Automatic Deflections** is off by default for newly connected channels and GitHub repositories. A high-confidence draft still requires approval when this setting is off.
+You set the threshold per channel in its settings. GitHub repositories always use the default of 0.8.
 
-- **Off:** your team reviews the draft and approves it before the answer is sent.
-- **On:** a draft that meets the configured requirements can post automatically.
+### Automatic Deflections
 
-Other drafts remain in the ticket queue. [Human escalation routing](/docs/product/escalation) adds notifications on eligible plans.
+**Automatic Deflections** is off by default for newly connected channels and GitHub repositories. While it is off, nothing is posted automatically, even for a high-confidence draft.
 
-## Change the setting
+| Setting | What happens to a draft that clears the threshold |
+|---|---|
+| **Off** | Your team reviews the draft and approves it before anything is sent. The customer receives no automated answer. |
+| **On** | The answer is posted automatically, with a prompt for the customer to react with a thumbs up or down and, afterward, a request to rate it from 1 to 5. See [Customer satisfaction](/docs/product/csat). |
 
-1. Open **Settings** and select the platform or GitHub repository.
-2. Edit the channel's configuration.
-3. Set the confidence threshold and **Automatic Deflections** option.
-4. Save. GitHub repository cards use an inline checkbox.
-5. Send a representative question and verify the ticket and reply behavior.
+Drafts that do not qualify stay in the ticket queue for your team, and [human escalation routing](/docs/product/escalation) can notify the right person on eligible plans. The setting also governs the automated replies for bug reports and feature requests described in [Tickets](/docs/product/tickets#how-the-ai-handles-each-category).
 
-Use different settings for channels with different review requirements. Test against current documentation before enabling automatic replies.
+<Callout type="warn">
+  Your plan includes a monthly allowance of automatic answers. On a plan with a hard limit, once it is used up, qualifying drafts go to your team instead of posting. See [Billing](/docs/product/billing).
+</Callout>
+
+### Change the setting
+
+<Steps>
+  <Step title="Open the channel's settings">
+    Open **Settings** and select the platform or GitHub repository.
+  </Step>
+  <Step title="Edit the configuration">
+    Open the channel's configuration for editing.
+  </Step>
+  <Step title="Set the threshold and Automatic Deflections">
+    Set the confidence threshold and the **Automatic Deflections** option, then save. GitHub repository cards use an inline checkbox for Automatic Deflections.
+  </Step>
+  <Step title="Test it">
+    Send a representative question and check the ticket and the reply. Test against current documentation before you enable automatic replies, and use different settings for channels with different review needs.
+  </Step>
+</Steps>
+
+<Callout type="info">
+  Circle is ingest-only: answerLoops reads Circle questions and prepares drafts, but never posts to Circle. Copy an approved draft into Circle yourself.
+</Callout>
 
 ## Knowledge search and model configuration
 
-The search step selects relevant content before drafting. A retrieval similarity score and the answer-review confidence score measure different things; a close text match does not by itself establish that the answer is correct.
+The search step selects relevant content before drafting. Two numbers are easy to confuse. The **retrieval similarity** score says how closely a piece of content matches the question's wording, and the **confidence** score says how well the reviewer judged the finished answer. A close text match does not by itself establish that the answer is correct.
 
-Configure chat and embedding services in [AI Model](/docs/product/ai-config). If you change the embedding model, re-import knowledge so the stored vectors match it.
+Configure the chat and embedding services (embeddings are the numeric fingerprints used to match questions to content) in [AI Model](/docs/product/ai-config). If you change the embedding model, re-import your knowledge so the stored vectors match it.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Ticket" title="Tickets" href="/docs/product/tickets">Review drafts, approve them, or reply in your own words.</Card>
+  <Card icon="UserRoundCheck" title="Human escalation" href="/docs/product/escalation">Send questions the AI could not settle to the right person.</Card>
+  <Card icon="BookOpen" title="Knowledge base" href="/docs/product/knowledge-base">Better content gives the AI better answers.</Card>
+  <Card icon="Sparkles" title="AI Model" href="/docs/product/ai-config">Choose the chat and embedding services.</Card>
+</Cards>

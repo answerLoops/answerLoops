@@ -4,145 +4,221 @@ description: View, triage, and reply to support tickets from every connected com
 icon: Ticket
 ---
 
-Every question posted in a monitored channel — Discord forum, GitHub Issue, Slack message, Telegram message, or inbound email — becomes a ticket. Tickets track the full lifecycle from first contact through resolution, with AI-generated draft replies posted back to the source platform.
+Every question posted in a channel you have connected becomes a **ticket**: one record that follows the question from first contact to resolution. answerLoops reads the question, categorizes it, drafts an answer from your knowledge base, and keeps every reply, status change, and AI decision in one place, so your team never has to hunt through Discord, Slack, email, and GitHub separately.
 
-## Ticket list
+<Hotspots
+  shot="tickets-list"
+  only={['filters', 'source', 'priority', 'ai-status', 'ticket-row']}
+  notes={{
+    filters: 'Narrow the inbox by status, priority, or category, then press Filter. Export CSV sits in the same bar.',
+    source: 'A colored badge shows which platform the question came from.',
+    priority: 'Priority is set from the AI\'s severity assessment when the ticket arrives.',
+    'ai-status': 'Shows what the AI did: drafted an answer for review, answered automatically, or left it to a person.',
+    'ticket-row': 'Select a row to open the full ticket, with the conversation, the AI draft, and the controls to reply.',
+  }}
+/>
 
-The ticket list is your central inbox. Each row shows:
+## Find the tickets that need you
 
-| Column | Description |
+The **Tickets** page is a single inbox across every connected channel. Each row shows:
+
+| Column | What it shows |
 |---|---|
-| **#** | Auto-incrementing ticket ID |
-| **Summary** | AI-generated one-line summary of the question |
-| **Source** | Colour-coded platform badge (see below) |
-| **Category** | Auto-classified topic |
-| **Priority** | `low`, `medium`, `high`, or `urgent` |
-| **Status** | Current lifecycle state |
-| **AI** | Whether an AI draft was generated |
-| **SLA** | Time remaining before SLA breach |
-| **Author** | Display name of the person who asked |
-| **Created** | Timestamp of the original message |
+| **#** | Your workspace's ticket number |
+| **Summary** | AI-written one-line summary of the question |
+| **Source** | The platform the question came from |
+| **Category** | The AI's classification (see [categories](#how-the-ai-handles-each-category)) |
+| **Priority** | `critical`, `high`, `medium`, or `low` |
+| **Status** | Where the ticket is in its lifecycle |
+| **AI** | What the AI did with it (for example, AI needs review or AI approved) |
+| **SLA** | Shows **SLA breach** in red when a response or resolution target has been missed; blank otherwise |
+| **Author** | Who asked |
+| **Created** | When the original message arrived |
 
-### Source platform badges
+The list shows the 50 newest tickets at a time. Select **Load more** at the bottom for older ones.
 
-The Source badge identifies where the ticket originated. Colours are consistent across the app:
+### Filter the list
 
-| Platform | Badge colour |
-|---|---|
-| Discord | Indigo |
-| GitHub | Gray |
-| Slack | Green |
-| Telegram | Sky |
-| Email | Yellow |
+Use the dropdowns at the top of the page, then press **Filter**:
 
-## Ticket statuses
+- **Status:** Open, In Progress, Resolved, Closed, or Duplicate
+- **Priority:** Critical, High, Medium, or Low
+- **Category:** Bug, Feature Request, Documentation, How-to, or General Question
+
+Filters stack, so you can combine all three. **Clear** resets the list.
+
+Selecting a [dashboard stat card](/docs/product/dashboard#stat-cards) opens this page with a matching card filter (Auto-Answered, Needs Review, AI Drafts Pending, or SLA Breaches). A "Filtered by" label appears above the list and stays in place when you change the dropdowns and press **Filter**. Select **Clear card filter** to remove only the card filter.
+
+### Where tickets come from
+
+The **Source** badge identifies the platform. Badges are consistent across the app:
+
+| Platform | Badge label | Color |
+|---|---|---|
+| Discord | Discord | Indigo |
+| GitHub | GitHub | Gray |
+| Slack | Slack | Green |
+| Telegram | Telegram | Sky |
+| Discourse | Discourse | Orange |
+| Circle | Circle | Violet |
+| Email | Email | Yellow |
+| AI agents using the Agent API | Agent | Brand blue |
+
+### Ticket statuses
 
 | Status | Meaning |
 |---|---|
 | `open` | New ticket, not yet handled |
-| `in_progress` | Being worked — AI draft generated or human assigned |
-| `resolved` | Answer provided; eligible for KB promotion |
-| `closed` | Ticket archived, no further action needed |
+| `in_progress` | A team member has replied, or moved it here |
+| `resolved` | Answered; can be promoted to a knowledge base article |
+| `closed` | Finished, no further action needed |
 | `duplicate` | Same question as another ticket. Left out of dashboard counts, analytics, and SLA tracking so it doesn't inflate your numbers |
 
-## Filters
+Sending the first reply on an `open` ticket moves it to `in_progress` automatically.
 
-Use the filter dropdowns at the top of the Tickets page to narrow by:
+## Read a ticket
 
-- **Status** — `open`, `in_progress`, `resolved`, `closed`, `duplicate`
-- **Priority** — `low`, `medium`, `high`, `urgent`
-- **Category** — see [Ticket categories](#ticket-categories) below
-- **Source** — filter to a single platform (Discord, GitHub, etc.)
+Select any row to open the ticket. The header gathers the key facts as badges: status, priority, category, AI status, and, when they apply, **SLA breached**, **Asked N×** (the same question has come up before), and the confidence result.
 
-Filters stack — you can combine status + priority + source at the same time. The count in the page header updates live as filters change.
+<Hotspots
+  shot="ticket-detail"
+  only={['original-message', 'ai-draft', 'confidence', 'feedback', 'details']}
+  notes={{
+    'original-message': 'The question exactly as the customer posted it.',
+    'ai-draft': 'The answer the AI wrote from your knowledge base. Here it was approved and sent automatically.',
+    confidence: 'How sure the AI reviewer was that the answer is right and complete, with a short explanation.',
+    feedback: 'Rate the answer with thumbs up or down. Ratings feed the answer-quality figures in Analytics.',
+    details: 'Severity and the response and resolve deadlines for this ticket.',
+  }}
+/>
 
-Selecting a [dashboard stat card](/docs/product/dashboard#stat-cards) opens this page with a matching card filter (Auto-Answered, Needs Review, AI Drafts Pending, or SLA Breaches). A "Filtered by" label shows above the list, and it stays in place when you change the dropdowns and press **Filter**. Select **Clear card filter** to remove it.
+The page has two columns. On the left is the conversation: the **Original Message**, the **AI Draft Answer**, the **AI Confidence** card, earlier **Replies**, and the **Reply** form. On the right are the **Details**, **Related Questions**, **Update Status**, and **Activity** panels.
 
-## Ticket categories
+### Jump back to the original message
 
-answerLoops automatically classifies each ticket into one of the following categories:
+A link under the title takes you to the question on its own platform:
 
-| Category | When it's used |
+- GitHub: **View on GitHub ↗** (the issue or discussion)
+- Discord: **View in Discord ↗**
+- Slack: **View in Slack ↗**
+- Telegram: **View in Telegram ↗**
+- Discourse: **View in Discourse ↗**
+- Circle: **View in Circle ↗**
+- Email: shows the sender's address
+
+If the original Discord message was deleted, the ticket says so and keeps its content.
+
+### See related questions
+
+**Related Questions** lists earlier tickets that are similar, with a match percentage. When an earlier ticket matches at 85% or more, the new ticket is flagged as a likely duplicate with the **Asked N×** badge. Open the match to reuse its answer, or mark the newer ticket `duplicate` from **Update Status**.
+
+## Review an AI draft
+
+For most tickets the AI has already written a draft by the time you open it. What happens next depends on how confident the AI reviewer was. A high-confidence draft can be sent to the customer automatically, when [Automatic Deflections](/docs/product/ai-deflection#automatic-deflections) is on for that channel. Anything else waits for you.
+
+<Hotspots
+  shot="ticket-detail-review"
+  only={['status-badges', 'ai-draft', 'confidence', 'related', 'update-status']}
+  notes={{
+    'status-badges': 'The AI flagged this ticket for a person because its confidence was low.',
+    'ai-draft': 'A draft is ready. Approve it, edit it, or dismiss it.',
+    confidence: 'The reviewer explains why it was unsure, which tells you what to check or fix.',
+    related: 'Earlier tickets on a similar topic, in case one already has the answer.',
+    'update-status': 'Set the status, add your name, and leave optional resolution notes.',
+  }}
+/>
+
+<Steps>
+  <Step title="Read the draft and its confidence">
+    The **AI Draft Answer** panel shows the draft. The **AI Confidence** card underneath shows a percentage and a short explanation of the score.
+  </Step>
+  <Step title="Choose what to do with it">
+    - **Approve** posts the draft as it is to the source platform.
+    - **Edit** opens the draft in a text field. **Save & post** sends your edited version.
+    - **Dismiss** hides the draft without posting anything. The ticket's status does not change.
+    - **Copy draft** copies the text, useful when you want to paste it somewhere yourself.
+  </Step>
+  <Step title="Update the ticket">
+    Under **Update Status**, pick the new status, enter your name, add optional resolution notes, and select **Update status**.
+  </Step>
+</Steps>
+
+<Callout type="info">
+  If Automatic Deflections is off for the channel, nothing is sent to the customer even when the AI is confident. The confidence card says so, and the draft waits for you to approve it or reply by hand.
+</Callout>
+
+### Reply in your own words
+
+The **Reply** form sends a message back to the person who asked. Enter your name and your message (up to 2,000 characters). The button names the destination:
+
+| Source | Button |
+|---|---|
+| GitHub | **Send reply to GitHub** |
+| Discord | **Send reply to Discord** |
+| Slack | **Send reply to Slack** |
+| Telegram | **Send reply to Telegram** |
+| Discourse | **Send reply to Discourse** |
+| Google Chat | **Send reply to Google Chat** |
+| Email | **Send reply by email** |
+| Circle, Agent | **Save reply** (records the reply on the ticket) |
+
+Replies go to the original thread on the source platform, not only into answerLoops. Circle tickets are ingest-only, so copy the answer into Circle yourself. For tickets opened by an AI agent there is no chat channel, so the reply is saved on the ticket for the agent to read through the API.
+
+### Turn a good answer into knowledge
+
+On a `resolved` or `closed` ticket that has an answer, the **Knowledge Base** panel offers **Promote to KB**. It turns the question and answer into a searchable article so the next person gets it instantly. Only owners and admins can promote. Once promoted, the panel links to the article instead.
+
+### When a ticket has no draft
+
+A ticket sent to a person without a draft shows a notice in place of the draft, and the notice says why.
+
+| Notice | Why | What to do |
+|---|---|---|
+| You've reached this month's AI limit | Your plan's included AI usage for the month is spent. | Add your own AI provider in **Settings → AI Model**, or wait for the limit to reset next month. |
+| You've reached your trial AI limit | The AI usage included in your trial is spent. | Add your own AI provider in **Settings → AI Model**. |
+| AI drafting is paused because there's no active plan | The workspace has no active trial or plan. | Choose a plan in **Billing**. |
+| We couldn't draft a reply for this ticket | AI was unavailable when the ticket arrived. | Nothing. A team member reviews the ticket. |
+| Bug reports and feature requests aren't answered automatically | The ticket was classified as a bug report or feature request. These are never answered from the knowledge base, because the fix or feature may not exist yet. | Nothing. A team member reviews it. |
+| This email is on hold because we couldn't verify the sender | An inbound email could not be matched to a verified sender, so it waits for a person. | Review it before replying. |
+| No AI draft was generated for this ticket | An older ticket, created before the reason was recorded. | Nothing. |
+
+<Callout type="info">
+  Only the first three notices need anything from you. The others are expected behavior.
+</Callout>
+
+## How the AI handles each category
+
+answerLoops classifies each ticket as it arrives. If classification is not possible (for example, no AI provider is available), the Category column stays blank and the ticket is handled as a general question.
+
+| Category | Used for |
 |---|---|
 | `how_to` | Step-by-step usage questions |
 | `documentation` | Requests to clarify or find docs |
-| `bug` | Reports of broken behaviour |
+| `bug` | Reports of broken behavior |
 | `feature_request` | Suggestions for new functionality |
-| `general_question` | Everything else that's a genuine question |
-| `uncategorized` | Could not be confidently classified |
+| `general_question` | Everything else that is a genuine question |
 
-### How category changes the AI response
+Category changes what the AI does next:
 
-Category isn't just a label — it changes what the AI does next:
+- **`how_to`, `documentation`, `general_question`:** answered from your knowledge base. A separate review grades the draft, and it is posted automatically only when confidence is high enough and Automatic Deflections is on. Otherwise it waits for a person.
+- **`bug`, `feature_request`:** never answered from the knowledge base, because the fix or feature does not exist yet, and never graded for confidence. The AI instead works down this list and stops at the first match:
+  1. **The same report already exists.** If a very similar earlier ticket exists, it replies that the team is already tracking it, with that ticket's number.
+  2. **A workaround exists.** If the knowledge base has a relevant answer, it posts it clearly labeled as a workaround, not a fix.
+  3. **Neither.** It acknowledges the report and routes the ticket straight to a person. No generated answer is posted.
 
-- **`how_to`, `documentation`, `general_question`** — answered from the knowledge base as usual. The draft is graded for confidence and auto-posted when confidence is high enough; otherwise it's routed to a human for review.
-- **`bug`, `feature_request`** — never auto-answered from the knowledge base, because the fix or feature doesn't exist there yet. Instead the AI:
-  1. Checks whether the report matches an existing open ticket and, if so, replies referencing that ticket number.
-  2. Otherwise checks the knowledge base for a relevant workaround and, if found, posts it explicitly labeled as a workaround, not a fix.
-  3. Otherwise acknowledges the report and routes it straight to a human — no generated answer is posted.
+<Callout type="info">
+  These automated replies follow the same Automatic Deflections setting as every other reply. When it is off for a channel, they are saved as drafts for you to approve and nothing is posted.
+</Callout>
 
-  Bug and feature-request tickets never go through the confidence grader and never auto-deflect on their own; a duplicate-match or workaround reply is the only way this category resolves without a human.
+## Export your tickets
 
-## Ticket detail
+Owners and admins can select **Export CSV** in the filter bar to download every ticket in the workspace as a comma-separated file. The export does not follow the filters on screen. It includes ID, status, priority, category, summary, content, author, created date, and resolved date.
 
-Click any ticket row to open the detail view.
+## Where to go next
 
-### Platform-aware source link
-
-The detail page shows a direct link back to the original message on its platform:
-
-- GitHub ticket → **View on GitHub ↗** (opens the Issue or Discussion)
-- Discord ticket → **View in Discord ↗** (opens the channel/thread)
-- Slack ticket → **View in Slack ↗**
-- Telegram ticket → **View in Telegram ↗**
-- Email ticket → shows the original sender and subject
-
-### AI draft panel
-
-answerLoops generates a draft reply automatically, using your workspace's included AI usage or your own provider if you added one. The AI draft panel appears on the right side of the ticket detail. From there you can:
-
-- **Approve** — posts the draft reply directly to the source platform (as a GitHub comment, Discord message, Slack reply, etc.)
-- **Edit** — opens the draft in an editable text field so you can adjust it before posting
-- **Dismiss** — hides the draft without posting; the ticket remains open
-
-#### When a ticket has no draft
-
-A ticket that goes to a person without a draft shows a notice in place of the panel, and the notice says why:
-
-| Notice | Why there is no draft | What to do |
-|---|---|---|
-| You've reached this month's AI limit | Your plan's included AI usage for the month is spent. | Add your own AI provider in **Settings → AI Model** to keep drafting, or wait for the limit to reset next month. |
-| You've reached your trial AI limit | The AI usage included in your trial is spent. | Add your own AI provider in **Settings → AI Model**. |
-| AI drafting is paused because there's no active plan | The workspace has no active trial or plan. | Choose a plan in **Billing**. |
-| We couldn't draft a reply for this ticket | AI was unavailable on our side when the ticket arrived. | Nothing. A team member reviews the ticket. |
-| Bug reports and feature requests aren't answered automatically | The ticket was classified as a bug report or feature request. These are never answered automatically, because the fix or feature may not exist yet. | Nothing. A team member reviews it. |
-| This email is on hold because we couldn't verify the sender | An inbound email could not be matched to a verified sender, so it waits for a person before anything is drafted. | Review it before replying. |
-| No AI draft was generated for this ticket | An older ticket, created before the reason was recorded. | Nothing. |
-
-<Note>
-  Only the first three notices need anything from you. The others are expected behavior.
-</Note>
-
-### Reply form
-
-Below the thread, the reply form lets you send a manual message back to the user. The submit button label reflects the destination platform:
-
-- **Send reply to GitHub**
-- **Send reply to Discord**
-- **Send reply to Slack**
-- **Send reply to Telegram**
-- **Send reply to Email**
-
-The reply is posted to the original thread on the source platform, not just stored internally.
-
-### Ticket actions
-
-From the detail page you can also:
-
-- **Promote to KB** — available on resolved tickets; turns the Q&A into a knowledge base article for future deflection
-- **Change status** — move the ticket to any status manually
-- **Change priority** — override the AI-assigned priority
-
-## Export
-
-Click **Export CSV** on the ticket list page to download all currently visible tickets (respecting active filters) as a comma-separated file. The export includes all columns shown in the list.
+<Cards>
+  <Card icon="Bot" title="Automatic replies" href="/docs/product/ai-deflection">Control when the AI answers on its own and when it waits for you.</Card>
+  <Card icon="UserRoundCheck" title="Human escalation" href="/docs/product/escalation">Decide who is pulled in when a question needs a person.</Card>
+  <Card icon="Star" title="Customer satisfaction" href="/docs/product/csat">See how customers rate the answers they receive.</Card>
+  <Card icon="BookOpen" title="Knowledge base" href="/docs/product/knowledge-base">Turn resolved tickets into answers the AI can reuse.</Card>
+</Cards>

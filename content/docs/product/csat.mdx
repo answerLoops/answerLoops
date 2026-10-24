@@ -4,24 +4,55 @@ description: Read customer ratings alongside answer feedback.
 icon: Star
 ---
 
-Customer satisfaction (CSAT) scoring is available on **Pro and Enterprise**, and in the self-hosted edition.
+Customer satisfaction scoring, usually shortened to **CSAT**, shows how the people you support rate the answers they get from the AI. Each rating is a number from 1 to 5, and the results roll up into an average and a breakdown you can read at a glance.
 
-## How ratings work
+<Callout type="info">
+  CSAT scoring is available on **Pro and Enterprise**, and in the self-hosted edition. On other plans the CSAT panel in Analytics shows an upgrade link instead of results.
+</Callout>
 
-On channels that support the rating prompt, customers can rate an AI answer from 1 to 5. A rating is associated with the ticket and appears in the workspace's aggregate results.
+## How customers rate an answer
 
-## Review results
+When answerLoops answers a question automatically, it follows the answer with a short prompt asking the customer to rate it. The customer reacts to the prompt with a number emoji from 1️⃣ to 5️⃣.
 
-Open **Analytics → Customer satisfaction (CSAT)** to see:
+- Ratings are recorded from reactions on **Discord** and **Slack**.
+- The prompt appears after answers the AI posted on its own. Drafts your team approves and sends by hand do not get one.
+- Each rating is attached to the ticket it belongs to and counted in your workspace totals.
 
-- **Average rating:** the mean of submitted ratings, shown out of 5.
-- **Total ratings:** the number of responses received.
-- **Rating distribution:** the count at each score from 1 to 5.
+## Read the results
 
-If no ratings have been submitted, the panel shows an empty state. A lack of responses is not a positive or negative satisfaction result.
+Open **Analytics** and find the **Customer satisfaction (CSAT)** panel. It shows:
 
-## Interpret feedback
+| Figure | What it tells you |
+|---|---|
+| **Avg. rating** | The mean of all submitted ratings, out of 5 |
+| **Total ratings** | How many responses you have received |
+| **Distribution** | A bar for each score from 5★ down to 1★, showing how many customers chose it |
 
-Review the response count alongside the average. A small number of ratings can change the result substantially. Use low ratings to investigate the original answer and its documentation, rather than treating the score as a diagnosis.
+Until the first rating arrives the panel shows "No ratings yet". An empty panel is not a good or bad result, just an absence of data.
 
-CSAT and thumbs-up/thumbs-down answer feedback are separate measures. The latter appears in **Answer quality by category**. See [Analytics](/docs/product/analytics) for how each metric is calculated.
+## Interpret the numbers
+
+- **Read the count with the average.** A handful of ratings can swing the result a lot, so a 4.8 from five responses means less than a 4.3 from two hundred.
+- **Use low ratings as a starting point.** Open the ticket behind a low score, read the answer the customer received, and check whether the knowledge base behind it was missing or out of date. A score points you at an answer to look into; it does not diagnose the cause.
+
+### CSAT is not the same as thumbs up or down
+
+CSAT is a customer's rating of the answer they received. Separately, an answer can be marked good or bad with thumbs up or down, either from the buttons on the ticket page or by a 👍 or 👎 reaction on the answer. That feedback is a different measure and appears in **Answer quality by category**, not in the CSAT panel.
+
+<Hotspots
+  shot="ticket-detail"
+  only={['feedback']}
+  notes={{
+    feedback: 'Thumbs up or down on the answer. This feeds Answer quality by category, not the CSAT panel.',
+  }}
+/>
+
+See [Analytics](/docs/product/analytics) for how each metric is calculated.
+
+## Where to go next
+
+<Cards>
+  <Card icon="ChartNoAxesColumn" title="Analytics" href="/docs/product/analytics">See CSAT next to deflection, categories, and response times.</Card>
+  <Card icon="Bot" title="Automatic replies" href="/docs/product/ai-deflection">CSAT prompts follow the answers the AI posts on its own.</Card>
+  <Card icon="SearchX" title="Knowledge gaps" href="/docs/product/knowledge-gaps">Find the topics where low ratings may come from missing content.</Card>
+</Cards>

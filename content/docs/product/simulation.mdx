@@ -4,45 +4,97 @@ description: Dry-run the AI pipeline against past tickets without writing to the
 icon: FlaskConical
 ---
 
-Simulation mode lets you test how your AI configuration would have performed on real historical tickets — with zero writes to the database.
+Simulation mode lets you test how an AI setup would have performed on real past tickets before you change anything in production. It replays your recent tickets through the answering pipeline with a model and confidence threshold you choose, then compares what the AI would have done with what actually happened. Nothing is created, changed, or sent: no tickets are touched, and no messages go to customers. Open **Simulation** from the **Monitor** group in the sidebar.
 
-## What it does
+<Callout type="info">
+  Simulation needs the Pro plan or above. Self-hosted deployments have every feature unlocked.
+</Callout>
 
-- Fetches the last N tickets (1–100)
-- Runs each through the full AI pipeline: embed → KB search → generate answer → assess confidence
-- Compares simulated outcomes to what actually happened
-- Returns per-ticket results and aggregate stats
+<Hotspots
+  shot="simulation"
+  only={['tickets-to-replay', 'model', 'threshold', 'run']}
+  notes={{
+    'tickets-to-replay': 'How many of your most recent tickets to replay, from 1 to 100. The default is 20.',
+    model: 'Which model answers the replayed tickets. What you can pick depends on your AI setup.',
+    threshold: 'The confidence an answer needs to count as deflected. The default is 0.8.',
+    run: 'Starts the run. You can watch each ticket progress live.',
+  }}
+/>
 
-No tickets are created, updated, or deleted during a simulation run.
+## Run a simulation
 
-## How to run
+<Steps>
+  <Step>
+    Go to **Simulation** in the sidebar.
+  </Step>
+  <Step>
+    Set **Tickets to replay**, choose a **Model**, and drag the **Deflect threshold** slider. The threshold moves in steps of 0.05.
+  </Step>
+  <Step>
+    Click **Run simulation**. A live panel shows each ticket moving through searching the knowledge base, generating an answer, and grading confidence.
+  </Step>
+  <Step>
+    Review the summary cards, the comparison line, and the per-ticket table.
+  </Step>
+</Steps>
 
-1. Go to **Simulation** in the sidebar
-2. Choose your model, confidence threshold, and ticket count. With your own AI provider you can pick any of its models; on included usage, simulation runs on the included model and counts toward your included AI usage for answers
-3. Click **Run simulation**
-4. Review results in the table and aggregate stats
+Which models you can choose depends on your setup. With your own AI provider, you pick from that provider's models. On a hosted plan using included AI usage, the picker is locked to the included model, and the run counts toward your included AI usage for answers. Add your own provider in **Settings → AI Model** to choose another.
 
-## Reading results
+## What each replay does
 
-| Column | Description |
+For each of your most recent tickets, whatever its status, the simulation:
+
+1. Searches your knowledge base for the three closest articles.
+2. Has the chosen model write an answer from them, using a standard support-agent prompt.
+3. Grades the answer's confidence.
+
+A ticket **would be deflected** when the confidence meets your threshold and the answer fully addresses the question. In the real pipeline, a ticket counts as **Actual** deflected when the AI's reply was posted automatically. If the AI becomes unavailable partway through, for example because included usage runs out, the run stops, shows the tickets it finished, and explains why.
+
+<Callout>
+  A simulation is an approximation of live behavior: it uses a standard prompt and the three closest articles, so real answers can differ. Treat its numbers as a guide for comparing models and thresholds against each other.
+</Callout>
+
+## Read the results
+
+The summary cards show:
+
+| Card | What it means |
 |---|---|
-| Ticket | Question text |
-| Sim confidence | AI confidence score in this run |
-| Sim deflect | Would this have been deflected at your threshold? |
-| Actual deflect | Was it actually deflected in production? |
-| Match | Do sim and actual agree? |
-| Duration | Time the AI took to process this ticket |
+| **Tickets** | How many tickets were replayed |
+| **Would deflect** | The share of tickets the AI would have answered automatically in this run |
+| **Actually deflected** | The share that were answered automatically in production |
+| **Match rate** | How often the simulation and production reached the same outcome |
+| **Avg confidence** | The mean confidence across all replayed tickets |
+| **Avg time** | The mean time the AI took per ticket |
 
-## Aggregate stats
+A line below the cards sums it up, saying whether this model and threshold would deflect more tickets than production, fewer, or the same.
 
-- **Deflect rate** — % of tickets the AI would deflect in this simulation
-- **Actual deflect rate** — % that were actually deflected in production
-- **Match rate** — how closely simulation matches production outcomes
-- **Avg confidence** — mean confidence across all tickets
-- **Delta** — difference between sim deflect rate and production rate
+The **Per-ticket results** table has one row per ticket:
 
-## Use cases
+| Column | What it shows |
+|---|---|
+| **ID** | The ticket number |
+| **Question** | The question text, with a **Sim answer** you can expand to read the simulated reply |
+| **Category** | The ticket's category |
+| **Confidence** | The confidence the AI had in the simulated answer |
+| **Sim deflect** | **Auto** if it would have been answered automatically at your threshold, otherwise **Human** |
+| **Actual** | **Auto** or **Human**, as it really happened |
+| **Match** | A check mark when simulation and reality agree, a cross when they differ |
+| **Reasoning** | A short note on why the answer was graded as it was |
 
-- Test a new model before switching in production
-- See the impact of raising or lowering the confidence threshold
-- Diagnose why certain questions aren't being deflected
+A ticket that fails during the run is shown with an error answer and zero confidence, and it counts as not deflected.
+
+## What to use it for
+
+- Test a new model before switching in production.
+- See the impact of raising or lowering the confidence threshold.
+- Diagnose why certain questions are not being deflected, by reading the reasoning on the rows where simulation and production disagree.
+- Check whether new knowledge base articles improve results on the questions that used to fail.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Bot" title="AI configuration" href="/docs/product/ai-config">Choose the model and thresholds your workspace uses live.</Card>
+  <Card icon="MessageSquareReply" title="AI deflection" href="/docs/product/ai-deflection">How the AI decides whether to answer a question itself.</Card>
+  <Card icon="SearchX" title="Knowledge gaps" href="/docs/product/knowledge-gaps">Find the questions worth fixing first.</Card>
+</Cards>

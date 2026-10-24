@@ -4,25 +4,86 @@ description: Configure who should follow up when a question needs a person.
 icon: UserRoundCheck
 ---
 
-Drafts that do not qualify for automatic replies remain available for your team. **Human escalation routing**, available on Pro and Enterprise and in the self-hosted edition, adds channel-specific notifications to the people responsible for follow-up.
+Not every question should be answered by AI. When the reviewer is not confident enough, or the question is a bug report or feature request, the ticket is handed to your team. **Escalation** is the step that makes sure a specific person or group notices.
 
-## Configure a destination
+<Callout type="info">
+  Human escalation routing is available on **Pro and Enterprise**, and in the self-hosted edition. On other plans, questions that need a person still wait for your team in the [ticket queue](/docs/product/tickets); they just do not tag anyone.
+</Callout>
 
-1. Open **Settings** and select the connected channel.
-2. Edit its escalation destination. The field depends on the platform: a Discord role, Slack group, Telegram username, email address, or supported channel user.
-3. Save the configuration.
-4. Test with a question that needs human help. Confirm that the ticket appears and the intended person or group receives the notification.
+<Hotspots
+  shot="ticket-detail-review"
+  only={['status-badges', 'confidence']}
+  notes={{
+    'status-badges': 'A ticket flagged for human review. This is the point at which the escalation contact is notified.',
+    confidence: 'The reviewer\'s score and reasoning, so whoever picks it up knows why the AI held back.',
+  }}
+/>
 
-Use the integration's setup guide for platform-specific identifiers and permissions.
+## What escalation does
 
-## Automatic replies and confidence
+When a ticket needs a person, answerLoops posts a short acknowledgment in the channel ("a team member will follow up shortly") and mentions your escalation contact in it. The unreviewed AI draft is never posted publicly. It stays on the ticket for you to approve or rewrite, and a notification appears in your workspace.
 
-The confidence threshold determines which reviewed answers qualify for automatic replies when that channel has automatic replies enabled. Raising the threshold makes automatic replies more selective. Lowering it allows more drafts to qualify; it does not improve the evidence behind them.
+A ticket needs a person when any of these is true:
 
-Before changing the threshold, inspect the draft and its sources. Missing or outdated documentation should be corrected in the knowledge base.
+- The reviewer's confidence is below the channel's [confidence threshold](/docs/product/ai-deflection#confidence-threshold), or it judged that the draft does not fully answer the question.
+- The question is a bug report or feature request with no matching earlier ticket or workaround.
+- Automatic Deflections is on, but your plan's monthly allowance of automatic answers is used up.
+
+<Callout type="warn">
+  The channel mention is part of the automatic reply, so it only appears when **Automatic Deflections** is on for that channel. When it is off, neither an answer nor a mention is posted to the channel. The draft and the in-app notification are still created, so check the ticket queue. See [Automatic replies](/docs/product/ai-deflection#automatic-deflections).
+</Callout>
+
+## Choose who gets notified
+
+<Steps>
+  <Step title="Open the channel's settings">
+    Open **Settings** and select the connected channel.
+  </Step>
+  <Step title="Enter the escalation contact">
+    Edit the channel's configuration and fill in the escalation field. The field depends on the platform:
+
+    | Platform | Field | What to enter |
+    |---|---|---|
+    | Discord | **Escalation Role ID** | The ID of the role to mention |
+    | Slack | **Escalation User Group ID** | A user group ID, which starts with `S`, or a single user ID, which starts with `U` |
+    | Telegram | **Escalation username** | A username to mention |
+    | Email | **Escalation email** | The address named in the reply as the person who will follow up |
+    | Discourse | **Escalation user** | A username to mention |
+    | Google Chat | **Escalation user id** | A user in the form `users/12345` |
+  </Step>
+  <Step title="Save">
+    The field is optional. Leave it empty to skip the mention.
+  </Step>
+  <Step title="Test it">
+    Send a question the knowledge base cannot answer, with Automatic Deflections on. Confirm that the ticket appears and the intended person or group is mentioned.
+  </Step>
+</Steps>
+
+Each integration's setup guide explains where to find these identifiers and which permissions the bot needs.
 
 ## Handle the ticket
 
-Open the ticket to read the question and draft. Edit or replace the draft, send the response, and update the ticket status. Promote a resolution into knowledge only when it is useful beyond this individual request.
+<Steps>
+  <Step title="Open the ticket">
+    Read the question, the draft, and the confidence explanation.
+  </Step>
+  <Step title="Respond">
+    Approve or edit the draft, or write your own reply.
+  </Step>
+  <Step title="Update the status">
+    Move the ticket to `in_progress`, `resolved`, or `closed`.
+  </Step>
+  <Step title="Capture what you learned">
+    Promote the resolution into the knowledge base only when it is useful beyond this one request. If the AI struggled because documentation was missing or out of date, fix the knowledge base instead of lowering the threshold.
+  </Step>
+</Steps>
 
-See [Tickets](/docs/product/tickets) and [AI Model](/docs/product/ai-config).
+Raising the confidence threshold sends more questions to a person. Lowering it lets more drafts post automatically, but it does not improve the evidence behind them.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Ticket" title="Tickets" href="/docs/product/tickets">Review drafts and reply from the ticket page.</Card>
+  <Card icon="Bot" title="Automatic replies" href="/docs/product/ai-deflection">Tune the threshold and Automatic Deflections.</Card>
+  <Card icon="BookOpen" title="Knowledge base" href="/docs/product/knowledge-base">Fix the gaps that cause escalations.</Card>
+</Cards>

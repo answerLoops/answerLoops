@@ -4,94 +4,122 @@ description: Configure chat and embedding providers, test connections, and see y
 icon: Cpu
 ---
 
-answerLoops uses a language model to draft answers and an embedding model to
-search your knowledge base. **Settings → AI Model** controls which provider and
-models an org uses.
+answerLoops uses two kinds of AI model. A **chat model** reads a question and drafts the answer. An **embedding model** turns your knowledge base into a searchable index so the right articles can be found. **Settings → AI Model** controls which provider and models your workspace uses. Owners and admins can change it.
+
+On a hosted plan you do not have to set anything up: AI usage is included. Add your own provider when you want to choose the models yourself, or remove the included-usage limit.
+
+<div className="not-prose my-6 flex flex-wrap gap-4">
+  <IntegrationLogo name="openai" size={48} />
+  <IntegrationLogo name="anthropic" size={48} />
+  <IntegrationLogo name="gemini" size={48} />
+  <IntegrationLogo name="groq" size={48} />
+  <IntegrationLogo name="mistral" size={48} />
+  <IntegrationLogo name="ollama" size={48} />
+</div>
+
+## Which setup do I need?
+
+| If you... | Do this |
+| --- | --- |
+| Want to start quickly on a hosted plan | Nothing. Included AI usage covers answers and knowledge-base processing, up to a limit. |
+| Have an OpenAI key | Use OpenAI for chat. The same key covers embeddings, so one key removes both limits. |
+| Prefer Anthropic, Groq, xAI, Google Gemini, or Mistral for answers | Use that provider for chat. Add an OpenAI key under **Embeddings** to remove the knowledge-base limit; on a hosted plan it is optional. |
+| Want to run your own model, such as Ollama, LM Studio, or vLLM | Use an OpenAI-compatible endpoint. This is **Custom AI model configuration**, included on Enterprise and in the self-hosted edition. |
+| Are self-hosting | Set `OPENAI_API_KEY` in your environment, or save provider settings in this page. |
 
 ## What runs by default
 
 | State | What's used |
-|---|---|
-| A hosted workspace, no key configured | **Included AI usage**, up to a limit — for the whole trial, then monthly on a paid plan |
-| AI limit reached, still no key | That part of AI pauses until you connect a provider (or, on a paid plan, until next month) |
-| Own chat key from a provider other than OpenAI, no embedding key | Answers on your key; knowledge‑base processing on included usage until you add an OpenAI embedding key |
-| Self‑hosted | The `OPENAI_API_KEY` in your environment |
+| --- | --- |
+| A hosted workspace, no key configured | **Included AI usage**, up to a limit: for the whole trial, then monthly on a paid plan |
+| AI limit reached, still no key | That part of AI pauses until you connect a provider, or, on a paid plan, until next month |
+| Own chat key from a provider other than OpenAI, no embedding key | Answers on your key; knowledge-base processing on included usage until you add an OpenAI embedding key |
+| Self-hosted | The `OPENAI_API_KEY` in your environment |
 | A workspace with saved model settings | Its configured chat and embedding services |
 
-On included usage, answerLoops chooses the models, and the card lists them
-read‑only. To pick your own models, add your own provider. The card shows
-where you stand — included usage, "limit reached", or the
-configured provider and model. See [Billing](/docs/product/billing) for how
-the limits work.
+The card at the top of the page shows where you stand: **Included**, **Limit reached**, **Custom**, or **Platform default**. On included usage, answerLoops chooses the models and the card lists them read-only. See [Billing](/docs/product/billing) for how the limits work.
 
-## Bring your own provider
-
-Included on every plan for the named providers below. A custom
-OpenAI‑compatible endpoint (your own base URL — Ollama, LM Studio, vLLM, a
-proxy) is part of **Custom AI model configuration**, which is included on Enterprise and in the self-hosted edition. On the hosted service a custom base URL must be an https address reachable on the public internet. Self-hosted installs can also use `http` and addresses on their own network, such as a local Ollama server. Link-local and cloud-metadata addresses are never allowed. Every chat and embedding request connects to the address that was checked when the call started.
+## Supported providers
 
 | Provider | Chat | Embeddings |
-|---|---|---|
-| OpenAI | ✓ | ✓ (same key covers both) |
-| Anthropic | ✓ | — (no embeddings API) |
-| Google Gemini | ✓ | Coming soon |
-| Groq | ✓ | — (no embeddings API) |
-| Mistral | ✓ | Coming soon |
-| xAI (Grok) | ✓ | — (no embeddings API) |
-| OpenAI‑compatible endpoint | ✓ (Enterprise) | ✓ (Enterprise) |
+| --- | --- | --- |
+| <IntegrationLogo name="openai" size={28} /> OpenAI | Yes | Yes (the same key covers both) |
+| <IntegrationLogo name="anthropic" size={28} /> Anthropic | Yes | No embeddings API |
+| <IntegrationLogo name="gemini" size={28} /> Google Gemini | Yes | Coming soon |
+| <IntegrationLogo name="groq" size={28} /> Groq | Yes | No embeddings API |
+| <IntegrationLogo name="mistral" size={28} /> Mistral | Yes | Coming soon |
+| xAI (Grok) | Yes | No embeddings API |
+| <IntegrationLogo name="ollama" size={28} /> OpenAI-compatible endpoint | Yes (Enterprise) | Yes (Enterprise) |
 
-**OpenAI is the only provider that can handle knowledge‑base processing
-(embeddings) today.** Google Gemini and Mistral are coming soon. Every other
-provider in the table covers answers only.
+Bring-your-own-key with a named provider is included on every plan. The OpenAI-compatible option takes your own base URL (Ollama, LM Studio, vLLM, or a proxy). On the hosted service the base URL must be an https address reachable on the public internet. Self-hosted installs can also use `http` and addresses on their own network, such as a local Ollama server.
 
-If your chat provider isn't OpenAI:
+<Callout type="info">
+  OpenAI is the only provider that can handle knowledge-base processing (embeddings) today. Google Gemini and Mistral are coming soon. Every other provider in the table covers answers only.
+</Callout>
 
-- **On a hosted plan**, the OpenAI key under **Embeddings** is optional. Leave
-  it blank and knowledge‑base processing runs on your plan's included AI usage.
-  Add an OpenAI key to remove that limit.
-- **On a self‑hosted install**, enter an **OpenAI API key under Embeddings** (or
-  use a custom embedding endpoint). Otherwise knowledge‑base search and every
-  ingest would fail, so the save is rejected with a clear message if it's
-  missing.
+If your chat provider is not OpenAI:
 
-### Steps
+- **On a hosted plan,** the OpenAI key under **Embeddings** is optional. Leave it blank and knowledge-base processing runs on your plan's included AI usage. Add an OpenAI key to remove that limit.
+- **On a self-hosted install,** enter an **OpenAI API key under Embeddings**, or use a custom embedding endpoint. Without one, knowledge-base search and every ingest would fail, so the save is rejected with a clear message.
 
-1. **Settings → AI Model → Edit** (or **Save** for a first‑time setup — owner or
-   admin only).
-2. Pick the **chat provider**, enter its **API key**, then click **Refresh
-   models** to pull that provider's current model list live — Model ID stays a
-   dropdown of whatever that provider actually offers today instead of a list
-   that goes stale between releases. If the live fetch fails (or before you've
-   run it), Model ID falls back to a built‑in list of recent models, or you can
-   type an ID directly with **Custom model ID…**.
-3. Pick the **embedding provider** and model. If the chat provider isn't
-   OpenAI, add an OpenAI embedding key (optional on a hosted plan, where
-   leaving it blank uses included AI usage).
-4. Click **Test connection** — this makes a one‑token call to each provider with
-   the values you entered (nothing is saved yet) and reports `chat: connection
-   OK` / `embedding: …` or a specific error (rejected key, unknown model,
-   unreachable endpoint). With no embedding key on a hosted plan, the embedding
-   line says knowledge‑base processing will use included AI usage instead.
-5. Click **Save**.
+## Connect your own provider
+
+<Steps>
+<Step>
+
+### Open the form
+
+Go to **Settings → AI Model**. On first setup the form is already open; if settings are saved, select **Edit**. Only owners and admins can change these settings.
+
+</Step>
+<Step>
+
+### Choose a chat provider and model
+
+Pick the **Chat provider** and enter its **API key**. Then select **Refresh models** to pull that provider's current model list live, so **Model ID** shows what the provider offers today. If the live fetch fails, or before you have run it, Model ID falls back to a built-in list of recent models. You can also type an ID directly with **Custom model ID…**. For xAI (Grok) and OpenAI-compatible endpoints there is no built-in list, so enter the ID yourself or use **Refresh models**.
+
+</Step>
+<Step>
+
+### Choose an embedding provider and model
+
+Pick the **Embedding provider** and **Embedding model**. If the chat provider is not OpenAI, add an OpenAI embedding key (optional on a hosted plan, where leaving it blank uses included AI usage).
+
+</Step>
+<Step>
+
+### Test the connection
+
+Select **Test connection**. This makes a very small test call to each provider with the values you entered, and nothing is saved yet. It reports `chat: connection OK` and an embedding line, or a specific error such as a rejected key, an unknown model, or an unreachable endpoint. With no embedding key on a hosted plan, the embedding line says knowledge-base processing will use included AI usage instead.
+
+</Step>
+<Step>
+
+### Save
+
+Select **Save** on first setup, or **Update** when you are editing existing settings.
+
+</Step>
+</Steps>
 
 ### Changing provider later
 
-If you switch the chat or embedding provider and leave the key field blank, the
-save is rejected — the stored key belonged to the previous provider and would
-fail on every call. Enter a key for the new provider. (A keyless local endpoint
-is the exception: switching to `openai-compatible` with no key clears the old
-one.)
+If you switch the chat or embedding provider and leave the key field blank, the save is rejected, because the stored key belonged to the previous provider and would fail on every call. Enter a key for the new provider. A keyless local endpoint is the exception: switching to the OpenAI-compatible option with no key clears the old one.
 
-Leaving a key field blank on an update to the **same** provider keeps the
-stored key — the field shows "Key saved".
+Leaving a key field blank when you update the **same** provider keeps the stored key. The field shows **Key saved**.
 
-## Reset
+## Reset to the default
 
-**Reset to platform default** deletes the org's AI config. A hosted workspace
-falls back to included usage (or, once the limit is reached, to no AI until next
-month); a self‑hosted deployment falls back to its environment key.
+**Reset to platform default** deletes your workspace's AI settings. A hosted workspace falls back to included usage (or, once the limit is reached, to no AI until next month). A self-hosted deployment falls back to its environment key.
 
-If your embedding model changes (you switch it here, or answerLoops changes
-the included one), your knowledge base is re‑embedded in the background from
-what you already added. Search keeps working throughout, and you don't need to
-re‑upload anything.
+<Callout type="info">
+  If your embedding model changes, either because you switch it here or because answerLoops changes the included one, your knowledge base is re-embedded in the background from what you already added. Search keeps working throughout, and you do not need to re-upload anything.
+</Callout>
+
+## Where to go next
+
+<Cards>
+  <Card icon="CreditCard" title="Billing" href="/docs/product/billing">See how included AI usage and its limits work.</Card>
+  <Card icon="BookOpen" title="Knowledge base" href="/docs/product/knowledge-base">Add the content your embedding model will index.</Card>
+  <Card icon="Server" title="Self-hosting" href="/docs/self-hosting/environment-variables">Environment variables for self-hosted installs.</Card>
+</Cards>

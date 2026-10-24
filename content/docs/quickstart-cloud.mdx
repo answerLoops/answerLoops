@@ -4,38 +4,106 @@ description: Create a workspace, add knowledge, and test your first channel.
 icon: Rocket
 ---
 
-## 1. Start the hosted trial
+Go from sign-up to a first AI-drafted answer on the hosted version of answerLoops. Most of the wait is your first knowledge import finishing.
 
-Open [answerLoops pricing](https://answerloops.com/pricing), choose a plan and billing interval, and sign in with **Google**. Complete checkout to start the **14-day plan trial**. A card is required; cancel before the trial ends to avoid the first subscription charge.
+<Callout type="info" title="What you need">
+  A Google account to sign in, a card for the 14-day trial (you are not charged today), a page or file with your current help content, and permission to install or configure an integration on the platform you want to connect.
+</Callout>
 
-AI usage is included, so you can seed your knowledge base and see answers drafted without a model-provider key. Connect your own provider in **Settings → AI Model** any time to remove the limit; your provider then bills that usage directly. See [Billing](/docs/product/billing) for how included usage works.
+<Steps>
+  <Step>
+    ### Start the 14-day trial
 
-## 2. Connect a channel
+    Open [answerLoops pricing](https://answerloops.com/pricing), choose a plan and billing interval, and select **Start 14-day free trial**. Sign in with **Google**, then complete checkout. A card is required; cancel before the trial ends to avoid the first subscription charge.
 
-Use onboarding or open the channel in **Settings**. Follow the guide for the platform you want to connect:
+    | Plan | Monthly | Annual, per month | Deflections per month |
+    |---|---|---|---|
+    | Standard | $49 | $39 | 500 |
+    | Pro | $149 | $119 | 3,000 |
+    | Enterprise | $499 | $399 | Unlimited |
 
-- [Discord](/docs/integrations/discord) and [Slack](/docs/integrations/slack)
-- [Discourse](/docs/integrations/discourse) and [Circle](/docs/integrations/circle)
-- [GitHub](/docs/integrations/github)
-- [Telegram](/docs/integrations/telegram), [Email](/docs/integrations/email), and [Google Chat](/docs/integrations/google-chat)
-- [Website widget](/docs/product/chat-widget)
+    The plan you pick is fully unlocked for the whole trial. AI usage is included, so you can seed your knowledge base and see answers drafted without a model-provider key. Connect your own provider in **Settings → AI Model** any time to remove the limit; your provider then bills that usage directly. See [Billing plans](/docs/reference/billing-plans) and [Billing](/docs/product/billing) for how allowances and included usage work.
 
-You need permission to install or configure the integration in that platform. Select the channels, spaces, or repositories answerLoops should monitor.
+    **What you should see:** after checkout you land in a short setup wizard with four steps: **Workspace**, **Connect**, **Seed KB**, and **Go live**.
+  </Step>
+  <Step>
+    ### Name your workspace
 
-## 3. Add knowledge
+    Enter a **Workspace name**, such as your community or product name, and select **Continue →**. Your team uses this name to recognize the workspace.
 
-Open **Knowledge Base** and import a current help article, upload documentation, or connect GitHub or Notion content. Wait for the import to complete, then search for a topic from the source to check that it is available.
+    **What you should see:** the wizard moves on to **Connect your community**.
+  </Step>
+  <Step>
+    ### Connect a channel
 
-Notion content is initially unpublished. Review it and publish the intended material before using it for customer answers. See [Knowledge Base](/docs/product/knowledge-base).
+    The wizard offers **Discord**, **Slack**, **GitHub**, and **Website Widget**. Pick one and follow the prompts, or select **Skip for now — connect later in Integrations**. Every other channel is connected from **Integrations** in the sidebar, where each channel has its own tab.
 
-## 4. Inspect a draft
+    - [Discord](/docs/integrations/discord) and [Slack](/docs/integrations/slack)
+    - [Discourse](/docs/integrations/discourse) and [Circle](/docs/integrations/circle)
+    - [GitHub](/docs/integrations/github)
+    - [Telegram](/docs/integrations/telegram), [Email](/docs/integrations/email), and [Google Chat](/docs/integrations/google-chat)
+    - [Website widget](/docs/product/chat-widget)
 
-Ask a question covered by the imported content in your connected channel. Open the ticket and check the draft, including whether it answers the question and matches the source.
+    You need permission to install or configure the integration on that platform. Select the channels, spaces, or repositories answerLoops should monitor.
 
-Automatic replies are off by default. A question appearing in the queue without a posted reply can be expected behavior. If no draft appears, open the ticket: a notice where the draft would be says why, for example that you've reached your AI limit.
+    <Screenshot
+      shot="integrations"
+      caption="The Integrations page has a tab for each channel and service. A connected channel shows its status and the servers or spaces it monitors."
+    />
 
-## 5. Choose reply settings
+    **What you should see:** the channel's tab on **Integrations** shows it as connected, with the channels or spaces you chose.
+  </Step>
+  <Step>
+    ### Add knowledge
 
-Enable automatic replies for the channels you are ready to automate. A draft must pass the configured confidence threshold before it qualifies. If the source material is missing or inaccurate, correct it before changing the threshold.
+    In the **Seed your knowledge base** step, choose **Upload file** (PDF, DOCX, MD, TXT, or CSV, up to 10 MB) or **Crawl a URL** (a public docs page or site root, then **Import URL**). You can also skip it and add content later from **Knowledge Base** in the sidebar, where you can also connect GitHub or Notion content.
 
-Invite teammates through [Settings → Team](/docs/product/team), and review [AI Model](/docs/product/ai-config) and [Billing Plans](/docs/reference/billing-plans) before launch.
+    Wait for the import to complete. The wizard reports how many articles or chunks were added.
+
+    <Screenshot
+      shot="knowledge-base"
+      caption="The Knowledge Base page: add an article, write an answer by hand, and connect a GitHub repository."
+    />
+
+    Notion content is initially unpublished. Review it and publish the intended material before using it for customer answers. See [Knowledge Base](/docs/product/knowledge-base).
+
+    **What you should see:** a confirmation with the number of articles added, then the **You're all set!** screen. Select **Go to dashboard →**.
+  </Step>
+  <Step>
+    ### Inspect a draft
+
+    Ask a question covered by the imported content in your connected channel. It appears as a ticket under **Tickets**. Open the ticket and check the draft, including whether it answers the question and matches the source.
+
+    <Screenshot
+      shot="ticket-detail"
+      caption="A ticket with the original message, the drafted answer, and the confidence score from the reviewing AI."
+    />
+
+    Automatic replies are off by default. A question appearing in the queue without a posted reply can be expected behavior. If no draft appears, open the ticket: a notice where the draft would be says why, for example that you've reached your AI limit.
+
+    **What you should see:** a ticket with your question, a draft answer, and a confidence panel. A low-confidence draft is held for a person instead.
+  </Step>
+  <Step>
+    ### Choose reply settings
+
+    Open the channel's tab on **Integrations** and turn on **Automatic Deflections** for the channels you are ready to automate. A draft must pass the configured confidence threshold (0.8 by default) before it qualifies. If the source material is missing or inaccurate, correct it before changing the threshold.
+
+    Invite teammates through [Settings → Team](/docs/product/team), and review [AI Model](/docs/product/ai-config) and [Billing Plans](/docs/reference/billing-plans) before launch.
+
+    **What you should see:** the channel's tab shows Automatic Deflections as on, and qualifying questions are answered without waiting for a person.
+  </Step>
+</Steps>
+
+<Callout type="warn" title="Test before you automate">
+  A confidence score is an AI assessment, not a guarantee. Review several drafts from real questions before turning on Automatic Deflections.
+</Callout>
+
+## Where to go next
+
+<Cards>
+  <Card icon="LayoutDashboard" title="Dashboard" href="/docs/product/dashboard">See what needs attention and how the AI is doing.</Card>
+  <Card icon="Ticket" title="Tickets" href="/docs/product/tickets">Review drafts, approve replies, and follow up.</Card>
+  <Card icon="BookOpen" title="Knowledge base" href="/docs/product/knowledge-base">Import more sources and keep articles current.</Card>
+  <Card icon="Plug" title="Integrations" href="/docs/integrations/discord">Connect more channels.</Card>
+  <Card icon="MessageSquare" title="Chat widget" href="/docs/product/chat-widget">Add support chat to your website.</Card>
+</Cards>

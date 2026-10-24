@@ -4,214 +4,289 @@ description: Import, manage, and search your knowledge base so the AI can deflec
 icon: BookText
 ---
 
-answerLoops searches the knowledge base for material relevant to a question and uses it to draft a reply. Keep articles current and review imported content before using it for customer answers.
+The knowledge base is the material answerLoops answers from. When a question arrives, answerLoops searches your articles for the ones closest in meaning and hands them to the AI as reference material for the reply. Better, fresher articles mean more questions the AI can answer on its own.
 
-## Import methods
+Open **Knowledge Base** from the **Improve** group in the sidebar. The page has three tabs: **Manage** (add and organize content), **Knowledge coverage** (see what the assistant can answer from), and **Review** (turn unanswered questions into articles).
 
-There are four ways to add content to the knowledge base. URL import and file upload embed each chunk for search. On a hosted plan this works without your own AI key, using your workspace's included AI usage; if you reach this month's limit, the import stops with a message asking you to add your own provider under **Settings → AI Model**.
+<Hotspots
+  shot="knowledge-base"
+  only={['tabs', 'write-answer', 'add-article', 'github-repos']}
+  notes={{
+    tabs: 'Manage is where you add content. Knowledge coverage shows what the assistant can answer from. Review holds unanswered questions waiting to become articles.',
+    'write-answer': 'Write down something the assistant should know, in your own words. No import needed.',
+    'add-article': 'Saves the article. It is published straight away, so the assistant can use it for the very next question.',
+    'github-repos': 'Repositories you have turned on for the knowledge base show up here, each with a Sync now button.',
+  }}
+/>
 
-If the embedding model behind your knowledge base changes, answerLoops re-embeds your content in the background from what you already added. Search keeps working throughout, and you don't need to re-upload anything. An article you edit while the re-index runs is processed again before it goes live, and the re-index stops with a clear message if the chosen embedding model produces vectors of a size the knowledge base can't store.
+<Callout type="info">
+  The Manage and Knowledge coverage tabs are available on every plan. The Review queue needs the Pro plan or above. Self-hosted deployments have every feature unlocked.
+</Callout>
 
-### 1. URL import
+## How it fits together
 
-Import a web page or an entire documentation site.
+1. **You add content.** Import a web page or site, upload a file, sync a GitHub repository or a Notion workspace, write an answer by hand, or promote a resolved ticket.
+2. **answerLoops makes it searchable.** Each source is split into sections. Each section becomes one article, and every article is converted into an embedding, a numeric fingerprint of its meaning, so it can be found by meaning rather than exact words.
+3. **The assistant draws on it.** For each question, the closest articles are passed to the assistant as reference material. This works the same whether the question arrives through the widget, a channel, email, or the Agent API and MCP `generate_answer`.
+4. **You close the gaps.** Questions the knowledge base could not answer land in [Knowledge Gaps](/docs/product/knowledge-gaps) and the Review queue, ready to become new articles.
 
-1. Go to **Knowledge Base → Import**
-2. Paste a URL into the import field
-3. Choose **Single page** or **Entire site**
-   - Single page imports only that URL
-   - Entire site crawls linked pages up to a maximum of **25 pages**
-4. Click **Import** and wait for processing to finish. Larger sites take longer.
-5. Imported pages appear in the Sources list when complete
+On a hosted plan, creating embeddings works without your own AI key, using your workspace's included AI usage. If you reach this month's limit, the import stops with a message asking you to add your own provider under **Settings → AI Model**.
 
-Each page becomes a separate source entry. The crawler fetches the rendered content, splits it into chunks, embeds each chunk as a vector, and writes everything to the database.
+## Add content
 
-**Addresses:** imports accept public web addresses only (`http` or `https`). If the address cannot be found, the import stops with a message asking you to check it. Pages on a site that cannot be imported are left out.
+Pick the method that matches where your knowledge already lives. Importing, uploading, and syncing are for owners and admins.
 
-**Import limits:** one import run saves at most 150 sections and about 600,000 characters in total across all of its pages, not per page. If a site import reaches that limit, the pages not yet reached stay un-imported and the next run continues from them. Section titles are shortened to 300 characters. Each workspace holds up to 2,000 articles.
+<Tabs items={['Web page or site', 'File upload', 'GitHub repository', 'Notion workspace']}>
+  <Tab value="Web page or site">
+    Best for a public help center or documentation site. Importing reads each page, splits it by its headings, and saves each section as an article.
 
-If an import fails before any section is saved, no source is left behind, so you can run the same import again.
+    <Steps>
+      <Step>
+        On the **Manage** tab, find the **Import from URL** panel.
+      </Step>
+      <Step>
+        Paste a public `http` or `https` address, such as `https://docs.example.com`.
+      </Step>
+      <Step>
+        Choose **Single page** to import only that address, or **Entire site** to follow links across the site (up to 25 pages per run).
+      </Step>
+      <Step>
+        Click **Import** and wait. Larger sites take longer, and a progress message tells you what stage it is in.
+      </Step>
+    </Steps>
 
-**Re-import deduplication:** if you import the same URL a second time, pages that were already ingested are skipped automatically. Only new pages are processed. This means you can safely re-run a site import after adding new docs without creating duplicates.
+    Each page becomes its own entry in the Sources list. When you import a URL again, pages already imported are skipped and only new ones are processed, so you can safely re-run a site import after adding new docs. If a run stops short of the whole site, the result message tells you to click **Import** again to continue.
 
-<Note>
-  Self-hosted operators must configure the URL import service. See [environment variables](/docs/self-hosting/environment-variables#url-ingest--firecrawl-optional).
-</Note>
+    If the address cannot be found, the import stops with a message asking you to check it. If an import fails before anything is saved, no source is left behind, so you can simply run it again.
 
-### 2. File upload
+    <Callout>
+      Self-hosted operators must configure the URL import service. See [environment variables](/docs/self-hosting/environment-variables#url-ingest--firecrawl-optional).
+    </Callout>
+  </Tab>
+  <Tab value="File upload">
+    Best for PDFs, exported documents, and notes that live on someone's computer.
 
-Drag and drop files directly into the KB.
+    <Steps>
+      <Step>
+        On the **Manage** tab, find the **Upload file** panel.
+      </Step>
+      <Step>
+        Drag a file onto the upload area, or click it to open the file picker.
+      </Step>
+      <Step>
+        Wait for **Parsing and embedding**. Large files can take 15 to 60 seconds. The result tells you how many chunks were added.
+      </Step>
+    </Steps>
 
-**Supported formats:** PDF, DOCX, MD, TXT, CSV
+    Supported formats are PDF, DOCX, MD, TXT, and CSV, up to 10 MB per file. Each file is split into sections and every section is indexed for search. If nothing from the file can be saved, its source entry is removed so you can upload the file again.
 
-**Maximum file size:** 10 MB per file
+    <Callout>
+      Files that are too large or too complex to read are rejected with a message saying so. The text extracted from a file can be at most 2 MB, and a PDF can have up to 300 pages.
+    </Callout>
+  </Tab>
+  <Tab value="GitHub repository">
+    Best for open-source projects and teams that keep docs next to the code. The Markdown files in a repository, and its answered GitHub Discussions, become articles.
 
-**Limits:** the text extracted from a file can be at most 2 MB, and PDFs can have up to 300 pages. Files that are too large or too complex to read are rejected with a message saying so. File names are shortened to their base name (up to 200 characters). Only workspace owners and admins can upload files.
+    <Steps>
+      <Step>
+        Install the GitHub App for the repository. Self-hosted operators also need to configure the app credentials; see [GitHub setup](/docs/integrations/github).
+      </Step>
+      <Step>
+        In **Integrations → GitHub**, switch on **Knowledge Base** for the repository.
+      </Step>
+      <Step>
+        Back on the **Manage** tab, the repository now appears under **GitHub Repositories**. Click **Sync now**.
+      </Step>
+    </Steps>
 
-1. Go to **Knowledge Base → Import**
-2. Drag files onto the upload area, or click to open the file picker
-3. Files are processed immediately — each becomes one or more source entries depending on size
+    A sync reads up to 100 `.md` and `.mdx` files from the repository. It skips folders such as `node_modules`, `vendor`, `.github`, `test`, `tests`, `__tests__`, and `spec`, plus `CHANGELOG`, `LICENSE.md`, and `CODE_OF_CONDUCT.md`. The whole repository is one entry in the Sources list, and its answered Discussions are a second one (type `github-discussion`).
 
-Large files are split into chunks automatically. Each chunk is embedded and indexed for semantic search. If no chunk can be saved, the file's source entry is removed so you can upload the file again.
+    With **Knowledge Base** switched on, answerLoops also re-syncs automatically on every push to the default branch, and a Discussion is added the moment it is marked as answered.
+  </Tab>
+  <Tab value="Notion workspace">
+    Best for teams that keep support content in Notion rather than on a published docs site. This one is not a single click: Notion needs a credential created in Notion itself, and you then share pages with it. The full walkthrough is in the [Notion integration](/docs/integrations/notion) guide.
 
-### 3. GitHub repo sync
+    <Steps>
+      <Step>
+        In Notion, create a connection (**Settings → Developer → Open developer tools → + New connection**, with **Access token** authentication) and copy its token. It starts with `ntn_` or `secret_`.
+      </Step>
+      <Step>
+        Share the pages you want synced: open a top-level page, click **•••  → Connections**, and add your connection. Sharing a page also shares its subpages, so one top-level parent is usually enough. You control the scope by sharing or unsharing pages in Notion.
+      </Step>
+      <Step>
+        In answerLoops, go to **Integrations → Notion**, paste the token, and click **Connect**.
+      </Step>
+      <Step>
+        On the **Manage** tab, click **Sync now** in the **Notion workspace** panel. Each Notion page, and each row of a shared database, is converted to text, split into sections, and embedded like every other source.
+      </Step>
+    </Steps>
 
-Connect a GitHub repository and sync its markdown files into the KB.
+    Re-syncing replaces the previous Notion content. The workspace shows up as one entry named **Notion workspace**, and there is no environment variable to configure because Notion is set up per workspace.
 
-1. Go to **Knowledge Base → GitHub Sync**
-2. Select the repository from the picker (requires GitHub App installed on your org)
-3. Click **Sync now** to queue an import of all `.md` and `.mdx` files
-4. Optionally enable **Auto-sync on push** — answerLoops receives a webhook from GitHub on every push to the default branch and queues a re-sync automatically
+    <Callout type="warn">
+      Notion content imports **unpublished**. It is searchable from the dashboard, but it is not used to answer customer questions or served to the website widget until you click **Publish to widget** in the Notion panel. Every other source publishes automatically on import; Notion is the exception because workspace docs are often internal drafts. Your publish choice is kept across re-syncs, and **Unpublish** reverses it.
+    </Callout>
+  </Tab>
+</Tabs>
 
-The sync respects the repo's file tree. Each markdown file becomes its own source entry.
+GitHub and Notion syncs run as background jobs. The Manage tab shows each one as **Queued**, then **Syncing** with a progress count, then done, and you can leave the page while it runs. Starting a sync for a source that is already syncing does nothing; the running job finishes on its own. Each sync builds its replacement alongside your live content and swaps it in only when complete, so a failed sync leaves your existing content in place.
 
-GitHub and Notion syncs run as background jobs — the Knowledge Base page shows each one as queued, then `Syncing N/M` as it works through the files or pages, then done, and you can navigate away while it runs. Re-triggering a sync for the same source while one is still in progress does nothing; the running job finishes on its own. Each sync builds its replacement alongside the live content and swaps it in only when complete, so a failed sync leaves your existing content in place. Starting a sync, deleting a source, toggling a source's publish state and deleting an article require an owner or admin role.
+### Write an answer by hand
 
-<Note>
-  Install the GitHub App for the repositories you want to sync. Self-hosted operators must also configure the app credentials; see [GitHub setup](/docs/integrations/github).
-</Note>
+Not everything the assistant should know comes from a document. Product details, policies, and "how we actually do it" answers often live in someone's head. The **Write an answer by hand** form at the top of the Manage tab lets you write them down directly.
 
-### 4. Notion workspace
+<Steps>
+  <Step>
+    Enter a **Question or title**, such as "Do you ship to Canada?"
+  </Step>
+  <Step>
+    Write the **Answer or context** the way you would tell a customer.
+  </Step>
+  <Step>
+    Click **Add to knowledge base**.
+  </Step>
+</Steps>
 
-Connect a Notion workspace and pull its pages and databases into the KB — useful for teams that keep their support content in Notion rather than a published docs site. Unlike the other three sources, this isn't one click: Notion requires creating a credential in Notion itself, then separately sharing pages with it. Full walkthrough with every click: [Notion integration](/docs/integrations/notion).
+<Callout type="warn">
+  The article is published immediately, with no draft step, so anything you write is visible to customers through the assistant. Leave out names, account details, and anything internal. If you want a second pair of eyes first, use the [Review queue](#review-queue) instead.
+</Callout>
 
-1. In Notion, create a connection (**Settings → Developer → Open developer tools → + New connection**, **Access token** auth) and copy its token (starts with `ntn_` or `secret_`).
-2. Share the pages you want synced: open each top-level page, click **•••  → Connections**, and add your connection. Sharing a page also shares its subpages, so sharing one top-level parent page is usually enough rather than adding every page individually. answerLoops syncs everything the connection can see — you control the scope by sharing or unsharing pages in Notion.
-3. In answerLoops, go to **Integrations → Notion**, paste the token, and click **Connect**.
-4. Go to the **Knowledge Base** page and click **Sync now** in the Notion panel. Each Notion page (and each row of a shared database) is converted to text, split into chunks, and embedded like every other source. Re-syncing replaces the previous Notion content.
+Only workspace owners and admins can add articles this way. The title can be up to 500 characters and the answer up to 8,000. Each article is indexed when it is saved, so adding needs an AI provider; if none is connected, the form tells you to add one in **Settings → AI Model**. Adds are limited to 30 every 10 minutes per workspace.
 
-<Note>
-  Notion content imports **unpublished**. It is searchable from the dashboard but is not used to answer customer questions or served to the website widget until you click **Publish to widget** on the Notion panel. Every other source publishes automatically on import; Notion is the exception because workspace docs are often internal drafts. Your publish choice is kept across re-syncs.
-</Note>
+### Promote a resolved ticket
 
-The token is stored encrypted (set `ENCRYPTION_KEY` before connecting in any real deployment). There is no environment variable to configure — Notion is set up per workspace in the Integrations UI.
+When a ticket is resolved with a good answer, turn it into an article so the AI can reuse that answer for similar questions.
 
-## Sources list
+<Steps>
+  <Step>
+    Open a ticket that is resolved and has an answer.
+  </Step>
+  <Step>
+    In the **Knowledge Base** panel on the ticket, click **Promote to KB**.
+  </Step>
+  <Step>
+    The question and answer are saved as a new article, and the panel changes to **In knowledge base**.
+  </Step>
+</Steps>
 
-The **Manage** tab on the Knowledge Base page lists every imported source. Each row shows:
+Only owners and admins can promote tickets, and promoting shares the same 30-per-10-minutes limit as writing by hand. A promoted article lists the ticket it came from, and it appears on the Knowledge coverage tab under **Promoted from resolved tickets**.
 
-| Column | Description |
-|---|---|
-| **Name** | File name, page URL, repo, or "Notion workspace" |
-| **Type** | `url`, `file`, `github`, or `notion` |
-| **Chunks** | Number of vector chunks indexed from this source |
-| **Size** | Approximate content size |
+## Find and manage articles
 
-A source marked **Unpublished** (currently only Notion) is indexed and shows in dashboard search but is held back from customer-facing answers and the website widget until you publish it from the Notion panel.
+<Hotspots
+  shot="knowledge-base-articles"
+  only={['search', 'article-count', 'article', 'source-ticket']}
+  notes={{
+    search: 'Searches by meaning, so a question in your own words finds the right article even when the wording differs.',
+    'article-count': 'How many articles are listed. The checkbox beside it selects every article at once.',
+    article: 'Each article shows its title and full text. Tick its box to select it for deletion.',
+    'source-ticket': 'Articles made from a ticket link back to it.',
+  }}
+/>
 
-To remove a source, select it and click **Delete selected**. Deleting a source removes all its chunks from the vector index — any articles derived from it will no longer surface in search results.
+**Search** looks for articles by meaning rather than exact words. Asking "how do I reset my password" surfaces an article titled "Account recovery steps" even though the words differ, and each result shows a match percentage. To return to the full list, click the **×** in the search field or **Clear**.
 
-## Adding knowledge by hand
+If semantic search is unavailable, for example because no AI provider is connected or the provider's key is invalid, search falls back to exact text matching and an amber banner reads **Keyword search only**.
 
-Not everything the assistant should know comes from a ticket or a file. Product details, policies, and "how we actually do it" answers often live in someone's head. The **Write an answer by hand** form at the top of the Manage tab lets you write them down directly.
+The **Sources** list shows everything you imported. Each row has a type tag (`url`, `pdf`, `docx`, `md`, `txt`, `csv`, `github`, `github-discussion`, or `notion`), the file name, page address, or repository, and a count of chunks and size. A source marked **Unpublished** is indexed and searchable from the dashboard but held back from customer-facing answers and the website widget.
 
-1. Enter a **question or title**, such as "Do you ship to Canada?"
-2. Write the **answer or context** the way you would tell a customer.
-3. Click **Add to knowledge base**.
+To remove content, tick one or more sources or articles, click **Delete selected**, and confirm. Deleting a source also deletes the articles imported from it. Only owners and admins can delete.
 
-The article is published immediately, so the assistant can use it for the very next question. There is no draft step, which means anything you write is visible to customers through the assistant: leave out names, account details, and anything internal. If you want a second pair of eyes first, use the [Review queue](#review-queue) instead.
+## See what the assistant knows
 
-Things to know:
+The **Knowledge coverage** tab shows exactly what your chat assistant can answer from, so nobody is surprised by what it does or does not know. It is also linked from **Settings → Widget**.
 
-- Only workspace **owners and admins** can add articles this way.
-- The question or title can be up to 500 characters and the answer up to 8,000.
-- Articles added by hand appear on the **Knowledge coverage** tab under **Added by hand**, and you can delete them from the article list like any other.
-- Adding needs an AI provider, because each article is indexed for search when it is saved. If none is connected, the form tells you to add one in **Settings → AI Model**.
-- Adds are limited to 30 every 10 minutes per workspace, and a workspace holds up to 2,000 articles in total.
+- **Counts.** **Live articles**, **Sources**, **Unpublished**, and **Not searchable**.
+- **Titles by source.** Every article title, grouped by where it came from: each file or imported page, synced sources, **Promoted from resolved tickets**, and **Added by hand**.
+- **Status per article.** An article is live when it is published and searchable. **Unpublished** articles are kept private and the assistant does not use them until you publish them, which suits internal documents. **Not searchable** articles have no search index entry, usually because embedding failed during import, or they were indexed with an embedding model other than the one your workspace uses now. Articles on an older model are re-indexed automatically after you switch models; for a failed import, re-import the source.
+- **Try a customer question.** Type a question and click **Check**. The tab runs the same lookup the chat widget uses and shows which articles the assistant would draw on, with a match score, or tells you that nothing covers it. If semantic search is unavailable, it says so instead of guessing.
+- **Supplied as context.** Next to each article, how often it was handed to the assistant (details below).
 
-## Promoting tickets to the KB
-
-When a ticket is resolved with a good answer, you can turn it into a KB article so the AI can reuse that answer for similar future questions.
-
-1. Open a ticket with status `resolved`
-2. Click **Promote to KB** in the ticket actions panel
-3. The Q&A pair is saved as a new KB article
-
-Promoted articles appear in the Sources list with type `ticket`.
-
-## Search
-
-Use the search bar at the top of the Knowledge Base page to find articles.
-
-**Semantic search** (default when an AI provider is configured or included usage is available): searches by meaning rather than exact words. Asking "how do I reset my password" will surface an article titled "Account recovery steps" even though the words don't match exactly.
-
-**Keyword fallback** (when no AI is available, for example you've reached your included AI limit and no key is configured): falls back to exact text matching. An amber warning banner appears at the top of the KB page to indicate that semantic search is unavailable.
-
-To clear a search and return to the full article list, click the **×** inside the search field or the **Clear** button.
-
-## Knowledge coverage
-
-The **Knowledge coverage** tab shows exactly what your chat assistant is able to answer from, so nobody is surprised by what it does or doesn't know. You can also reach it from **Settings → Widget**.
-
-- **Counts.** Live articles, sources, and any articles the assistant can't use.
-- **Titles by source.** Every article title, grouped by where it came from: each uploaded file or imported page, synced sources, tickets you promoted, and articles added by hand.
-- **Status per article.** An article is **live** when it is published and searchable. **Unpublished** articles are kept private and are not used by the assistant unless you publish them. This is the right state for internal documents, such as a Notion workspace you only want your team to see. **Not searchable** articles are missing a search index entry (usually because embedding failed during import) or were indexed with an embedding model other than the one your workspace currently uses, so the assistant cannot find them yet. Articles on an older model are re-indexed automatically after you switch models; for a failed import, re-import the source.
-- **Try a customer question.** Type a question and the tab runs the same lookup the chat widget uses. It shows which articles the assistant would draw on, with a match score, or tells you that nothing covers the question. If semantic search is unavailable, it says so instead of guessing.
-
-If a question doesn't closely match any live article, the assistant answers from general knowledge instead, and that answer can be wrong. Use the tab to find those gaps before your customers do, then add or edit an article to cover them. The tab is available on every plan.
+If a question does not closely match any live article, the assistant answers from general knowledge instead, and that answer can be wrong. Use this tab to find those gaps before your customers do, then add or edit an article to cover them.
 
 ## Review queue
 
-The **Review** tab turns questions your knowledge base couldn't answer into new articles, with a person checking every one before it goes live. It is available on the Pro plan and above.
+The **Review** tab turns questions your knowledge base could not answer into new articles, with a person checking every one before it goes live. It requires the Pro plan or above and is visible to owners and admins only, because items contain text typed by customers and visitors. Other team members see a short notice.
 
 When the assistant answers a question that nothing in your knowledge base (or your team's earlier answers) covered, the question lands in the queue instead of disappearing:
 
-- **Support tickets** from your connected channels are added after the assistant has replied, so capturing a question never delays an answer. If the assistant's draft fully answered the question, it comes along as a starting point. If it didn't, the item is marked **No usable answer** and you write one.
-- **Website chat widget** questions are added when no article matched. The widget keeps no record of who asked, so the queue shows the question and the answer the assistant gave, never the visitor. Email addresses, phone numbers and long digit runs are replaced with markers before the text is stored, and widget items are labelled as visitor-supplied text.
+- **Support tickets** from your connected channels are added after the assistant has replied, so capturing a question never delays an answer. If the assistant's draft fully answered the question, it comes along as a starting point. If not, the item is marked **No usable answer — write one** and you write it.
+- **Website chat widget** questions are added when no article matched. The queue shows the question and the answer the assistant gave, never the visitor. Email addresses, phone numbers, and long digit runs are replaced with markers before the text is stored, and widget items are labelled as visitor-supplied text.
 
-When the same question comes in again, the existing item's counter goes up (**Asked 4 times**) instead of adding a duplicate, and the most-asked questions are listed first. Items you reject stay rejected, and their count keeps rising so you can see if people keep asking.
+When the same question comes in again, the existing item's counter goes up (**Asked 4 times**) instead of adding a duplicate, and the most-asked questions are listed first.
 
-For each item you can:
+<Steps>
+  <Step>
+    Open the **Review** tab. The **To review** list shows pending items; **Approved** and **Rejected** show past decisions.
+  </Step>
+  <Step>
+    Edit the **Question** and the **Answer**. Remove names, account details, and anything else that was only meant for the person who asked.
+  </Step>
+  <Step>
+    Click **Approve and add to knowledge base**. The text is saved as a new article and starts answering questions straight away. Or click **Reject** to dismiss it; a rejected item can be moved back to review with **Move back to review**.
+  </Step>
+</Steps>
 
-1. Edit the **question** and the **answer**. Remove names, account details and anything else that was only meant for the person who asked.
-2. Click **Approve and add to knowledge base**. The edited text is saved as a new article and starts answering questions straight away.
-3. Or click **Reject** to dismiss it. A rejected item can be moved back to review at any time.
+Nothing in the queue is searchable or shown to customers until you approve it. The **Review** tab shows how many items are waiting. Each workspace holds up to 500 unreviewed items at a time; when the queue is full the tab says so and new questions are not captured, so clear it regularly.
 
-Nothing in the queue is searchable or shown to customers until you approve it. The queue is visible to owners and admins only, because items contain text typed by customers and visitors; other team members see a short notice on the tab. The **Review** tab shows how many items are waiting, and each workspace holds up to 500 unreviewed items at a time. When the queue is full the tab says so and new questions are not captured, so clear it regularly.
+## More details
 
-The text of rejected items is removed, and the text of approved items is removed 90 days after review (the approved article keeps its own copy). The item and its counter stay so a repeated question is still recognised.
+<Accordions>
+  <Accordion title="Limits at a glance">
+    | Limit | Value |
+    |---|---|
+    | Articles per workspace | 2,000, shared by every source. Once full, further adds, imports, and approvals are declined with a message, even if several people add at the same moment. |
+    | URL import, per run | Up to 25 new pages, 150 sections, and about 600,000 characters in total across all pages. Section titles are shortened to 300 characters. |
+    | URL import rate | 10 imports every 10 minutes per workspace |
+    | File upload | 10 MB per file, 2 MB of extracted text, 300 PDF pages, up to 200 sections per file, 10 uploads every 10 minutes. File names are shortened to 200 characters. |
+    | GitHub sync | Up to 100 Markdown files, plus up to 300 answered Discussions |
+    | Write or promote | 30 every 10 minutes per workspace |
+    | Review queue | 500 unreviewed items |
 
-Approved articles count toward the same 2,000-article limit as every other source. The limit holds even when several people add articles at the same moment: once a workspace is full, further adds and approvals are declined with a message, and a declined approval stays in the queue.
+    If a site import reaches its per-run limit, the pages not yet reached stay un-imported and the next run continues from them.
+  </Accordion>
+  <Accordion title="Changing your embedding model">
+    If the embedding model behind your knowledge base changes, answerLoops re-embeds your content in the background from what you already added. Search keeps working throughout, and you do not need to re-upload anything. An article you edit while the re-index runs is processed again before it goes live. The re-index stops with a clear message if the chosen embedding model produces vectors of a size the knowledge base cannot store.
+  </Accordion>
+  <Accordion title="Who added an article">
+    When a team member adds an article by hand (including from the Knowledge Gaps page), promotes a resolved ticket, or approves a question from the review queue, answerLoops records that person as the article's creator. This is separate from whoever originally answered the ticket.
 
-## How the assistant uses your articles
+    Some articles have no recorded creator, and that means unknown, not nobody. Articles that existed before this was recorded keep an unknown creator, and articles made by file upload, URL import, or a synced source are created by the import itself. Refreshing a ticket's article later does not change who is recorded as its creator, and removing a team member keeps their articles.
+  </Accordion>
+  <Accordion title="Article history">
+    answerLoops keeps an append-only history for each article. It records when an article was created, when a resolved ticket was promoted into one, when its question or answer was changed, and each review decision on the question that became the article: approved, rejected, or reopened. Every entry notes who did it and where it came from: added by hand, promoted from a ticket, the review queue, a file or URL import, or a synced source.
 
-Matching articles are passed to the assistant as reference material to answer from. This is the same whether the question arrives through the widget, a channel, email, or the Agent API and MCP `generate_answer`.
+    - Changes made by a sync or import are recorded as automated, with no person attached. A sync that rewrites a page with the same content adds nothing.
+    - Only a change to the words counts as an edit. Reflowing text or adding trailing whitespace does not.
+    - The history stores a fingerprint of the question and answer at each moment, never a copy of the text, so it does not keep old wording and it is unaffected by the review queue's text retention.
+    - Articles that existed before the history was introduced start with no entries. Nothing is reconstructed or guessed for them.
+    - Deleting an article deletes its history, and deleting a team member keeps their entries with the person removed.
+  </Accordion>
+  <Accordion title="Article usage (Supplied as context)">
+    The Knowledge coverage tab shows each article's **Supplied as context** count: the total recorded (up to 400 days, with older counts removed automatically) and the last 30 days. An article is counted when it was among the matches handed to the assistant as context for an answer that was actually produced: a reply in the website chat widget, a drafted reply to a support ticket, a Discord `/ask` answer, or an answer generated through the Agent API. Searching the knowledge base, running a [simulation](/docs/product/simulation), and bug reports or feature requests (which are never answered from the knowledge base) are not counted.
 
-## Who added an article
+    - The count means the article was given to the assistant, not that the reply quoted it. The assistant decides what to use.
+    - Only a number per article per day is stored. The question, the visitor, and the ticket are never recorded with it.
+    - When usage data loads, an article with no recorded usage shows zero. If it cannot be loaded, the tab shows **Usage unavailable** instead of treating the missing data as zero, and coverage information remains available.
+    - Deleting an article, or the workspace, removes its counts.
+  </Accordion>
+  <Accordion title="Review queue text retention">
+    The text of rejected items is removed, and the text of approved items is removed 90 days after review (the approved article keeps its own copy). The item and its counter stay so a repeated question is still recognised.
+  </Accordion>
+  <Accordion title="Where the data lives (self-hosted)">
+    Articles and source chunks are stored in the `kb_articles` and `kb_sources` tables in PostgreSQL. Questions waiting in the review queue are stored in `kb_review_items` until they are approved or rejected, and the per-article answer counts are stored in `kb_article_usage`. They persist across Docker restarts as long as you retain the `postgres-data` volume.
+  </Accordion>
+</Accordions>
 
-When a team member adds an article by hand (including from the Knowledge Gaps page), promotes a resolved ticket, or approves a question from the review queue, answerLoops records that person as the article's creator. This is separate from whoever originally answered the ticket: promoting or approving an answer does not make its first responder the creator.
-
-Some articles have no recorded creator, and that means unknown, not nobody. Articles that existed before this was recorded keep an unknown creator, and articles made by file upload, URL import or a synced source are created by the import itself. Refreshing a ticket's article later does not change who is recorded as its creator, and removing a team member keeps their articles.
-
-## Article history
-
-answerLoops keeps an append-only history for each article. It records when an article was created, when a resolved ticket was promoted into one, when its question or answer was changed, and each review decision on the question that became the article: approved, rejected, or reopened. Every entry notes who did it and where it came from: added by hand, promoted from a ticket, the review queue, a file or URL import, or a synced source.
-
-A few things to know about what is and is not recorded:
-
-- Changes made by a sync or import are recorded as automated, with no person attached. A sync that rewrites a page with the same content adds nothing.
-- Only a change to the words counts as an edit. Reflowing text or adding trailing whitespace does not.
-- The history stores a fingerprint of the question and answer at each moment, never a copy of the text, so it does not keep old wording and it is unaffected by the review queue's text retention.
-- Articles that existed before the history was introduced start with no entries. Nothing is reconstructed or guessed for them.
-- Deleting an article deletes its history, and deleting a team member keeps their entries with the person removed.
-
-## Article usage
-
-The **Knowledge coverage** tab shows each article's **Supplied as context** count, covering up to 400 days of recorded counts, with older counts removed automatically, and the last 30 days. An article is counted when it was among the matches handed to the assistant as context for an answer that was actually produced: a reply in the website chat widget, a drafted reply to a support ticket, a Discord `/ask` answer, or an answer generated through the Agent API. Searching the knowledge base, running a [simulation](/docs/product/simulation), and bug reports or feature requests (which are never answered from the knowledge base) are not counted.
-
-Two things to keep in mind when reading the numbers:
-
-- The count means the article was given to the assistant, not that the reply quoted it. The assistant decides what to use.
-- Only a number per article per day is stored. The question, the visitor and the ticket are never recorded with it.
-- When usage data loads successfully, an article with no recorded usage shows zero. If usage cannot be loaded, the tab shows **Usage unavailable** instead of treating the missing data as zero; coverage information remains available.
-- Up to 400 days of recorded counts are retained, and older counts are automatically removed.
-
-Deleting an article, or deleting the workspace, removes its counts.
-
-## Data persistence
-
-KB articles and source chunks are stored in the `kb_articles` and `kb_sources` tables in PostgreSQL. Questions waiting in the review queue are stored in `kb_review_items` until they are approved or rejected, and the per-article answer counts are stored in `kb_article_usage`. They persist across Docker restarts as long as you retain the `postgres-data` volume.
-
-<Warning>
+<Callout type="warn">
   Never run `docker compose down -v`. The `-v` flag deletes all Docker volumes, which permanently removes your KB articles, tickets, and all other data. Use `docker compose down` (without `-v`) to stop the stack safely.
-</Warning>
+</Callout>
+
+## Where to go next
+
+<Cards>
+  <Card icon="SearchX" title="Knowledge gaps" href="/docs/product/knowledge-gaps">Find the questions your knowledge base cannot answer yet.</Card>
+  <Card icon="MessageCircle" title="Chat widget" href="/docs/product/chat-widget">Put your knowledge base in front of website visitors.</Card>
+  <Card icon="NotebookText" title="Notion integration" href="/docs/integrations/notion">Step-by-step setup for syncing a Notion workspace.</Card>
+  <Card icon="FlaskConical" title="Simulation" href="/docs/product/simulation">Test how your AI would have handled past tickets.</Card>
+</Cards>

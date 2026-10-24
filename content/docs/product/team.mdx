@@ -4,36 +4,126 @@ description: Invite teammates and manage workspace membership.
 icon: Users
 ---
 
-Owners and administrators manage invitations in **Settings → Team**.
+Bring your colleagues into the workspace so they can answer tickets, review AI drafts, and keep the knowledge base current. Owners and admins manage the whole team from **Settings → Team**: invite people, see who has access, and remove or hand over ownership when things change. Team management is included on every plan.
+
+<Hotspots
+  shot="team"
+  only={['members', 'transfer', 'remove', 'pending-invites']}
+  notes={{
+    members: 'Everyone with access to the workspace, with their email address and role.',
+    transfer: 'Owner only. Hands the workspace to another member after you confirm.',
+    remove: 'Takes a member out of the workspace right away.',
+    'pending-invites': 'Invitations that have not been accepted yet, each with its role, expiry date, a Copy link button, and Revoke.',
+  }}
+/>
+
+<Callout type="info">
+  The screenshot shows a demo workspace with fictional people.
+</Callout>
 
 ## Invite a teammate
 
-1. Open **Settings → Team**.
-2. Under **Invite a teammate**, enter the person's email address.
-3. Select **Member** or **Admin**.
-4. Click **Send invite**. You can also copy the invitation link from **Pending Invites**.
-5. Ask the recipient to open the link and sign in with the invited email address.
+<Steps>
+<Step>
 
-The person appears in **Members** after accepting. Pending invitations display their role and expiration date. Use **Revoke** to cancel an invitation that should no longer grant access.
+### Open the Team tab
 
-## Roles
+Go to **Settings → Team**.
 
-| Role | Purpose |
-| --- | --- |
-| Owner | Holds workspace ownership and can transfer it to another member. |
-| Admin | Manages workspace settings and membership. |
-| Member | Works with support tickets and workspace content. |
+</Step>
+<Step>
 
-Give administrative access to people who need to manage the workspace. Invitations cannot create another owner; use the ownership-transfer action instead.
+### Enter their details
+
+Under **Invite a teammate**, enter the person's email address and choose **Member** or **Admin**.
+
+</Step>
+<Step>
+
+### Send the invite
+
+Click **Send invite**. The invitation link is copied to your clipboard automatically, so you can paste it straight into a message. If the person is already a member, you will see a message saying so instead.
+
+</Step>
+<Step>
+
+### Ask them to accept
+
+Ask the recipient to open the link and sign in with the invited email address. They join as soon as they select **Accept invitation**.
+
+</Step>
+</Steps>
+
+Where email delivery is configured, answerLoops also emails the invitation. Invitations are valid for 7 days, and sending a new invitation to the same address replaces the earlier pending one. If you lose the link, copy it again with **Copy link** under **Pending Invites**.
+
+The new person appears in **Members** after accepting, and the list updates on its own, without a refresh.
+
+## Choose the right role
+
+| Role | Purpose | Who can grant it |
+| --- | --- | --- |
+| Owner | Holds workspace ownership and can transfer it to another member. | Transfer from the current owner only |
+| Admin | Manages workspace settings and membership. | Owners |
+| Member | Works with support tickets and workspace content. | Owners and admins |
+
+Give administrative access only to people who need to manage the workspace. Invitations cannot create another owner; use ownership transfer instead.
+
+## Manage invitations
+
+**Pending Invites** appears whenever invitations are waiting. Each row shows the email address, the role, and the expiry date.
+
+- **Copy link:** copies the invitation link so you can resend it.
+- **Revoke:** cancels an invitation that should no longer grant access.
 
 ## Remove a member
 
-Find the person in **Members** and choose **Remove**. The owner cannot be removed with this action. Transfer ownership first when the current owner is leaving.
+Find the person in **Members** and choose **Remove**. Their membership is removed straight away. A few rules apply:
+
+- The owner cannot be removed. Transfer ownership first when the current owner is leaving.
+- You cannot remove yourself.
+- Only an owner can remove an admin.
 
 ## Transfer ownership
 
-The current owner can select **Transfer Ownership** beside another member and complete the confirmation. Check the selected recipient before confirming: ownership controls administration of the workspace.
+<Steps>
+<Step>
+
+### Choose the new owner
+
+As the current owner, select **Transfer Ownership** beside another member. The button appears only when the workspace has at least one other member.
+
+</Step>
+<Step>
+
+### Confirm
+
+Check the name in the dialog, then select **Yes, transfer ownership**.
+
+</Step>
+</Steps>
+
+<Callout type="warn">
+  You become a regular member and lose owner privileges. This cannot be undone unless the new owner transfers ownership back to you.
+</Callout>
 
 ## If an invitation does not work
 
-Check that the invitation is still listed, has not expired, and matches the email used to sign in. Revoke an incorrect invitation and send a new one with the intended address and role.
+<Accordions>
+<Accordion title="The link says it is invalid or already used">
+The invitation was already accepted or revoked. Check **Pending Invites**; if it is gone, send a new one.
+</Accordion>
+<Accordion title="The link says it has expired">
+Invitations last 7 days. Revoke the old one if it is still listed, then send a new invitation.
+</Accordion>
+<Accordion title="The page says you are signed in with a different email">
+The invitation only works for the address it was sent to. Sign out, then sign in with the invited email. If the address was wrong, revoke the invitation and send a new one with the correct address and role.
+</Accordion>
+</Accordions>
+
+## Where to go next
+
+<Cards>
+  <Card icon="LayoutDashboard" title="Dashboard" href="/docs/product/dashboard">See what your team will work from each day.</Card>
+  <Card icon="Ticket" title="Tickets" href="/docs/product/tickets">Work through open questions and review AI drafts.</Card>
+  <Card icon="CreditCard" title="Billing" href="/docs/product/billing">Manage your plan and usage.</Card>
+</Cards>

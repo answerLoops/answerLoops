@@ -4,7 +4,19 @@ description: Operate support, knowledge, and AI performance from one workspace.
 icon: LayoutDashboard
 ---
 
-Use the dashboard to review open work, answer outcomes, and response targets. The sidebar links to tickets, knowledge, reporting, and workspace settings.
+The dashboard is your workspace's home screen. It shows what needs attention right now, how the AI is doing, and whether any conversation is running past its response target.
+
+<Hotspots
+  shot="dashboard"
+  only={['navigation', 'stat-cards', 'auto-answered', 'open-tickets', 'sla-status']}
+  notes={{
+    navigation: 'Pages are grouped by the job they support: Monitor, Support, Improve, and Configure.',
+    'stat-cards': 'Live counts for your tickets. Select any card to open the matching filtered list.',
+    'auto-answered': 'Every question the AI resolved automatically, without a person stepping in.',
+    'open-tickets': 'Unresolved questions, oldest first, so nothing sits unanswered.',
+    'sla-status': 'Tickets past their configured response target, kept apart from the rest of the queue.',
+  }}
+/>
 
 ## Stat cards
 
@@ -21,7 +33,9 @@ Use the dashboard to review open work, answer outcomes, and response targets. Th
 
 Select any card to jump to the matching view. The ticket list shows the same tickets the card counts, and a "Filtered by" label appears above the list while a card filter is active. Pressing **Filter** keeps the card filter along with your status, priority, and category choices. Select **Clear card filter** to drop only the card filter.
 
-The Deflection rate card uses the same figure as the Analytics page, which leaves out bug reports and feature requests. Auto-Answered counts every deflected ticket, so the two numbers won't always line up with each other.
+<Callout type="info">
+  The Deflection rate card uses the same figure as the Analytics page, which leaves out bug reports and feature requests. Auto-Answered counts every deflected ticket, so the two numbers won't always line up with each other.
+</Callout>
 
 Tickets marked `duplicate` are left out of every stat card, the deflection rate, category breakdown, and SLA figures, so a repeated question is only counted once. Mark a ticket as duplicate from its status form on the ticket page.
 
@@ -51,3 +65,11 @@ The workspace sidebar groups pages by the job they support:
 - **Configure:** Billing and Settings
 
 On mobile, the same navigation is available from the menu button in the top bar.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Ticket" title="Tickets" href="/docs/product/tickets">Work through open questions and review AI drafts.</Card>
+  <Card icon="ChartNoAxesColumn" title="Analytics" href="/docs/product/analytics">See deflection, categories, and response times over time.</Card>
+  <Card icon="SearchX" title="Knowledge gaps" href="/docs/product/knowledge-gaps">Find the questions your knowledge base cannot answer yet.</Card>
+</Cards>

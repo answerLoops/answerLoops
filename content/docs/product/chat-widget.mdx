@@ -4,32 +4,80 @@ description: Add an AI support chatbot to any website or documentation site with
 icon: MessageSquare
 ---
 
-The answerLoops chat widget adds a support chatbot to any website or documentation site that accepts custom JavaScript. Visitors can ask questions about your community, business, or product and receive answers from your published knowledge-base articles without creating an account.
+The answerLoops chat widget adds a support chatbot to any website or documentation site that accepts custom JavaScript. Visitors ask questions about your community, business, or product and get answers from your published knowledge-base articles, without creating an account.
 
-<Callout>
-  The widget answers from **published knowledge-base articles only**. Unlike your connected channels, it does not draw on past resolved tickets — those are written for the one person who raised them and often contain account details or internal notes, and a widget visitor is anonymous.
-
-  The practical consequence: a workspace with an empty knowledge base gets thin widget answers. Promoting a few resolved tickets into the knowledge base is what makes the widget useful, and it's the same step that generalises an answer so it's safe for anyone to read.
-
-  On the Pro plan and above, a widget question that no article covered is also added to the [Review queue](/docs/product/knowledge-base#review-queue), without any record of the visitor, so you can turn it into an article.
+<Callout type="info" title="Availability">
+  The widget is included on every hosted plan and on self-hosted installs. The Standard plan shows a "Powered by answerLoops" line; Pro and Enterprise can remove it and also capture unanswered widget questions in the [Review queue](/docs/product/knowledge-base#review-queue). Each widget answer counts toward your plan's monthly deflection allowance. See [Billing plans](/docs/reference/billing-plans).
 </Callout>
 
-## Setup
+## How it works
 
-1. Go to **Settings → Widget**
-2. Copy the embed snippet — it looks like this:
+<IntegrationFlow
+  platform="channels"
+  sourceLogo="channels"
+  sourceLabel="Your website"
+  outcomesLabel="What visitors get"
+  source={{
+    title: 'Your site and its visitors',
+    text: 'A visitor opens the chat bubble on a page of your website or documentation site and types a question. They do not need an account.',
+  }}
+  trigger={{
+    title: 'Embed snippet',
+    text: 'A one-line script tag loads the chat bubble. The chat panel itself is served by answerLoops and only opens on the domains you list under Allowed domains.',
+  }}
+  steps={[
+    { title: 'Check the site', text: 'answerLoops confirms the page is on one of your allowed domains and that your workspace is still within its monthly answer allowance.' },
+    { title: 'Find the answer', text: 'It searches your published knowledge-base articles for what is relevant to the question. Past tickets are never used.' },
+    { title: 'Reply', text: 'One AI writes a short answer in the visitor\'s language and streams it into the chat, with a card when a card is clearer. There is no separate review step and no approval queue for widget answers.' },
+  ]}
+  outcomes={[
+    { tone: 'post', title: 'Answer in the chat', text: 'The visitor reads the reply as it is written, with steps, quick replies, a callout, a link card, or contact options when they help.' },
+    { tone: 'info', title: 'Lead captured', text: 'Before the first message the panel asks for an email address, which the visitor can skip. Addresses appear on the Leads page.' },
+    { tone: 'review', title: 'Gap queued for review', text: 'When no article matched, Pro and above add the question, without any record of the visitor, to the Review queue so you can turn it into an article.' },
+  ]}
+  replyLabel="The answer streams back into the same chat panel"
+/>
 
-```html
-<script src="https://your-instance.example.com/widget.js" data-widget-id="..."></script>
-```
+The widget answers from **published knowledge-base articles only**. Unlike your connected channels, it does not draw on past resolved tickets. Those are written for the one person who raised them and often contain account details or internal notes, and a widget visitor is anonymous.
 
-3. Paste it into your site's HTML, before the closing `</body>` tag
+<Callout type="warn" title="Thin knowledge, thin answers">
+  A workspace with an empty knowledge base gets thin widget answers. Promoting a few resolved tickets into the knowledge base is what makes the widget useful, and it is the same step that generalises an answer so it is safe for anyone to read.
+</Callout>
 
-Add the website or documentation domain to **Settings → Widget → Allowed domains**, as described below. The chat bubble appears at the bottom right of pages where you install the snippet. Visitors select it to open the chat panel.
+## Set it up
 
-## Branding
+<Steps>
+  <Step>
+    ### Allow your domain
 
-On the Standard plan the widget shows the answerLoops logo and a "Powered by answerLoops" line. The Pro and Enterprise plans can remove the answerLoops branding. **Settings → Widget** shows an upgrade option when your plan does not include it. Self-hosted installs have it unlocked.
+    Go to **Settings → Widget** and add your website or documentation domain under **Allowed domains**, then select **Save domains**. See [Restricting where the widget works](#restricting-where-the-widget-works).
+
+    **What you should see:** the domain listed under Allowed domains. Until at least one domain is listed, the widget will not load on any site.
+  </Step>
+  <Step>
+    ### Copy the embed snippet
+
+    In the same **Widget** tab, copy the embed snippet. It looks like this:
+
+    ```html
+    <script src="https://your-instance.example.com/widget.js" data-widget-id="..."></script>
+    ```
+  </Step>
+  <Step>
+    ### Paste it into your site
+
+    Paste it into your site's HTML before the closing `</body>` tag, or follow the steps for your platform below.
+
+    **What you should see:** a chat bubble at the bottom right of pages where you installed the snippet. Visitors select it to open the chat panel.
+  </Step>
+  <Step>
+    ### Preview and test
+
+    Select **Preview widget** in Settings to try it without any extra configuration, then ask a question your articles cover. Open **Knowledge Base → Knowledge coverage** (also linked from **Settings → Widget**) to see exactly which articles the widget can answer from.
+
+    **What you should see:** an answer drawn from your articles. If the panel instead says the widget is not enabled for a domain, add that domain under Allowed domains.
+  </Step>
+</Steps>
 
 ## Adding it by platform
 
@@ -111,11 +159,21 @@ Where you paste the snippet depends on how your site is built. Find your platfor
   Whichever platform you use, the rule is the same: paste into the **one file or field that wraps every page** (a layout, an app shell, a footer-code field) — never a single page's content, or the widget only loads there.
 </Note>
 
+## What you can customize
+
+| Setting | Where | Notes |
+|---|---|---|
+| Branding | **Settings → Widget** | Standard shows the answerLoops logo and a "Powered by answerLoops" line. Pro and Enterprise can remove the answerLoops branding; **Settings → Widget** shows an upgrade option when your plan does not include it. Self-hosted installs have it unlocked. |
+| Allowed domains | **Settings → Widget** | The domains the widget may load on. Subdomains are included. |
+| Embed token | **Settings → Widget** | Issued per workspace and expires after 90 days; **Regenerate token** issues a new one. |
+| What it knows | **Knowledge Base** | Publish or unpublish articles and sources. The widget only answers from published articles. |
+| Contact and link cards | Your articles | Cards show links and contact details only when they are written in your articles. There is nothing to configure. |
+
+The chat bubble sits at the bottom right of the page, and the answer language follows the visitor's language. Neither is configurable.
+
 ## Restricting where the widget works
 
-The `data-widget-id` value is an **embed token**, and it is deliberately public: it ships in the HTML of every page the widget renders on. There is no way to hide it, which means anyone can copy it out of your page source and use it on their own site — putting your knowledge base and your AI spend behind it.
-
-**Settings → Widget → Allowed domains** is how you stop that. List the domains you embed on, one per line:
+The `data-widget-id` value is an **embed token**, and it is deliberately public: it ships in the HTML of every page the widget renders on. Because anyone can read it, **Settings → Widget → Allowed domains** is how you control where the widget works. List the domains you embed on, one per line:
 
 ```
 example.com
@@ -124,15 +182,13 @@ docs.example.com
 
 Subdomains of a listed domain are included, so `example.com` also covers `support.example.com`. Ports are ignored. Embeds on any other domain show a short message explaining that the widget is not enabled there, rather than failing silently.
 
-<Warning>
-  **The widget will not load anywhere until you list at least one domain.** This is deliberate: an allowlist that defaults to open protects only the people who already thought about it. Your own answerLoops domain is always permitted, so the **Preview widget** link in Settings works without any configuration.
-</Warning>
+<Callout type="warn" title="The widget will not load until you list a domain">
+  The widget will not load anywhere until you list at least one domain. Your own answerLoops domain is always permitted, so the **Preview widget** link in Settings works without any configuration.
+</Callout>
 
-### How to think about the allowlist
+If the panel says it could not confirm which site it is embedded on, the page is blocking referrer information; loading the page over HTTPS usually resolves it.
 
-The allowlist controls **where your widget renders**. If someone copies your embed snippet out of your page source and drops it on their own site, that embed is refused — and so is any direct call to the chat or lead-capture endpoints that didn't come from a render the allowlist approved. Your embed token is a public identifier — it appears in your page HTML by design, the same as any embedded widget — but a copied token alone cannot drive chat or lead-capture traffic from anywhere else. Usage limits still apply on top of this, independently.
-
-Only workspace owners and admins can change the allowed domains or regenerate the token. Members can see the embed snippet but not alter where it works.
+Only workspace owners and admins can change the allowed domains or regenerate the token. Members can see the embed snippet but not alter where it works. Usage limits apply independently of the allowlist.
 
 ### Documentation sites
 
@@ -141,16 +197,16 @@ If your docs run on a platform that executes custom JavaScript on every page —
 This is usually the highest-value place to put it: docs visitors are anonymous and arrive with support-shaped questions, which is exactly what the knowledge base answers.
 
 <Note>
-  On platforms with no build step, this means the embed token ends up committed to whatever repository holds your docs. The token is a public identifier rather than a secret — it appears in page HTML regardless — but committing it does mean rotating it requires a commit. If that matters for your setup, hold off until the hosted loader ships, which replaces the token in the snippet with a stable slug.
+  On platforms with no build step, the embed token ends up committed to whatever repository holds your docs. The token is a public identifier rather than a secret, but rotating it then requires a commit.
 </Note>
 
 ## Rotating the token
 
 Tokens expire after **90 days**. Settings warns you as the date approaches, and **Regenerate token** issues a new one.
 
-<Warning>
-  Regenerating takes effect immediately and invalidates the old token. Every page still using the old snippet stops working until you update it. Rotate when you are able to update your site, not before.
-</Warning>
+<Callout type="warn" title="Rotating takes effect immediately">
+  Regenerating invalidates the old token. Every page still using the old snippet stops working until you update it. Rotate when you are able to update your site, not before.
+</Callout>
 
 ## Rich answer cards
 
@@ -166,7 +222,7 @@ The assistant only fills in the content of these cards; it never produces markup
 
 To get contact or link cards, put the addresses and URLs you want visitors to see in your knowledge base articles. There is nothing to configure.
 
-## Rate limits & input caps
+## Rate limits and input caps
 
 The widget chat endpoint is public (no login required), so it enforces limits to protect your AI provider bill from abuse:
 
@@ -177,16 +233,22 @@ The widget chat endpoint is public (no login required), so it enforces limits to
 - Each message capped at **4,000 characters**; at most **50 messages** per request
 - Request bodies capped at **512KB**
 
-Each approved load of the widget panel receives a short-lived session pass that is tied to the visitor's network address; chat and lead capture use it automatically from inside the embed.
-
 The lead-capture endpoint, used when a visitor leaves an email address, is limited separately at **30/minute per token** and **5/minute per visitor**, with a 64KB body cap and a validated address.
 
 Requests over these limits return `429 Too Many Requests`. Limits are enforced across every running instance rather than per process, so the numbers above are the real ceiling. They are not currently configurable.
+
+Separately from rate limits, every widget answer counts toward your plan's monthly deflection allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
 
 ## What the widget can and cannot reach
 
 It answers from your **knowledge base** — published articles only. It does not read your ticket queue, and it has no access to settings, billing, or team data either; the embed token grants none of those.
 
-To see exactly which articles it can answer from, and to test a question, open **Knowledge Base → Knowledge coverage** (also linked from **Settings → Widget**).
-
 Treat knowledge base contents as visible to anyone who can use the widget. If you have ingested internal documentation, review it before making the widget public.
+
+## Where to go next
+
+<Cards>
+  <Card icon="BookOpen" title="Knowledge base" href="/docs/product/knowledge-base">Publish the articles the widget answers from.</Card>
+  <Card icon="Receipt" title="Billing plans" href="/docs/reference/billing-plans">See allowances and branding by plan.</Card>
+  <Card icon="Rocket" title="Cloud quickstart" href="/docs/quickstart-cloud">Set up a workspace end to end.</Card>
+</Cards>
