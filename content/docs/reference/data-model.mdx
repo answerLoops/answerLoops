@@ -4,7 +4,29 @@ description: A map of the workspace, ticket, knowledge, and configuration record
 icon: Database
 ---
 
-This reference describes the main records used by answerLoops. The schema definitions are in `lib/db/schema.ts`; migrations define changes applied to an existing database.
+This reference describes the main records used by answerLoops and how they connect. Use it to find where a piece of workspace, ticket, or knowledge data lives. The schema definitions are in `lib/db/schema.ts`; migrations define changes applied to an existing database.
+
+## How the records relate
+
+Almost everything belongs to a workspace (`orgs`). People reach a workspace through `memberships`, tickets collect replies and history, and knowledge articles can come from an imported source or be promoted from a ticket.
+
+<Mermaid
+  caption="The main records and how they connect: a workspace has members, tickets, knowledge articles and sources, integrations and API keys; tickets have replies; articles keep a history of changes."
+  chart={`erDiagram
+  orgs ||--o{ memberships : "has members"
+  users ||--o{ memberships : "joins through"
+  orgs ||--o{ tickets : "receives"
+  tickets ||--o{ ticket_replies : "has"
+  orgs ||--o{ kb_articles : "owns"
+  orgs ||--o{ kb_sources : "imports from"
+  kb_sources ||--o{ kb_articles : "produces"
+  tickets ||--o{ kb_articles : "promoted into"
+  kb_articles ||--o{ kb_article_events : "records history in"
+  orgs ||--o{ integrations : "connects"
+  orgs ||--o{ api_keys : "issues"`}
+/>
+
+The diagram shows the key relationships only. The link from an article to its import source (`source_id`) is a plain reference rather than an enforced foreign key. The tables below list every record.
 
 ## Workspace and access
 
@@ -58,3 +80,11 @@ Message de-duplication is scoped to the workspace: `tickets` is unique on `(org_
 `ai_configs` stores workspace model settings. `sla_configs` stores response and resolution targets per priority. Rows with a null `org_id` are the global defaults; a workspace that saves its own targets gets its own row (unique per `org_id` and `priority`, removed with the workspace). Deadlines for a ticket use the workspace's row for the ticket's priority and fall back to the default row. `subscriptions` records hosted-plan state, and `api_generations` records standalone answer generation for usage accounting.
 
 Use application actions and documented APIs for routine changes. For self-hosted upgrades, apply the documented migrations and retain a tested backup. See [Upgrading](/docs/self-hosting/upgrading).
+
+## Where to go next
+
+<Cards>
+  <Card icon="Upload" title="Upgrading" href="/docs/self-hosting/upgrading">Apply migrations safely on a self-hosted install.</Card>
+  <Card icon="Code" title="Agent API" href="/docs/integrations/agent-api">Read and write workspace data through the documented API.</Card>
+  <Card icon="BookOpen" title="Knowledge base" href="/docs/product/knowledge-base">How articles, sources and reviews work in the product.</Card>
+</Cards>

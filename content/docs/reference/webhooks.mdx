@@ -4,32 +4,79 @@ description: Find the setup guide for incoming channel and billing events.
 icon: Webhook
 ---
 
-answerLoops receives webhook events from connected platforms. Each integration has its own registration, permissions, and event format; there is no single payload format for all channels.
+A webhook is a message one service sends to another when something happens. answerLoops receives webhook events from the platforms you connect, such as a new question in a Telegram group or a new GitHub issue, and turns each one into a ticket. This page shows how an event travels through answerLoops and points you to the right setup guide for each source.
 
-## Integration guides
+Each integration has its own registration, permissions, and event format; there is no single payload format for all channels.
 
-| Source | Setup and behavior |
-| --- | --- |
-| GitHub | [GitHub integration](/docs/integrations/github): Issues, Discussions, comments, and repository synchronization. |
-| Discourse | [Discourse integration](/docs/integrations/discourse): activity in watched categories. |
-| Circle | [Circle integration](/docs/integrations/circle): posts and comments in connected spaces. |
-| Telegram | [Telegram integration](/docs/integrations/telegram): messages delivered to the configured bot. |
-| Email | [Email integration](/docs/integrations/email): inbound messages and reply configuration. |
-| Billing | [Stripe integration](/docs/integrations/stripe): subscription events for operators of the hosted service. |
+## How an event becomes a reply
+
+Every channel below feeds the same pipeline, so a question gets the same treatment wherever it was asked.
+
+<Mermaid
+  caption="A platform sends an event to answerLoops, a ticket is created and the AI drafts an answer from your knowledge base. A confident answer is posted back to the original conversation when Automatic Deflections is on; otherwise the draft waits for your team."
+  chart={`sequenceDiagram
+  participant P as Connected platform
+  participant A as answerLoops
+  participant K as AI and knowledge base
+  participant T as Your team dashboard
+  P->>A: New message or event
+  A->>A: Create a ticket
+  A->>K: Triage and search the knowledge base
+  K-->>A: Draft answer with a confidence score
+  alt Confident and Automatic Deflections is on
+    A->>P: Post the reply in the same conversation
+  else Otherwise
+    A->>T: Draft waits for review
+  end`}
+/>
+
+<Callout type="info">
+  A reply that continues an existing conversation is added to that ticket instead of opening a new one, and a message that is delivered twice creates only one ticket.
+</Callout>
+
+## Which webhook goes where
+
+| Source | Endpoint on your deployment | Setup guide |
+| --- | --- | --- |
+| GitHub | `/api/github/webhook` | [GitHub integration](/docs/integrations/github): Issues, Discussions, comments, and repository synchronization. |
+| Slack | `/api/slack/events` | [Slack integration](/docs/integrations/slack): channel messages (polling is available when you have no public endpoint). |
+| Google Chat | `/api/google-chat/events` | [Google Chat integration](/docs/integrations/google-chat): messages to the Chat app. |
+| Discourse | `/api/discourse/webhook` | [Discourse integration](/docs/integrations/discourse): activity in watched categories. |
+| Circle | `/api/circle/webhook` | [Circle integration](/docs/integrations/circle): posts and comments in connected spaces. |
+| Telegram | `/api/telegram/webhook` | [Telegram integration](/docs/integrations/telegram): messages delivered to the configured bot. |
+| Email | `/api/email/ingest` | [Email integration](/docs/integrations/email): inbound messages and reply configuration. |
+| Discord | `/api/ingest` (called by the bot service) | [Discord integration](/docs/integrations/discord): the bot forwards channel messages; Discord itself does not call a webhook. |
+| Billing | `/api/billing/webhook` | [Stripe integration](/docs/integrations/stripe): subscription events for operators of the hosted service. |
 
 ## Request handling
 
 Every inbound endpoint reads the request body with a byte limit (1 MB for most providers, 2 MB for email, 5 MB for GitHub) and answers `413` when it is exceeded. Messages are truncated to 8,000 characters before they are processed, and each workspace has a per-minute budget for inbound events; events over the budget are answered `429` so the provider retries later.
 
-Credentials are matched per channel: a secret created for one integration is only accepted by that channel's endpoint. Stripe events are claimed by event id before they are handled, so a retried or simultaneous delivery of the same event is applied once, and an event older than the last one applied for a workspace is skipped.
+Stripe events are claimed by event id before they are handled, so a retried or simultaneous delivery of the same event is applied once, and an event older than the last one applied for a workspace is skipped.
 
 ## Verify delivery
 
-1. Complete the integration's setup guide.
-2. Send a test message or create the supported event in the connected platform.
-3. Check that the expected ticket or status change appears in answerLoops.
-4. If nothing appears, check the platform's delivery history and the answerLoops application logs for that event.
+<Steps>
+<Step>
+Complete the integration's setup guide.
+</Step>
+<Step>
+Send a test message or create the supported event in the connected platform.
+</Step>
+<Step>
+Check that the expected ticket or status change appears in answerLoops.
+</Step>
+<Step>
+If nothing appears, check the platform's delivery history and the answerLoops application logs for that event.
+</Step>
+</Steps>
 
 For self-hosted deployments, confirm that the configured callback URL is reachable over HTTPS and points to the intended deployment. Use the exact route and event types in the integration guide.
 
-To build a client that searches knowledge or creates tickets directly, use the [Agent API](/docs/integrations/agent-api) or [MCP](/docs/integrations/mcp).
+## Where to go next
+
+<Cards>
+  <Card icon="Code" title="Agent API" href="/docs/integrations/agent-api">Search knowledge or create tickets directly from your own code.</Card>
+  <Card icon="Plug" title="MCP" href="/docs/integrations/mcp">Connect an MCP-capable client to your workspace.</Card>
+  <Card icon="Ticket" title="Tickets" href="/docs/product/tickets">See how incoming events appear and get handled.</Card>
+</Cards>

@@ -4,37 +4,39 @@ description: Complete reference for every environment variable recognised by ans
 icon: Settings
 ---
 
-All variables are set in your `.env` file (local) or in your hosting provider's environment configuration (production). Variables marked **Required** must be present or the app will refuse to start.
+This is the complete list of environment variables answerLoops reads. Use it to look up a name, find out whether it is required, and see what it controls. For a guided, step-by-step setup, start with the [self-hosting guide](/docs/self-hosting/environment-variables).
 
-<Note>
-  answerLoops uses **Auth.js v5**. The correct variable names are `AUTH_SECRET` and `AUTH_URL` — **not** `NEXTAUTH_SECRET` / `NEXTAUTH_URL`. If you are migrating from an older deployment, rename them.
-</Note>
+Set variables in your `.env` file (local) or in your hosting provider's environment configuration (production).
 
-## Core (required)
+| Marker | Meaning |
+|---|---|
+| **Required** | Must be set for a working deployment |
+| **Optional** | Has a default, or only switches on an extra feature |
+| **Managed service only** | Used only on answerLoops' own hosted service; self-hosters leave it unset |
+
+<Callout type="info">
+  answerLoops uses **Auth.js v5**. The variable names are `AUTH_SECRET` and `AUTH_URL`, not `NEXTAUTH_SECRET` / `NEXTAUTH_URL`. If you are migrating from an older deployment, rename them. (`NEXTAUTH_URL` is still honoured as a fallback for `AUTH_URL` when building links in emails and OAuth callbacks.)
+</Callout>
+
+<Cards>
+  <Card icon="Server" title="Required for every install" href="#core-required">Database, session secret, public URL, encryption key, and Google sign-in.</Card>
+  <Card icon="Sparkles" title="AI provider" href="#ai-providers">An OpenAI key powers drafts and search out of the box.</Card>
+  <Card icon="MessageSquare" title="Channels" href="#discord">Discord, Slack, Google Chat, GitHub, Telegram and email.</Card>
+</Cards>
+
+## Core and access
+
+### Core (required)
 
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection string, e.g. `postgresql://user:pass@host:5432/dbname` |
-| `DIRECT_DATABASE_URL` | Non-pooled connection string for `LISTEN`/`NOTIFY` only (config hot-reload, live team and dashboard updates). Required whenever `DATABASE_URL` is a pooled connection (a provider's pooled endpoint, PgBouncer, etc.) — falls back to `DATABASE_URL` otherwise |
-| `AUTH_SECRET` | Random 32-byte secret used to sign Auth.js v5 session tokens and the OAuth `state` for channel connect flows. Generate with `openssl rand -hex 32` |
-| `AUTH_URL` | Full public URL of your deployment, e.g. `https://answerloops.com`. Used by Auth.js for OAuth callbacks |
-| `ENCRYPTION_KEY` | 32-byte hex key used to encrypt stored API keys at rest. Generate with `openssl rand -hex 32`. In production (`NODE_ENV=production`) it is mandatory — saving a credential without it throws instead of storing plaintext |
+| `DATABASE_URL` | **Required.** PostgreSQL connection string, e.g. `postgresql://<user>:<password>@<host>:5432/<database>` |
+| `DIRECT_DATABASE_URL` | Optional. Non-pooled connection string used only for `LISTEN`/`NOTIFY` (configuration hot-reload, live team and dashboard updates). Needed whenever `DATABASE_URL` points at a pooled connection (a provider's pooled endpoint, PgBouncer, etc.); otherwise it falls back to `DATABASE_URL` |
+| `AUTH_SECRET` | **Required.** Random 32-byte secret for the Auth.js v5 session and for channel connect flows. Generate with `openssl rand -hex 32` |
+| `AUTH_URL` | **Required.** Full public URL of your deployment, e.g. `https://answerloops.com`. Used for sign-in callbacks and links in emails |
+| `ENCRYPTION_KEY` | **Required in production** (`NODE_ENV=production`). 32-byte hex key used to encrypt stored credentials at rest. Generate with `openssl rand -hex 32` |
 
-## Networking
-
-| Variable | Description |
-|---|---|
-| `TRUST_PROXY_HOPS` | Number of proxies between the public internet and the app. Defaults to `1`. Rate limiters resolve the client IP by counting this many entries in from the right of `x-forwarded-for`, so a caller-supplied prefix on that header can't be used to mint a fresh bucket per request. Set to `2` for Cloudflare in front of a platform load balancer. `cf-connecting-ip` takes precedence when it can be relied on (see `ORIGIN_VERIFY_SECRET`) |
-| `ORIGIN_VERIFY_SECRET` | Optional. When set, every public pre-auth POST route (`/api/mcp`, `/api/v1/agent/*`, `/api/widget/*`, `/api/newsletter`) rejects any request missing a matching `x-origin-verify` header, and `cf-connecting-ip` is read only from requests that carry it. Without it, self-hosted installs read `cf-connecting-ip` when present, and the managed cloud deployment uses `x-forwarded-for` only. Requires a matching rule on your CDN/edge proxy; see the self-hosting guide |
-
-## Multi-domain
-
-| Variable | Description |
-|---|---|
-| `NEXT_PUBLIC_APP_URL` | Optional. Base URL of a dedicated dashboard subdomain (e.g. `https://app.example.com`) that shares the same deployment as your root domain. When set, marketing-page CTAs link there instead of a relative `/dashboard` path. Unset by default — most deployments serve everything from one domain |
-| `AUTH_COOKIE_DOMAIN` | Optional. Shares the Auth.js session cookie across every subdomain of your apex (e.g. `.example.com`). Required alongside `NEXT_PUBLIC_APP_URL`, since a session cookie is host-only by default — without it, a user signed in on the root domain appears logged out on the app subdomain |
-
-## OAuth provider
+### Sign-in (required)
 
 Google is the only sign-in provider answerLoops configures. Both variables are required.
 
@@ -45,100 +47,115 @@ Google is the only sign-in provider answerLoops configures. Both variables are r
 
 Callback URL to register: `https://<your-domain>/api/auth/callback/google`
 
-<Note>
-  `DISCORD_CLIENT_ID` below is a separate thing — the "connect a Discord server" flow inside the product, not a sign-in method. There is no Discord or GitHub OAuth provider for dashboard sign-in.
-</Note>
+<Callout type="info">
+  `DISCORD_CLIENT_ID` and `SLACK_CLIENT_ID` below are separate: they power the "connect a Discord server" and "Add to Slack" flows inside the product, not sign-in. There is no Discord, Slack or GitHub provider for dashboard sign-in.
+</Callout>
+
+### Networking
+
+| Variable | Description |
+|---|---|
+| `TRUST_PROXY_HOPS` | Optional. Number of proxies between the public internet and the app. Defaults to `1`. Set to `2` for Cloudflare in front of a platform load balancer |
+| `ORIGIN_VERIFY_SECRET` | Optional. A shared secret between your CDN or edge proxy and the app. Requires a matching rule at the edge; see the [self-hosting guide](/docs/self-hosting/environment-variables) |
+
+### Public URLs and multi-domain
+
+| Variable | Description |
+|---|---|
+| `APP_URL` | Optional. Public origin of the app, read at request time (changing it needs a restart, not a rebuild). Used, for example, as the server address advertised in the OpenAPI spec. Falls back to `NEXT_PUBLIC_APP_URL` |
+| `NEXT_PUBLIC_APP_URL` | Optional. Base URL of a dedicated dashboard subdomain (e.g. `https://app.example.com`) on the same deployment as your root domain. When set, marketing-page links go there instead of a relative `/dashboard` path. Most deployments serve everything from one domain and leave it unset |
+| `AUTH_COOKIE_DOMAIN` | Optional. Shares the session cookie across subdomains of your apex (e.g. `.example.com`). Required alongside `NEXT_PUBLIC_APP_URL`, because a session cookie is host-only by default |
 
 ## AI providers
 
-These are platform-wide defaults. Individual orgs can override the AI model in **Settings → AI Model**.
+### Platform default
 
 | Variable | Description |
 |---|---|
-| `OPENAI_API_KEY` | OpenAI API key — enables GPT models and OpenAI embeddings |
-| `ANTHROPIC_API_KEY` | Anthropic API key — enables Claude models |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | Google AI API key — enables Gemini models |
-| `GROQ_API_KEY` | Groq API key — enables fast open-weight model inference |
-| `MISTRAL_API_KEY` | Mistral API key — enables Mistral models |
+| `OPENAI_API_KEY` | **Required for AI features unless every workspace brings its own key.** The platform-wide OpenAI key, used for AI answers, draft replies and embeddings for any workspace that has not saved its own provider key |
 
-<Note>
-  At least one AI provider key is strongly recommended. Without one, AI draft replies are disabled and KB search falls back to keyword matching.
-</Note>
+<Callout type="info">
+  Anthropic, Google Gemini, Groq, Mistral, xAI and OpenAI-compatible endpoints are configured per workspace in **Settings → AI Model**, where each workspace saves its own key. They are not read from environment variables, so `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `GROQ_API_KEY` and `MISTRAL_API_KEY` have no effect; support for them is coming soon. Embeddings must produce 1536-dimension vectors.
+</Callout>
 
-## Widget chat runtime
+### Widget chat runtime
 
 | Variable | Description |
 |---|---|
-| `COPILOTKIT_TELEMETRY_DISABLED` | Opts the widget chat's CopilotKit runtime out of its telemetry ping. Defaults to `true`; set to `false` to opt back in. |
+| `COPILOTKIT_TELEMETRY_DISABLED` | Optional. Opts the widget chat runtime out of its telemetry ping. Defaults to `true`; set to `false` to opt back in |
 
-## Discord
-
-| Variable | Description |
-|---|---|
-| `DISCORD_TOKEN` | Bot token from the Discord Developer Portal. Required on both the app service (for the channel picker UI) and the bot service |
-| `DISCORD_CLIENT_ID` | Discord application client ID. Optional — when set, onboarding offers a 1-click "Add to Discord" flow instead of asking for a manually-created bot token and channel IDs |
-| `DISCORD_CLIENT_SECRET` | Discord OAuth2 client secret. Required with `DISCORD_CLIENT_ID` for the 1-click flow |
-| `DISCORD_APPLICATION_ID` | Discord application ID (same value as `DISCORD_CLIENT_ID` in most setups). Required to register the `/ask` and `/summarize` slash commands |
-| `DISCORD_GUILD_ID` | ID of the Discord server to monitor |
-| `BOT_SECRET` | Shared secret between the bot and the app for authenticating ingest requests |
-| `BOT_TARGET_URL` | Base URL the bot posts ingested messages to, e.g. `https://answerloops.com` — no trailing slash |
-
-## Slack
+### Knowledge-base crawling
 
 | Variable | Description |
 |---|---|
-| `SLACK_CLIENT_ID` | Slack app client ID |
-| `SLACK_CLIENT_SECRET` | Slack app client secret |
-| `SLACK_SIGNING_SECRET` | Used to verify that incoming Slack events are genuine |
-| `SLACK_POLL_INTERVAL_SECONDS` | How often (in seconds) the app polls Slack for new messages. Defaults to `60` |
+| `FIRECRAWL_API_KEY` | Optional. Firecrawl API key; needed for URL crawl imports into the knowledge base |
+| `FIRECRAWL_API_URL` | Optional. Point at a self-hosted Firecrawl instance instead of the managed service |
 
-## Google Chat
+## Channels
+
+### Discord
 
 | Variable | Description |
 |---|---|
-| `GOOGLE_CHAT_SERVICE_ACCOUNT_JSON` | Full service-account JSON key, as a single-line string. Authenticates outgoing replies to the Chat API. |
-| `GOOGLE_CHAT_ENDPOINT_URL` | Public HTTP endpoint URL for the Chat app's connection settings. Must exactly match what's configured in Google Cloud — used to verify incoming request tokens. |
+| `DISCORD_TOKEN` | Bot token from the Discord Developer Portal. Needed on both the app service (channel picker, invite flow) and the bot service. A workspace's own saved bot token takes precedence |
+| `DISCORD_CLIENT_ID` | Optional. Discord application client ID. When set, onboarding offers a 1-click "Add to Discord" flow instead of asking for a manually created bot token and channel IDs |
+| `DISCORD_CLIENT_SECRET` | Optional. OAuth2 client secret; required together with `DISCORD_CLIENT_ID` for the 1-click flow |
+| `DISCORD_APPLICATION_ID` | Optional. Discord application ID (usually the same as `DISCORD_CLIENT_ID`). Required to register the `/ask` and `/summarize` slash commands |
+| `DISCORD_GUILD_ID` | Optional. When set, slash commands are registered for that one server (instant) instead of globally (can take up to an hour to appear) |
+| `DISCORD_CHANNEL_IDS` | Optional. Comma-separated channel IDs the bot watches when the workspace has no channels saved in Settings |
+| `BOT_SECRET` | Shared secret between the bot service and the app. Each workspace gets its own in Settings; this is the environment fallback |
+| `BOT_TARGET_URL` | URL of the app as seen from the bot service, e.g. `https://answerloops.com` (no trailing slash). Defaults to `http://localhost:3000` |
 
-## GitHub
+### Slack
+
+| Variable | Description |
+|---|---|
+| `SLACK_CLIENT_ID` | Slack app client ID; enables the 1-click "Add to Slack" install |
+| `SLACK_CLIENT_SECRET` | Slack app client secret; required with `SLACK_CLIENT_ID` |
+| `SLACK_SIGNING_SECRET` | Signing secret from your Slack app, needed for Events API delivery |
+| `SLACK_POLL_INTERVAL_SECONDS` | Optional. How often, in seconds, the app polls Slack for new messages. Defaults to `60` |
+
+### Google Chat
+
+| Variable | Description |
+|---|---|
+| `GOOGLE_CHAT_SERVICE_ACCOUNT_JSON` | Full service-account JSON key as a single-line string, used for outgoing replies through the Chat API |
+| `GOOGLE_CHAT_ENDPOINT_URL` | Public HTTP endpoint URL of the Chat app. Must exactly match what is configured in Google Cloud |
+
+### GitHub
 
 | Variable | Description |
 |---|---|
 | `GITHUB_APP_ID` | Numeric ID of your GitHub App |
-| `GITHUB_APP_PRIVATE_KEY` | PEM-encoded private key generated in the GitHub App settings |
-| `GITHUB_WEBHOOK_SECRET` | Secret used to verify GitHub webhook payloads. Generate with `openssl rand -hex 32` — paste without trailing newline. Required — `/api/github/webhook` returns `503` until it is set |
-| `GITHUB_APP_SLUG` | URL slug for your GitHub App, e.g. `answerloops` |
-| `GITHUB_APP_CLIENT_ID` | The GitHub App's Client ID, used to confirm the person completing an install can access the installation. Enable "Request user authorization (OAuth) during installation" on the App |
-| `GITHUB_APP_CLIENT_SECRET` | A client secret generated in the GitHub App settings. Required with `GITHUB_APP_CLIENT_ID` |
+| `GITHUB_APP_PRIVATE_KEY` | The App's PEM private key, **base64-encoded** (`base64 -i your-app.pem \| tr -d '\n'`) |
+| `GITHUB_WEBHOOK_SECRET` | Webhook secret for the GitHub App. Generate with `openssl rand -hex 32` and paste without a trailing newline. `/api/github/webhook` returns `503` until it is set |
+| `GITHUB_APP_SLUG` | URL slug of your GitHub App, e.g. `answerloops` |
+| `GITHUB_APP_CLIENT_ID` | The App's Client ID. Enable "Request user authorization (OAuth) during installation" on the App |
+| `GITHUB_APP_CLIENT_SECRET` | A client secret generated in the App settings; required with `GITHUB_APP_CLIENT_ID` |
 
-## Telegram
-
-| Variable | Description |
-|---|---|
-| `TELEGRAM_WEBHOOK_BASE_URL` | Optional. Overrides `AUTH_URL` for the Telegram webhook only. Each organization saves its own bot token in Integrations → Telegram. |
-
-## Resend (email)
+### Telegram
 
 | Variable | Description |
 |---|---|
-| `RESEND_API_KEY` | Resend API key — used for both outbound transactional email and the email ingest channel |
-| `RESEND_FROM` | Default sender address for transactional emails, e.g. `support@answerloops.com` |
-| `RESEND_NEWSLETTER_FROM` | Sender address for blog newsletter signup confirmations (can be the same as `RESEND_FROM`) |
-| `RESEND_WEBHOOK_SECRET` | Svix signing secret (`whsec_...`) for Resend's outbound delivery-status webhooks (bounces/complaints) — bounce/complaint tracking is unavailable without it, sending and inbound ingest still work |
-| `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | Google Cloud OAuth client for the "Connect Gmail" send-only integration — optional, without it that feature is unavailable |
-| `GMAIL_REDIRECT_URI` | Optional override for the Gmail OAuth callback URL (defaults to `<app-url>/api/email/gmail/callback`) |
-| `OUTLOOK_CLIENT_ID` / `OUTLOOK_CLIENT_SECRET` | Microsoft Entra app registration for the "Connect Outlook" send-only integration — optional, without it that feature is unavailable |
-| `OUTLOOK_REDIRECT_URI` | Optional override for the Outlook OAuth callback URL (defaults to `<app-url>/api/email/outlook/callback`) |
+| `TELEGRAM_WEBHOOK_BASE_URL` | Optional. Overrides `AUTH_URL` as the base for the Telegram webhook address. Each workspace saves its own bot token in Integrations → Telegram, so there is no bot-token variable |
 
-## Firecrawl
+### Email (Resend, Gmail, Outlook)
 
 | Variable | Description |
 |---|---|
-| `FIRECRAWL_API_KEY` | Firecrawl API key — required for KB URL crawl imports |
-| `FIRECRAWL_API_URL` | Optional. Point at a self-hosted Firecrawl instance instead of the managed service |
+| `RESEND_API_KEY` | Resend API key for outbound transactional email and the email ingest channel |
+| `RESEND_FROM` | Default sender address for transactional email, e.g. `support@answerloops.com` |
+| `RESEND_NEWSLETTER_FROM` | Sender address for blog newsletter signup confirmations (can match `RESEND_FROM`) |
+| `RESEND_WEBHOOK_SECRET` | Required for inbound email through Resend, and for bounce and complaint tracking. Signing secret (`whsec_...`) of your Resend webhook. Without it, Resend's events are not accepted; outbound replies still send |
+| `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET` | Optional. Google Cloud OAuth client for the "Connect Gmail" send-only integration. Without it that feature is unavailable |
+| `GMAIL_REDIRECT_URI` | Optional. Override for the Gmail OAuth callback URL (defaults to `<app-url>/api/email/gmail/callback`) |
+| `OUTLOOK_CLIENT_ID` / `OUTLOOK_CLIENT_SECRET` | Optional. Microsoft Entra app registration for the "Connect Outlook" send-only integration. Without it that feature is unavailable |
+| `OUTLOOK_REDIRECT_URI` | Optional. Override for the Outlook OAuth callback URL (defaults to `<app-url>/api/email/outlook/callback`) |
+| `FEEDBACK_NOTIFY_EMAIL` | Optional. Where to send an alert when someone posts product feedback. Defaults to `hello@answerloops.com`; set your own address on a self-hosted install |
 
-## Per-org integrations (no environment variable)
+### Per-workspace integrations (no environment variable)
 
-Discourse, Circle, and the Notion KB source are configured entirely per-organization — there is no platform-wide app or shared credential to set here. Each org pastes its own token or secret in Settings, encrypted at rest with `ENCRYPTION_KEY` (above).
+Discourse, Circle and the Notion knowledge-base source are configured entirely per workspace. There is no platform-wide app or shared credential to set; each workspace pastes its own token or secret in Settings, and it is stored encrypted with `ENCRYPTION_KEY`.
 
 | Integration | Where it's configured | Setup guide |
 |---|---|---|
@@ -146,46 +163,73 @@ Discourse, Circle, and the Notion KB source are configured entirely per-organiza
 | Circle | Integrations → Circle | [Circle](/docs/integrations/circle) |
 | Notion KB source | Integrations → Notion | [Notion](/docs/integrations/notion) |
 
-## Analytics tuning
+## Operations
+
+### Analytics tuning
 
 | Variable | Description |
 |---|---|
-| `ROI_MINUTES_PER_TICKET` | Optional. Minutes assumed saved per deflected ticket, used in the ROI-hours-saved calculation. Defaults to a reasonable estimate — see `lib/analytics/roi.ts` |
-| `ROI_STAFF_HOURLY_RATE` | Optional. Hourly staff rate used to convert hours saved into a dollar figure. Same defaulting behaviour |
+| `ROI_MINUTES_PER_TICKET` | Optional. Minutes assumed saved per deflected ticket in the ROI calculation. Defaults to `10` |
+| `ROI_STAFF_HOURLY_RATE` | Optional. Hourly staff rate used to turn hours saved into a dollar figure. Defaults to `50` |
 
-## Web Push (VAPID)
+### Web Push (VAPID)
+
+Browser push notifications turn on when both keys are set.
 
 | Variable | Description |
 |---|---|
-| `VAPID_PUBLIC_KEY` | VAPID public key for browser push notifications |
+| `VAPID_PUBLIC_KEY` | VAPID public key |
 | `VAPID_PRIVATE_KEY` | VAPID private key |
-| `VAPID_EMAIL` | Contact email included in VAPID headers, e.g. `mailto:admin@answerloops.com` |
+| `VAPID_EMAIL` | Optional. Contact address in `mailto:` form, e.g. `mailto:admin@example.com` |
 
-Generate a VAPID key pair with:
+Generate a key pair with:
+
 ```bash
 npx web-push generate-vapid-keys
 ```
 
-## Sentry (error tracking)
+### Sentry (error tracking)
 
 | Variable | Description |
 |---|---|
-| `SENTRY_DSN` | DSN from your Sentry project's Client Keys settings. Unset disables error tracking entirely — no requests to Sentry are made |
-| `SENTRY_AUTH_TOKEN` | Optional. Only needed to upload source maps at build time for readable production stack traces |
-| `SENTRY_ORG` | Optional. Your Sentry organization slug, used alongside `SENTRY_AUTH_TOKEN` |
-| `SENTRY_PROJECT` | Optional. Your Sentry project slug, used alongside `SENTRY_AUTH_TOKEN` |
+| `SENTRY_DSN` | Optional. DSN from your Sentry project's Client Keys settings. Unset disables error tracking entirely; no requests to Sentry are made |
+| `SENTRY_AUTH_TOKEN` | Optional. Only needed to upload source maps at build time |
+| `SENTRY_ORG` | Optional. Sentry organization slug, used with `SENTRY_AUTH_TOKEN` |
+| `SENTRY_PROJECT` | Optional. Sentry project slug, used with `SENTRY_AUTH_TOKEN` |
 
-## Billing / deployment mode
+### Build, privacy and development
 
 | Variable | Description |
 |---|---|
-| `DEPLOYMENT_MODE` | Set to `cloud` **only** on answerLoops' own managed SaaS deployment. Determines whether plan-tier feature gating (Discord/Slack integrations, CSAT scoring, simulation, knowledge gap dashboard, custom AI model config) applies at all. Any other value, or unset, means self-hosted: unmetered, every feature unlocked, no Stripe required |
-| `STRIPE_SECRET_KEY` | Stripe secret API key. Required when `DEPLOYMENT_MODE=cloud` — its absence there is treated as a misconfiguration (billing shows an error state) rather than falling back to self-hosted/unlimited |
-| `STRIPE_WEBHOOK_SECRET` | Signing secret for the Stripe webhook endpoint (`/api/billing/webhook`), used to verify subscription lifecycle events |
-| `STRIPE_PUBLISHABLE_KEY` | Publishable key (`pk_...`) for the embedded checkout form on `/checkout`. Read at request time — deliberately not `NEXT_PUBLIC_`-prefixed, since that prefix is substituted at build time and could never be set by someone running a prebuilt image. Safe to expose in client code by design — it can only create payment attempts, never read or move money. Without it that page shows a disabled state instead of a card form |
-| `STRIPE_PRICE_STANDARD` / `STRIPE_PRICE_PRO` / `STRIPE_PRICE_ENTERPRISE` | Stripe Price IDs used for each paid plan's checkout session. Each var must hold the price for the plan it names — the amount shown in the app comes from the code, while the amount charged comes from Stripe, so a mismatch bills the wrong figure without erroring |
-| `STRIPE_PRICE_STANDARD_ANNUAL` / `STRIPE_PRICE_PRO_ANNUAL` / `STRIPE_PRICE_ENTERPRISE_ANNUAL` | Yearly Stripe Price IDs for the same three plans. Selected when a visitor picks annual billing on the pricing page. A plan without one declines annual checkout rather than billing the monthly price. |
+| `CLOUDFLARE_WEB_ANALYTICS` | Optional. Set to `true` to allow Cloudflare Web Analytics on pages. Read when the config loads, so set it where the build runs |
+| `NEXT_PUBLIC_DOCS_WIDGET_TOKEN` | Optional. Embeds a chat widget token on the built-in `/docs` pages. Local or dev use; the widget does not render without it |
+| `ALLOW_PRIVATE_OUTBOUND_URLS` | Development only. Set to `true` to let outbound fetches reach private addresses; ignored when `NODE_ENV=production` |
+| `MOCK_EXTERNALS` | Test suites only. Replaces external services with in-process fakes; a production process refuses to run with it set |
 
-<Note>
-  `DEPLOYMENT_MODE` was introduced to stop deployment type from being inferred from whether `STRIPE_SECRET_KEY` happened to be set — a missing or rotated key on the cloud deployment used to silently degrade every paying org to unmetered/unlimited instead of surfacing as a misconfiguration.
-</Note>
+## Billing and deployment mode
+
+<Callout type="warn">
+  Everything in this section is for answerLoops' own managed service. Self-hosters leave all of it unset: your install is unmetered, every feature is unlocked, and no Stripe account is needed.
+</Callout>
+
+| Variable | Description |
+|---|---|
+| `DEPLOYMENT_MODE` | **Managed service only.** Set to `cloud` only on answerLoops' own managed deployment. It decides whether plan-tier feature gating applies at all. Any other value, or unset, means self-hosted |
+| `STRIPE_SECRET_KEY` | **Managed service only.** Stripe secret API key. Required when `DEPLOYMENT_MODE=cloud`; its absence there is treated as a misconfiguration (billing shows an error state) |
+| `STRIPE_WEBHOOK_SECRET` | **Managed service only.** Signing secret for the Stripe webhook endpoint (`/api/billing/webhook`) |
+| `STRIPE_PUBLISHABLE_KEY` | **Managed service only.** Publishable key (`pk_...`) for the embedded checkout form on `/checkout`, read at request time. `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is still accepted as a fallback. Without either, the page shows a disabled state instead of a card form |
+| `STRIPE_PRICE_STANDARD` / `STRIPE_PRICE_PRO` / `STRIPE_PRICE_ENTERPRISE` | **Managed service only.** Stripe Price IDs for each paid plan's checkout. Each must hold the price for the plan it names: the amount shown in the app comes from the code, the amount charged from Stripe |
+| `STRIPE_PRICE_STANDARD_ANNUAL` / `STRIPE_PRICE_PRO_ANNUAL` / `STRIPE_PRICE_ENTERPRISE_ANNUAL` | **Managed service only.** Yearly Price IDs for the same plans, used when a visitor picks annual billing. A plan without one declines annual checkout rather than billing the monthly price |
+| `FEEDBACK_WIDGET_ENABLED` | **Managed service only.** Set to `true` or `1` to show the product feedback board. Off by default; self-hosted installs have no board |
+
+<Callout type="info">
+  `DEPLOYMENT_MODE` exists so deployment type is never guessed from whether `STRIPE_SECRET_KEY` happens to be set. A missing or rotated key on the managed service surfaces as a misconfiguration instead of silently turning every paying workspace into an unmetered one.
+</Callout>
+
+## Where to go next
+
+<Cards>
+  <Card icon="Server" title="Self-hosting guide" href="/docs/self-hosting/environment-variables">Step-by-step setup with example values and the variables you need first.</Card>
+  <Card icon="Rocket" title="Quickstart" href="/docs/quickstart-self-host">Get a first workspace answering questions.</Card>
+  <Card icon="Plug" title="Integrations" href="/docs/integrations/agent-api">Connect channels and the Agent API.</Card>
+</Cards>

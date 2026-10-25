@@ -4,9 +4,17 @@ description: Plan tiers, deflection limits, and pricing for answerLoops Cloud.
 icon: Receipt
 ---
 
-## Plans
+answerLoops Cloud has three plans, priced by how many questions the AI answers for you rather than by seat. This page lists what each plan costs, how many answers it includes, and what happens when you reach the limit, so you can pick a plan before you start a trial.
 
-Pricing is deflection-based, not per-seat. Every hosted plan includes the full AI pipeline — higher tiers add scale, insight, and support.
+A **deflection** is a question the AI answered on its own, without a person stepping in. Every plan includes the full AI pipeline; higher tiers add scale, insight and support.
+
+## Compare the plans
+
+<Cards>
+  <Card icon="Layers" title="Standard: $49/mo">500 deflections a month. Hard cap: auto-answering pauses at the limit.</Card>
+  <Card icon="TrendingUp" title="Pro: $149/mo">3,000 deflections a month. Soft cap: answers keep going out, $5 per 100 over.</Card>
+  <Card icon="Building2" title="Enterprise: $499/mo">Unlimited deflections. No cap to reach.</Card>
+</Cards>
 
 | Plan | Price (monthly) | Price (annual, per mo) | Deflections/mo | Beyond the limit |
 |---|---|---|---|---|
@@ -14,9 +22,13 @@ Pricing is deflection-based, not per-seat. Every hosted plan includes the full A
 | Pro | $149 | $119 (20%+ off) | 3,000 | Soft cap — keeps answering, $5 per 100 over |
 | Enterprise | $499 | $399 (20%+ off) | Unlimited | — |
 
-There is no free tier. Every plan starts with a 14-day trial — see below.
+There is no free tier. Every plan starts with a 14-day trial, described below.
 
 Annual billing saves at least 20%. The annual charges are **$468 Standard**, **$1,428 Pro**, and **$4,788 Enterprise**, paid once per year. The equivalent monthly amounts in the table are not monthly installments.
+
+<Callout type="info">
+  The [pricing page](https://answerloops.com/pricing) has the full feature comparison and is the one place it is kept up to date. The differences that affect day-to-day use are the deflection allowance above and how the limit behaves.
+</Callout>
 
 ## What counts as a deflection
 
@@ -24,28 +36,43 @@ An automated channel answer counts when it meets the configured confidence thres
 
 Allowances reset each **calendar month**, including on annual subscriptions.
 
-## Trial
+## Start with the trial
 
-Pick a plan at signup and it's fully unlocked for 14 days (card required) — every feature and the deflection limit of the tier you chose, not a reduced trial-only allowance. Cancel any time before the trial ends and you won't be charged. If the trial ends without a valid payment method, access stops immediately — there's no free tier to drop back to.
+Pick a plan at signup and it is fully unlocked for 14 days (card required). You get every feature and the deflection limit of the tier you chose, not a reduced trial-only allowance.
+
+- Cancel any time before the trial ends and you won't be charged.
+- If the trial ends without a valid payment method, access stops immediately. There is no free tier to drop back to.
 
 ## Included AI usage
 
-Every hosted plan includes AI usage, so no AI provider key is required: triage, drafting and knowledge-base processing run on answerLoops' own models up to a limit, for the whole 14-day trial and then each calendar month on a paid plan (annual plans included). Answers and knowledge-base processing have separate limits. A dashboard banner appears at 80% of either, and once you reach one of them that part of AI pauses until you add your own provider in **Settings → AI Model** (or, on a paid plan, until the next month starts; the trial's usage doesn't reset). An OpenAI key removes both limits; another provider removes the answers limit, and an OpenAI embedding key removes the knowledge-base one. Doesn't apply to self-hosted deployments. See [Billing](/docs/product/billing).
+Every hosted plan includes AI usage, so no AI provider key is required: triage, drafting and knowledge-base processing run on answerLoops' own models up to a limit, for the whole 14-day trial and then each calendar month on a paid plan (annual plans included). Answers and knowledge-base processing have separate limits.
 
-## What each plan includes
-
-The [pricing page](https://answerloops.com/pricing) has the full feature comparison and is the one place it is kept up to date. The differences that affect day-to-day use are the deflection allowance above and how the limit behaves, described next.
+A dashboard banner appears at 80% of either. Once you reach one of them, that part of AI pauses until you add your own provider in **Settings → AI Model** (or, on a paid plan, until the next month starts; the trial's usage doesn't reset). An OpenAI key removes both limits; another provider removes the answers limit, and an OpenAI embedding key removes the knowledge-base one. This doesn't apply to self-hosted deployments. See [Billing](/docs/product/billing).
 
 ## Approaching or hitting your limit
 
-Once an org crosses 80% of its monthly deflection allowance, an in-app warning banner appears on **Settings → Billing** with a one-click upgrade to the next tier.
+Once an org crosses 80% of its monthly deflection allowance, an in-app warning banner appears on **Settings → Billing** with a one-click upgrade to the next tier. What happens at the limit depends on the plan's cap.
 
-What happens at the limit depends on the plan's cap:
-
-- **Standard (hard cap)** — AI auto-answering pauses until the next calendar-month reset once 500 deflections are used, and new questions route straight to the human queue instead. There is no Standard overage charge.
-- **Pro (soft cap)** — answers keep going out past 3,000 deflections. Usage beyond the included amount is billed at $5 per 100 (rounded up to the nearest 100). The Billing page shows how far over the plan the org is.
-- **Enterprise** — unlimited; there is no cap to reach.
+<Accordions type="single">
+  <Accordion title="Standard (hard cap)">
+    AI auto-answering pauses until the next calendar-month reset once 500 deflections are used, and new questions route straight to the human queue instead. There is no Standard overage charge.
+  </Accordion>
+  <Accordion title="Pro (soft cap)">
+    Answers keep going out past 3,000 deflections. Usage beyond the included amount is billed at $5 per 100 (rounded up to the nearest 100). The Billing page shows how far over the plan the org is.
+  </Accordion>
+  <Accordion title="Enterprise">
+    Unlimited; there is no cap to reach.
+  </Accordion>
+</Accordions>
 
 ## Self-hosting
 
-The core platform is AGPL-3.0 licensed. Self-hosted deployments have every feature unlocked, no deflection limit, and no billing integration required — see [Production Setup Guide](/docs/self-hosting/production).
+The core platform is AGPL-3.0 licensed. Self-hosted deployments have every feature unlocked, no deflection limit, and no billing integration required. See the [self-hosting production guide](/docs/self-hosting/production).
+
+## Where to go next
+
+<Cards>
+  <Card icon="Receipt" title="Billing" href="/docs/product/billing">Manage your subscription, usage and invoices.</Card>
+  <Card icon="Server" title="Self-hosting" href="/docs/self-hosting/production">Run answerLoops yourself with every feature unlocked.</Card>
+  <Card icon="Settings" title="AI model settings" href="/docs/self-hosting/ai-providers">Bring your own AI provider.</Card>
+</Cards>
