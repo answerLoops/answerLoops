@@ -78,6 +78,15 @@ function collectDocPageIds(nav: typeof docsNav): string[] {
   return ids;
 }
 
+// Pages whose content now lives on another page. Each old path keeps working
+// on every host with a permanent redirect, so links, bookmarks and search
+// results from before the merge still land somewhere useful.
+const MERGED_DOC_PAGES: Record<string, string> = {
+  'self-hosting/ai-providers': 'product/ai-config',
+  'self-hosting/slack-app': 'integrations/slack',
+  'self-hosting/telegram-bot': 'integrations/telegram',
+};
+
 // The hand-written API reference page was replaced by a generated,
 // multi-page Agent API reference (see scripts/generate-api-reference.mjs);
 // its old single-page slug now resolves to the new section's overview page.
@@ -87,6 +96,7 @@ function collectDocPageIds(nav: typeof docsNav): string[] {
 const LEGACY_SLUG_OVERRIDES: Record<string, string> = {
   'reference/api-endpoints': 'reference/api/overview',
   'self-hosting/stripe': 'self-hosting/environment-variables',
+  ...MERGED_DOC_PAGES,
 };
 
 const legacyDocPageIds = collectDocPageIds(docsNav);
@@ -172,6 +182,11 @@ const nextConfig: NextConfig = {
         destination: '/dashboard',
         permanent: true,
       },
+      ...Object.entries(MERGED_DOC_PAGES).map(([from, to]) => ({
+        source: `/docs/${from}`,
+        destination: `/docs/${to}`,
+        permanent: true,
+      })),
       ...legacyDocPageIds.map((id) => ({
         source: `/${id}`,
         has: [{ type: 'host' as const, value: 'docs.answerloops.com' }],

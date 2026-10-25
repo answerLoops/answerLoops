@@ -25,7 +25,7 @@ On a hosted plan you do not have to set anything up: AI usage is included. Add y
 | Have an OpenAI key | Use OpenAI for chat. The same key covers embeddings, so one key removes both limits. |
 | Prefer Anthropic, Groq, xAI, Google Gemini, or Mistral for answers | Use that provider for chat. Add an OpenAI key under **Embeddings** to remove the knowledge-base limit; on a hosted plan it is optional. |
 | Want to run your own model, such as Ollama, LM Studio, or vLLM | Use an OpenAI-compatible endpoint. This is **Custom AI model configuration**, included on Enterprise and in the self-hosted edition. |
-| Are self-hosting | Set `OPENAI_API_KEY` in your environment, or save provider settings in this page. |
+| Are self-hosting | Set `OPENAI_API_KEY` in your environment, or save provider settings in this page. See [Self-hosted installs](#self-hosted-installs). |
 
 ## What runs by default
 
@@ -108,6 +108,32 @@ If you switch the chat or embedding provider and leave the key field blank, the 
 
 Leaving a key field blank when you update the **same** provider keeps the stored key. The field shows **Key saved**.
 
+## Self-hosted installs
+
+A self-hosted deployment has no included usage, so it needs a key from the start. There are two places to put one.
+
+<Tabs items={['Server default (OpenAI)', 'Per workspace (any provider)']}>
+  <Tab value="Server default (OpenAI)">
+    Set `OPENAI_API_KEY` in `.env` and restart the app. Every workspace that has not saved its own key uses it, for both chat and embeddings. It is the quickest way to get answers working.
+
+    ```dotenv
+    OPENAI_API_KEY=<your-openai-api-key>
+    ```
+
+    OpenAI is the only provider read from the server environment. Reading the Anthropic, Gemini, Groq, Mistral and xAI keys from environment variables is coming soon.
+  </Tab>
+  <Tab value="Per workspace (any provider)">
+    Use **Settings → AI Model**, as described above. The key you save is stored encrypted and takes priority over the server default for that workspace. This is the only way to use Anthropic, Gemini, Groq, Mistral or xAI today.
+  </Tab>
+</Tabs>
+
+Two things are specific to self-hosting:
+
+- **Embedding size.** The knowledge base stores 1536-dimension vectors. An OpenAI-compatible embedding endpoint works as long as its model produces vectors of that size; a model with a different size is rejected when an article is saved.
+- **Re-indexing runs in the bot service.** When the embedding model changes, the background re-index is performed by the `bot` service, so keep it running. See [Production deployment](/docs/self-hosting/production).
+
+To run a model on your own hardware, follow the [Ollama guide](/docs/integrations/ollama). It covers the base URL to use when answerLoops runs in Docker. Most local setups keep an OpenAI key for embeddings only.
+
 ## Reset to the default
 
 **Reset to platform default** deletes your workspace's AI settings. A hosted workspace falls back to included usage (or, once the limit is reached, to no AI until next month). A self-hosted deployment falls back to its environment key.
@@ -121,5 +147,5 @@ Leaving a key field blank when you update the **same** provider keeps the stored
 <Cards>
   <Card icon="CreditCard" title="Billing" href="/docs/product/billing">See how included AI usage and its limits work.</Card>
   <Card icon="BookOpen" title="Knowledge base" href="/docs/product/knowledge-base">Add the content your embedding model will index.</Card>
-  <Card icon="Server" title="Self-hosting" href="/docs/self-hosting/environment-variables">Environment variables for self-hosted installs.</Card>
+  <Card icon="Server" title="Environment variables" href="/docs/reference/environment-variables">Every setting a self-hosted install reads, including `OPENAI_API_KEY`.</Card>
 </Cards>

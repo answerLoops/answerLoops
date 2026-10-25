@@ -41,6 +41,14 @@ Because the bot is per-organization, the token you generate with @BotFather is s
 
 ---
 
+## Self-hosting: make the app reachable
+
+Telegram delivers messages by calling your app, so a self-hosted deployment needs an address Telegram can reach over public HTTPS. Set `AUTH_URL` to it (for example `https://support.yourcompany.com`). Addresses like `localhost` or private hostnames are refused by Telegram. Nothing else is needed from the operator: there is no shared bot, and each organization creates its own below. Skip this section on managed cloud.
+
+<Callout type="warn">
+  Do not point `AUTH_URL` at a tunnel just to test Telegram locally. `AUTH_URL` also controls where Google sign-in returns, so changing it breaks login. Set `TELEGRAM_WEBHOOK_BASE_URL` to the tunnel address instead.
+</Callout>
+
 ## Setup
 
 ### 1. Create a bot with @BotFather

@@ -44,6 +44,22 @@ Every connected channel appears in the unified ticket list with a Slack source b
 
 ---
 
+## Self-hosting: create the Slack app
+
+On managed cloud the Slack app already exists. On your own deployment **you** create it once, and then your team connects from **Integrations → Slack** as described below. Skip this section on managed cloud.
+
+<Steps>
+  <Step title="Create the app">
+    Go to [api.slack.com/apps](https://api.slack.com/apps) and create an app for your workspace. If you only plan to paste a token by hand (polling), you can skip the next two steps and generate the bot token from the app's **OAuth & Permissions** page.
+  </Step>
+  <Step title="Add the redirect URL and scopes">
+    Under **OAuth & Permissions → Redirect URLs**, add `<your-app-url>/api/slack/callback`, where `<your-app-url>` is the value of `AUTH_URL`. Add the bot token scopes `channels:history`, `channels:read`, `channels:join`, `chat:write`, `reactions:write` and `users:read`.
+  </Step>
+  <Step title="Set the environment variables">
+    Set the variables from the [reference table](#environment-variables-reference) on the `app` service, plus `SLACK_POLL_INTERVAL_SECONDS` on the `bot` service if you use polling, then restart them. Polling runs inside the `bot` service, so it must be running.
+  </Step>
+</Steps>
+
 ## Option 1: 1-click OAuth (recommended)
 
 1. In **Integrations → Slack** (or the onboarding wizard), click **Add to Slack**

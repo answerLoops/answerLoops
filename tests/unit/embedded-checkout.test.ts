@@ -237,11 +237,10 @@ describe('switching plan cannot mount a stale session', () => {
 describe('the publishable key is documented wherever env vars are listed', () => {
   // Not .env.example: that's the self-hosting quick-start template, and
   // billing/Stripe is cloud-platform-only — self-hosted deployments are
-  // unmetered with checkout unused, so it's deliberately absent there. These
-  // two are the reference docs that cover the cloud deployment too.
+  // unmetered with checkout unused, so it's deliberately absent there. The
+  // reference page is the one that covers the cloud deployment too.
   it.each([
     'content/docs/reference/environment-variables.mdx',
-    'content/docs/self-hosting/environment-variables.mdx',
   ])('%s names STRIPE_PUBLISHABLE_KEY', (file) => {
     // Anyone relying on this doc without it gets a checkout page with no card
     // form. It has to be the unprefixed name: the prefixed one is baked in

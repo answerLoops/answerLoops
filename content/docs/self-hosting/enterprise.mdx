@@ -19,9 +19,9 @@ Application hosting and model processing are separate choices. External chat and
 | Channel | Connection method | Setup guide |
 | --- | --- | --- |
 | Discord | A bot uses the platform gateway and API. | [Discord bot setup](/docs/self-hosting/discord-bot) |
-| Slack | Events API, or polling mode for self-hosted deployments. | [Slack app setup](/docs/self-hosting/slack-app) |
+| Slack | Events API, or polling mode for self-hosted deployments. | [Slack guide](/docs/integrations/slack#self-hosting-create-the-slack-app) |
 | GitHub | GitHub App webhooks. | [GitHub integration](/docs/integrations/github) |
-| Telegram | A bot webhook. | [Telegram bot setup](/docs/self-hosting/telegram-bot) |
+| Telegram | A bot webhook. | [Telegram guide](/docs/integrations/telegram#self-hosting-make-the-app-reachable) |
 | Email | An inbound-message endpoint and configured reply service. | [Email channel setup](/docs/self-hosting/email-channel) |
 | Google Chat | A configured Chat app endpoint and paired space. | [Google Chat app setup](/docs/self-hosting/google-chat-app) |
 | Discourse | API access and webhook configuration. | [Discourse integration](/docs/integrations/discourse) |
@@ -33,7 +33,7 @@ Follow each integration guide for the required permissions and callback configur
 
 Polling is an alternative to Slack event delivery when operating a self-hosted deployment. The bot requests channel history at the configured interval. This changes how Slack events reach the bot; it does not remove the application's other network requirements.
 
-See [Slack app setup](/docs/self-hosting/slack-app) for scopes, channel access, and polling configuration.
+See the [Slack guide](/docs/integrations/slack#self-hosting-create-the-slack-app) for scopes, channel access, and polling configuration.
 
 ## Prepare for launch
 
@@ -61,6 +61,6 @@ For hosted Enterprise, contact [hello@answerloops.com](mailto:hello@answerloops.
 
 <Cards>
   <Card icon="Globe" title="Production" href="/docs/self-hosting/production">Plan hosting, storage, backups, and the upgrade process.</Card>
-  <Card icon="Cpu" title="AI providers" href="/docs/self-hosting/ai-providers">Choose the chat and embedding providers your deployment uses.</Card>
+  <Card icon="Cpu" title="AI providers" href="/docs/product/ai-config#self-hosted-installs">Choose the chat and embedding providers your deployment uses.</Card>
   <Card icon="CircleArrowUp" title="Upgrading" href="/docs/self-hosting/upgrading">Keep a running deployment current.</Card>
 </Cards>

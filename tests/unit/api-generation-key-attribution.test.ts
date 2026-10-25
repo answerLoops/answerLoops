@@ -303,7 +303,6 @@ describe('TRUST_PROXY_HOPS is documented everywhere env vars are listed', () => 
 
   it.each([
     'content/docs/reference/environment-variables.mdx',
-    'content/docs/self-hosting/environment-variables.mdx',
   ])('appears in %s with its default called out', (file) => {
     const doc = readFileAt(file)
     expect(doc, `${file} never mentions TRUST_PROXY_HOPS`).toContain('TRUST_PROXY_HOPS')
