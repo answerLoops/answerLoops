@@ -16,8 +16,8 @@
       {
         "id": "edit",
         "label": "Change the model",
-        "x": 27.8,
-        "y": 52.7,
+        "x": 92.4,
+        "y": 44.3,
         "w": 3.5,
         "h": 4.1
       },
@@ -25,15 +25,15 @@
         "id": "chat-provider",
         "label": "Provider, model and key status",
         "x": 22.8,
-        "y": 59.1,
+        "y": 51.1,
         "w": 73,
-        "h": 19.5
+        "h": 23
       },
       {
         "id": "embeddings",
         "label": "Embeddings",
         "x": 23.8,
-        "y": 70.6,
+        "y": 62.6,
         "w": 71.1,
         "h": 3.4
       }

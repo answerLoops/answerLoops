@@ -15,7 +15,8 @@
  *   - Idempotent: every run wipes that workspace's data and writes it again.
  *   - Contains no secret values. Credentials that the app needs to display a
  *     "connected" integration are generated at runtime with crypto.randomBytes
- *     and are meaningless outside the throwaway database.
+ *     (or, for the AI model keys, are fixed readable markers) and are
+ *     meaningless outside the throwaway database.
  */
 
 import crypto from 'node:crypto'
@@ -829,13 +830,19 @@ async function main() {
   const period = new Date(now).toISOString().slice(0, 7)
   await db.insert(s.platformAiUsage).values({ orgId, period, chatSpendMicros: 4_180_000, embeddingSpendMicros: 210_000 })
 
-  // ---- AI configuration (provider chosen, deliberately no key) -----------
+  // ---- AI configuration (both providers connected) ----------------------
+  // The settings page only needs a stored value to show "connected" and the
+  // last four characters, and it never calls the provider. These are readable
+  // markers, not key-shaped strings, so no scanner or reader mistakes them for
+  // a credential, and the screenshot is the same on every run.
   await db.insert(s.aiConfigs).values({
     orgId,
     chatProvider: 'anthropic',
     chatModel: 'claude-sonnet-4-5',
+    chatApiKey: 'northwind-demo-chat-0001',
     embeddingProvider: 'openai',
     embeddingModel: EMBEDDING_MODEL,
+    embeddingApiKey: 'northwind-demo-embedding-0002',
   })
 
   // ---- Knowledge sources --------------------------------------------------

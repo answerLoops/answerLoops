@@ -17,6 +17,21 @@ On a hosted plan you do not have to set anything up: AI usage is included. Add y
   <IntegrationLogo name="ollama" size={48} />
 </div>
 
+<Hotspots
+  shot="ai-model"
+  only={['settings-tabs', 'edit', 'chat-provider', 'embeddings']}
+  notes={{
+    'settings-tabs': 'AI Model is one of the Settings tabs. Owners and admins can change it.',
+    edit: 'Edit opens the form for the chat provider, model, API key and embeddings.',
+    'chat-provider': 'The saved chat provider and model, and whether a key is connected. Only the last four characters of a key are ever shown.',
+    embeddings: 'The embedding provider and model that turn your knowledge base into a searchable index.',
+  }}
+/>
+
+<Callout type="info">
+  The screenshot shows a demo workspace. Its settings are sample data.
+</Callout>
+
 ## Which setup do I need?
 
 | If you... | Do this |
