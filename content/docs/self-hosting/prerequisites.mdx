@@ -4,46 +4,61 @@ description: What you need before running answerLoops on your own infrastructure
 icon: ListChecks
 ---
 
-Gather these before you start the [self-host quickstart](/docs/quickstart-self-host) — nothing below takes long to get, but bouncing between OAuth app dashboards mid-setup is the most common source of "why isn't this working."
+This page lists everything to have ready before you start the [self-host quickstart](/docs/quickstart-self-host). Nothing here takes long to get. Gathering it first saves you from bouncing between provider dashboards halfway through setup, which is the most common reason a first install stalls.
 
-## Required
+When you are done, you will have the tools installed, a Google sign-in client, an AI provider key, and two generated secrets.
+
+## Tools and services you need
 
 | Requirement | Version | Notes |
 |---|---|---|
-| Node.js | 22+ | Required by Next.js 16 and pnpm |
-| Docker | Latest stable | Includes Docker Compose v2 |
-| pnpm | 11+ | Used for package management |
-| Git | Any | For cloning the repo |
-| Postgres with the `pgvector` extension | 15+ | `docker-compose.yml` already runs `pgvector/pgvector:pg16`, so nothing to do for the Docker path. Bringing your own Postgres (Supabase, Railway, RDS, a bare install) instead of the provided compose file? Run `CREATE EXTENSION vector;` once before starting the app — every major managed provider supports this natively. Powers KB search's vector index. |
+| Node.js | 22 or newer | Needed to run the app outside Docker and for the CLI tools |
+| pnpm | 11 or newer | The package manager the project uses |
+| Docker | Latest stable | Includes Docker Compose v2. Required for the Docker setup in this guide |
+| Git | Any | Needed to clone the repository |
+| PostgreSQL with the `pgvector` extension | 15 or newer | Stores your data and powers knowledge-base search |
 
-## Required accounts / keys
+<Callout type="info">
+  **Postgres with Docker needs no extra work.** The development compose file runs `pgvector/pgvector:pg16`, which already includes `pgvector`. If you bring your own Postgres instead (Supabase, Railway, RDS, or a bare install), run `CREATE EXTENSION vector;` once in that database before starting the app. Every major managed provider supports the extension.
+</Callout>
 
-| Service | Purpose | Free tier? |
+## Accounts and keys
+
+| Service | What it is for | Cost |
 |---|---|---|
-| Google | Sign-in for your team (a Google OAuth client; see [OAuth setup](/docs/self-hosting/oauth)) | Yes |
-| OpenAI (or other AI provider) | AI deflection + KB embeddings | Pay per use |
+| Google | Signing in. You create a Google OAuth client, as shown in [OAuth setup](/docs/self-hosting/oauth) | Free |
+| OpenAI (or another AI provider) | Drafting answers and indexing your knowledge base | Pay per use |
 
-## Optional (add channels as you need them)
+An OpenAI key is the simplest start: it covers both answering and knowledge-base indexing, and it is the only provider answerLoops reads from the server environment. Other providers are set per workspace in the dashboard. See [AI provider config](/docs/self-hosting/ai-providers).
 
-You don't need all of these to get started — connect one channel first, confirm it works, then add the rest.
+## Optional accounts for channels
 
-| Service | Purpose |
+You do not need these to get started. Connect one channel first, confirm it works, then add the rest.
+
+| Service | What it is for |
 |---|---|
-| Discord | Community bot integration |
-| Slack | Community bot integration |
-| GitHub App | Issue/Discussion ingestion + KB sync |
+| Discord | Community bot |
+| Slack | Community bot |
+| GitHub App | Issue and Discussion ingestion, and knowledge-base sync |
 
-## Generating secrets
+## Generate your secrets
 
-Several env vars require random secrets. Generate them with:
+Two settings need a random value. Generate each one separately:
 
 ```bash
-# AUTH_SECRET and ENCRYPTION_KEY
 openssl rand -hex 32
 ```
 
-Run this twice — once for each secret. Never reuse the same value for both.
+Run it twice: one value for `AUTH_SECRET` and a different one for `ENCRYPTION_KEY`. Never use the same value for both.
 
 <Warning>
-  `ENCRYPTION_KEY` encrypts API keys stored in the database. If you change it after setup, all stored API keys become unreadable and users will need to re-enter them.
+  Keep `ENCRYPTION_KEY` safe and do not change it after setup. It protects the API keys and tokens you save in the dashboard. If it changes, those saved credentials can no longer be read and everyone has to enter them again.
 </Warning>
+
+## Where to go next
+
+<Cards>
+  <Card icon="Terminal" title="Self-host quickstart" href="/docs/quickstart-self-host">Install and start answerLoops on one machine.</Card>
+  <Card icon="KeyRound" title="OAuth setup" href="/docs/self-hosting/oauth">Create the Google sign-in client.</Card>
+  <Card icon="Settings" title="Environment variables" href="/docs/self-hosting/environment-variables">See the settings you will fill in.</Card>
+</Cards>

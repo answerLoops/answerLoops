@@ -4,82 +4,100 @@ description: Running answerLoops with Docker Compose.
 icon: Container
 ---
 
-Everything here assumes you've already cloned the repo and filled in a real `.env.local` — see the [self-host quickstart](/docs/quickstart-self-host) if you haven't done that part yet. Docker Compose reads that file; it doesn't generate secrets or register OAuth apps for you.
+This page shows how to run answerLoops with Docker Compose: which compose file to use, what each one starts, and the day-to-day commands for stopping, watching logs, and looking inside the database. When you are done, you will have the app and the bot running and know how to operate them.
 
-## Run a published image (no build)
+It assumes you have cloned the repository and created a `.env` file with real values. See the [self-host quickstart](/docs/quickstart-self-host) if you have not. Docker Compose reads `.env`; it does not generate secrets or register sign-in clients for you.
 
-Official images are published to the GitHub Container Registry, so you can run
-answerLoops without building anything:
+## Choose a compose file
 
-```bash
-docker compose -f docker-compose.ghcr.yml up -d
-```
+The repository ships three compose files. Pick the one that matches what you are doing.
 
-That pulls `ghcr.io/answerloops/answerloops:latest` and starts both the app and
-the bot from it. First run takes as long as the download rather than as long as
-a Next.js build, which on a modest machine is the difference between a minute
-and quarter of an hour.
+| File | Use it for | Builds | Includes Postgres |
+|---|---|---|---|
+| `docker-compose.yml` | Trying answerLoops locally and development | Source is mounted into the container and runs in dev mode | Yes |
+| `docker-compose.ghcr.yml` | Self-hosting without a build | Pulls a published image | No, you bring your own |
+| `docker-compose.prod.yml` | Self-hosting from source | Builds the production image locally | No, you bring your own |
 
-Images are built for `linux/amd64` and `linux/arm64`, so Apple Silicon runs
-natively rather than under emulation.
+The published-image and from-source files leave Postgres out on purpose. A database inside the same compose project is convenient for a trial and the wrong default for data you care about. Point `DATABASE_URL` in `.env` at a Postgres you run.
 
-### Pinning a version
+## What `docker compose up` starts
 
-`latest` moves when a new release is published. For anything you rely on staying
-put, pin a version instead:
+Running `docker compose up --build` with the default file starts three containers: the app, the bot, and Postgres.
 
-```bash
-ANSWERLOOPS_IMAGE=ghcr.io/answerloops/answerloops:1.4.0 \
-  docker compose -f docker-compose.ghcr.yml up -d
-```
+<Mermaid
+  caption="The three containers the default compose file starts and how they connect. The bot and the app both use the Postgres container, and the bot sends what it hears to the app."
+  chart={`flowchart LR
+  Browser["Your browser"] -->|"port 3000"| App["app: dashboard and API"]
+  Bot["bot: Discord and Slack listener"] -->|"http://app:3000"| App
+  App --> DB[("postgres, port 5432")]
+  Bot --> DB
+  DB --- Vol[("postgres-data volume")]
+  Bot -->|"outbound"| Chat["Discord and Slack"]`} />
 
-Available tags are listed on the [package page](https://github.com/answerLoops/answerLoops/pkgs/container/answerloops).
-Alongside each release there is a `main` tag built from the tip of the default
-branch, and a `sha-<commit>` tag for pinning to an exact commit.
+- **app** serves the dashboard and API on `http://localhost:3000`. It applies database migrations itself when it starts.
+- **bot** is the background worker. It listens to Discord, polls Slack where that is configured, and hands what it hears to the app at `BOT_TARGET_URL`. It also runs the knowledge-base sync and re-index jobs.
+- **postgres** is `pgvector/pgvector:pg16` on port `5432`, with its data in the `postgres-data` volume.
 
-### Which file to use
+In this default file the app and bot get their database address from the compose file, so a `DATABASE_URL` in `.env` does not redirect them. The bot starts only after Postgres is healthy and the app has started.
 
-| | |
-|---|---|
-| `docker-compose.yml` | local development — builds from source, includes Postgres |
-| `docker-compose.ghcr.yml` | self-hosting — pulls a published image, brings your own Postgres |
-| `docker-compose.prod.yml` | self-hosting from source — builds locally, brings your own Postgres |
+## Start answerLoops
 
-The published-image path expects `DATABASE_URL` in `.env` to point at a Postgres
-you run: the compose file deliberately does not start one, because a database
-inside the same compose project is convenient for development and the wrong
-default for anything holding real data.
+<Tabs items={['Published image', 'Build from source', 'Local trial']}>
+  <Tab value="Published image">
+    Official images are published to the GitHub Container Registry, so nothing has to be built:
 
-Both services run the same image and differ only in their command, so there is
-no second image to keep in step.
+    ```bash
+    docker compose -f docker-compose.ghcr.yml up -d
+    ```
 
-## Start
+    This pulls `ghcr.io/answerloops/answerloops:latest` and starts the app and the bot from it. The first run takes as long as the download rather than a build. Images are built for `linux/amd64` and `linux/arm64`, so Apple Silicon runs natively.
 
-```bash
-docker compose up --build
-```
+    `latest` moves when a release is published. To stay on a version you have tested, pin it:
 
-On first run this:
-1. Builds the Next.js app image
-2. Starts Postgres with a named volume (`postgres-data`) for persistence
-3. Runs Drizzle migrations automatically
-4. Serves the app on `http://localhost:3000`
+    ```bash
+    ANSWERLOOPS_IMAGE=ghcr.io/answerloops/answerloops:<version> \
+      docker compose -f docker-compose.ghcr.yml up -d
+    ```
 
-## Stop (keep data)
+    Tags are listed on the [package page](https://github.com/answerLoops/answerLoops/pkgs/container/answerloops). Besides release versions there is a `main` tag built from the tip of the default branch and a `sha-<commit>` tag for an exact commit.
+
+    Both services run the same image and differ only in their start command, so there is nothing to keep in step between them.
+  </Tab>
+  <Tab value="Build from source">
+    This builds the production image on your machine and runs it:
+
+    ```bash
+    docker compose -f docker-compose.prod.yml up -d --build
+    ```
+
+    The app listens on port `3000`. Because both services run on one Docker network, the bot reaches the app at `http://app:3000`. If you split them across hosts, set `BOT_TARGET_URL` to the app's public address.
+  </Tab>
+  <Tab value="Local trial">
+    The default file includes Postgres and mounts your source into the containers, so it suits trying things out and development:
+
+    ```bash
+    docker compose up --build
+    ```
+
+    On first run it installs dependencies, starts Postgres, starts the app in development mode, and applies migrations. Open `http://localhost:3000` when the app is ready.
+  </Tab>
+</Tabs>
+
+<Callout type="info">
+  The app applies database migrations every time it starts, so there is no separate migration step with any of the three files.
+</Callout>
+
+## Stop without losing data
 
 ```bash
 docker compose down
 ```
 
+For the published-image or from-source stack, add `-f docker-compose.ghcr.yml` or `-f docker-compose.prod.yml`.
+
 <Warning>
-  Never run `docker compose down -v`. The `-v` flag deletes named volumes, which includes your Postgres data. All articles, tickets, and org settings will be lost.
+  Never run `docker compose down -v`. The `-v` flag deletes named volumes, including your Postgres data in the default stack. Your articles, tickets, and workspace settings would be lost, and there is no recovery without a backup.
 </Warning>
-
-## Rebuild after code changes
-
-```bash
-docker compose up --build
-```
 
 ## View logs
 
@@ -87,46 +105,65 @@ docker compose up --build
 # All services
 docker compose logs -f
 
-# App only
+# One service
 docker compose logs app -f
-
-# Postgres only
+docker compose logs bot -f
 docker compose logs postgres -f
 ```
 
-## Access the database
+The `postgres` service exists only in the default file. Add `-f <file>` for the other two.
+
+## Look inside the database
+
+With the default stack, open a Postgres shell in the container:
 
 ```bash
 docker compose exec postgres psql -U community -d community
 ```
 
-Common queries:
+Some useful commands once you are in:
+
 ```sql
 -- List all tables
 \dt
 
--- Check org onboarding status
+-- Check whether a workspace finished onboarding
 SELECT id, name, onboarded_at FROM orgs;
 
--- Check users
+-- See who has signed in
 SELECT id, email, provider FROM users;
 
 -- Exit
 \q
 ```
 
+If you run your own Postgres, connect with `psql` and your `DATABASE_URL` instead.
+
 ## Named volumes
 
-| Volume | Contents |
-|---|---|
-| `postgres-data` | All database data |
-| `pnpm-store` | pnpm package cache (speeds up rebuilds) |
+The default file creates these volumes:
+
+| Volume | Contents | Safe to delete? |
+|---|---|---|
+| `postgres-data` | All database data | No |
+| `app_node_modules` | The app's installed packages | Yes, they are reinstalled |
+| `bot_node_modules` | The bot's installed packages | Yes, they are reinstalled |
 
 ## Environment variables in Docker
 
-Docker Compose reads from your `.env` file automatically. Any variable set in `.env` is available inside the `app` container.
+Every compose file reads `.env` and passes its values into the containers. To confirm a value reached the app:
 
-To verify a variable is loaded:
 ```bash
-docker compose exec app printenv OPENAI_API_KEY
+docker compose exec app printenv AUTH_URL
 ```
+
+Avoid printing secret values in shared terminals or logs.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Globe" title="Production deployment" href="/docs/self-hosting/production">Add a domain, HTTPS, and health checks.</Card>
+  <Card icon="CircleArrowUp" title="Upgrading" href="/docs/self-hosting/upgrading">Back up and move to a newer version.</Card>
+  <Card icon="Settings" title="Environment variables" href="/docs/self-hosting/environment-variables">See every setting the containers read.</Card>
+  <Card icon="LifeBuoy" title="Troubleshooting" href="/docs/self-hosting/troubleshooting">Fix startup and connection problems.</Card>
+</Cards>

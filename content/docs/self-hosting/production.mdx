@@ -4,78 +4,136 @@ description: Deploy answerLoops to a production server.
 icon: Globe
 ---
 
-This assumes you've already worked through the [self-host quickstart](/docs/quickstart-self-host) locally and know your setup works — production is the same app, just with real secrets, a real domain, and `docker-compose.prod.yml` instead of the dev compose file.
+This page shows how to run answerLoops on a real domain with HTTPS. When you are done, your team signs in at your own address, the bot runs in the background, and a health check confirms the app can reach its database.
 
-## Recommended stack
+It assumes you have already worked through the [self-host quickstart](/docs/quickstart-self-host) locally. Production is the same app with real secrets, a real domain, and a compose file that does not include a database.
 
-- **Server**: Any Linux VPS (Ubuntu 22.04+)
-- **Reverse proxy**: Caddy (auto SSL) or nginx
-- **Process**: Docker Compose
-- **Database**: Docker Postgres with named volume, or a managed Postgres service
+## How the pieces fit
 
-## Get the code onto the server
+<Mermaid
+  caption="A production deployment. Browsers and services that send webhooks reach the app through your reverse proxy. The bot has no public address: it talks to the app and the database, and connects out to chat platforms."
+  chart={`flowchart LR
+  Users["Your team, widget visitors, and webhook senders"] --> Edge["Reverse proxy or platform edge, with HTTPS"]
+  Edge --> App["app on port 3000"]
+  Bot["bot, no public port"] -->|"BOT_TARGET_URL"| App
+  App --> DB[("Postgres with pgvector")]
+  Bot --> DB
+  App -->|"outbound"| AI["AI provider"]
+  Bot -->|"outbound"| Chat["Discord and Slack"]`} />
 
-Clone the repo on your server the same way you did locally, then create a production `.env` (not `.env.local` — that's the dev-only file):
+The **app** is the only service that needs to be reachable from the internet. The **bot** is the background worker: it listens to Discord, polls Slack where configured, and runs the jobs that sync knowledge-base sources and re-index content. Run both.
 
-```bash
-git clone https://github.com/answerLoops/answerLoops.git
-cd answerLoops
-cp .env.local.example .env
-```
+## What you need
 
-Fill in `.env` with your production values — the checklist below covers what has to be different from your dev setup.
+- A Linux server with Docker (for example Ubuntu 22.04 or newer), or a platform such as Railway.
+- A Postgres database with the `pgvector` extension. The production compose files do not start one, so use a managed Postgres or one you run yourself. See [Prerequisites](/docs/self-hosting/prerequisites).
+- A reverse proxy for HTTPS. Caddy gets certificates automatically; nginx works too. A platform like Railway provides HTTPS for you.
 
-## Environment checklist
+## Set up the server
 
-Before going live, verify these are set in your production `.env`:
+<Steps>
+  <Step>
+    Clone the repository on the server and create a production `.env`:
 
-- [ ] `AUTH_URL` set to your production domain (e.g. `https://app.yourdomain.com`)
-- [ ] `AUTH_SECRET` — unique 32-byte hex, not the same as dev
-- [ ] `ENCRYPTION_KEY` — unique 32-byte hex, not the same as dev
-- [ ] `DATABASE_URL` pointing to production database
-- [ ] OAuth callback URLs updated in GitHub/Google dashboards
-- [ ] `OPENAI_API_KEY` set
+    ```bash
+    git clone https://github.com/answerLoops/answerLoops.git
+    cd answerLoops
+    cp .env.example .env
+    ```
 
-## Caddy (recommended — auto SSL)
+    Use `.env` for production values, not `.env.local`.
+  </Step>
+  <Step>
+    Fill in the production values using the checklist below.
+  </Step>
+  <Step>
+    Put a reverse proxy in front of port `3000` (see the next section).
+  </Step>
+  <Step>
+    Start the stack.
 
-```
-app.yourdomain.com {
-    reverse_proxy localhost:3000
-}
-```
+    <Tabs items={['Published image', 'Build from source']}>
+      <Tab value="Published image">
+        ```bash
+        docker compose -f docker-compose.ghcr.yml up -d
+        ```
 
-Run: `caddy run --config Caddyfile`
+        Pin a version with `ANSWERLOOPS_IMAGE=ghcr.io/answerloops/answerloops:<version>` for anything you want to stay put. See [Docker setup](/docs/self-hosting/docker).
+      </Tab>
+      <Tab value="Build from source">
+        ```bash
+        docker compose -f docker-compose.prod.yml up -d --build
+        ```
 
-## nginx
+        This builds the multi-stage production image and runs the bot in its production mode, not the development watch mode.
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    Check that it is healthy (see [Health check](#health-check)).
+  </Step>
+</Steps>
 
-```nginx
-server {
-    listen 443 ssl;
-    server_name app.yourdomain.com;
+Database migrations run automatically when the app starts, so there is no separate migration step.
 
-    location / {
-        proxy_pass http://localhost:3000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+## Production checklist
+
+Before going live, confirm these in your production `.env`:
+
+- [ ] `AUTH_URL` is your public address, for example `https://app.yourdomain.com`
+- [ ] `AUTH_SECRET` is a new random value, not the one from development
+- [ ] `ENCRYPTION_KEY` is a new random value, not the one from development
+- [ ] `DATABASE_URL` points at your production database (plus `DIRECT_DATABASE_URL` if that connection goes through a pooler)
+- [ ] The Google redirect URI is `https://<your-domain>/api/auth/callback/google` (see [OAuth setup](/docs/self-hosting/oauth))
+- [ ] `OPENAI_API_KEY` is set, or every workspace saves its own key in Settings
+- [ ] `BOT_SECRET` is set, and `BOT_TARGET_URL` points at the app as the bot sees it
+- [ ] `TRUST_PROXY_HOPS` matches the number of proxies in front of the app (the default `1` fits a single proxy)
+
+All of these are described in [Environment variables](/docs/self-hosting/environment-variables).
+
+## Add HTTPS with a reverse proxy
+
+<Tabs items={['Caddy', 'nginx']}>
+  <Tab value="Caddy">
+    Caddy obtains and renews certificates for you. Put this in a `Caddyfile`:
+
+    ```
+    app.yourdomain.com {
+        reverse_proxy localhost:3000
     }
-}
-```
+    ```
 
-## Start in production
+    Then run `caddy run --config Caddyfile`.
+  </Tab>
+  <Tab value="nginx">
+    ```nginx
+    server {
+        listen 443 ssl;
+        server_name app.yourdomain.com;
+        ssl_certificate     <path-to-your-certificate>;
+        ssl_certificate_key <path-to-your-private-key>;
 
-Use `docker-compose.prod.yml`, not the plain `docker-compose.yml` from local dev — it builds the multi-stage production image and runs the bot in `bot:start` mode instead of the dev watch mode:
+        location / {
+            proxy_pass http://localhost:3000;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+    }
+    ```
+  </Tab>
+</Tabs>
 
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
+## The bot must be running
 
-Drizzle migrations run automatically against your production database on first start, same as local dev — no separate migration step.
+<Callout type="warn">
+  Keep the **bot** service running. It is the worker that picks up queued knowledge-base syncs (Notion, GitHub), retries stuck ingests, and re-indexes content after an embedding model change. Without it those jobs never start.
+</Callout>
 
-<Note>
-  The **bot** service must be running for knowledge-base syncs (Notion, GitHub) to complete — it's the worker that picks up queued sync jobs and drives them. It reaches the app at `BOT_TARGET_URL` (default `http://localhost:3000`) and authenticates with `BOT_SECRET`; set both if the two services aren't on the same host. The sync itself runs inside `POST /api/kb/sync-jobs/run` on the app, which does real work after responding to auth — deploy the app on a runtime without a short per-request timeout (the standard `pnpm start` Node server is fine; a serverless function platform may cut a large sync off).
-</Note>
+The bot reaches the app at `BOT_TARGET_URL` (default `http://localhost:3000`) and sends `BOT_SECRET` with its requests. Use the same `BOT_SECRET` value on both services. If the two are not on the same Docker network or host, set `BOT_TARGET_URL` to the app's address as the bot sees it. In the bundled compose files, the bot uses `http://app:3000`.
+
+The sync itself runs inside the app's `POST /api/kb/sync-jobs/run` route, which keeps working after it responds. Deploy the app on a runtime without a short per-request time limit. The standard `pnpm start` Node server is fine; a serverless function platform may cut a large sync off.
 
 ## Health check
 
@@ -84,6 +142,21 @@ curl https://app.yourdomain.com/api/health
 # → {"ok":true}
 ```
 
-## Alternative: Railway or another PaaS
+The endpoint runs a trivial query against the database, so a failure can mean the database is unreachable and not just that the app is down. The Docker image checks it every 30 seconds for the app container. The bot has no web port, so its health check is turned off in the compose files. Watch its logs instead.
 
-If you'd rather not manage a VPS, reverse proxy, and TLS certs yourself, push the repo to Railway (or another PaaS) — Railway reads the committed `railway.toml` / `railway.bot.toml`, builds each service with Nixpacks, handles HTTPS automatically, and you skip the Caddy/nginx section above entirely. You'll still need to set the same environment variables, and a managed Postgres (for example Railway's own Postgres) instead of the Docker-volume one.
+## Alternative: Railway or another platform
+
+If you would rather not manage a server, reverse proxy, and certificates, deploy to Railway or a similar platform. The repository includes `railway.toml` for the app and `railway.bot.toml` for the bot. Each is built with Nixpacks:
+
+- **App:** starts with `pnpm start` and uses `/api/health` as its deploy health check.
+- **Bot:** starts with `pnpm bot:start`.
+
+The platform provides HTTPS, so you skip the proxy section above. You still set the same environment variables, and you need a managed Postgres with `pgvector`. Set `BOT_TARGET_URL` on the bot to the app's public address, since the two run as separate services.
+
+## Where to go next
+
+<Cards>
+  <Card icon="CircleArrowUp" title="Upgrading" href="/docs/self-hosting/upgrading">Back up and move to a newer version safely.</Card>
+  <Card icon="Settings" title="Environment variables" href="/docs/self-hosting/environment-variables">Every setting, grouped by purpose.</Card>
+  <Card icon="LifeBuoy" title="Troubleshooting" href="/docs/self-hosting/troubleshooting">Fix startup, sign-in, and channel problems.</Card>
+</Cards>

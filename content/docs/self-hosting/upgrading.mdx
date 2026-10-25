@@ -4,37 +4,122 @@ description: How to update your self-hosted answerLoops instance.
 icon: CircleArrowUp
 ---
 
-## Standard upgrade
+This page shows how to move your self-hosted instance to a newer version and how to go back if something looks wrong. When you are done, you are running the new version with your data intact and a backup you can fall back on.
 
-```bash
-git pull origin main
-docker compose up --build -d
-```
+<Mermaid
+  caption="The upgrade flow: back up first, fetch the new version, restart, let migrations run on startup, then confirm the instance is healthy."
+  chart={`flowchart LR
+  A["Back up the database"] --> B["Pull the new code or image"]
+  B --> C["Restart the stack"]
+  C --> D["Migrations run on startup"]
+  D --> E["Check health and logs"]`} />
 
-Drizzle migrations run automatically on startup.
+## Upgrade
 
-## Check migration status
+<Steps>
+  <Step>
+    **Back up your database.** Do this before every upgrade. With the bundled Postgres from the default compose file:
+
+    ```bash
+    docker compose exec postgres pg_dump -U community community > backup.sql
+    ```
+
+    With your own Postgres, use `pg_dump` against your `DATABASE_URL`, or your provider's snapshot feature.
+  </Step>
+  <Step>
+    **Get the new version and restart.**
+
+    <Tabs items={['Published image', 'Build from source']}>
+      <Tab value="Published image">
+        The compose file always pulls the image before starting, so restarting is enough:
+
+        ```bash
+        docker compose -f docker-compose.ghcr.yml up -d
+        ```
+
+        If you pinned a version, change `ANSWERLOOPS_IMAGE` to the new tag first.
+      </Tab>
+      <Tab value="Build from source">
+        ```bash
+        git pull origin main
+        docker compose -f docker-compose.prod.yml up -d --build
+        ```
+      </Tab>
+      <Tab value="Local trial stack">
+        ```bash
+        git pull origin main
+        docker compose up --build -d
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+  <Step>
+    **Let the migrations run.** The app applies any new database changes automatically when it starts, so there is nothing else to run. Watch it happen in the logs:
+
+    ```bash
+    docker compose logs app --tail=50
+    ```
+
+    Each change appears as an `[migrate] applying` line. If a migration fails, the app stops starting and the log names the file that failed.
+  </Step>
+  <Step>
+    **Verify.** Confirm the app is healthy:
+
+    ```bash
+    curl https://<your-domain>/api/health
+    ```
+
+    You should see `{"ok":true}`. Then sign in and open the dashboard.
+  </Step>
+</Steps>
+
+<Warning>
+  Keep your data volume. Never run `docker compose down -v` during an upgrade: it deletes the database volume and everything in it.
+</Warning>
+
+## Check which migrations have run
+
+Applied migrations are recorded in a table named `__custom_migrations`. With the bundled Postgres:
 
 ```bash
 docker compose exec postgres psql -U community -d community \
-  -c "SELECT * FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 5;"
+  -c "SELECT * FROM __custom_migrations ORDER BY applied_at DESC LIMIT 5;"
 ```
 
-## Rollback
+## Roll back
 
-answerLoops doesn't ship automatic rollback tooling. To revert:
+answerLoops does not ship automatic rollback tooling. To go back to a previous version, return to the previous code or image and restart:
 
-```bash
-git checkout <previous-tag>
-docker compose up --build -d
-```
+<Tabs items={['Published image', 'Build from source']}>
+  <Tab value="Published image">
+    Set `ANSWERLOOPS_IMAGE` to the earlier tag and run `docker compose -f docker-compose.ghcr.yml up -d`.
+  </Tab>
+  <Tab value="Build from source">
+    ```bash
+    git checkout <previous-tag>
+    docker compose -f docker-compose.prod.yml up -d --build
+    ```
+  </Tab>
+</Tabs>
 
-<Warning>
-  If a migration added new columns or tables, rolling back the code won't remove them. This is generally safe — extra columns are ignored. Dropped columns may cause issues; check the migration diff before rolling back.
-</Warning>
+<Callout type="warn">
+  Rolling the code back does not undo database changes. New columns and tables are generally harmless to an older version, but a change that removed something can cause problems. Review the migration changes before rolling back, and restore your backup if the older version will not start.
+</Callout>
 
-## Check current version
+## Check your current version
+
+For a source checkout:
 
 ```bash
 git log --oneline -1
 ```
+
+For a published image, the tag in `ANSWERLOOPS_IMAGE` is your version.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Container" title="Docker setup" href="/docs/self-hosting/docker">Compose files, pinning a version, and volumes.</Card>
+  <Card icon="Globe" title="Production deployment" href="/docs/self-hosting/production">The full production layout.</Card>
+  <Card icon="LifeBuoy" title="Troubleshooting" href="/docs/self-hosting/troubleshooting">If the instance does not come back up.</Card>
+</Cards>

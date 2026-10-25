@@ -30,10 +30,10 @@ cd answerLoops
 ## 2. Configure environment
 
 ```bash
-cp .env.local.example .env.local
+cp .env.example .env
 ```
 
-Edit `.env.local` with at minimum:
+Edit `.env` with at minimum:
 
 ```dotenv
 # Required
@@ -58,7 +58,7 @@ To generate the two secrets, see [Generating secrets](/docs/self-hosting/prerequ
 
 ## 3. Start with Docker
 
-Once your `.env.local` has real values (not the ones above), this one command does the rest:
+Once your `.env` has real values (not the ones above), this one command does the rest:
 
 ```bash
 docker compose up --build
@@ -70,6 +70,10 @@ This starts:
 - **postgres** on `localhost:5432` (data persisted in a named volume)
 
 Drizzle migrations run automatically on first start — no manual migration step. For published images, pinning a version, logs, and database access, see [Docker setup](/docs/self-hosting/docker).
+
+<Callout type="info">
+  This is the development stack: it mounts the source and runs `pnpm dev`, which is the quickest way to try answerLoops. For a deployment that stays up, follow the [production guide](/docs/self-hosting/production).
+</Callout>
 
 <Warning>
   Never run `docker compose down -v` — this deletes your database volume and all data.

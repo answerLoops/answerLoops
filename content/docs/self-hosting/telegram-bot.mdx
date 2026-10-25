@@ -1,17 +1,44 @@
 ---
 title: Telegram Bot Setup
-description: Get a Telegram bot token from @BotFather and connect it to a self-hosted answerLoops deployment.
+description: The one thing a self-hosted answerLoops operator needs for Telegram, a public HTTPS address for the webhook, and where the rest of the setup lives.
 icon: Send
 ---
 
-Connecting Telegram works the same way on a self-hosted deployment as on managed cloud — there's no separate self-hosting flow. Create a bot with [@BotFather](https://t.me/BotFather), copy the token it gives you, and paste it into **Integrations → Telegram**. See the [full Telegram setup guide](/docs/integrations/telegram) for the step-by-step walkthrough, chat ID lookup, and troubleshooting.
+Telegram needs almost no operator setup. There is no shared bot and no platform-wide credential: each organization creates its own bot with [@BotFather](https://t.me/BotFather) and pastes the token into **Integrations → Telegram**, exactly as on managed cloud. So this page is short on purpose. It covers the only part that belongs to whoever runs the deployment, and sends you to the [Telegram integration guide](/docs/integrations/telegram) for everything else.
 
-## Self-hosting-specific env var
+When you are done, Telegram can reach your deployment, and your team can connect a bot.
 
-One optional environment variable matters only for self-hosted deployments — everything else, including the bot token, is configured per-organization through the Settings UI:
+## Operator checklist
 
-```dotenv
-TELEGRAM_WEBHOOK_BASE_URL=https://your-tunnel.example.com  # optional, overrides AUTH_URL for the webhook only — see the integration guide's troubleshooting for when you need this
-```
+<Steps>
+  <Step title="Make the app reachable over public HTTPS">
+    Telegram delivers messages by calling your app, so the app needs an address Telegram can reach on the public internet over HTTPS. Set `AUTH_URL` to that address (for example `https://support.yourcompany.com`). Addresses like `localhost` or private hostnames are refused by Telegram.
+  </Step>
+  <Step title="Only if you need to: set a separate webhook address">
+    `TELEGRAM_WEBHOOK_BASE_URL` overrides `AUTH_URL` for the Telegram webhook only. You need it just when the app is reached at a different address than the one Telegram should call, for example when you develop on `localhost` and expose the webhook through a tunnel such as ngrok. Leave it unset for a normal deployment.
+  </Step>
+  <Step title="Let your team connect their bot">
+    Nothing else is required. Your team creates the bot, pastes its token into **Integrations → Telegram** and clicks **Connect**, and the webhook registers itself at `<your-app-url>/api/telegram/webhook`. Follow the [integration guide's setup](/docs/integrations/telegram#setup) for BotFather, chat IDs and group privacy settings.
+  </Step>
+</Steps>
 
-For everything else — creating the bot, finding a chat ID, registering the webhook, and diagnosing a bot that connects but never replies — see [Telegram](/docs/integrations/telegram).
+## Environment variable
+
+| Variable | Required | What it does |
+| --- | --- | --- |
+| `AUTH_URL` | Yes | Your public app URL. It is the address Telegram is told to call |
+| `TELEGRAM_WEBHOOK_BASE_URL` | No | Overrides `AUTH_URL` for the Telegram webhook only. Leave it unset unless you use a tunnel |
+
+<Callout type="warn">
+  Do not point `AUTH_URL` at a tunnel just to test Telegram locally. `AUTH_URL` also controls where Google sign-in returns, so changing it breaks login. Set `TELEGRAM_WEBHOOK_BASE_URL` to the tunnel address instead.
+</Callout>
+
+If the bot connects but the webhook did not register, set `AUTH_URL` (or `TELEGRAM_WEBHOOK_BASE_URL`) to a public HTTPS address and click **Register webhook** on the Telegram card. The [troubleshooting section](/docs/integrations/telegram#troubleshooting) of the integration guide covers a bot that connects but never replies.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Send" title="Telegram integration guide" href="/docs/integrations/telegram">Create the bot, find chat IDs and diagnose a bot that stays silent.</Card>
+  <Card icon="Settings" title="Environment Variables" href="/docs/self-hosting/environment-variables">Every variable the app and bot read.</Card>
+  <Card icon="Wrench" title="Troubleshooting" href="/docs/self-hosting/troubleshooting">Fixes for common self-hosting problems.</Card>
+</Cards>

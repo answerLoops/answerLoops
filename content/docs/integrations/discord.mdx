@@ -90,7 +90,6 @@ For the OAuth flow, you need to create your own Discord application and configur
 
 Under **Bot → Privileged Gateway Intents**, enable:
 - **Message Content Intent**
-- **Server Members Intent** (required for user lookups)
 
 Under **OAuth2 → URL Generator**, select scopes: `bot`, `applications.commands`. Select bot permissions: **Read Messages/View Channels**, **Send Messages**, **Create Public Threads**, **Read Message History**.
 
@@ -142,11 +141,7 @@ answerLoops supports two slash commands in connected servers:
 | `/ask <question>` | Queries the KB and returns an AI answer inline (visible only to the user who ran it) |
 | `/summarize` | Summarizes the current thread or recent channel activity |
 
-Slash commands require `DISCORD_APPLICATION_ID` to be set. After setting it, register the commands by running:
-
-```bash
-pnpm run discord:register-commands
-```
+Slash commands require `DISCORD_APPLICATION_ID` to be set on the bot service. The bot registers them itself when it starts, so after setting it, restart the bot.
 
 ---
 
@@ -190,6 +185,6 @@ pnpm run discord:register-commands
     Confirm the forum channel is selected in **Integrations → Discord → Channel picker**. answerLoops only listens on explicitly selected channels. Also verify the bot has **Read Messages** and **View Channels** permission in that forum.
   </Accordion>
   <Accordion title="Slash commands aren't showing up in Discord">
-    Run `pnpm run discord:register-commands` and confirm `DISCORD_APPLICATION_ID` is set. Discord can take up to an hour to propagate global slash commands — guild-scoped registration is instant if you specify a `DISCORD_GUILD_ID`.
+    Confirm `DISCORD_APPLICATION_ID` is set on the bot service and restart the bot, which registers the commands at startup. Discord can take up to an hour to propagate global slash commands — guild-scoped registration is instant if you specify a `DISCORD_GUILD_ID`.
   </Accordion>
 </AccordionGroup>

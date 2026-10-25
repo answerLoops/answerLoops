@@ -4,28 +4,30 @@ description: Review deployment, integration permissions, and operational require
 icon: Building
 ---
 
-Use this guide to prepare an internal review of a self-hosted answerLoops deployment. The integrations you select determine its network and platform-permission requirements.
+Use this guide to prepare an internal review of a self-hosted answerLoops deployment. The integrations you select determine its network and platform-permission requirements, so the page is organized around the questions a review team usually asks: what you operate, how each channel connects, and what to do before launch.
 
-## Application and data services
+When you are done, you will have the inputs for your review and a launch checklist to work through.
+
+## What you operate
 
 Plan the application domain, authentication, database, storage, backups, and upgrade process. Your team operates these services in a self-hosted deployment. See [Production](/docs/self-hosting/production).
 
 Application hosting and model processing are separate choices. External chat and embedding providers receive relevant content, and connected messaging platforms continue to process conversations.
 
-## Channel connection methods
+## How each channel connects
 
-| Channel | Connection method |
-| --- | --- |
-| Discord | A bot uses the platform gateway and API. |
-| Slack | Events API, or polling mode for self-hosted deployments. |
-| GitHub | GitHub App webhooks. |
-| Telegram | A bot webhook. |
-| Email | An inbound-message endpoint and configured reply service. |
-| Google Chat | A configured Chat app endpoint and paired space. |
-| Discourse | API access and webhook configuration. |
-| Circle | API access for selected spaces and comments. |
+| Channel | Connection method | Setup guide |
+| --- | --- | --- |
+| Discord | A bot uses the platform gateway and API. | [Discord bot setup](/docs/self-hosting/discord-bot) |
+| Slack | Events API, or polling mode for self-hosted deployments. | [Slack app setup](/docs/self-hosting/slack-app) |
+| GitHub | GitHub App webhooks. | [GitHub integration](/docs/integrations/github) |
+| Telegram | A bot webhook. | [Telegram bot setup](/docs/self-hosting/telegram-bot) |
+| Email | An inbound-message endpoint and configured reply service. | [Email channel setup](/docs/self-hosting/email-channel) |
+| Google Chat | A configured Chat app endpoint and paired space. | [Google Chat app setup](/docs/self-hosting/google-chat-app) |
+| Discourse | API access and webhook configuration. | [Discourse integration](/docs/integrations/discourse) |
+| Circle | API access for selected spaces and comments. | [Circle integration](/docs/integrations/circle) |
 
-Follow each [integration guide](/docs/integrations/discord) for the required permissions and callback configuration. Installation approval depends on the connected workspace's policies; self-hosting does not override them.
+Follow each integration guide for the required permissions and callback configuration. Installation approval depends on the connected workspace's policies; self-hosting does not override them.
 
 ## Slack polling
 
@@ -35,10 +37,30 @@ See [Slack app setup](/docs/self-hosting/slack-app) for scopes, channel access, 
 
 ## Prepare for launch
 
-- Assign owners for application operations, support review, and source documentation.
-- Verify login, channel delivery, and replies with test conversations.
-- Check chat and embedding access from the deployed services.
-- Set backup and restore procedures and plan application updates.
-- Document the data-processing and service requirements for your organization.
+<Steps>
+  <Step title="Assign owners">
+    Name owners for application operations, support review, and source documentation.
+  </Step>
+  <Step title="Test the full path">
+    Verify login, channel delivery, and replies with test conversations.
+  </Step>
+  <Step title="Check model access">
+    Check chat and embedding access from the deployed services.
+  </Step>
+  <Step title="Plan backups and updates">
+    Set backup and restore procedures and plan application updates.
+  </Step>
+  <Step title="Write down the requirements">
+    Document the data-processing and service requirements for your organization.
+  </Step>
+</Steps>
 
 For hosted Enterprise, contact [hello@answerloops.com](mailto:hello@answerloops.com) to discuss model configuration, migration assistance, service levels, and agreement requirements.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Globe" title="Production" href="/docs/self-hosting/production">Plan hosting, storage, backups, and the upgrade process.</Card>
+  <Card icon="Cpu" title="AI providers" href="/docs/self-hosting/ai-providers">Choose the chat and embedding providers your deployment uses.</Card>
+  <Card icon="CircleArrowUp" title="Upgrading" href="/docs/self-hosting/upgrading">Keep a running deployment current.</Card>
+</Cards>

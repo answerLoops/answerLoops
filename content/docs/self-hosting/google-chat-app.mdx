@@ -1,54 +1,80 @@
 ---
 title: Google Chat App Setup
-description: One-time Google Cloud configuration to enable Google Chat as a support channel.
+description: One-time Google Cloud configuration that lets a self-hosted answerLoops deployment receive and reply to Google Chat messages.
 icon: MessageCircle
 ---
 
-This is a platform-operator, one-time setup — done once for your whole deployment, not per connected org. Individual orgs then connect via the connect-code flow in [Google Chat integration docs](/docs/integrations/google-chat).
+Google Chat has no "install" button that answerLoops can drive for an arbitrary Workspace, so a self-hosted deployment needs its own Chat app. You create it once in Google Cloud, and every organization on your deployment then pairs a space to it with a connect code. This page is the one-time operator setup.
 
-## 1. Create a Google Cloud project (or reuse an existing one)
+When you are done, your deployment has a Chat app listening at your public address, and your team can connect spaces from **Integrations → Google Chat**. What they do from there (generating a connect code, posting `/connect`, escalation and thresholds) is in the [Google Chat integration guide](/docs/integrations/google-chat).
 
-Go to the [Google Cloud Console](https://console.cloud.google.com) and create a project, or reuse one you already have.
-
-## 2. Enable the Google Chat API
-
-**APIs & Services → Library** → search **Google Chat API** → **Enable**.
-
-## 3. Create a service account
-
-**IAM & Admin → Service Accounts → Create Service Account**. No special IAM roles are required for basic messaging — the Chat API authorizes based on the Chat app configuration, not project-level IAM roles.
-
-Create a JSON key for this service account and keep it safe — it becomes `GOOGLE_CHAT_SERVICE_ACCOUNT_JSON`.
-
-## 4. Configure the Chat app
-
-**Google Chat API → Configuration**:
-
-- **App name / avatar / description** — however you want the bot to appear
-- **Functionality** — enable "Receive 1:1 messages" and "Join spaces and group conversations"
-- **Connection settings** → **HTTP endpoint URL** → your public endpoint:
-  ```
-  https://{YOUR_DOMAIN}/api/google-chat/events
-  ```
-- **Visibility** — for an unlisted app usable outside your own Google Workspace, list the specific domains or individual users/groups allowed to install it. A Workspace admin on the *installing* side may also need to enable third-party Chat apps for their domain (their **Admin Console → Apps → Google Workspace Marketplace apps** settings) before the app can be added to a space at all.
-
-## 5. Set environment variables
-
-```bash
-GOOGLE_CHAT_SERVICE_ACCOUNT_JSON='{"type":"service_account","project_id":"...", ...}'  # the full JSON key, as a single-line string
-GOOGLE_CHAT_ENDPOINT_URL=https://{YOUR_DOMAIN}/api/google-chat/events
-```
-
-<Callout type="warn">
-  `GOOGLE_CHAT_ENDPOINT_URL` must exactly match the HTTP endpoint URL configured in step 4 — Google signs each incoming request's token audience to that exact value, and verification fails on any mismatch (trailing slash included).
+<Callout type="info">
+  **You do this once for the whole deployment, not once per organization.** All organizations share the one Chat app you create here.
 </Callout>
 
-## 6. Connect an org
+## Set up the Chat app
 
-Once the above is live, any org can connect from **Settings → Integrations → Google Chat** — see [Google Chat integration docs](/docs/integrations/google-chat) for the connect-code flow.
+<Steps>
+  <Step title="Create or choose a Google Cloud project">
+    Open the [Google Cloud Console](https://console.cloud.google.com) and create a project, or reuse one you already have.
+  </Step>
+  <Step title="Enable the Google Chat API">
+    Go to **APIs & Services → Library**, search for **Google Chat API** and click **Enable**.
+  </Step>
+  <Step title="Create a service account and a JSON key">
+    Go to **IAM & Admin → Service Accounts → Create Service Account**. No special IAM roles are needed for basic messaging, because the Chat API authorizes through the Chat app configuration rather than project roles. Create a JSON key for the account and keep it somewhere safe. It becomes `GOOGLE_CHAT_SERVICE_ACCOUNT_JSON`.
+  </Step>
+  <Step title="Configure the Chat app">
+    In **Google Chat API → Configuration**, set:
 
-## Distribution note
+    - **App name, avatar and description** to whatever you want people to see.
+    - **Functionality** to "Receive 1:1 messages" and "Join spaces and group conversations".
+    - **Connection settings → HTTP endpoint URL** to your public endpoint:
 
-This setup makes the app installable as an **unlisted app** — fast to stand up, but each customer's Workspace admin has a manual step (enabling third-party apps, then adding this one to a space). A [Google Workspace Marketplace](https://developers.google.com/workspace/marketplace/about-app-review) listing would let a customer install with a couple of clicks and no admin-console detour first, at the cost of a one-time Google review (OAuth verification + listing review, commonly a few weeks) before it goes live. Both use the same `/api/google-chat/events` endpoint and env vars — a later Marketplace listing wouldn't require re-doing this setup.
+      ```text
+      https://<your-domain>/api/google-chat/events
+      ```
 
-Marketplace submission asks for a public privacy policy URL as part of the app configuration and OAuth verification — the hosted deployment already has one at `/privacy`.
+    - **Visibility**. For an unlisted app used outside your own Workspace, list the domains, users or groups allowed to install it.
+  </Step>
+  <Step title="Set the environment variables">
+    Set both variables on the `app` service and restart it:
+
+    ```dotenv
+    GOOGLE_CHAT_SERVICE_ACCOUNT_JSON=<the full JSON key as a single-line string>
+    GOOGLE_CHAT_ENDPOINT_URL=https://<your-domain>/api/google-chat/events
+    ```
+  </Step>
+  <Step title="Connect an organization">
+    Any owner or admin can now open **Integrations → Google Chat** and follow the [connect-code flow](/docs/integrations/google-chat#the-connect-code-pairing-flow).
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  `GOOGLE_CHAT_ENDPOINT_URL` must exactly match the HTTP endpoint URL you entered in the Chat app configuration, including any trailing slash. If they differ, Google Chat events are rejected and nothing reaches answerLoops.
+</Callout>
+
+## Who can install the app
+
+The Chat app you just created is an **unlisted app**. It is quick to stand up, but each customer's Workspace admin has two manual steps: enabling third-party Chat apps for their domain (in their **Admin Console → Apps → Google Workspace Marketplace apps** settings), then adding the app to a space.
+
+A [Google Workspace Marketplace](https://developers.google.com/workspace/marketplace/about-app-review) listing lets a customer install in a couple of clicks with no admin-console detour, at the cost of a one-time Google review (OAuth verification and listing review, commonly a few weeks). Both routes use the same endpoint and environment variables, so listing later does not mean redoing this setup. The Marketplace submission asks for a public privacy policy URL, and the hosted deployment already serves one at `/privacy`.
+
+## Troubleshooting
+
+<Accordions>
+  <Accordion title="Messages in the space never reach answerLoops">
+    Check that the HTTP endpoint URL in the Chat app configuration, `GOOGLE_CHAT_ENDPOINT_URL` and your real public address are all identical, and that the `app` service was restarted after you set the variables.
+  </Accordion>
+  <Accordion title="The app cannot be added to a space">
+    The Workspace admin on the installing side may need to enable third-party Chat apps for their domain first, and the person adding the app must be inside the **Visibility** list you configured.
+  </Accordion>
+</Accordions>
+
+## Where to go next
+
+<Cards>
+  <Card icon="MessageCircle" title="Google Chat integration guide" href="/docs/integrations/google-chat">Pair a space with a connect code and set escalation.</Card>
+  <Card icon="Settings" title="Environment Variables" href="/docs/self-hosting/environment-variables">Every variable the app and bot read.</Card>
+  <Card icon="Globe" title="Production" href="/docs/self-hosting/production">Public HTTPS address and hosting for your deployment.</Card>
+</Cards>

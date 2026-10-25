@@ -4,53 +4,82 @@ description: Configure which AI model answerLoops uses for deflection and embedd
 icon: Cpu
 ---
 
-answerLoops uses AI for two things:
-- **Chat** — generating answers to questions
-- **Embeddings** — converting text to vectors for semantic search
+answerLoops uses AI for two jobs, and each can use a different provider:
 
-## Platform default
+- **Chat** writes the answers to questions.
+- **Embeddings** turn your knowledge-base text into vectors, which are lists of numbers that let search find articles by meaning rather than exact words.
 
-Set `OPENAI_API_KEY` in `.env`. This is used by all orgs that haven't configured a custom key in Settings.
+This page shows how to give your instance a model. When you are done, answers and knowledge-base search both work.
 
-```dotenv
-OPENAI_API_KEY=sk-proj-...
-```
+## Choose where the key lives
 
-## Per-org keys (via Settings UI)
+<Tabs items={['Server default (OpenAI)', 'Per workspace (any provider)']}>
+  <Tab value="Server default (OpenAI)">
+    Set `OPENAI_API_KEY` in `.env`. Every workspace that has not saved its own key uses it, for both chat and embeddings. This is the quickest way to get started.
 
-Each org can override the platform key in **Settings → AI Model**. Keys are encrypted at rest using `ENCRYPTION_KEY`.
+    ```dotenv
+    OPENAI_API_KEY=<your-openai-api-key>
+    ```
 
-Supported providers: OpenAI, Anthropic, Google Gemini, Groq, Mistral, xAI
-(Grok), and any OpenAI-compatible endpoint (Ollama, LM Studio, vLLM).
+    OpenAI is the only provider answerLoops reads from the server environment. Restart the app after changing `.env`.
+  </Tab>
+  <Tab value="Per workspace (any provider)">
+    Each workspace can set its own provider in **Settings → AI Model**. The key you save there is stored encrypted and takes priority over the server default for that workspace.
 
-Model ID is a live dropdown, not a fixed list. After entering an API key,
-click **Refresh models** to fetch that provider's current model list directly
-from its own API — this stays accurate as providers ship new models, instead
-of a hardcoded list going stale. If the live fetch fails, or before you've run
-it, Model ID falls back to a small built-in list of recent models, or you can
-type any model ID directly.
+    Supported providers: OpenAI, Anthropic, Google Gemini, Groq, Mistral, xAI (Grok), and any OpenAI-compatible endpoint such as Ollama, LM Studio, or vLLM.
+
+    Model ID is a live dropdown, not a fixed list. After you enter an API key, select **Refresh models** to fetch the provider's current model list from the provider itself, so it stays accurate as new models ship. Before you refresh, or if the fetch fails, the field falls back to a short built-in list of recent models, and you can type any model ID directly.
+  </Tab>
+</Tabs>
+
+<Callout type="info">
+  Use **Settings → AI Model** for Anthropic, Gemini, Groq, Mistral, and xAI. Their keys are saved per workspace, not read from `.env`. Reading these keys from environment variables is coming soon.
+</Callout>
 
 ## Embeddings
 
-Embeddings use OpenAI's `text-embedding-3-small` by default. This can be changed per-org in Settings → Embeddings.
+Embeddings use OpenAI's `text-embedding-3-small` by default. You can change the embedding provider and model per workspace in **Settings → AI Model**, in the **Embeddings** section.
 
-OpenAI is the only named provider that can handle embeddings today. Google Gemini and Mistral are coming soon. If the chat provider is anything else (Anthropic, Gemini, Groq, Mistral, xAI), enter a separate **OpenAI API key** in the embedding key field — the save is rejected without one, and knowledge-base search and every KB import would otherwise fail. An OpenAI-compatible endpoint can serve embeddings too, as long as its model outputs 1536-dimension vectors, the size the knowledge base stores. A model with a different size is rejected when an article is saved.
+OpenAI is the only named provider that can produce the embeddings the knowledge base needs. If your chat provider is anything else, enter a separate **OpenAI API key** in the embeddings key field. Saving is rejected without one, and knowledge-base search and every import would otherwise fail. Embeddings from Google Gemini and Mistral are coming soon.
 
-<Info>
-  Embedding vectors are stored in the database alongside each KB article. Changing the embedding model requires re-importing all KB articles.
-</Info>
+An OpenAI-compatible endpoint can serve embeddings too, as long as its model produces **1536-dimension vectors**, the size the knowledge base stores. A model with a different size is rejected when an article is saved.
 
-## Self-hosted AI (Ollama)
+<Callout type="info">
+  If you change the embedding model, answerLoops re-embeds your existing content in the background from the text it already has, so you do not re-import anything. Search keeps working while it runs. The bot service performs this re-index, so keep it running. See [Production deployment](/docs/self-hosting/production).
+</Callout>
 
-To use Ollama instead of a cloud provider:
+## Use a model you host (Ollama)
 
-1. Run Ollama: `ollama serve`
-2. Pull a model: `ollama pull llama3.2`
-3. In Settings → AI Model → Chat provider: **OpenAI-compatible**
-4. Base URL: `http://localhost:11434/v1`
-5. Model ID: `llama3.2`
-6. Leave API key blank
+Self-hosted instances can point at an OpenAI-compatible server on their own network, such as Ollama.
 
-<Warning>
-  Ollama runs on the host machine, not inside Docker. Use `http://host.docker.internal:11434/v1` as the base URL when running answerLoops in Docker on Mac/Windows.
-</Warning>
+<Steps>
+  <Step>
+    Start Ollama: `ollama serve`.
+  </Step>
+  <Step>
+    Download a model: `ollama pull llama3.2`.
+  </Step>
+  <Step>
+    In **Settings → AI Model**, set **Chat provider** to **OpenAI-compatible**.
+  </Step>
+  <Step>
+    Set **Base URL** to `http://localhost:11434/v1` and **Model ID** to `llama3.2`.
+  </Step>
+  <Step>
+    Leave the API key blank and save.
+  </Step>
+</Steps>
+
+<Callout type="warn">
+  Ollama runs on the host machine, not inside Docker. When answerLoops runs in Docker on Mac or Windows, use `http://host.docker.internal:11434/v1` as the base URL instead of `localhost`.
+</Callout>
+
+Embeddings still need a model that produces 1536-dimension vectors, so most local setups keep an OpenAI key for embeddings only.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Settings" title="Environment variables" href="/docs/self-hosting/environment-variables">See `OPENAI_API_KEY` and the other server settings.</Card>
+  <Card icon="BookOpen" title="Knowledge base" href="/docs/product/knowledge-base">Add the content the AI answers from.</Card>
+  <Card icon="LifeBuoy" title="Troubleshooting" href="/docs/self-hosting/troubleshooting#answers-and-ai">Fix missing drafts and key errors.</Card>
+</Cards>

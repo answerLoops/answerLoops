@@ -4,205 +4,166 @@ description: Fixes for common issues encountered when self-hosting answerLoops.
 icon: LifeBuoy
 ---
 
-## App won't start
-
-**Check logs first:**
+Find your symptom below, open it, and follow the fix. Problems are grouped by where you notice them. For most of them, the first thing to check is the logs.
 
 ```bash
 docker compose logs app --tail=50
+docker compose logs bot --tail=50
 ```
 
-**Common causes:**
-
-- **Missing required env var** — the logs will name the variable. Add it to `.env` and restart.
-- **`DATABASE_URL` wrong or Postgres not ready** — Postgres takes a few seconds to initialise on first boot. Wait 10 seconds and run `docker compose restart app`.
-- **Port 3000 already in use** — change the host port in `docker-compose.yml`, e.g. `"3001:3000"`.
-- **`AUTH_SECRET` or `AUTH_URL` missing** — answerLoops uses Auth.js v5. The correct variable names are `AUTH_SECRET` and `AUTH_URL`, **not** `NEXTAUTH_SECRET` / `NEXTAUTH_URL`. Rename them if you are upgrading from an older deployment.
-
-## Database connection refused
-
-```
-Error: connect ECONNREFUSED 127.0.0.1:5432
-```
-
-Postgres is not yet ready or is on a different host. Fix:
-
-```bash
-docker compose restart app
-```
-
-If the error persists, verify that the `postgres` service is running and healthy:
-
-```bash
-docker compose ps
-docker compose logs postgres --tail=20
-```
-
-Check that `DATABASE_URL` in your `.env` uses the service name as the host (`postgres`), not `localhost`:
-
-```
-DATABASE_URL=postgresql://community:password@postgres:5432/community
-```
-
-## OAuth redirect mismatch
-
-**Error:** `redirect_uri_mismatch` or `Error 400: redirect_uri_mismatch`
-
-Add the exact callback URL to your OAuth app's allowed redirect URIs:
-
-| Provider | Callback URL |
-|---|---|
-| GitHub | `https://<your-domain>/api/auth/callback/github` |
-| Discord | `https://<your-domain>/api/auth/callback/discord` |
-| Google | `https://<your-domain>/api/auth/callback/google` |
-
-Also verify that `AUTH_URL` in your `.env` matches your actual public domain exactly, including the scheme (`https://`), and has no trailing slash.
-
-## AI draft never appears
-
-Open the ticket. Where the draft panel would be, a notice says why there is no draft (see [When a ticket has no draft](/docs/product/tickets#when-a-ticket-has-no-draft)). Bug reports and feature requests are never answered automatically, and an email from an unverified sender is held for a person, so no draft is expected for those.
-
-On a self-hosted deployment, a missing draft on an ordinary question usually means there is no valid AI key.
-
-Fix: go to **Settings → AI Model** and add an API key, or set one of the platform-default env vars (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, `GROQ_API_KEY`, or `MISTRAL_API_KEY`) and restart the app.
-
-Verify the key is accepted — the Settings page shows a "Key saved ✓" badge after a successful save.
-
-## GitHub webhook returning 401 Unauthorized
-
-The webhook receives a 401 if either of the following is true:
-
-1. **`/api/github/webhook` is not in `PUBLIC_PATHS`** — Auth.js v5 protects all routes by default. The webhook route must be explicitly excluded in `auth.ts`. Check that `PUBLIC_PATHS` includes `/api/github/webhook`.
-
-2. **`GITHUB_WEBHOOK_SECRET` has a trailing newline** — `openssl rand -hex 32` appends a newline character. If you paste the output directly, the secret stored in your `.env` will not match what GitHub sends. Fix:
-   - Regenerate with `openssl rand -hex 32 | tr -d '\n'`, or
-   - Open `.env`, find `GITHUB_WEBHOOK_SECRET`, and manually remove any trailing whitespace
-
-After fixing, restart the app and re-deliver the failed webhook from the GitHub App settings page.
-
-## Discord forum posts not creating tickets
-
-**Symptom:** questions posted as new forum posts are not ingested; replies inside existing threads work fine.
-
-**Cause:** Discord fires a `ThreadCreate` event for new forum posts, not a `MessageCreate` event. The bot must have a `ThreadCreate` listener to capture these.
-
-**Fix:** ensure you are running the bot image built after the July 2026 `ThreadCreate` fix. Pull the latest image and restart:
-
-```bash
-docker compose pull bot
-docker compose up -d bot
-```
-
-Replies inside threads fire `MessageCreate` and continue to work as before. Only the initial forum post requires `ThreadCreate`.
-
-## Discord channel picker shows "loading…" indefinitely
-
-The channel picker in the answerLoops UI calls Discord's API to list channels. It requires `DISCORD_TOKEN` to be set on the **app** service, not only on the bot service.
-
-Check your `docker-compose.yml` or environment config and ensure `DISCORD_TOKEN` is present in the `app` service's environment block, then restart:
-
-```bash
-docker compose up -d app
-```
-
-## Discord bot not connecting (`DISCORD_TOKEN` and `DISCORD_CLIENT_ID` mismatch)
-
-`DISCORD_TOKEN` and `DISCORD_CLIENT_ID` must both come from the **same Discord application**. If you created a new application or regenerated the token, update both variables together and restart the bot.
-
-## `BOT_TARGET_URL` causing 404 on `/api/ingest`
-
-The bot appends `/api/ingest` to `BOT_TARGET_URL`. A trailing slash or period produces a malformed URL:
-
-| Value | Result |
-|---|---|
-| `https://answerloops.com` | ✅ `https://answerloops.com/api/ingest` |
-| `https://answerloops.com/` | ❌ `https://answerloops.com//api/ingest` |
-| `https://answerloops.com.` | ❌ `https://answerloops.com./api/ingest` |
-
-Set `BOT_TARGET_URL` to the bare domain with no trailing slash or period.
-
-## FAQ page always shows "No FAQ generated yet"
-
-**Cause:** a missing `await` on the `getLatestFAQ()` call in the GET `/api/faq` route caused the response to resolve before the DB query completed. This was fixed in July 2026.
-
-If you are on an older build, pull the latest image:
-
-```bash
-docker compose pull app
-docker compose up -d app
-```
-
-Note: the FAQ is generated only from tickets with status `resolved` or `closed`. If no tickets have been resolved yet, the FAQ will legitimately be empty.
-
-## `/knowledge-gaps` page crashes with a server error
-
-**Cause:** a nested `<Link>` inside another `<Link>` caused an SSR crash when gap data existed. Fixed in July 2026. Pull the latest app image to resolve.
-
-## Slack events not ingesting
-
-1. Verify `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, and `SLACK_SIGNING_SECRET` are all set correctly.
-2. Check the Slack App's Event Subscriptions page — the request URL must be publicly reachable and returning 200.
-3. Confirm `SLACK_POLL_INTERVAL_SECONDS` is set if you are using polling mode rather than event subscriptions.
-4. Check app logs for Slack-related errors:
-
-```bash
-docker compose logs app --tail=50 | grep -i slack
-```
-
-## Emails not sending
-
-1. Verify `RESEND_API_KEY` is valid and not expired.
-2. Verify `RESEND_FROM` is set to an address in a verified Resend domain.
-3. Check that the sending domain is verified in your Resend dashboard.
-4. Inspect logs:
-
-```bash
-docker compose logs app --tail=50 | grep -i resend
-```
-
-## Widget returns 500
-
-A 500 from the widget embed script usually means the app is not reachable from the browser, or the widget's org token is invalid.
-
-1. Open the browser console — the error message from the fetch response is logged there.
-2. Confirm the app is running and accessible at its public URL.
-3. Go to **Settings → Widget** and verify the org token has not been regenerated without updating the embed snippet.
-
-## Data lost after restart
-
-You ran `docker compose down -v`. The `-v` flag deletes all named volumes, including `postgres-data`. This is permanent — there is no recovery without a backup.
-
-Always stop the stack with:
-
-```bash
-docker compose down
-```
-
-Never use `-v` unless you intentionally want to wipe all data.
-
-## Page crashes with "X.map is not a function"
-
-An API route returned a non-array (usually an error object or `null`). Check:
-
-```bash
-docker compose logs app --tail=30 | grep -i error
-```
-
-Common causes: missing API key, failed DB query, or an unhandled exception in an API handler.
-
-## Onboarding wizard shows on every login
-
-`onboarded_at` is null in the `orgs` table — the onboarding wizard was never completed. Complete it once: name your workspace, then click through all steps (you can skip optional ones).
-
-To inspect via the database directly:
-
-```bash
-docker compose exec postgres psql -U community -d community \
-  -c "SELECT id, name, onboarded_at FROM orgs;"
-```
-
-## Updated content appears without its styles
-
-Let Next.js manage caching for `/_next/static/` assets. Production builds use content-hashed assets that can be cached indefinitely; development assets need to refresh as source files change. Do not apply a custom immutable cache rule to development assets.
-
-If an earlier configuration cached a development stylesheet indefinitely, restart the development server after correcting the configuration and perform a hard reload in the browser to discard the old response.
+If you run the published-image or from-source stack, add `-f docker-compose.ghcr.yml` or `-f docker-compose.prod.yml` after `docker compose`.
+
+## Quick lookup
+
+| What you see | Most likely cause | Jump to |
+|---|---|---|
+| App will not start | Missing setting, or the database is not ready | [Startup and database](#startup-and-database) |
+| `ECONNREFUSED` on port 5432 | Wrong database host, or Postgres still starting | [Startup and database](#startup-and-database) |
+| `redirect_uri_mismatch` | Google redirect URI does not match `AUTH_URL` | [Sign-in and access](#sign-in-and-access) |
+| No sign-in button | Google credentials not set | [Sign-in and access](#sign-in-and-access) |
+| No AI draft on a ticket | No usable AI key | [Answers and AI](#answers-and-ai) |
+| Bot connects but never replies | Automatic Deflections is off | [Channels](#channels) |
+| Knowledge-base syncs never finish | Bot service is not running | [Channels](#channels) |
+| Data gone after a restart | Volumes were deleted | [Startup and database](#startup-and-database) |
+
+## Startup and database
+
+<Accordions>
+  <Accordion title="The app will not start">
+    Check the app logs first. Then look for these causes:
+
+    - **A required setting is missing.** Add it to `.env` and restart. See the [minimum to boot](/docs/self-hosting/environment-variables#minimum-to-boot).
+    - **The database is not ready.** Postgres can take a few seconds to initialise on first boot. Wait about 10 seconds, then run `docker compose restart app`.
+    - **Port 3000 is already in use.** Change the host port in the compose file, for example `"3001:3000"`.
+    - **Old setting names.** answerLoops uses `AUTH_SECRET` and `AUTH_URL`. Rename `NEXTAUTH_` variables if you are coming from an older deployment.
+    - **A migration failed.** The log names the file that failed. Restore your backup if you are mid-upgrade, and see [Upgrading](/docs/self-hosting/upgrading).
+  </Accordion>
+  <Accordion title="Database connection refused (ECONNREFUSED)">
+    The app cannot reach Postgres. Either it is still starting or `DATABASE_URL` points at the wrong host.
+
+    1. Restart the app: `docker compose restart app`.
+    2. If it persists, check that Postgres is running: `docker compose ps` and `docker compose logs postgres --tail=20`.
+    3. Make sure `DATABASE_URL` uses the service name as the host (`postgres`), not `localhost`, when the app runs in the default compose stack:
+
+    ```
+    DATABASE_URL=postgresql://community:<your-password>@postgres:5432/community
+    ```
+
+    The default compose file sets this for you. Bring-your-own-Postgres stacks use the address you provide.
+  </Accordion>
+  <Accordion title="Live updates or settings changes do not appear">
+    If `DATABASE_URL` goes through a connection pooler, live updates and config reload need a direct connection. Set `DIRECT_DATABASE_URL` to your provider's direct or session-mode connection string and restart.
+  </Accordion>
+  <Accordion title="All my data disappeared after a restart">
+    The database volume was deleted, most likely by `docker compose down -v`. The `-v` flag removes named volumes, including `postgres-data`. This cannot be undone without a backup.
+
+    Stop the stack with `docker compose down` and never add `-v` unless you mean to wipe everything. See [Upgrading](/docs/self-hosting/upgrading) for how to take backups.
+  </Accordion>
+  <Accordion title="The onboarding wizard appears on every login">
+    The workspace has not finished onboarding. Complete the wizard once: name your workspace and click through the steps (you can skip optional ones). To check the state directly:
+
+    ```bash
+    docker compose exec postgres psql -U community -d community \
+      -c "SELECT id, name, onboarded_at FROM orgs;"
+    ```
+
+    An empty `onboarded_at` means onboarding has not finished.
+  </Accordion>
+</Accordions>
+
+## Sign-in and access
+
+<Accordions>
+  <Accordion title="Google shows redirect_uri_mismatch">
+    The redirect URI registered in Google does not match what your instance sends. Sign-in is Google only, so there is a single address to fix:
+
+    ```
+    https://<your-domain>/api/auth/callback/google
+    ```
+
+    Add it exactly as shown under your OAuth client's authorized redirect URIs. Then make sure `AUTH_URL` in `.env` matches your public address, including `https://`, with no trailing slash. See [OAuth setup](/docs/self-hosting/oauth).
+  </Accordion>
+  <Accordion title="The sign-in page has no button">
+    The page only offers a method whose credentials are set. Set `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` in `.env` and restart.
+  </Accordion>
+</Accordions>
+
+## Answers and AI
+
+<Accordions>
+  <Accordion title="An AI draft never appears">
+    Open the ticket. Where the draft would be, a notice explains why there is none (see [When a ticket has no draft](/docs/product/tickets#when-a-ticket-has-no-draft)). Bug reports and feature requests are never answered automatically, and email from an unverified sender is held for a person, so no draft is expected for those.
+
+    For an ordinary question on a self-hosted instance, a missing draft usually means there is no usable AI key. Go to **Settings → AI Model** and add one, or set `OPENAI_API_KEY` in `.env` and restart. The Settings page shows a **Key saved** badge after a successful save.
+
+    Anthropic, Gemini, Groq, and Mistral keys can only be saved in **Settings → AI Model**; they are not read from `.env`.
+  </Accordion>
+  <Accordion title="Knowledge-base search or import fails after switching chat provider">
+    A chat provider other than OpenAI cannot produce embeddings. Add an OpenAI key in the **Embeddings** section of **Settings → AI Model**. See [AI provider config](/docs/self-hosting/ai-providers).
+  </Accordion>
+  <Accordion title="Emails are not sending">
+    1. Check that `RESEND_API_KEY` is valid.
+    2. Check that `RESEND_FROM` is an address on a domain verified in your Resend dashboard.
+    3. Look at the logs: `docker compose logs app --tail=50 | grep -i resend`.
+
+    Without these settings, email notifications are skipped silently.
+  </Accordion>
+</Accordions>
+
+## Channels
+
+<Accordions>
+  <Accordion title="The bot is connected but never replies in the channel">
+    **Automatic Deflections** is off by default. While it is off, answers are held as drafts on the dashboard for your team to approve, edit, or dismiss, and nothing is posted to the channel on its own. Turn it on for the channel in its integration settings once you trust the answers.
+  </Accordion>
+  <Accordion title="Knowledge-base syncs or re-indexing never finish">
+    The **bot** service runs those jobs. Check that it is running (`docker compose ps`) and that `BOT_SECRET` is set to the same value on the app and the bot. If the bot and app are on different hosts, set `BOT_TARGET_URL` on the bot to the app's address.
+  </Accordion>
+  <Accordion title="The bot gets 404 on /api/ingest">
+    The bot adds `/api/ingest` to the end of `BOT_TARGET_URL`, so a trailing slash or period breaks the address.
+
+    | Value | Result |
+    |---|---|
+    | `https://app.example.com` | Works: `https://app.example.com/api/ingest` |
+    | `https://app.example.com/` | Broken: `https://app.example.com//api/ingest` |
+    | `https://app.example.com.` | Broken: `https://app.example.com./api/ingest` |
+
+    Use the bare address with nothing after it.
+  </Accordion>
+  <Accordion title="The Discord channel picker says loading forever">
+    The picker asks Discord for your channels from the **app** service, so `DISCORD_TOKEN` must be set on the app and not only on the bot. Add it to the app's environment and restart: `docker compose up -d app`.
+  </Accordion>
+  <Accordion title="The Discord bot will not connect">
+    `DISCORD_TOKEN` and `DISCORD_CLIENT_ID` must come from the same Discord application. If you created a new application or regenerated the token, update both together and restart the bot.
+  </Accordion>
+  <Accordion title="Slack events are not arriving">
+    1. Check that `SLACK_CLIENT_ID`, `SLACK_CLIENT_SECRET`, and `SLACK_SIGNING_SECRET` are all set.
+    2. On the Slack app's Event Subscriptions page, confirm the request URL is publicly reachable and verified.
+    3. Look at the logs: `docker compose logs app --tail=50 | grep -i slack`.
+
+    `SLACK_POLL_INTERVAL_SECONDS` only matters in polling mode and defaults to `60`.
+  </Accordion>
+  <Accordion title="The GitHub webhook returns an error">
+    - **503:** `GITHUB_WEBHOOK_SECRET` is not set. Set it to the same value you configured on the GitHub App.
+    - **401:** the secret does not match. Check that the value in `.env` has no trailing whitespace or newline, then restart the app and re-deliver the failed webhook from the GitHub App settings page.
+  </Accordion>
+  <Accordion title="The widget returns an error">
+    A 500 from the widget usually means the browser cannot reach the app, or the embed snippet no longer matches the workspace.
+
+    1. Open the browser console and read the error from the failed request.
+    2. Confirm the app is reachable at its public address.
+    3. In **Settings → Widget**, confirm the widget token in your embed snippet is the current one.
+  </Accordion>
+</Accordions>
+
+## Still stuck?
+
+Gather the relevant log lines from the app and bot, and the exact error text, before you ask for help. Remove any keys or tokens first.
+
+## Where to go next
+
+<Cards>
+  <Card icon="Settings" title="Environment variables" href="/docs/self-hosting/environment-variables">Check a setting's name and format.</Card>
+  <Card icon="CircleArrowUp" title="Upgrading" href="/docs/self-hosting/upgrading">Back up and roll back safely.</Card>
+  <Card icon="Globe" title="Production deployment" href="/docs/self-hosting/production">Review the production checklist.</Card>
+</Cards>

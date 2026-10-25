@@ -4,26 +4,69 @@ description: Configure Google login for your self-hosted instance.
 icon: KeyRound
 ---
 
-answerLoops signs users in with Google OAuth. The sign-in page only offers a method whose credentials are set, so without the two variables below it shows a notice that sign-in is not set up instead of a button.
+answerLoops signs your team in with Google. This page walks you through creating a Google OAuth client, which is a set of credentials that lets answerLoops ask Google who is signing in. When you are done, the sign-in page shows a **Google** button.
 
-## Google OAuth
+<Callout type="info">
+  Google is the only sign-in method. Discord, Slack, and GitHub connections inside the product are for linking channels, and you set those up after you are signed in.
+</Callout>
 
-1. Go to [console.cloud.google.com](https://console.cloud.google.com) → **APIs & Services** → **Credentials**
-2. Click **Create Credentials** → **OAuth client ID**
-3. Application type: **Web application**
-4. Add authorized redirect URI: `http://localhost:3000/api/auth/callback/google`
-5. Copy the **Client ID** and **Client Secret**
+The sign-in page only offers a method whose credentials are set. Without the two variables below it shows a notice that sign-in is not set up, instead of a button.
 
-Add to `.env`:
-```dotenv
-AUTH_GOOGLE_ID=your_client_id
-AUTH_GOOGLE_SECRET=your_client_secret
-```
+## Create the Google client
 
-## Production callback URLs
+<Steps>
+  <Step>
+    Open [console.cloud.google.com](https://console.cloud.google.com), then go to **APIs & Services** → **Credentials**.
+  </Step>
+  <Step>
+    Select **Create Credentials** → **OAuth client ID**.
+  </Step>
+  <Step>
+    Set the application type to **Web application**.
+  </Step>
+  <Step>
+    Add this authorized redirect URI, using your own address in place of the example:
 
-Replace `http://localhost:3000` with your production domain in the callback URL.
+    - Local: `http://localhost:3000/api/auth/callback/google`
+    - Production: `https://<your-domain>/api/auth/callback/google`
+  </Step>
+  <Step>
+    Copy the **Client ID** and **Client secret**, and add them to `.env`:
 
-<Warning>
-  OAuth callback URLs must match exactly — trailing slashes, http vs https, and port numbers all matter.
-</Warning>
+    ```dotenv
+    AUTH_GOOGLE_ID=<your-google-client-id>
+    AUTH_GOOGLE_SECRET=<your-google-client-secret>
+    ```
+  </Step>
+</Steps>
+
+Restart the app after changing `.env`.
+
+## How sign-in works
+
+<Mermaid
+  caption="The Google sign-in redirect: you start on answerLoops, approve on Google, and Google sends you back to your own callback address."
+  chart={`sequenceDiagram
+  participant You
+  participant App as answerLoops
+  participant Google
+  You->>App: Select Google on the sign-in page
+  App->>Google: Redirect to Google to approve
+  Google->>You: Ask you to approve
+  You->>Google: Approve
+  Google->>App: Redirect to /api/auth/callback/google
+  App->>You: Signed in, open the dashboard`} />
+
+The callback address in the fifth message is built from `AUTH_URL`, so that variable must match the public address you actually use.
+
+<Callout type="warn">
+  The redirect URI in Google must match your address exactly. A trailing slash, `http` versus `https`, or a different port each count as a mismatch. If Google shows a `redirect_uri_mismatch` error, see [troubleshooting](/docs/self-hosting/troubleshooting#sign-in-and-access).
+</Callout>
+
+## Where to go next
+
+<Cards>
+  <Card icon="Globe" title="Production deployment" href="/docs/self-hosting/production">Put the app on a real domain with HTTPS.</Card>
+  <Card icon="Settings" title="Environment variables" href="/docs/self-hosting/environment-variables">See `AUTH_URL` and the other sign-in settings.</Card>
+  <Card icon="LifeBuoy" title="Troubleshooting" href="/docs/self-hosting/troubleshooting#sign-in-and-access">Fix redirect and sign-in errors.</Card>
+</Cards>
