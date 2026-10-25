@@ -7,6 +7,7 @@ import { Accordion, Accordions } from 'fumadocs-ui/components/accordion'
 import { Step, Steps } from 'fumadocs-ui/components/steps'
 import { Hotspots } from '@/components/docs/hotspots'
 import { IntegrationFlow } from '@/components/docs/integration-flow'
+import { Mermaid } from '@/components/docs/mermaid'
 import { IntegrationLogo } from '@/components/docs/integration-logo'
 import { LoopIllustration } from '@/components/docs/loop-illustration'
 import { Screenshot } from '@/components/docs/screenshot'
@@ -97,6 +98,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     LoopIllustration,
     Screenshot,
     Hotspots,
+    Mermaid,
     // Blog posts reference the connected-channel list in prose; this keeps
     // it sourced from lib/marketing/channels.ts instead of a hardcoded list
     // in a post's MDX that can drift when a channel is added or renamed.
