@@ -116,7 +116,7 @@ async function applyMasks(page: Page, masks: ShotMask[], rules: TextMaskRule[]):
     )
   }
   await page.evaluate((list) => {
-    const compiled = list.map((r) => ({ re: new RegExp(r.pattern, r.flags ?? 'g'), to: r.replacement }))
+    const compiled = list.map((r) => ({ re: r.pattern, to: r.replacement }))
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
     const nodes: Text[] = []
     while (walker.nextNode()) nodes.push(walker.currentNode as Text)
@@ -131,7 +131,7 @@ async function applyMasks(page: Page, masks: ShotMask[], rules: TextMaskRule[]):
       for (const { re, to } of compiled) value = value.replace(re, to)
       if (value !== el.value) el.value = value
     }
-  }, rules.map((r) => ({ ...r, flags: r.flags ?? 'g' })))
+  }, rules)
 }
 
 // Last line of defence: nothing secret-looking or non-fictional may remain.

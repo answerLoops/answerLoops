@@ -1,12 +1,12 @@
 // @vitest-environment happy-dom
+import { createElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Hotspots } from '@/components/docs/hotspots'
 
 vi.mock('next/image', () => ({
-  // eslint-disable-next-line @next/next/no-img-element
-  default: ({ src, alt }: { src: string; alt: string }) => <img src={src} alt={alt} />,
+  default: ({ src, alt }: { src: string; alt: string }) => createElement('img', { src, alt }),
 }))
 
 vi.mock('@/components/docs/shots', () => ({

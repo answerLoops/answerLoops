@@ -44,10 +44,13 @@ export interface ShotMask {
   text?: string
 }
 
-/** Rewrite any visible text matching a regular expression. */
+/**
+ * Rewrite any visible text matching a regular expression. The pattern is a
+ * literal (with the g flag) rather than a string, so nothing is compiled from
+ * data at capture time; Playwright passes it into the page as is.
+ */
 export interface TextMaskRule {
-  pattern: string
-  flags?: string
+  pattern: RegExp
   replacement: string
 }
 
@@ -82,11 +85,11 @@ export const DEFAULT_VIEWPORT: ViewportSize = { width: 1440, height: 900 }
  */
 export const DEFAULT_TEXT_MASKS: TextMaskRule[] = [
   // "••••30b1 (connected)": the last four characters of a stored token.
-  { pattern: '[•·]{2,}\\s?[A-Za-z0-9]{4}\\b', replacement: '••••••••' },
+  { pattern: /[•·]{2,}\s?[A-Za-z0-9]{4}\b/g, replacement: '••••••••' },
   // Long hex values: Circle setup value, widget embed token.
-  { pattern: '\\b[0-9a-f]{24,}\\b', replacement: '••••••••••••••••' },
+  { pattern: /\b[0-9a-f]{24,}\b/g, replacement: '••••••••••••••••' },
   // "al_live_<8 hex>••••••••": API key prefixes.
-  { pattern: '\\bal_live_[0-9a-f]{4,}', replacement: 'al_live_••••••••' },
+  { pattern: /\bal_live_[0-9a-f]{4,}/g, replacement: 'al_live_••••••••' },
 ]
 
 export const SHOTS: Shot[] = [
@@ -292,7 +295,7 @@ export const SHOTS: Shot[] = [
     ],
     capture: { type: 'element', selector: 'section[role="dialog"]:has-text("Product Feedback")' },
     // The seeded maintainer reply carries a personal name; show the team instead.
-    textMask: [{ pattern: 'Nathan @ answerLoops', replacement: 'answerLoops team' }],
+    textMask: [{ pattern: /Nathan @ answerLoops/g, replacement: 'answerLoops team' }],
     alt: 'The product feedback board: a Feedback tab listing submitted ideas with a team reply, an Updates tab, and a box to leave feedback.',
     pins: [
       { id: 'tabs', selector: 'section[role="dialog"] button:has-text("Updates")', label: 'Feedback and Updates tabs' },

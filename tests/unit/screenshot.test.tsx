@@ -1,13 +1,12 @@
 // @vitest-environment happy-dom
+import { createElement } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { Screenshot } from '@/components/docs/screenshot'
 
 vi.mock('fumadocs-ui/components/image-zoom', () => ({
-  // eslint-disable-next-line @next/next/no-img-element
-  ImageZoom: ({ src, alt, width, height }: { src: string; alt: string; width: number; height: number }) => (
-    <img src={src} alt={alt} width={width} height={height} />
-  ),
+  ImageZoom: ({ src, alt, width, height }: { src: string; alt: string; width: number; height: number }) =>
+    createElement('img', { src, alt, width, height }),
 }))
 
 vi.mock('@/components/docs/shots', () => ({
