@@ -142,7 +142,7 @@ export function GitHubIntegrationCard() {
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800 mb-0.5">Automatic Deflections</p>
-                        <p className="text-xs text-gray-500">When off, high-confidence AI answers are held as drafts awaiting approval instead of posting automatically — a brief acknowledgment comment is posted instead.</p>
+                        <p className="text-xs text-gray-500">When off, high-confidence AI answers are held as drafts awaiting approval instead of posting automatically. Nothing is posted to the issue until your team approves a draft.</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0 mt-0.5">
                         {editingDeflectId === repo.id ? (

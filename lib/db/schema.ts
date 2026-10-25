@@ -579,8 +579,9 @@ export const integrations = pgTable(
     enabled: integer('enabled').notNull().default(1),
     // Automatic Deflections — default OFF. When 0, a high-confidence answer
     // is never auto-posted to the customer channel; it's held as a draft for
-    // staff Approve/Edit/Dismiss and a brief generic acknowledgment is sent
-    // instead (see postNeedsHumanReview in lib/ai/agent.ts). When 1, a
+    // staff Approve/Edit/Dismiss and nothing is posted to the channel (Google
+    // Chat alone gets a neutral receipt; see postNeedsHumanReview in
+    // lib/ai/agent.ts). When 1, a
     // high-confidence answer auto-posts as before. Distinct from `enabled`
     // above, which gates whether the integration is connected at all.
     autoDeflectEnabled: integer('auto_deflect_enabled').notNull().default(0),

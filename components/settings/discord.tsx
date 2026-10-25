@@ -312,7 +312,7 @@ export function DiscordIntegrationCard() {
               <div>
                 <span className="text-xs font-medium text-gray-600">Automatic Deflections</span>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  When off, high-confidence answers are held as drafts awaiting approval instead of posting automatically — a brief acknowledgment is sent to the channel instead.
+                  When off, high-confidence answers are held as drafts awaiting approval instead of posting automatically. Nothing is posted to the channel until your team approves a draft.
                 </p>
               </div>
               <ToggleSwitch
@@ -418,7 +418,7 @@ export function DiscordIntegrationCard() {
                 defaultChecked={integration!.auto_deflect_enabled === 1}
               />
               <p className="text-xs text-gray-400 mt-1">
-                When off, high-confidence answers are held as drafts awaiting approval instead of posting automatically — a brief acknowledgment is sent to the channel instead.
+                When off, high-confidence answers are held as drafts awaiting approval instead of posting automatically. Nothing is posted to the channel until your team approves a draft.
               </p>
             </div>
             {(saveState as { error?: string } | null)?.error && (

@@ -235,7 +235,7 @@ export function DiscourseIntegrationCard() {
                 defaultChecked={integration?.auto_deflect_enabled === 1}
               />
               <p className="text-xs text-gray-400 mt-1">
-                When off, high-confidence answers are held as drafts awaiting approval instead of posting automatically.
+                When off, high-confidence answers are held as drafts awaiting approval instead of posting automatically. Nothing is posted to the topic until your team approves a draft.
               </p>
             </div>
             {(saveState as { error?: string } | null)?.error && (

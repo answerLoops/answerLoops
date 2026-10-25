@@ -250,7 +250,7 @@ export function GoogleChatIntegrationCard() {
                 defaultChecked={integration!.auto_deflect_enabled === 1}
               />
               <p className="text-xs text-gray-400 mt-1">
-                When off, high-confidence answers are held as drafts awaiting approval instead of posting automatically — a brief acknowledgment is sent to the space instead.
+                When off, high-confidence answers are held as drafts awaiting approval instead of posting automatically. The space only gets a short receipt, so Google Chat does not show the app as not responding, until your team approves a draft.
               </p>
             </div>
             <div className="flex items-center gap-2">
