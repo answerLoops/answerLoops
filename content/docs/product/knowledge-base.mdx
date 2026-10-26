@@ -229,6 +229,24 @@ When the same question comes in again, the existing item's counter goes up (**As
 
 Nothing in the queue is searchable or shown to customers until you approve it. The **Review** tab shows how many items are waiting. Each workspace holds up to 500 unreviewed items at a time; when the queue is full the tab says so and new questions are not captured, so clear it regularly.
 
+## Verifying an article
+
+An article can be marked as verified: an owner or admin checked it and found the answer still correct. On the **Manage** tab, each article shows where it stands, always in words:
+
+- **Never verified.** Nobody has checked it. Every article starts here, including every article that existed before verification was introduced.
+- **Verified on a date by a person.** Someone checked it, and its question and answer have not changed since.
+- **Changed since last verified.** It was verified, but its question or answer has been edited or refreshed since, so the check no longer applies. Verifying it again clears this.
+
+To verify an article, choose **Mark as verified** (or **Verify again**) and add an optional note, for example the product version you checked it against. The note can be up to 500 characters.
+
+A few things to know about what verification means:
+
+- Verification applies to the exact wording that was checked. Any change to the words, whether by a person, a ticket refresh or a sync, makes the article read as changed since last verified. Reflowing text or adding trailing whitespace is not a change.
+- Imports and syncs never verify an article and never clear a verification on their own. A page rewritten by a sync with new content simply reads as changed since last verified.
+- Age alone never makes an article wrong. A verification of unchanged text stays valid however old it is, and verification has no effect on whether the assistant uses an article.
+- If the person who verified an article is later removed from the team, the date and note stay and the name is dropped.
+- Each verification is also recorded in the article's history.
+
 ## More details
 
 <Accordions>
@@ -254,7 +272,7 @@ Nothing in the queue is searchable or shown to customers until you approve it. T
     Some articles have no recorded creator, and that means unknown, not nobody. Articles that existed before this was recorded keep an unknown creator, and articles made by file upload, URL import, or a synced source are created by the import itself. Refreshing a ticket's article later does not change who is recorded as its creator, and removing a team member keeps their articles.
   </Accordion>
   <Accordion title="Article history">
-    answerLoops keeps an append-only history for each article. It records when an article was created, when a resolved ticket was promoted into one, when its question or answer was changed, and each review decision on the question that became the article: approved, rejected, or reopened. Every entry notes who did it and where it came from: added by hand, promoted from a ticket, the review queue, a file or URL import, or a synced source.
+    answerLoops keeps an append-only history for each article. It records when an article was created, when a resolved ticket was promoted into one, when its question or answer was changed, each time a person verified it, and each review decision on the question that became the article: approved, rejected, or reopened. Every entry notes who did it and where it came from: added by hand, promoted from a ticket, the review queue, a file or URL import, or a synced source.
 
     - Changes made by a sync or import are recorded as automated, with no person attached. A sync that rewrites a page with the same content adds nothing.
     - Only a change to the words counts as an edit. Reflowing text or adding trailing whitespace does not.

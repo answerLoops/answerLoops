@@ -159,6 +159,23 @@ export interface PriorAnswer {
   articleId?: number
 }
 
+/**
+ * Whether a person has checked an article, judged against its current text:
+ * 'verified' while the content still matches what was checked, 'changed' once
+ * it no longer does, 'never' when nobody has verified it.
+ */
+export type ArticleVerificationStatus = 'never' | 'verified' | 'changed'
+
+export interface ArticleVerification {
+  status: ArticleVerificationStatus
+  /** When it was last verified, even if the article has changed since. */
+  verified_at: string | null
+  verified_by: number | null
+  /** The verifier's name, or null when unknown or the user has been deleted. */
+  verified_by_name: string | null
+  note: string | null
+}
+
 export interface KBArticle {
   id: number
   question: string
@@ -170,6 +187,8 @@ export interface KBArticle {
   published: 0 | 1
   created_at: string
   updated_at: string
+  /** Present on the article list; absent on search results. */
+  verification?: ArticleVerification
 }
 
 export type KBArticleEventType =
@@ -179,6 +198,7 @@ export type KBArticleEventType =
   | 'review_approved'
   | 'review_rejected'
   | 'review_reopened'
+  | 'verified'
 
 export type KBArticleEventOrigin = 'manual' | 'ticket_promotion' | 'review_queue' | 'import' | 'sync'
 

@@ -90,6 +90,23 @@ function checkValues(column: string): string[] {
   expect(m, `no CHECK ... IN (...) on ${column}`).not.toBeNull()
   return [...m![1].matchAll(/'([^']*)'/g)].map((x) => x[1])
 }
+/**
+ * The event types the table accepts once every migration has run: the inline
+ * CHECK in the creating migration, replaced by any later migration that drops
+ * and re-adds kb_article_events_type_check to allow a new type. The last one wins,
+ * the way the runner applies them.
+ */
+function effectiveTypeValues(): string[] {
+  let values = checkValues('type')
+  const files = fs.readdirSync(DRIZZLE_DIR).filter((f) => f.endsWith('.sql')).sort()
+  for (const f of files) {
+    const m = read(`drizzle/${f}`).match(
+      /ADD CONSTRAINT kb_article_events_type_check\s+CHECK\s*\(\s*type\s+IN\s*\(([^)]*)\)\s*\)/i
+    )
+    if (m) values = [...m[1].matchAll(/'([^']*)'/g)].map((x) => x[1])
+  }
+  return values
+}
 /** Members of an exported string-literal union type in types/index.ts. */
 function unionMembers(name: string): string[] {
   const m = read('types/index.ts').match(new RegExp(`export type ${name} =([^\\n]*(?:\\n\\s*\\|[^\\n]*)*)`))
@@ -180,10 +197,14 @@ describe('migration runner compatibility (lib/db/migrate.ts)', () => {
 })
 
 describe('CHECK constraints agree with the TypeScript unions in types/index.ts', () => {
-  it('type lists exactly the KBArticleEventType members', () => {
+  it('type lists exactly the KBArticleEventType members, counting later migrations that widen it', () => {
     const members = unionMembers('KBArticleEventType')
     expect(members.length).toBeGreaterThan(0)
-    expect([...checkValues('type')].sort()).toEqual([...members].sort())
+    expect([...effectiveTypeValues()].sort()).toEqual([...members].sort())
+  })
+
+  it('the original 0060 list is a subset of the final list, so no migration narrows what was allowed', () => {
+    expect(checkValues('type').every((t) => effectiveTypeValues().includes(t))).toBe(true)
   })
 
   it('origin lists exactly the KBArticleEventOrigin members', () => {

@@ -57,7 +57,7 @@ Schema: `lib/db/schema.ts`. Migrations: hand-authored SQL in `drizzle/`, applied
 | `ticket_embeddings`, `ticket_links` | semantic vector per ticket + nearest-neighbour graph |
 | `ai_assessments` | confidence grade per drafted answer |
 | `kb_articles`, `kb_sources` | knowledge base Q&A articles + their source documents/URLs |
-| `kb_article_events` | append-only article history: created, promoted, edited, review decisions (hash of content, never the text) |
+| `kb_article_events` | append-only article history: created, promoted, edited, verified, review decisions (hash of content, never the text) |
 | `integrations` | per-org, per-platform connection config (Discord/Slack/Telegram/Email) |
 | `discord_guilds` | one row per Discord server an org has connected — an org can connect more than one |
 | `github_repos` | connected repos for source-code search + KB sync |

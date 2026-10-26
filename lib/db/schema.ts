@@ -430,6 +430,15 @@ export const kbArticles = pgTable(
     // approved a review item. Null means unknown or automated: articles made
     // before this column existed, and imports and syncs (those carry source_id).
     createdBy: integer('created_by').references(() => users.id, { onDelete: 'set null' }),
+    // Explicit verification: a person checked the answer is still correct. The
+    // hash is of the question and answer they checked (lib/kb/revision.ts); the
+    // article reads as verified only while its content still matches it. Only
+    // the verify action writes these; imports and syncs never do. Null means
+    // never verified.
+    verifiedAt: text('verified_at'),
+    verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
+    verifiedContentHash: text('verified_content_hash'),
+    verificationNote: text('verification_note'),
     createdAt: text('created_at').notNull().default(now),
     updatedAt: text('updated_at').notNull().default(now),
   },
@@ -515,7 +524,7 @@ export const kbArticleEvents = pgTable(
     id: serial('id').primaryKey(),
     orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
     articleId: integer('article_id').references(() => kbArticles.id, { onDelete: 'cascade' }),
-    // 'created' | 'promoted' | 'edited' | 'review_approved' | 'review_rejected' | 'review_reopened'
+    // 'created' | 'promoted' | 'edited' | 'review_approved' | 'review_rejected' | 'review_reopened' | 'verified'
     type: text('type').notNull(),
     // Null for automated events (imports and syncs) and for users since deleted.
     actorUserId: integer('actor_user_id').references(() => users.id, { onDelete: 'set null' }),

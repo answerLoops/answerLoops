@@ -54,9 +54,9 @@ The diagram shows the key relationships only. The link from an article to its im
 | Records | Purpose |
 | --- | --- |
 | `kb_sources` | Imported source metadata. |
-| `kb_articles` | Searchable knowledge articles, their publication state, and which team member added each one (`created_by`, null when unknown or imported). |
+| `kb_articles` | Searchable knowledge articles, their publication state, which team member added each one (`created_by`, null when unknown or imported), and whether a person has verified the answer (`verified_at`, `verified_by`, `verified_content_hash`, `verification_note`; all null until someone verifies it). |
 | `kb_sync_jobs` | Progress of background imports. |
-| `kb_article_events` | An append-only history of each article: created, promoted from a ticket, edited, and the review decisions behind it. Each row records the type, who did it (empty for imports and syncs), where it came from, and a hash of the question and answer at that moment. The article text itself is not copied. |
+| `kb_article_events` | An append-only history of each article: created, promoted from a ticket, edited, verified by a person, and the review decisions behind it. Each row records the type, who did it (empty for imports and syncs), where it came from, and a hash of the question and answer at that moment. The article text itself is not copied. |
 | `kb_article_usage` | A daily count, per article, of the answers it was supplied to as context. Counts only: no question text, visitor or ticket is stored. |
 | `kb_review_items` | Unseen questions waiting for a person to review, edit and approve them into articles. |
 | `ticket_embeddings` | Search representations associated with tickets. |
