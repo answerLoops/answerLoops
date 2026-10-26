@@ -96,10 +96,11 @@ function formatEscalationMention(
 // automatically, everything else is routed to a human with a draft" — the
 // draft was going out live anyway). When false, the ticket is marked
 // needs_human, the draft stays saved (updateTicketAIDraft already ran
-// before this) for a staff member to approve from the dashboard, and a
-// brief generic acknowledgment (never the draft text) is sent instead —
-// asking a question and getting total silence is indistinguishable from a
-// broken bot, so something must go out even though the real answer can't.
+// before this) for a staff member to approve from the dashboard, and, when
+// Automatic Deflections is on (`postToChannel`, below), a brief generic
+// acknowledgment (never the draft text) is sent instead — asking a question
+// and getting total silence is indistinguishable from a broken bot, so
+// something must go out even though the real answer can't.
 //
 // `postToChannel` defaults to true and is set to `autoDeflectEnabled` by
 // every call site. Automatic Deflections off means the bot posts no real
