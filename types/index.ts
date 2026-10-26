@@ -216,6 +216,14 @@ export interface KBArticleEvent {
   created_at: string
 }
 
+/** One line of an article's history as the dashboard shows it. */
+export interface KBArticleHistoryEntry extends KBArticleEvent {
+  /** The actor's name (or email when they have no name). Null when there is no actor or the user was deleted. */
+  actor_name: string | null
+  /** The workspace-visible number of the ticket this event came from, when it came from one. */
+  source_ticket_number: number | null
+}
+
 export interface KBSource {
   id: number
   org_id: number

@@ -274,10 +274,13 @@ A few things to know about what verification means:
   <Accordion title="Article history">
     answerLoops keeps an append-only history for each article. It records when an article was created, when a resolved ticket was promoted into one, when its question or answer was changed, each time a person verified it, and each review decision on the question that became the article: approved, rejected, or reopened. Every entry notes who did it and where it came from: added by hand, promoted from a ticket, the review queue, a file or URL import, or a synced source.
 
-    - Changes made by a sync or import are recorded as automated, with no person attached. A sync that rewrites a page with the same content adds nothing.
+    To see it, choose **Show history** under an article on the **Manage** tab. Any member of the workspace can open it. It loads when you open it, newest first, and each entry says what happened, who did it, when, and where it came from. An entry that came from a ticket links to that ticket.
+
+    - Changes made by a sync or import are recorded as automated, with no person attached, and show as **Imported** or **Synced**, never as a person's name. If the person behind an entry has since been removed from the team, it says **Former team member**.
+    - An article from before the history was introduced says **No history recorded before this was introduced**. A sync that rewrites a page with the same content adds nothing.
     - Only a change to the words counts as an edit. Reflowing text or adding trailing whitespace does not.
     - The history stores a fingerprint of the question and answer at each moment, never a copy of the text, so it does not keep old wording and it is unaffected by the review queue's text retention.
-    - Articles that existed before the history was introduced start with no entries. Nothing is reconstructed or guessed for them.
+    - Nothing is reconstructed or guessed for articles that existed before the history was introduced.
     - Deleting an article deletes its history, and deleting a team member keeps their entries with the person removed.
   </Accordion>
   <Accordion title="Article usage (Supplied as context)">

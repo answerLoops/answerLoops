@@ -12,6 +12,7 @@ import { NotionKBSection } from '@/components/dashboard/notion-kb-section'
 import { AddKnowledgeSection, type KnowledgeDraft } from '@/components/dashboard/add-knowledge-section'
 import { getTicketDraftAction } from '@/lib/actions/kb'
 import { CoverageTab } from './coverage-tab'
+import { ArticleHistory } from '@/components/dashboard/article-history'
 import { ArticleVerificationControl } from '@/components/dashboard/article-verification'
 import { ReviewTab } from './review-tab'
 import type { ReviewCounts } from '@/lib/db/queries/kb-review'
@@ -621,6 +622,7 @@ function ArticlesList({
               {a.verification && (
                 <ArticleVerificationControl articleId={a.id} verification={a.verification} onVerified={onVerified} />
               )}
+              <ArticleHistory articleId={a.id} />
             </div>
           </li>
         ))}

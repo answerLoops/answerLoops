@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, or } from 'drizzle-orm'
 import { getDb } from '../drizzle'
-import { kbArticleEvents, kbReviewItems } from '../schema'
-import type { KBArticleEvent, KBArticleEventOrigin, KBArticleEventType } from '@/types'
+import { kbArticleEvents, kbArticles, kbReviewItems, tickets, users } from '../schema'
+import type { KBArticleEvent, KBArticleEventOrigin, KBArticleEventType, KBArticleHistoryEntry } from '@/types'
 
 // Either a database or an open transaction; both can insert.
 type Executor = Pick<ReturnType<typeof getDb>, 'insert'>
@@ -72,5 +72,65 @@ export async function getArticleEvents(articleId: number, orgId: number): Promis
     review_item_id: r.reviewItemId ?? null,
     content_hash: r.contentHash ?? null,
     created_at: r.createdAt,
+  }))
+}
+
+/**
+ * An article's history as the dashboard shows it: the same events as
+ * getArticleEvents, newest first, with the actor's name and the number of the
+ * ticket an event came from. Returns null when the article does not exist in
+ * this workspace, so a caller can tell "no such article" from "no history".
+ *
+ * Everything is scoped to the workspace, including the joins: another
+ * workspace's article, user or ticket never appears here.
+ */
+export async function getArticleHistory(articleId: number, orgId: number): Promise<KBArticleHistoryEntry[] | null> {
+  const db = getDb()
+  const [article] = await db
+    .select({ id: kbArticles.id })
+    .from(kbArticles)
+    .where(and(eq(kbArticles.id, articleId), eq(kbArticles.orgId, orgId)))
+    .limit(1)
+  if (!article) return null
+
+  const rows = await db
+    .select({
+      event: kbArticleEvents,
+      actorName: users.name,
+      actorEmail: users.email,
+      ticketNumber: tickets.orgTicketNumber,
+    })
+    .from(kbArticleEvents)
+    .leftJoin(users, eq(users.id, kbArticleEvents.actorUserId))
+    .leftJoin(tickets, and(eq(tickets.id, kbArticleEvents.sourceTicketId), eq(tickets.orgId, orgId)))
+    .where(
+      and(
+        eq(kbArticleEvents.orgId, orgId),
+        or(
+          eq(kbArticleEvents.articleId, articleId),
+          inArray(
+            kbArticleEvents.reviewItemId,
+            db
+              .select({ id: kbReviewItems.id })
+              .from(kbReviewItems)
+              .where(and(eq(kbReviewItems.articleId, articleId), eq(kbReviewItems.orgId, orgId)))
+          )
+        )
+      )
+    )
+    .orderBy(desc(kbArticleEvents.createdAt), desc(kbArticleEvents.id))
+
+  return rows.map(({ event: r, actorName, actorEmail, ticketNumber }) => ({
+    id: r.id,
+    article_id: r.articleId ?? null,
+    type: r.type as KBArticleEventType,
+    actor_user_id: r.actorUserId ?? null,
+    origin: r.origin as KBArticleEventOrigin,
+    source_ticket_id: r.sourceTicketId ?? null,
+    review_item_id: r.reviewItemId ?? null,
+    content_hash: r.contentHash ?? null,
+    created_at: r.createdAt,
+    actor_name: r.actorUserId == null ? null : (actorName ?? actorEmail ?? null),
+    source_ticket_number: ticketNumber ?? null,
   }))
 }
