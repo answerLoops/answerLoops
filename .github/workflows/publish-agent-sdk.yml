@@ -1,12 +1,12 @@
 name: Publish agent-sdk
 
 # Publishes packages/agent-sdk to npm. Separate tag namespace from the app's
-# `v*` release tags (which drive publish-image.yml) because the SDK versions
-# independently of the app itself — a docs-only or client-side fix to the SDK
-# shouldn't force an app release, and an app release shouldn't force a bump of
-# a package whose surface didn't change.
+# `v*` release tags (which drive publish-image.yml) so each artifact publishes
+# from its own tag. The version number itself is shared: the app, the SDK and
+# the widget are released at the same version, and
+# tests/unit/package-versions-aligned.test.ts fails a PR that bumps only some.
 #
-# Tag the SDK release as `agent-sdk-v<version>` (e.g. `agent-sdk-v0.2.0`),
+# Tag the SDK release as `agent-sdk-v<version>` (e.g. `agent-sdk-v0.6.7`),
 # matching the `version` field committed in packages/agent-sdk/package.json,
 # then push the tag to publish.
 #
