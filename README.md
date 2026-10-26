@@ -116,6 +116,7 @@ Sources: [Chatwoot](https://www.chatwoot.com/pricing/self-hosted-plans), [Zammad
 - [Self-hosting guide](https://answerloops.com/docs/quickstart-self-host?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=learn-more)
 - [Agent API and MCP](https://answerloops.com/docs/integrations/mcp?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=learn-more)
 - [TypeScript SDK](./packages/agent-sdk/README.md)
+- [Chat widget package](./packages/widget/README.md)
 - [Architecture guide](./ARCHITECTURE.md)
 
 ## Contributing

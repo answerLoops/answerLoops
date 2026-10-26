@@ -20,6 +20,7 @@ import path from 'node:path'
 const WRITE_ALLOWLIST: Record<string, Record<string, string[]>> = {
   'publish-image.yml': { build: ['packages'], merge: ['packages'] },
   'publish-agent-sdk.yml': { publish: ['id-token'] },
+  'publish-widget.yml': { publish: ['id-token'] },
 }
 
 interface Line {
@@ -131,6 +132,7 @@ describe('workflow least privilege', () => {
         'keep-alive.yml',
         'publish-agent-sdk.yml',
         'publish-image.yml',
+        'publish-widget.yml',
         'security.yml',
       ]),
     )
@@ -263,7 +265,7 @@ describe('workflow least privilege', () => {
     ).toBe(true)
   })
 
-  it.each(['publish-agent-sdk.yml', 'keep-alive.yml'])(
+  it.each(['publish-agent-sdk.yml', 'publish-widget.yml', 'keep-alive.yml'])(
     'serialises %s with a concurrency group that never cancels a run in progress',
     async (file) => {
       const wf = (await workflows()).find((w) => w.file === file)!

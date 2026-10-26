@@ -1,0 +1,87 @@
+name: Publish widget
+
+# Publishes packages/widget to npm. Separate tag namespace from the app's
+# `v*` release tags (which drive publish-image.yml) and from `agent-sdk-v*`,
+# because the widget package versions independently of the app and the SDK — a
+# loader fix shouldn't force an app release, and an app release shouldn't force
+# a bump of a package whose surface didn't change.
+#
+# Tag the widget release as `widget-v<version>` (e.g. `widget-v0.2.0`),
+# matching the `version` field committed in packages/widget/package.json,
+# then push the tag to publish.
+#
+# Auths to npm via OIDC trusted publishing (id-token: write below) rather than
+# a long-lived NPM_TOKEN secret — npm is deprecating bypass-2fa tokens with
+# direct-publish access, and OIDC leaves nothing to leak or rotate. Requires
+# a trusted publisher configured on the @answerloops/widget package on
+# npmjs.com pointing at this repo + this workflow file.
+
+on:
+  push:
+    tags:
+      - 'widget-v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-widget-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Build, verify, and publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # npm provenance
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0 # zizmor: ignore[cache-poisoning]
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+          # No `cache:` here (setup-node only accepts npm/yarn/pnpm or
+          # omitted — `false` errors outright). Omitted already means
+          # disabled; this job runs on a privileged tag-push trigger and
+          # publishes with OIDC credentials, so no cache is the right
+          # tradeoff anyway. zizmor's cache-poisoning audit still flags a
+          # bare setup-node call here regardless, hence the ignore below.
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
+        with:
+          version: 11
+
+      - run: pnpm install --frozen-lockfile
+
+      # OIDC trusted publishing needs npm >=11.5.1; Node 22's bundled npm can
+      # lag behind that. Pinned to an exact version rather than @latest, which
+      # is the actual mitigation zizmor's adhoc-packages audit is checking
+      # for — it still flags any `npm install -g`, pinned or not, since it
+      # can't distinguish the two statically.
+      - run: npm install -g npm@12.0.2 # zizmor: ignore[adhoc-packages]
+
+      # Refuses to publish a tag that doesn't match the version actually
+      # committed to package.json — catches a stale tag pushed against the
+      # wrong commit before it reaches the registry.
+      - name: Verify tag matches package.json version
+        working-directory: packages/widget
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#widget-v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "Tag widget-v$TAG_VERSION does not match package.json version $PKG_VERSION" >&2
+            exit 1
+          fi
+
+      - run: pnpm --filter @answerloops/widget typecheck
+      - run: pnpm --filter @answerloops/widget build
+
+      - name: Publish to npm
+        working-directory: packages/widget
+        run: npm publish --provenance --access public

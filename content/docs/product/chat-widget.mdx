@@ -83,7 +83,7 @@ The widget answers from **published knowledge-base articles only**. Unlike your 
 
 Where you paste the snippet depends on how your site is built. Find your platform below.
 
-<Tabs items={['Wix', 'Squarespace', 'Shopify', 'WordPress', 'Webflow', 'Next.js', 'React / Vite', 'Angular']}>
+<Tabs items={['Wix', 'Squarespace', 'Shopify', 'WordPress', 'Webflow', 'Next.js', 'React / Vite', 'Angular', 'npm package']}>
   <Tab value="Wix">
     Settings → Custom Code → add code → paste the snippet → set it to load on **all pages**, placement **Body - end**.
   </Tab>
@@ -152,6 +152,25 @@ Where you paste the snippet depends on how your site is built. Find your platfor
     ```html
     <script src="https://your-instance.example.com/widget.js" data-widget-id="..."></script>
     ```
+  </Tab>
+  <Tab value="npm package">
+    For a React or Next.js app you can install the widget as a dependency instead of pasting a script tag. It loads the same widget from your instance, so your branding, allowed domains and knowledge base apply unchanged.
+
+    ```bash
+    npm install @answerloops/widget
+    ```
+
+    Place the component once, in the layout that wraps every page:
+    ```tsx
+    import { AnswerLoopsWidget } from '@answerloops/widget/react'
+
+    <AnswerLoopsWidget
+      widgetId="<your-embed-token>"
+      baseUrl="https://your-instance.example.com"
+    />
+    ```
+
+    Outside React, call `mountWidget({ widgetId, baseUrl })` from `@answerloops/widget`; it returns a handle with an `unmount()` method. Use the same embed token and instance address as the snippet in **Settings → Widget**.
   </Tab>
 </Tabs>
 
