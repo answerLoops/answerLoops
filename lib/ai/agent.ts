@@ -402,7 +402,7 @@ Guidelines:
     await updateTicketAIDraft(ticketId, text)
     // The draft is written, so the articles it was grounded on count as used.
     await countArticleUsage(orgId, priorAnswers)
-    await recordAnswerSources({ orgId, answerId, surface: 'ticket', outcome: 'generated', context: priorAnswers })
+    await recordAnswerSources({ orgId, answerId, ticketId, surface: 'ticket', outcome: 'generated', context: priorAnswers })
 
     let assessment
     try {
@@ -518,7 +518,7 @@ Guidelines:
     }
     // If the draft was already recorded as generated this is a no-op; if the
     // generation itself failed, record what was supplied with the outcome failed.
-    await recordAnswerSources({ orgId, answerId, surface: 'ticket', outcome: 'failed', context: priorAnswers })
+    await recordAnswerSources({ orgId, answerId, ticketId, surface: 'ticket', outcome: 'failed', context: priorAnswers })
     logger.error('agent failed', { module: MOD, ticketId, error: err })
   }
 }

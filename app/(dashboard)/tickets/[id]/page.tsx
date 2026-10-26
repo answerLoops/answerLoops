@@ -18,6 +18,8 @@ import { getFeedbackSummary } from '@/lib/db/queries/feedback'
 import { FeedbackButtons } from '@/components/tickets/feedback-buttons'
 import { getArticleBySourceTicket } from '@/lib/db/queries/kb'
 import { PromoteKBButton } from '@/components/tickets/promote-kb-button'
+import { AnswerSourcesPanel } from '@/components/dashboard/answer-sources'
+import { getAnswerSourcesForTicket } from '@/lib/db/queries/kb-answers'
 import { LocalDate } from '@/components/ui/local-date'
 import { telegramMessageIdFromSource } from '@/lib/telegram/message-id'
 import { getIntegration, parseGuildChannelMap } from '@/lib/db/queries/integrations'
@@ -72,6 +74,9 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
   const isOwner = members.find((m) => m.user_id === currentUserId)?.role === 'owner'
   const currentRole = members.find((m) => m.user_id === currentUserId)?.role
   const canPromote = currentRole === 'owner' || currentRole === 'admin'
+  // The articles supplied to this draft: owners and admins only, and only read
+  // for them, so a plain member's request never touches the answer records.
+  const answerSources = canPromote ? await getAnswerSourcesForTicket(ticket.id, orgId) : null
 
   // Resolve guild ID: prefer per-ticket value (new tickets), fall back to
   // the channel→guild map auto-saved by the bot on startup (old tickets).
@@ -269,6 +274,7 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
               sourcePlatform={ticket.source_platform ?? 'discord'}
             />
           )}
+          {answerSources && <AnswerSourcesPanel data={answerSources} />}
           {ticket.ai_draft_status === 'pending' && (
             <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-xs text-gray-500">
               AI agent is generating an answer from GitHub source code…

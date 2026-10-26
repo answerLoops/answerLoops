@@ -1,15 +1,19 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { ANSWER_REFERENCE_RETENTION_DAYS } from '@/lib/kb/coverage'
 import { contentHash } from '@/lib/kb/revision'
+import { sourceStatus } from '@/lib/kb/answer-sources'
 import type {
   KBAnswerOutcome,
   KBAnswerRecord,
   KBAnswerReference,
+  KBAnswerSource,
   KBAnswerSurface,
   KBArticleAnswerRef,
+  KBArticleAnswerView,
+  KBTicketAnswerSources,
 } from '@/types'
 import { getDb } from '../drizzle'
-import { kbAnswerReferences, kbAnswers, kbArticles } from '../schema'
+import { kbAnswerReferences, kbAnswers, kbArticles, tickets } from '../schema'
 
 const SURFACES: readonly KBAnswerSurface[] = ['widget', 'ticket', 'discord', 'agent_api']
 const OUTCOMES: readonly KBAnswerOutcome[] = ['generated', 'failed']
@@ -29,6 +33,12 @@ export interface RecordAnswerInput {
   orgId: number
   surface: KBAnswerSurface
   outcome: KBAnswerOutcome
+  /**
+   * The ticket this answer was drafted for. Only kept for the ticket surface,
+   * and only when the ticket belongs to the workspace; otherwise ignored. An
+   * opaque id: nothing from the ticket is stored.
+   */
+  ticketId?: number | null
   references: AnswerReferenceInput[]
 }
 
@@ -58,9 +68,19 @@ export async function recordAnswerReferences(input: RecordAnswerInput): Promise<
   }
 
   return getDb().transaction(async (tx) => {
+    let ticketId: number | null = null
+    if (input.surface === 'ticket' && input.ticketId != null && Number.isInteger(input.ticketId)) {
+      const [ticket] = await tx
+        .select({ id: tickets.id })
+        .from(tickets)
+        .where(and(eq(tickets.id, input.ticketId), eq(tickets.orgId, input.orgId)))
+        .limit(1)
+      ticketId = ticket?.id ?? null
+    }
+
     const inserted = await tx
       .insert(kbAnswers)
-      .values({ id: input.answerId, orgId: input.orgId, surface: input.surface, outcome: input.outcome })
+      .values({ id: input.answerId, orgId: input.orgId, surface: input.surface, outcome: input.outcome, ticketId })
       .onConflictDoNothing({ target: kbAnswers.id })
       .returning({ id: kbAnswers.id })
     if (inserted.length === 0) return { recorded: false }
@@ -154,6 +174,81 @@ export async function getRecentAnswersForArticle(
     score: r.score ?? null,
     article_content_hash: r.hash,
   }))
+}
+
+/**
+ * The sources behind a ticket's most recent draft, lowest rank first, each with
+ * where it stands now: current, changed since, unpublished or deleted. Null
+ * when the ticket has no recorded answer (older tickets, tickets that were
+ * never drafted from the knowledge base, or one past the retention window).
+ *
+ * Scoped to the workspace through the answer and through the article join, so
+ * another workspace's answer or article never appears. Only the article's own
+ * title is returned, never text from the conversation.
+ */
+export async function getAnswerSourcesForTicket(ticketId: number, orgId: number): Promise<KBTicketAnswerSources | null> {
+  const db = getDb()
+  const [answer] = await db
+    .select()
+    .from(kbAnswers)
+    .where(and(eq(kbAnswers.ticketId, ticketId), eq(kbAnswers.orgId, orgId)))
+    .orderBy(desc(kbAnswers.createdAt))
+    .limit(1)
+  if (!answer) return null
+
+  const rows = await db
+    .select({
+      articleId: kbAnswerReferences.articleId,
+      hash: kbAnswerReferences.articleContentHash,
+      rank: kbAnswerReferences.rank,
+      question: kbArticles.question,
+      answer: kbArticles.answer,
+      published: kbArticles.published,
+    })
+    .from(kbAnswerReferences)
+    .leftJoin(kbArticles, and(eq(kbArticles.id, kbAnswerReferences.articleId), eq(kbArticles.orgId, orgId)))
+    .where(eq(kbAnswerReferences.answerId, answer.id))
+    .orderBy(kbAnswerReferences.rank, kbAnswerReferences.id)
+
+  const sources: KBAnswerSource[] = rows.map((r) => {
+    const live = r.question === null || r.answer === null || r.published === null
+      ? null
+      : { question: r.question, answer: r.answer, published: r.published }
+    return {
+      article_id: live ? r.articleId : null,
+      title: live ? live.question : null,
+      rank: r.rank,
+      status: sourceStatus(r.hash, live),
+    }
+  })
+  return {
+    answer_id: answer.id,
+    outcome: answer.outcome as KBAnswerOutcome,
+    created_at: answer.createdAt,
+    sources,
+  }
+}
+
+/**
+ * The recent answers an article was supplied to, newest first, each marked
+ * `earlier` when the article has been edited since that answer. Null when the
+ * article is not in the workspace, so a caller can tell that from an empty list.
+ */
+export async function getArticleAnswerView(
+  articleId: number,
+  orgId: number,
+  limit = 20
+): Promise<KBArticleAnswerView[] | null> {
+  const [article] = await getDb()
+    .select({ question: kbArticles.question, answer: kbArticles.answer })
+    .from(kbArticles)
+    .where(and(eq(kbArticles.id, articleId), eq(kbArticles.orgId, orgId)))
+    .limit(1)
+  if (!article) return null
+
+  const now = contentHash(article.question, article.answer)
+  const answers = await getRecentAnswersForArticle(articleId, orgId, limit)
+  return answers.map((a) => ({ ...a, revision: a.article_content_hash === now ? 'current' : 'earlier' }))
 }
 
 /**

@@ -12,6 +12,7 @@ import { NotionKBSection } from '@/components/dashboard/notion-kb-section'
 import { AddKnowledgeSection, type KnowledgeDraft } from '@/components/dashboard/add-knowledge-section'
 import { getTicketDraftAction } from '@/lib/actions/kb'
 import { CoverageTab } from './coverage-tab'
+import { ArticleAnswers } from '@/components/dashboard/article-answers'
 import { ArticleHistory } from '@/components/dashboard/article-history'
 import { ArticleVerificationControl } from '@/components/dashboard/article-verification'
 import { ReviewTab } from './review-tab'
@@ -541,6 +542,17 @@ function ArticlesList({
   const allChecked = articles.length > 0 && selected.size === articles.length
   const someChecked = selected.size > 0
 
+  // A link such as /kb#article-12 (from the sources shown on a ticket) lands on
+  // that article. The list loads after the page does, so scroll once it is here.
+  useEffect(() => {
+    if (articles.length === 0) return
+    const match = window.location.hash.match(/^#article-(\d+)$/)
+    if (!match) return
+    const el = document.getElementById(`article-${match[1]}`)
+    el?.scrollIntoView({ block: 'center' })
+    el?.focus({ preventScroll: true })
+  }, [articles])
+
   function toggleAll() {
     setSelected(allChecked ? new Set() : new Set(articles.map(a => a.id)))
   }
@@ -599,7 +611,12 @@ function ArticlesList({
       <DeleteError message={deleteError} />
       <ul className="space-y-2">
         {articles.map((a) => (
-          <li key={a.id} className="flex items-start gap-3 bg-white rounded-lg border border-gray-200 p-4">
+          <li
+            key={a.id}
+            id={`article-${a.id}`}
+            tabIndex={-1}
+            className="flex scroll-mt-20 items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 outline-none target:ring-2 target:ring-brand-300"
+          >
             <input
               type="checkbox"
               checked={selected.has(a.id)}
@@ -623,6 +640,7 @@ function ArticlesList({
                 <ArticleVerificationControl articleId={a.id} verification={a.verification} onVerified={onVerified} />
               )}
               <ArticleHistory articleId={a.id} />
+              {'can_view_answers' in a && a.can_view_answers && <ArticleAnswers articleId={a.id} />}
             </div>
           </li>
         ))}

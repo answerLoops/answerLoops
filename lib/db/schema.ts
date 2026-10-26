@@ -484,11 +484,15 @@ export const kbAnswers = pgTable(
     surface: text('surface').notNull(),
     // 'generated' | 'failed'
     outcome: text('outcome').notNull(),
+    // Set only for the ticket surface (the ticket this draft was written for);
+    // an opaque id, cleared if the ticket is deleted. See drizzle/0063.
+    ticketId: integer('ticket_id').references(() => tickets.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
   },
   (t) => [
     index('idx_kb_answers_org_created').on(t.orgId, t.createdAt),
     index('idx_kb_answers_created').on(t.createdAt),
+    index('idx_kb_answers_ticket').on(t.ticketId, t.createdAt),
   ]
 )
 

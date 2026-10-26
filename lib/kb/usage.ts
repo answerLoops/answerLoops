@@ -55,6 +55,8 @@ export async function recordAnswerSources(input: {
   answerId: string
   surface: KBAnswerSurface
   outcome: KBAnswerOutcome
+  /** For the ticket surface: the ticket the draft was written for, so its page can show the sources. */
+  ticketId?: number
   context: ReadonlyArray<{ articleId?: number }>
 }): Promise<void> {
   try {
@@ -66,6 +68,7 @@ export async function recordAnswerSources(input: {
       orgId: input.orgId,
       surface: input.surface,
       outcome: input.outcome,
+      ...(input.ticketId !== undefined && { ticketId: input.ticketId }),
       references,
     })
   } catch (err) {

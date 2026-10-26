@@ -189,6 +189,8 @@ export interface KBArticle {
   updated_at: string
   /** Present on the article list; absent on search results. */
   verification?: ArticleVerification
+  /** Present on the article list: whether this viewer (owner or admin) may see the answers it was supplied to. */
+  can_view_answers?: boolean
 }
 
 export type KBArticleEventType =
@@ -244,6 +246,33 @@ export interface KBAnswerRecord {
   outcome: KBAnswerOutcome
   created_at: string
   references: KBAnswerReference[]
+}
+
+/** Where a source stands now compared with what was supplied to the answer. */
+export type KBAnswerSourceStatus = 'current' | 'changed' | 'unpublished' | 'deleted'
+
+/** One article supplied to a ticket's draft, with its current standing. */
+export interface KBAnswerSource {
+  /** Null once the article has been deleted. */
+  article_id: number | null
+  /** The article's own title (its question), never text from the conversation. Null once deleted. */
+  title: string | null
+  rank: number
+  status: KBAnswerSourceStatus
+}
+
+/** The sources behind a ticket's most recent draft. */
+export interface KBTicketAnswerSources {
+  answer_id: string
+  outcome: KBAnswerOutcome
+  created_at: string
+  sources: KBAnswerSource[]
+}
+
+/** An answer an article was supplied to, with whether the article has changed since. */
+export interface KBArticleAnswerView extends KBArticleAnswerRef {
+  /** `current` when the article is unchanged since that answer, `earlier` when it was a different version. */
+  revision: 'current' | 'earlier'
 }
 
 /** An answer an article was supplied to, as seen from the article. */

@@ -12,17 +12,25 @@ import { kbAnswerReferences, kbAnswers } from '@/lib/db/schema'
 const ROOT = process.cwd()
 const DRIZZLE_DIR = path.join(ROOT, 'drizzle')
 const MIGRATION = '0062_kb_answer_references.sql'
+const TICKET_MIGRATION = '0063_kb_answers_ticket.sql'
 
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf-8')
-const sqlStatements = () =>
-  read(`drizzle/${MIGRATION}`)
+const statementsOf = (file: string) =>
+  read(`drizzle/${file}`)
     .split('\n')
     .filter((l) => !l.trim().startsWith('--'))
     .join('\n')
+/** The creating migration only; the structure checks below read both files. */
+const sqlStatements = () => statementsOf(MIGRATION)
+/** Both migrations that shape these tables. */
+const allStatements = () => `${statementsOf(MIGRATION)}\n${statementsOf(TICKET_MIGRATION)}`
 
-/** The body of one CREATE TABLE, as `column name -> its definition line`. */
+/**
+ * The columns of one table across both migrations, as `column name -> its
+ * definition line`: the CREATE TABLE body plus any ADD COLUMN that follows.
+ */
 function tableLines(table: string): Map<string, string> {
-  const s = sqlStatements()
+  const s = allStatements()
   const start = s.indexOf(`CREATE TABLE IF NOT EXISTS ${table} (`)
   expect(start, `no CREATE TABLE for ${table}`).toBeGreaterThanOrEqual(0)
   const body = s.slice(s.indexOf('(', start) + 1, s.indexOf('\n);', start))
@@ -30,7 +38,12 @@ function tableLines(table: string): Map<string, string> {
     .split('\n')
     .map((l) => l.trim().replace(/,$/, ''))
     .filter((l) => l && !l.startsWith('CONSTRAINT') && !l.startsWith('PRIMARY KEY'))
-  return new Map(lines.map((l) => [l.split(/\s+/)[0], l]))
+  const columns = new Map(lines.map((l) => [l.split(/\s+/)[0], l]))
+  for (const m of s.matchAll(new RegExp(`ALTER TABLE ${table}\\s+ADD COLUMN IF NOT EXISTS ([^;]+);`, 'g'))) {
+    const def = m[1].trim()
+    columns.set(def.split(/\s+/)[0], def)
+  }
+  return columns
 }
 
 describe('migration file ordering (lib/db/migrate.ts runs *.sql sorted by name)', () => {
@@ -76,6 +89,31 @@ describe('migration file ordering (lib/db/migrate.ts runs *.sql sorted by name)'
   })
 })
 
+describe('the ticket link migration', () => {
+  const files = fs.readdirSync(DRIZZLE_DIR).filter((f) => f.endsWith('.sql')).sort()
+  const s = () => statementsOf(TICKET_MIGRATION)
+
+  it('runs right after the migration that created the table it alters', () => {
+    expect(files.indexOf(TICKET_MIGRATION)).toBeGreaterThan(files.indexOf(MIGRATION))
+  })
+
+  it('is safe to re-run: the column and the index are both IF NOT EXISTS, and nothing else changes', () => {
+    expect(s()).toMatch(/ALTER TABLE kb_answers\s+ADD COLUMN IF NOT EXISTS ticket_id INTEGER/)
+    expect(s()).toMatch(/CREATE INDEX IF NOT EXISTS idx_kb_answers_ticket ON kb_answers \(ticket_id, created_at\)/)
+    expect(s().replace(/ON DELETE SET NULL/gi, '')).not.toMatch(/\b(DROP|INSERT|UPDATE|DELETE|TRUNCATE)\b/i)
+    expect(read(`drizzle/${TICKET_MIGRATION}`).match(/--> statement-breakpoint/g)).toHaveLength(1)
+  })
+
+  it('stores an opaque ticket id that is cleared when the ticket is deleted, and is nullable so older answers stay valid', () => {
+    expect(s()).toContain('ticket_id INTEGER REFERENCES tickets(id) ON DELETE SET NULL')
+    expect(s()).not.toMatch(/ticket_id INTEGER[^;]*NOT NULL/)
+    const col = getTableConfig(kbAnswers).columns.find((c) => c.name === 'ticket_id')!
+    expect(col.notNull).toBe(false)
+    const fk = getTableConfig(kbAnswers).foreignKeys.find((f) => f.reference().columns[0].name === 'ticket_id')!
+    expect(fk.onDelete).toBe('set null')
+  })
+})
+
 describe('row-level security reaches the new tables without their own statement', () => {
   it('the runner enables RLS on every public table, and the migration does not need to', () => {
     const runner = read('lib/db/migrate.ts')
@@ -88,7 +126,7 @@ describe('what is stored', () => {
   it('has no column that could hold question text, answer text, a visitor or a ticket', () => {
     const columns = [...tableLines('kb_answers').keys(), ...tableLines('kb_answer_references').keys()]
     expect(columns.sort()).toEqual(
-      ['answer_id', 'article_content_hash', 'article_id', 'created_at', 'id', 'id', 'org_id', 'outcome', 'rank', 'score', 'surface'].sort()
+      ['answer_id', 'article_content_hash', 'article_id', 'created_at', 'id', 'id', 'org_id', 'outcome', 'rank', 'score', 'surface', 'ticket_id'].sort()
     )
   })
 
@@ -144,7 +182,7 @@ describe('Drizzle tables agree with the SQL migration', () => {
       it('has the same indexes', () => {
         for (const idx of cfg.indexes) {
           const cols = idx.config.columns.map((c) => (c as { name: string }).name).join(', ')
-          expect(sqlStatements()).toContain(`INDEX IF NOT EXISTS ${idx.config.name} ON ${name} (${cols})`)
+          expect(allStatements()).toContain(`INDEX IF NOT EXISTS ${idx.config.name} ON ${name} (${cols})`)
         }
       })
     })

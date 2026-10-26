@@ -141,6 +141,14 @@ describe('recordAnswerSources', () => {
     expect(loggerError).toHaveBeenCalledTimes(1)
   })
 
+  it('passes a ticket id through when there is one, and sends none when there is not', async () => {
+    await sources({ surface: 'ticket', ticketId: 42, context: [{ articleId: 11 }] })
+    await sources({ surface: 'widget', context: [{ articleId: 11 }] })
+
+    expect(recordAnswerReferences.mock.calls[0][0].ticketId).toBe(42)
+    expect('ticketId' in recordAnswerReferences.mock.calls[1][0]).toBe(false)
+  })
+
   it('does not touch the aggregate usage count', async () => {
     await sources({ context: [{ articleId: 11 }] })
 

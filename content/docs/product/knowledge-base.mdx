@@ -247,6 +247,27 @@ A few things to know about what verification means:
 - If the person who verified an article is later removed from the team, the date and note stay and the name is dropped.
 - Each verification is also recorded in the article's history.
 
+## Sources behind an answer
+
+Owners and admins can see which articles were supplied to an answer, and which answers an article was supplied to. Both views say **supplied as context**: the assistant decides what to use, so being listed does not mean the reply quoted or relied on an article.
+
+### On a ticket
+
+Below a ticket's AI draft, the **Sources** panel lists the articles that were supplied for that draft, in the order they were given. Each one shows where it stands now:
+
+| Status | What it means |
+|---|---|
+| **Current** | The article is unchanged since the answer was generated. |
+| **Changed since** | The article was edited or re-synced after the answer, so it may now say something different. |
+| **Unpublished** | The article is no longer live, so the assistant cannot use it now. |
+| **Deleted** | The article no longer exists. |
+
+Articles that are live link to their place in the knowledge base. A draft that failed still lists what was supplied to it, and says it failed. Tickets drafted before this was added, and drafts older than 90 days, show no panel.
+
+### On an article
+
+On the **Manage** tab, choose **Show recent answers** under an article to see the answers it was supplied to in the last 90 days: where each was given (the website chat widget, a support ticket draft, Discord, or the Agent API), when, whether it was generated or failed, and the article's position in the order. An answer given when the article read differently says **The article has changed since this answer**. Only the metadata is stored, so no question or answer text appears.
+
 ## More details
 
 <Accordions>
@@ -292,10 +313,10 @@ A few things to know about what verification means:
     - Deleting an article, or the workspace, removes its counts.
   </Accordion>
   <Accordion title="Answer sources: what is stored and for how long">
-    answerLoops records which knowledge-base articles were supplied to each generated answer, so an answer can be traced back to its sources. It is a record of what was supplied, never a judgment about what the reply used. It is written when an answer is generated in the website chat widget, in Discord with `/ask`, through the Agent API and MCP, and for a support ticket's drafted reply. Searches, simulations, and bug reports or feature requests (which are never answered from the knowledge base) record nothing. Nothing is shown in the dashboard yet.
+    answerLoops records which knowledge-base articles were supplied to each generated answer, so an answer can be traced back to its sources. It is a record of what was supplied, never a judgment about what the reply used. It is written when an answer is generated in the website chat widget, in Discord with `/ask`, through the Agent API and MCP, and for a support ticket's drafted reply. Searches, simulations, and bug reports or feature requests (which are never answered from the knowledge base) record nothing. Owners and admins can read these records on a ticket and on an article; see [Sources behind an answer](#sources-behind-an-answer).
 
     - **What is stored:** an answer id, the channel (website chat widget, support ticket, Discord, or the Agent API), whether the answer was generated or failed, and when. For each article supplied: its place in the order it was given to the assistant, and a fingerprint of the article's question and answer as it was at that moment. An article that was found but dropped before the answer was written is not recorded.
-    - **What is never stored:** the question, the answer, the visitor, or anything from the ticket.
+    - **What is never stored:** the question, the answer, the visitor, or anything from the ticket. For a support ticket's draft, only the ticket's number is kept, so the ticket page can show its sources.
     - **Who can see it:** owners and admins only.
     - **How long:** 90 days, then it is removed automatically.
     - **Deleting an article** keeps its records with the article shown as deleted and the fingerprint intact, so a trace is never rewritten. **Deleting the workspace** removes everything. Editing an article does not change an existing record, because it holds a fingerprint, not the text.

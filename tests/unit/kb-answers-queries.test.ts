@@ -98,7 +98,7 @@ describe('recordAnswerReferences', () => {
     await recordAnswerReferences({ ...base, surface: 'agent_api', outcome: 'failed', references: [] })
     const answer = inserts('kb_answers')[0]
     expect(answer.params).toEqual(expect.arrayContaining([ANSWER, 7, 'agent_api', 'failed']))
-    expect(answer.sql).toMatch(/insert into "kb_answers" \("id", "org_id", "surface", "outcome", "created_at"\)/)
+    expect(answer.sql).toMatch(/insert into "kb_answers" \("id", "org_id", "surface", "outcome", "ticket_id", "created_at"\)/)
   })
 
   it('looks articles up under the workspace, so an id from another workspace is never recorded', async () => {
@@ -198,7 +198,7 @@ describe('getReferencesForAnswer', () => {
   it('returns the answer with its references, lowest rank first, with a deleted article as null', async () => {
     respond = (c) =>
       c.sql.includes('from "kb_answers"')
-        ? [[ANSWER, 7, 'widget', 'generated', '2026-10-25T10:00:00+00:00']]
+        ? [[ANSWER, 7, 'widget', 'generated', null, '2026-10-25T10:00:00+00:00']]
         : [
             [1, ANSWER, 11, 'h1', 1, 0.9],
             [2, ANSWER, null, 'h2', 2, null],
@@ -278,5 +278,167 @@ describe('pruneAnswerReferences', () => {
     respond = () => []
     const { pruneAnswerReferences } = await import('@/lib/db/queries/kb-answers')
     expect(await pruneAnswerReferences()).toBe(0)
+  })
+})
+
+describe('recordAnswerReferences ticket link', () => {
+  const ticketBase = { ...base, surface: 'ticket' as const }
+
+  it('keeps the ticket id for a ticket draft, after checking it belongs to the workspace', async () => {
+    respond = (c) => {
+      if (c.sql.startsWith('insert into "kb_answers"')) return [[ANSWER]]
+      if (c.sql.includes('from "tickets"')) return [[42]]
+      return []
+    }
+    const { recordAnswerReferences } = await import('@/lib/db/queries/kb-answers')
+    await recordAnswerReferences({ ...ticketBase, ticketId: 42, references: [] })
+    const lookup = calls.find((c) => c.sql.includes('from "tickets"'))!
+    expect(lookup.sql).toContain('"tickets"."org_id" = $')
+    expect(lookup.params).toEqual(expect.arrayContaining([42, 7]))
+    expect(inserts('kb_answers')[0].params).toContain(42)
+  })
+
+  it('stores no ticket when the ticket is not in the workspace', async () => {
+    respond = (c) => (c.sql.startsWith('insert into "kb_answers"') ? [[ANSWER]] : [])
+    const { recordAnswerReferences } = await import('@/lib/db/queries/kb-answers')
+    await recordAnswerReferences({ ...ticketBase, ticketId: 99, references: [] })
+    expect(inserts('kb_answers')[0].params).not.toContain(99)
+    expect(inserts('kb_answers')[0].params).toContain(null)
+  })
+
+  it.each(['widget', 'discord', 'agent_api'] as const)('ignores a ticket id on the %s surface, and does not even look it up', async (surface) => {
+    respond = (c) => (c.sql.startsWith('insert into "kb_answers"') ? [[ANSWER]] : [])
+    const { recordAnswerReferences } = await import('@/lib/db/queries/kb-answers')
+    await recordAnswerReferences({ ...base, surface, ticketId: 42, references: [] })
+    expect(calls.some((c) => c.sql.includes('from "tickets"'))).toBe(false)
+    expect(inserts('kb_answers')[0].params).not.toContain(42)
+  })
+
+  it('does not look anything up when there is no ticket id, or it is not a whole number', async () => {
+    respond = (c) => (c.sql.startsWith('insert into "kb_answers"') ? [[ANSWER]] : [])
+    const { recordAnswerReferences } = await import('@/lib/db/queries/kb-answers')
+    await recordAnswerReferences({ ...ticketBase, references: [] })
+    await recordAnswerReferences({ ...ticketBase, answerId: '3f1c9a7e-6b1d-4e0a-9a52-0c3d1a7b8e44', ticketId: 1.5, references: [] })
+    expect(calls.some((c) => c.sql.includes('from "tickets"'))).toBe(false)
+  })
+})
+
+describe('getAnswerSourcesForTicket', () => {
+  const Q = 'How do I reset my password?'
+  const A = 'Use the reset link.'
+  const HASH = contentHash(Q, A)
+
+  /** answer row, then the source rows: article id, stored hash, rank, question, answer, published. */
+  function scriptedTicket(sources: unknown[][], answerRow: unknown[] | null = [ANSWER, 7, 'ticket', 'generated', 42, '2026-10-25T10:00:00+00:00']) {
+    respond = (c) => (c.sql.includes('from "kb_answers"') && !c.sql.includes('kb_answer_references') ? (answerRow ? [answerRow] : []) : sources)
+  }
+
+  it('is null when the ticket has no recorded answer, and reads no sources', async () => {
+    scriptedTicket([], null)
+    const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
+    expect(await getAnswerSourcesForTicket(42, 7)).toBeNull()
+    expect(calls).toHaveLength(1)
+  })
+
+  it('reads the newest answer for the ticket, scoped to the workspace', async () => {
+    scriptedTicket([])
+    const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
+    await getAnswerSourcesForTicket(42, 7)
+    const q = calls[0]
+    expect(q.sql).toContain('"kb_answers"."ticket_id" = $')
+    expect(q.sql).toContain('"kb_answers"."org_id" = $')
+    expect(q.sql).toMatch(/order by "kb_answers"\."created_at" desc limit/)
+    expect(q.params).toEqual(expect.arrayContaining([42, 7]))
+  })
+
+  it('joins the articles under the workspace too, so another workspace\'s article reads as deleted', async () => {
+    scriptedTicket([])
+    const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
+    await getAnswerSourcesForTicket(42, 7)
+    const refs = calls[1]
+    expect(refs.sql).toContain('left join "kb_articles"')
+    expect(refs.sql).toMatch(/"kb_articles"\."org_id" = \$/)
+    expect(refs.sql).toMatch(/order by "kb_answer_references"\."rank", "kb_answer_references"\."id"/)
+  })
+
+  it('gives current, changed, unpublished and deleted sources in rank order, each with its status', async () => {
+    scriptedTicket([
+      [11, HASH, 1, Q, A, 1], // unchanged and live
+      [12, HASH, 2, Q, `${A} Edited.`, 1], // edited since
+      [13, HASH, 3, Q, A, 0], // no longer live
+      [null, HASH, 4, null, null, null], // article deleted (join found nothing)
+    ])
+    const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
+    expect(await getAnswerSourcesForTicket(42, 7)).toEqual({
+      answer_id: ANSWER,
+      outcome: 'generated',
+      created_at: '2026-10-25T10:00:00+00:00',
+      sources: [
+        { article_id: 11, title: Q, rank: 1, status: 'current' },
+        { article_id: 12, title: Q, rank: 2, status: 'changed' },
+        { article_id: 13, title: Q, rank: 3, status: 'unpublished' },
+        { article_id: null, title: null, rank: 4, status: 'deleted' },
+      ],
+    })
+  })
+
+  it('returns only the article title, never the article body or anything from the conversation', async () => {
+    scriptedTicket([[11, HASH, 1, Q, A, 1]])
+    const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
+    const out = await getAnswerSourcesForTicket(42, 7)
+    expect(JSON.stringify(out)).not.toContain(A)
+    expect(Object.keys(out!.sources[0]).sort()).toEqual(['article_id', 'rank', 'status', 'title'])
+  })
+
+  it('reports a failed draft as failed, with the sources that were supplied', async () => {
+    scriptedTicket([[11, HASH, 1, Q, A, 1]], [ANSWER, 7, 'ticket', 'failed', 42, '2026-10-25T10:00:00+00:00'])
+    const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
+    const out = await getAnswerSourcesForTicket(42, 7)
+    expect(out!.outcome).toBe('failed')
+    expect(out!.sources).toHaveLength(1)
+  })
+
+  it('returns an empty list for a draft that had no articles supplied', async () => {
+    scriptedTicket([])
+    const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
+    expect((await getAnswerSourcesForTicket(42, 7))!.sources).toEqual([])
+  })
+})
+
+describe('getArticleAnswerView', () => {
+  const Q = 'How do I reset my password?'
+  const A = 'Use the reset link.'
+  const NOW = contentHash(Q, A)
+  const OLD = contentHash(Q, 'An older answer.')
+
+  it('is null for an article that is not in the workspace, and reads no answers', async () => {
+    respond = () => []
+    const { getArticleAnswerView } = await import('@/lib/db/queries/kb-answers')
+    expect(await getArticleAnswerView(11, 7)).toBeNull()
+    expect(calls).toHaveLength(1)
+    expect(calls[0].sql).toContain('"kb_articles"."org_id" = $')
+    expect(calls[0].params).toEqual(expect.arrayContaining([11, 7]))
+  })
+
+  it('marks an answer earlier when the article has changed since, and current when it has not', async () => {
+    respond = (c) =>
+      c.sql.includes('from "kb_articles"') && !c.sql.includes('kb_answer_references')
+        ? [[Q, A]]
+        : [
+            [ANSWER, 'widget', 'generated', '2026-10-25T10:00:00+00:00', 1, null, NOW],
+            ['3f1c9a7e-6b1d-4e0a-9a52-0c3d1a7b8e44', 'discord', 'failed', '2026-10-24T10:00:00+00:00', 2, null, OLD],
+          ]
+    const { getArticleAnswerView } = await import('@/lib/db/queries/kb-answers')
+    const out = await getArticleAnswerView(11, 7)
+    expect(out!.map((a) => [a.surface, a.outcome, a.revision])).toEqual([
+      ['widget', 'generated', 'current'],
+      ['discord', 'failed', 'earlier'],
+    ])
+  })
+
+  it('returns an empty list for an article no answer was supplied to', async () => {
+    respond = (c) => (c.sql.includes('from "kb_articles"') && !c.sql.includes('kb_answer_references') ? [[Q, A]] : [])
+    const { getArticleAnswerView } = await import('@/lib/db/queries/kb-answers')
+    expect(await getArticleAnswerView(11, 7)).toEqual([])
   })
 })
