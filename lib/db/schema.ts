@@ -14,6 +14,8 @@ import {
   timestamp,
   date,
   vector,
+  uuid,
+  unique,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
@@ -465,6 +467,48 @@ export const kbArticleUsage = pgTable(
   (t) => [
     primaryKey({ columns: [t.articleId, t.day] }),
     index('idx_kb_article_usage_org_day').on(t.orgId, t.day),
+  ]
+)
+
+// Which articles were supplied to each generated answer (see
+// lib/db/queries/kb-answers.ts and drizzle/0062_kb_answer_references.sql).
+// Identifiers, the channel, the outcome, the revision hash and the retrieval
+// rank only: no question or answer text, no visitor identity, no ticket
+// content. The answer id is supplied by the caller so a retry records once.
+export const kbAnswers = pgTable(
+  'kb_answers',
+  {
+    id: uuid('id').primaryKey(),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    // 'widget' | 'ticket' | 'discord' | 'agent_api'
+    surface: text('surface').notNull(),
+    // 'generated' | 'failed'
+    outcome: text('outcome').notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  },
+  (t) => [
+    index('idx_kb_answers_org_created').on(t.orgId, t.createdAt),
+    index('idx_kb_answers_created').on(t.createdAt),
+  ]
+)
+
+// One row per article per answer. article_id is nulled when the article is
+// deleted, and the hash of the revision that was supplied stays, so the trace
+// is never rewritten. The unique constraint, not a primary key, because
+// article_id is nullable.
+export const kbAnswerReferences = pgTable(
+  'kb_answer_references',
+  {
+    id: serial('id').primaryKey(),
+    answerId: uuid('answer_id').notNull().references(() => kbAnswers.id, { onDelete: 'cascade' }),
+    articleId: integer('article_id').references(() => kbArticles.id, { onDelete: 'set null' }),
+    articleContentHash: text('article_content_hash').notNull(),
+    rank: integer('rank').notNull(),
+    score: doublePrecision('score'),
+  },
+  (t) => [
+    unique('uq_kb_answer_references_answer_article').on(t.answerId, t.articleId),
+    index('idx_kb_answer_references_article').on(t.articleId, t.answerId),
   ]
 )
 

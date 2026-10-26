@@ -32,6 +32,7 @@ import { getStuckPendingTickets } from '../lib/db/queries/tickets'
 import { claimNextKbSyncJob, reclaimStuckKbSyncJobs } from '../lib/db/queries/kb-sync-jobs'
 import { purgeExpiredReviewText } from '../lib/db/queries/kb-review'
 import { pruneArticleUsage } from '../lib/db/queries/kb-usage'
+import { pruneAnswerReferences } from '../lib/db/queries/kb-answers'
 import { getDirectDatabaseUrl } from '../lib/db/direct-url'
 import { getDeploymentMode } from '../lib/billing/plans'
 import { getOrgIdsWithFlag } from '../lib/db/queries/feature-flags'
@@ -44,7 +45,8 @@ const MOD = 'bot'
 const ORG_PURGE_SWEEP_INTERVAL_MS = 6 * 60 * 60 * 1000
 
 // Daily housekeeping for KB data: blank visitor text on rejected / old approved
-// review items and drop article-usage rows past their retention window.
+// review items and drop article-usage and answer-reference rows past their
+// retention windows.
 const KB_RETENTION_SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000
 
 function startKbRetentionSweep(): void {
@@ -52,8 +54,9 @@ function startKbRetentionSweep(): void {
     try {
       const cleared = await purgeExpiredReviewText()
       const pruned = await pruneArticleUsage()
-      if (cleared > 0 || pruned > 0) {
-        logger.info('kb retention sweep complete', { module: MOD, cleared, pruned })
+      const prunedAnswers = await pruneAnswerReferences()
+      if (cleared > 0 || pruned > 0 || prunedAnswers > 0) {
+        logger.info('kb retention sweep complete', { module: MOD, cleared, pruned, prunedAnswers })
       }
     } catch (err) {
       logger.error('kb retention sweep failed', { module: MOD, error: err })

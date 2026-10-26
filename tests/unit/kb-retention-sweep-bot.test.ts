@@ -15,6 +15,7 @@ describe('bot knowledge-base retention sweep', () => {
   it('imports both cleanup functions from their query modules', () => {
     expect(bot).toMatch(/import \{[^}]*\bpurgeExpiredReviewText\b[^}]*\} from '(?:@|\.\.)\/lib\/db\/queries\/kb-review'/)
     expect(bot).toMatch(/import \{[^}]*\bpruneArticleUsage\b[^}]*\} from '(?:@|\.\.)\/lib\/db\/queries\/kb-usage'/)
+    expect(bot).toMatch(/import \{[^}]*\bpruneAnswerReferences\b[^}]*\} from '(?:@|\.\.)\/lib\/db\/queries\/kb-answers'/)
   })
 
   it('runs once a day', () => {
@@ -25,6 +26,12 @@ describe('bot knowledge-base retention sweep', () => {
   it('runs both cleanups in each pass', () => {
     expect(fn).toContain('await purgeExpiredReviewText()')
     expect(fn).toContain('await pruneArticleUsage()')
+    expect(fn).toContain('await pruneAnswerReferences()')
+  })
+
+  it('reports the answer references it removed, and logs only when something was removed', () => {
+    expect(fn).toMatch(/prunedAnswers > 0/)
+    expect(fn).toMatch(/logger\.info\('kb retention sweep complete', \{[^}]*\bprunedAnswers\b/)
   })
 
   it('catches a failing pass inside the sweep and logs it, so the loop keeps going', () => {

@@ -23,6 +23,7 @@ import {
   kbArticles,
   kbReviewItems,
   kbArticleUsage,
+  kbAnswers,
   kbArticleEvents,
   integrations,
   emailMessages,
@@ -170,6 +171,8 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     await tx.delete(kbArticleEvents).where(eq(kbArticleEvents.orgId, orgId))
     await tx.delete(kbReviewItems).where(eq(kbReviewItems.orgId, orgId))
     await tx.delete(kbArticleUsage).where(eq(kbArticleUsage.orgId, orgId))
+    // References go with their answers, before the articles they point at.
+    await tx.delete(kbAnswers).where(eq(kbAnswers.orgId, orgId))
     await tx.delete(kbArticles).where(eq(kbArticles.orgId, orgId))
     await tx.delete(notifications).where(eq(notifications.orgId, orgId))
     await tx.delete(csatRatings).where(eq(csatRatings.orgId, orgId))

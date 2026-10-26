@@ -291,6 +291,16 @@ A few things to know about what verification means:
     - When usage data loads, an article with no recorded usage shows zero. If it cannot be loaded, the tab shows **Usage unavailable** instead of treating the missing data as zero, and coverage information remains available.
     - Deleting an article, or the workspace, removes its counts.
   </Accordion>
+  <Accordion title="Answer sources: what is stored and for how long">
+    answerLoops can record which knowledge-base articles were supplied to each generated answer, so an answer can be traced back to its sources. It is a record of what was supplied, never a judgment about what the reply used. The storage is in place; the channels do not write to it yet, and nothing is shown in the dashboard yet.
+
+    - **What is stored:** an answer id, the channel (website chat widget, support ticket, Discord, or the Agent API), whether the answer was generated or failed, and when. For each article supplied: its place in the order, its retrieval score when there was one, and a fingerprint of the article's question and answer as it was at that moment.
+    - **What is never stored:** the question, the answer, the visitor, or anything from the ticket.
+    - **Who can see it:** owners and admins only.
+    - **How long:** 90 days, then it is removed automatically.
+    - **Deleting an article** keeps its records with the article shown as deleted and the fingerprint intact, so a trace is never rewritten. **Deleting the workspace** removes everything. Editing an article does not change an existing record, because it holds a fingerprint, not the text.
+    - An article counts once per answer however many of its passages matched, and an article from another workspace is never recorded.
+  </Accordion>
   <Accordion title="Review queue text retention">
     The text of rejected items is removed, and the text of approved items is removed 90 days after review (the approved article keeps its own copy). The item and its counter stay so a repeated question is still recognised.
   </Accordion>

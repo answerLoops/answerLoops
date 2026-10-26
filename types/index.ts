@@ -224,6 +224,39 @@ export interface KBArticleHistoryEntry extends KBArticleEvent {
   source_ticket_number: number | null
 }
 
+export type KBAnswerSurface = 'widget' | 'ticket' | 'discord' | 'agent_api'
+export type KBAnswerOutcome = 'generated' | 'failed'
+
+/** One article supplied to one answer. */
+export interface KBAnswerReference {
+  /** Null once the article has been deleted; the hash below still says which revision was supplied. */
+  article_id: number | null
+  article_content_hash: string
+  /** Position in the final context, lowest first. */
+  rank: number
+  /** Retrieval score, when the caller had one. */
+  score: number | null
+}
+
+export interface KBAnswerRecord {
+  id: string
+  surface: KBAnswerSurface
+  outcome: KBAnswerOutcome
+  created_at: string
+  references: KBAnswerReference[]
+}
+
+/** An answer an article was supplied to, as seen from the article. */
+export interface KBArticleAnswerRef {
+  answer_id: string
+  surface: KBAnswerSurface
+  outcome: KBAnswerOutcome
+  created_at: string
+  rank: number
+  score: number | null
+  article_content_hash: string
+}
+
 export interface KBSource {
   id: number
   org_id: number

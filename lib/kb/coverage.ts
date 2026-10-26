@@ -19,6 +19,9 @@ export const ARTICLE_USAGE_WINDOW_DAYS = 30
 /** Usage older than this many days is pruned from storage. */
 export const ARTICLE_USAGE_RETENTION_DAYS = 400
 
+/** Answer-to-article references older than this many days are pruned from storage. */
+export const ANSWER_REFERENCE_RETENTION_DAYS = 90
+
 export interface CoverageRow {
   id: number
   title: string
