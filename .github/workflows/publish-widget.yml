@@ -1,12 +1,12 @@
 name: Publish widget
 
 # Publishes packages/widget to npm. Separate tag namespace from the app's
-# `v*` release tags (which drive publish-image.yml) and from `agent-sdk-v*`,
-# because the widget package versions independently of the app and the SDK — a
-# loader fix shouldn't force an app release, and an app release shouldn't force
-# a bump of a package whose surface didn't change.
+# `v*` release tags (which drive publish-image.yml) and from `agent-sdk-v*`, so
+# each artifact publishes from its own tag. The version number itself is shared:
+# the app, the SDK and the widget are released at the same version, and
+# tests/unit/package-versions-aligned.test.ts fails a PR that bumps only some.
 #
-# Tag the widget release as `widget-v<version>` (e.g. `widget-v0.2.0`),
+# Tag the widget release as `widget-v<version>` (e.g. `widget-v0.6.7`),
 # matching the `version` field committed in packages/widget/package.json,
 # then push the tag to publish.
 #
