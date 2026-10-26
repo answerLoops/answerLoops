@@ -13,7 +13,7 @@ import { flattenMastraStream } from '@/lib/widget/mastra-stream'
 import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import { getKBContext } from '@/lib/db/queries/kb'
 import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
-import { countArticleUsage } from '@/lib/kb/usage'
+import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
 import { getOrgByWidgetToken } from '@/lib/db/queries/widgets'
 import { getWidgetChatMemory } from '@/lib/ai/memory'
 import { rateLimitShared } from '@/lib/ratelimit'
@@ -443,6 +443,10 @@ If no article below covers the question, answer from general knowledge and don't
     tools: buildGenuiTools(contextBlock),
   })
 
+  // One id for this generation, so a repeated completion callback records the
+  // answer once.
+  const answerId = newAnswerId()
+
   // How long the request spent in validation, quota, model and retrieval
   // before the model was even called — the part of latency the visitor can't
   // see progress on.
@@ -450,6 +454,11 @@ If no article below covers the question, answer from general knowledge and don't
   const result = await widgetAgent.stream(query, {
     memory: { thread: resourceId, resource: resourceId },
     modelSettings: { maxOutputTokens: 600 },
+    // The stream failed after it started: record what was supplied with the
+    // outcome failed. If onFinish already recorded this answer, this is a no-op.
+    onError: async () => {
+      await recordAnswerSources({ orgId: org.id, answerId, surface: 'widget', outcome: 'failed', context: allContext })
+    },
     // Billed unconditionally once the stream completes — this endpoint has
     // no confidence-assessment step like the MCP/ticket pipelines do, so a
     // delivered answer is the bar for what counts as a deflection here.
@@ -458,6 +467,7 @@ If no article below covers the question, answer from general knowledge and don't
         logger.error('widget chat commitDeflection failed', { module: MOD, orgId: org.id, error: e })
       })
       await countArticleUsage(org.id, allContext)
+      await recordAnswerSources({ orgId: org.id, answerId, surface: 'widget', outcome: 'generated', context: allContext })
       // No article matched, so whatever was just said came from general
       // knowledge. Queue the question (never the visitor's identity) for a
       // person to review before anything like it is treated as a KB answer.

@@ -58,7 +58,7 @@ Schema: `lib/db/schema.ts`. Migrations: hand-authored SQL in `drizzle/`, applied
 | `ai_assessments` | confidence grade per drafted answer |
 | `kb_articles`, `kb_sources` | knowledge base Q&A articles + their source documents/URLs |
 | `kb_article_events` | append-only article history: created, promoted, edited, verified, review decisions (hash of content, never the text) |
-| `kb_answers` | one row per generated answer that had articles supplied: id (caller-supplied, so a retry records once), channel, outcome, time; no question or answer text, no visitor; 90-day retention swept by the bot |
+| `kb_answers` | one row per generated answer: id (made once per generation, so a repeated callback records once), channel, outcome, time; no question or answer text, no visitor; 90-day retention swept by the bot. Written best-effort by `recordAnswerSources` (`lib/kb/usage.ts`), beside `countArticleUsage`, from the widget reply (`app/api/widget/chat/route.ts`, on finish and on a failed stream), Discord `/ask` (`app/api/slash/ask/route.ts`), `generate_answer` for the Agent API and MCP (`lib/agent/core.ts`) and ticket drafts (`lib/ai/agent.ts`); bug and feature-request tickets, searches and simulations record nothing |
 | `kb_answer_references` | the articles supplied to each answer: rank, retrieval score, and a content hash of the article at that moment; `article_id` is nulled when the article is deleted and the hash stays |
 | `integrations` | per-org, per-platform connection config (Discord/Slack/Telegram/Email) |
 | `discord_guilds` | one row per Discord server an org has connected — an org can connect more than one |

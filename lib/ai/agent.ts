@@ -19,7 +19,7 @@ import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
 import { getIntegration } from '@/lib/db/queries/integrations'
 import { updateTicketAIDraftStatus, getTicketById } from '@/lib/db/queries/tickets'
 import { logger } from '@/lib/logger'
-import { countArticleUsage } from '@/lib/kb/usage'
+import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
 import type { AIDraftSkipReason, PriorAnswer, TicketCategory } from '@/types'
 import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import type { Match } from '@/lib/ai/related'
@@ -338,6 +338,8 @@ Guidelines:
 - Format your answer in markdown for Discord
 - Respond in the same language as the question — if the user wrote in Spanish, reply in Spanish; French, reply in French; etc.${priorContext}`
 
+  // One id for this generation, so a repeat records the answer once.
+  const answerId = newAnswerId()
   try {
     const t0 = Date.now()
 
@@ -400,6 +402,7 @@ Guidelines:
     await updateTicketAIDraft(ticketId, text)
     // The draft is written, so the articles it was grounded on count as used.
     await countArticleUsage(orgId, priorAnswers)
+    await recordAnswerSources({ orgId, answerId, surface: 'ticket', outcome: 'generated', context: priorAnswers })
 
     let assessment
     try {
@@ -513,6 +516,9 @@ Guidelines:
       logger.warn('no AI provider configured — skipped drafting, routed to human', { module: MOD, ticketId, orgId })
       return
     }
+    // If the draft was already recorded as generated this is a no-op; if the
+    // generation itself failed, record what was supplied with the outcome failed.
+    await recordAnswerSources({ orgId, answerId, surface: 'ticket', outcome: 'failed', context: priorAnswers })
     logger.error('agent failed', { module: MOD, ticketId, error: err })
   }
 }

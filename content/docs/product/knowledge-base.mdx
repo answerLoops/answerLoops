@@ -292,9 +292,9 @@ A few things to know about what verification means:
     - Deleting an article, or the workspace, removes its counts.
   </Accordion>
   <Accordion title="Answer sources: what is stored and for how long">
-    answerLoops can record which knowledge-base articles were supplied to each generated answer, so an answer can be traced back to its sources. It is a record of what was supplied, never a judgment about what the reply used. The storage is in place; the channels do not write to it yet, and nothing is shown in the dashboard yet.
+    answerLoops records which knowledge-base articles were supplied to each generated answer, so an answer can be traced back to its sources. It is a record of what was supplied, never a judgment about what the reply used. It is written when an answer is generated in the website chat widget, in Discord with `/ask`, through the Agent API and MCP, and for a support ticket's drafted reply. Searches, simulations, and bug reports or feature requests (which are never answered from the knowledge base) record nothing. Nothing is shown in the dashboard yet.
 
-    - **What is stored:** an answer id, the channel (website chat widget, support ticket, Discord, or the Agent API), whether the answer was generated or failed, and when. For each article supplied: its place in the order, its retrieval score when there was one, and a fingerprint of the article's question and answer as it was at that moment.
+    - **What is stored:** an answer id, the channel (website chat widget, support ticket, Discord, or the Agent API), whether the answer was generated or failed, and when. For each article supplied: its place in the order it was given to the assistant, and a fingerprint of the article's question and answer as it was at that moment. An article that was found but dropped before the answer was written is not recorded.
     - **What is never stored:** the question, the answer, the visitor, or anything from the ticket.
     - **Who can see it:** owners and admins only.
     - **How long:** 90 days, then it is removed automatically.

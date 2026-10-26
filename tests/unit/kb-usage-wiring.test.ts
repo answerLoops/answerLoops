@@ -27,7 +27,7 @@ describe('knowledge-base retrieval keeps article ids', () => {
 describe('where usage is counted', () => {
   it('widget chat counts after the reply is delivered, beside billing', () => {
     const s = readSrc('app/api/widget/chat/route.ts')
-    expect(s).toMatch(/import \{ countArticleUsage \} from '@\/lib\/kb\/usage'/)
+    expect(s).toMatch(/import \{[^}]*\bcountArticleUsage\b[^}]*\} from '@\/lib\/kb\/usage'/)
     const onFinish = s.slice(s.indexOf('onFinish: async (event)'))
     const commitIdx = onFinish.indexOf('commitDeflection(')
     const countIdx = onFinish.indexOf('countArticleUsage(org.id, allContext)')
@@ -76,6 +76,93 @@ describe('where usage is counted', () => {
     const searchFn = core.slice(core.indexOf('export async function searchKbCore'), core.indexOf('// ── get_faq'))
     expect(searchFn.length).toBeGreaterThan(0)
     expect(searchFn).not.toContain('countArticleUsage')
+  })
+})
+
+describe('where answer sources are recorded', () => {
+  const sources = /recordAnswerSources\(\{[^}]*\}\)/g
+  const calls = (s: string) => s.match(sources) ?? []
+
+  it('widget chat records after the reply, beside the usage count, and on a failed stream', () => {
+    const s = readSrc('app/api/widget/chat/route.ts')
+    expect(s).toMatch(/import \{[^}]*\brecordAnswerSources\b[^}]*\} from '@\/lib\/kb\/usage'/)
+    const onFinish = s.slice(s.indexOf('onFinish: async (event)'))
+    const counted = onFinish.indexOf('countArticleUsage(org.id, allContext)')
+    const recorded = onFinish.indexOf("recordAnswerSources({ orgId: org.id, answerId, surface: 'widget', outcome: 'generated', context: allContext })")
+    expect(recorded).toBeGreaterThan(counted)
+    // a failed stream records the same context with the failed outcome
+    const onError = s.slice(s.indexOf('onError: async'), s.indexOf('onFinish: async (event)'))
+    expect(onError).toContain("surface: 'widget', outcome: 'failed', context: allContext")
+    // both record the whole context that was supplied, nothing else
+    expect(calls(s)).toHaveLength(2)
+  })
+
+  it('widget chat makes one answer id per generation, before streaming starts', () => {
+    const s = readSrc('app/api/widget/chat/route.ts')
+    const made = s.indexOf('const answerId = newAnswerId()')
+    expect(made).toBeGreaterThan(-1)
+    expect(made).toBeLessThan(s.indexOf('widgetAgent.stream('))
+    // never created inside a callback, which a repeat would re-run
+    expect(s.match(/newAnswerId\(\)/g)).toHaveLength(1)
+  })
+
+  it('slash /ask records after the answer, and records a failure but not a missing AI provider', () => {
+    const s = readSrc('app/api/slash/ask/route.ts')
+    const counted = s.indexOf('await countArticleUsage(orgId, kbArticleIds)')
+    const generated = s.indexOf("surface: 'discord', outcome: 'generated', context: kbArticleIds")
+    expect(generated).toBeGreaterThan(counted)
+    const noProvider = s.indexOf('err instanceof NoAIProviderConfiguredError')
+    const failed = s.indexOf("surface: 'discord', outcome: 'failed', context: kbArticleIds")
+    expect(failed).toBeGreaterThan(noProvider)
+    expect(s.indexOf('const answerId = newAnswerId()')).toBeLessThan(s.indexOf('askAgent.generate('))
+    expect(calls(s)).toHaveLength(2)
+  })
+
+  it('generate_answer records after the answer, and records a failure but not a missing AI provider', () => {
+    const s = readSrc('lib/agent/core.ts')
+    const counted = s.indexOf('await countArticleUsage(orgId, groundingContext)')
+    const generated = s.indexOf("surface: 'agent_api', outcome: 'generated', context: groundingContext")
+    expect(generated).toBeGreaterThan(counted)
+    const noProvider = s.indexOf('e instanceof NoAIProviderConfiguredError')
+    const failed = s.indexOf("surface: 'agent_api', outcome: 'failed', context: groundingContext")
+    expect(failed).toBeGreaterThan(noProvider)
+    expect(s.indexOf('const answerId = newAnswerId()')).toBeLessThan(s.indexOf('answerAgent.generate(question)'))
+    expect(calls(s)).toHaveLength(2)
+  })
+
+  it('ticket drafts record once the draft is saved, never for bug reports or feature requests', () => {
+    const s = readSrc('lib/ai/agent.ts')
+    const saved = s.indexOf('await updateTicketAIDraft(ticketId, text)', s.indexOf('supportAgent.generate('))
+    const counted = s.indexOf('await countArticleUsage(orgId, priorAnswers)')
+    const generated = s.indexOf("surface: 'ticket', outcome: 'generated', context: priorAnswers")
+    expect(generated).toBeGreaterThan(counted)
+    expect(counted).toBeGreaterThan(saved)
+    // Everything before the KB-grounded generation is the bug / feature-request path.
+    const earlyReturn = s.indexOf("category === 'bug' || category === 'feature_request'")
+    expect(generated).toBeGreaterThan(earlyReturn)
+    expect(s.indexOf('const answerId = newAnswerId()')).toBeGreaterThan(earlyReturn)
+    // The failure is recorded in the answer path's catch, after the missing-provider branch.
+    const noProvider = s.indexOf('err instanceof NoAIProviderConfiguredError', generated)
+    const failed = s.indexOf("surface: 'ticket', outcome: 'failed', context: priorAnswers")
+    expect(failed).toBeGreaterThan(noProvider)
+    expect(calls(s)).toHaveLength(2)
+  })
+
+  it('search-only and simulation surfaces record nothing', () => {
+    for (const file of ['app/api/kb/search/route.ts', 'app/api/simulation/run/route.ts']) {
+      const s = readSrc(file)
+      expect(s).not.toContain('recordAnswerSources')
+      expect(s).not.toContain('recordAnswerReferences')
+    }
+    const core = readSrc('lib/agent/core.ts')
+    const searchFn = core.slice(core.indexOf('export async function searchKbCore'), core.indexOf('// ── get_faq'))
+    expect(searchFn).not.toContain('recordAnswerSources')
+  })
+
+  it('every call site that records an answer also keeps counting usage, unchanged', () => {
+    for (const file of ['app/api/widget/chat/route.ts', 'app/api/slash/ask/route.ts', 'lib/agent/core.ts', 'lib/ai/agent.ts']) {
+      expect(readSrc(file), file).toContain('countArticleUsage(')
+    }
   })
 })
 

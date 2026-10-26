@@ -192,7 +192,11 @@ describe('generateAnswerCore reference block', () => {
       reserveGeneration: async () => ({ granted: true, generationId: 1 }),
       commitDeflection: async () => true,
     }))
-    vi.doMock('@/lib/kb/usage', () => ({ countArticleUsage: async () => undefined }))
+    vi.doMock('@/lib/kb/usage', () => ({
+      countArticleUsage: async () => undefined,
+      newAnswerId: () => '2f1c9a7e-6b1d-4e0a-9a52-0c3d1a7b8e44',
+      recordAnswerSources: async () => undefined,
+    }))
     vi.doMock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }))
   })
 

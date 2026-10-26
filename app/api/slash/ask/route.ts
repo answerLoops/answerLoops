@@ -12,7 +12,7 @@ import { orgRateLimitPerMinute } from '@/lib/billing/entitlements-server'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { getBearerToken, matchesPlatformBotSecret } from '@/lib/http/bearer-auth'
 import { logger } from '@/lib/logger'
-import { countArticleUsage } from '@/lib/kb/usage'
+import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
 
 const MOD = 'api/slash/ask'
 const RATE_LIMIT_WINDOW_MS = 60_000
@@ -58,6 +58,9 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Monthly usage limit reached — upgrade the plan or wait for the next billing cycle.' }, { status: 402 })
   }
 
+  // One id for this generation, so a repeat records the answer once.
+  const answerId = newAnswerId()
+
   // Embed question → KB semantic search for context
   let kbContext = ''
   let kbArticleIds: { articleId: number }[] = []
@@ -93,6 +96,7 @@ If you cite a KB article, reference the question it answered. If you don't know,
     })
 
     await countArticleUsage(orgId, kbArticleIds)
+    await recordAnswerSources({ orgId, answerId, surface: 'discord', outcome: 'generated', context: kbArticleIds })
 
     logger.info('slash /ask answered', { module: MOD, orgId })
     return Response.json({ answer: text })
@@ -100,6 +104,7 @@ If you cite a KB article, reference the question it answered. If you don't know,
     if (err instanceof NoAIProviderConfiguredError) {
       return Response.json({ error: aiUnavailableMessage(err, 'No AI provider configured for this org — an admin needs to connect one in Settings → AI Model.') }, { status: 503 })
     }
+    await recordAnswerSources({ orgId, answerId, surface: 'discord', outcome: 'failed', context: kbArticleIds })
     logger.error('slash /ask AI failed', { module: MOD, error: err })
     return Response.json({ error: 'AI failed to generate an answer' }, { status: 500 })
   }
