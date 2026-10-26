@@ -24,4 +24,13 @@ describe('release versions stay aligned', () => {
       expect(versionOf(rel)).toBe(app)
     },
   )
+
+  // The image itself is tagged from the git tag, so the only place a version is
+  // written down for Docker is the pinned-image example in the ghcr compose file.
+  it('shows the app version in the pinned-image example of the ghcr compose file', () => {
+    const compose = readFileSync(path.join(root, 'docker-compose.ghcr.yml'), 'utf8')
+    const pinned = compose.match(/ANSWERLOOPS_IMAGE=ghcr\.io\/answerloops\/answerloops:(\S+)/)
+    expect(pinned, 'docker-compose.ghcr.yml has no pinned-image example').not.toBeNull()
+    expect(pinned![1]).toBe(app)
+  })
 })
