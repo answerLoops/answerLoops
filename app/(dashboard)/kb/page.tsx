@@ -12,6 +12,7 @@ import { NotionKBSection } from '@/components/dashboard/notion-kb-section'
 import { AddKnowledgeSection, type KnowledgeDraft } from '@/components/dashboard/add-knowledge-section'
 import { getTicketDraftAction } from '@/lib/actions/kb'
 import { CoverageTab } from './coverage-tab'
+import { ArticleVerificationControl } from '@/components/dashboard/article-verification'
 import { ReviewTab } from './review-tab'
 import type { ReviewCounts } from '@/lib/db/queries/kb-review'
 
@@ -522,7 +523,15 @@ function UrlIngestSection({ onImported }: { onImported: () => void }) {
   )
 }
 
-function ArticlesList({ articles, onDeleted }: { articles: (Article | KBSearchResult)[]; onDeleted: () => void }) {
+function ArticlesList({
+  articles,
+  onDeleted,
+  onVerified,
+}: {
+  articles: (Article | KBSearchResult)[]
+  onDeleted: () => void
+  onVerified: () => void
+}) {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [confirmBulk, setConfirmBulk] = useState(false)
@@ -608,6 +617,9 @@ function ArticlesList({ articles, onDeleted }: { articles: (Article | KBSearchRe
                 <Link href={`/tickets/${a.source_ticket_number}`} className="mt-2 inline-block text-xs text-brand-600 hover:underline">
                   From ticket #{a.source_ticket_number} →
                 </Link>
+              )}
+              {a.verification && (
+                <ArticleVerificationControl articleId={a.id} verification={a.verification} onVerified={onVerified} />
               )}
             </div>
           </li>
@@ -871,7 +883,7 @@ export default function KBPage() {
           No articles yet. Upload a file, import from a URL, or promote a resolved ticket from its detail page.
         </p>
       ) : (
-        <ArticlesList articles={articles} onDeleted={loadAll} />
+        <ArticlesList articles={articles} onDeleted={loadAll} onVerified={loadAll} />
       )}
         </>
       )}

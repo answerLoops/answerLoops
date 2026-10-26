@@ -5,12 +5,13 @@ import { refresh } from 'next/cache'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { logger } from '@/lib/logger'
 import { getTicketById } from '@/lib/db/queries/tickets'
-import { countArticles, createArticle, getArticleBySourceTicket } from '@/lib/db/queries/kb'
+import { countArticles, createArticle, getArticleBySourceTicket, verifyArticle } from '@/lib/db/queries/kb'
 import { ArticleCapReachedError } from '@/lib/db/queries/kb-article-cap'
 import { embedTextWithModel } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
+import { VERIFICATION_NOTE_MAX } from '@/lib/kb/verification'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 
@@ -191,4 +192,58 @@ export async function addKnowledgeAction(
     logger.error('failed to add knowledge article', { module: 'actions/kb', orgId, error: err })
     return { error: 'Could not add this to the knowledge base. Try again.' }
   }
+}
+
+// Verifying costs one small write, so the cap is loose: it only stops a script
+// or a stuck button from flooding the history, not a person working down a list.
+const VERIFY_MAX = 120
+const VERIFY_WINDOW_MS = 10 * 60_000
+
+const VerifyArticleSchema = z.object({
+  articleId: z.coerce.number().int().positive(),
+  note: z
+    .string()
+    .trim()
+    .max(VERIFICATION_NOTE_MAX, `Keep the note under ${VERIFICATION_NOTE_MAX} characters`),
+})
+
+export type VerifyArticleState = { ok: true } | { error: string } | null
+
+/**
+ * Marks an article as checked: the signed-in person confirms its answer is
+ * still correct. Limited to owners and admins, like writing an article. What is
+ * recorded is the article's text at the moment of the check, so any later edit
+ * makes it read as changed since last verified. The article must belong to the
+ * session's workspace; the id in the form is never trusted on its own.
+ */
+export async function verifyArticleAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<VerifyArticleState> {
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
+
+  const parsed = VerifyArticleSchema.safeParse({
+    articleId: formData.get('articleId'),
+    note: formData.get('note') ?? '',
+  })
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+
+  const limit = await rateLimitShared(`kb-verify:${orgId}`, VERIFY_MAX, VERIFY_WINDOW_MS)
+  if (!limit.ok) return { error: 'You are verifying too quickly. Try again in a few minutes.' }
+
+  try {
+    const recorded = await verifyArticle(
+      { articleId: parsed.data.articleId, userId: access.userId, note: parsed.data.note },
+      orgId
+    )
+    if (!recorded) return { error: 'Article not found' }
+  } catch (err) {
+    logger.error('failed to verify knowledge article', { module: 'actions/kb', orgId, error: err })
+    return { error: 'Could not mark this as verified. Try again.' }
+  }
+
+  refresh()
+  return { ok: true }
 }

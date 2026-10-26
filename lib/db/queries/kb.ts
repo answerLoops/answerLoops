@@ -1,9 +1,10 @@
 import { eq, and, desc, sql, or, ilike, isNotNull, cosineDistance } from 'drizzle-orm'
 import { getDb } from '../drizzle'
-import { kbArticles, tickets } from '../schema'
+import { kbArticles, tickets, users } from '../schema'
 import { assertWithinArticleCap } from './kb-article-cap'
 import { recordArticleEvent } from './kb-events'
 import { contentHash } from '@/lib/kb/revision'
+import { toVerification, VERIFICATION_NOTE_MAX } from '@/lib/kb/verification'
 import type { KBArticle, KBSearchResult, PriorAnswer } from '@/types'
 
 export const KB_MATCH_THRESHOLD = 0.45
@@ -160,12 +161,64 @@ export async function listArticles(publishedOnly = true, orgId: number): Promise
   // Joined so the UI can link to the source ticket's user-facing number
   // (tickets.org_ticket_number) rather than the internal DB id.
   const rows = await getDb()
-    .select({ article: kbArticles, sourceTicketNumber: tickets.orgTicketNumber })
+    .select({
+      article: kbArticles,
+      sourceTicketNumber: tickets.orgTicketNumber,
+      verifierName: users.name,
+      verifierEmail: users.email,
+    })
     .from(kbArticles)
     .leftJoin(tickets, eq(tickets.id, kbArticles.sourceTicketId))
+    .leftJoin(users, eq(users.id, kbArticles.verifiedBy))
     .where(conditions)
     .orderBy(desc(kbArticles.updatedAt))
-  return rows.map((r) => ({ ...toArticle(r.article), source_ticket_number: r.sourceTicketNumber ?? null }))
+  return rows.map((r) => ({
+    ...toArticle(r.article),
+    source_ticket_number: r.sourceTicketNumber ?? null,
+    verification: toVerification(r.article, r.verifierName ?? r.verifierEmail ?? null),
+  }))
+}
+
+/**
+ * Records that a person checked an article and found its answer still correct.
+ *
+ * Stores who, when, an optional note, and the hash of the question and answer
+ * as they are right now, then appends a 'verified' event, all in one
+ * transaction. The row is locked while it is read, so a concurrent edit cannot
+ * slip in between reading the text and hashing it: what is recorded is exactly
+ * what the verifier saw. Scoped to the workspace; another workspace's article
+ * reads as not found. Returns null in that case.
+ */
+export async function verifyArticle(
+  input: { articleId: number; userId: number; note?: string | null },
+  orgId: number
+): Promise<{ verifiedAt: string; contentHash: string } | null> {
+  const note = input.note?.trim().slice(0, VERIFICATION_NOTE_MAX) || null
+  return getDb().transaction(async (tx) => {
+    const [article] = await tx
+      .select({ question: kbArticles.question, answer: kbArticles.answer })
+      .from(kbArticles)
+      .where(and(eq(kbArticles.id, input.articleId), eq(kbArticles.orgId, orgId)))
+      .for('update')
+      .limit(1)
+    if (!article) return null
+
+    const hash = contentHash(article.question, article.answer)
+    const verifiedAt = new Date().toISOString()
+    await tx
+      .update(kbArticles)
+      .set({ verifiedAt, verifiedBy: input.userId, verifiedContentHash: hash, verificationNote: note })
+      .where(and(eq(kbArticles.id, input.articleId), eq(kbArticles.orgId, orgId)))
+    await recordArticleEvent(tx, {
+      orgId,
+      articleId: input.articleId,
+      type: 'verified',
+      actorUserId: input.userId,
+      origin: 'manual',
+      contentHash: hash,
+    })
+    return { verifiedAt, contentHash: hash }
+  })
 }
 
 // pgvector ANN search via the embedding_vec column (see schema.ts) instead of
