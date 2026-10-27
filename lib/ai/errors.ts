@@ -23,6 +23,25 @@ export class NoAIProviderConfiguredError extends Error {
   }
 }
 
+/**
+ * Thrown when a model call that must return structured output comes back with
+ * none: an empty completion, a refusal with no body, or a content-filter stop.
+ * The agent library resolves such a call with `object: undefined` instead of
+ * rejecting, so the step has to reject itself — callers degrade on a rejection
+ * (a failed assessment routes the answer to human review) but not on an
+ * undefined result.
+ */
+export class EmptyAIResponseError extends Error {
+  /** Which pipeline step got nothing back, e.g. "triage" or "assessment". */
+  readonly step: string
+
+  constructor(step: string) {
+    super(`The AI returned no usable ${step} result`)
+    this.name = 'EmptyAIResponseError'
+    this.step = step
+  }
+}
+
 export type BudgetKind = 'chat' | 'embedding'
 export type BudgetTier = 'trial' | 'plan'
 
