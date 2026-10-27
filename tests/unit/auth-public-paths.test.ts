@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import fs from 'fs'
 import path from 'path'
+import { isWebsitePath } from '@/lib/marketing/website-paths'
 
 // Guardrail for a real production bug: every route that authenticates a
 // caller by its own means (webhook signature, Bearer API key, shared secret)
@@ -16,6 +17,21 @@ describe('auth.ts PUBLIC_PATHS covers every self-authenticating API route', () =
   const match = authSrc.match(/const PUBLIC_PATHS = \[([\s\S]*?)\]/)
   if (!match) throw new Error('Could not find PUBLIC_PATHS in auth.ts')
   const publicPaths = match[1].split(',').map((s) => s.trim().replace(/^'|'$/g, '')).filter(Boolean)
+
+  const sitemapSrc = fs.readFileSync(path.join(process.cwd(), 'app/sitemap.ts'), 'utf-8')
+  const sitemapPaths = [...sitemapSrc.matchAll(/\{ path: '([^']*)'/g)].map((match) => match[1] || '/')
+
+  it('discovers the static sitemap pages', () => {
+    expect(sitemapPaths).toEqual(expect.arrayContaining([
+      '/', '/circle-ai-answers', '/discourse-ai-answers', '/dual-agent-ai-support',
+    ]))
+  })
+
+  it.each(sitemapPaths)('sitemap page %s is public and stays on the marketing host', (route) => {
+    expect(publicPaths.some((p) => route === p || route.startsWith(`${p}/`)),
+      `${route} must render without a session`).toBe(true)
+    expect(isWebsitePath(route), `${route} must stay on the marketing host`).toBe(true)
+  })
 
   const selfAuthenticatingRoutes = [
     '/api/email/ingest', // Svix signature / legacy shared-secret header
