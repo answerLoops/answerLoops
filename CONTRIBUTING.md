@@ -164,15 +164,12 @@ Add them and restart. For anything else, see
 
 ### Expected behavior
 
-- **The bot logs an error and exits.** Without a Discord token, the bot prints
-  `No Discord token found` and stops. This is expected until you connect Discord
-  under Settings → Integrations, and it does not affect the app. On the first
-  start with an empty database, the bot may also log
-  `relation "integrations" does not exist`. It starts before the app has created
-  the tables during boot. No action is needed.
-- **`AGENTS.md` appears as modified in `git status`.** The Next.js development
-  server rewrites a heading in that file each time it runs. Do not include it in
-  your commit. Run `git restore AGENTS.md` to discard the change.
+**The bot logs an error and exits.** Without a Discord token, the bot prints
+`No Discord token found` and stops. This is expected until you connect Discord
+under Settings → Integrations, and it does not affect the app. On the first start
+with an empty database, the bot may also log
+`relation "integrations" does not exist`. It starts before the app has created
+the tables during boot. No action is needed.
 
 ### Main commands
 
