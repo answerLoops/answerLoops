@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { ingest, waitForPipeline, getTicket } from './helpers'
 
 // Proves the harness end-to-end: bot ingest -> triage -> embed -> agent ->
-// assess, all under AIMock, with the result observable via the API and the UI.
+// assess, all under mock mode, with the result observable via the API and the UI.
 test.describe('smoke: ingest pipeline', () => {
   test('a confident question is triaged, answered, and auto-deflected', async ({ request, page }) => {
     const ticketId = await ingest(request, {
