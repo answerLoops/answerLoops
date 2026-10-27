@@ -28,15 +28,26 @@ work on.
 - Report security issues privately through [SECURITY.md](./SECURITY.md) —
   never in a public issue or PR.
 
-## Run it locally
+## Run it locally in 3 steps
 
-Prerequisites: Docker Engine with Compose, a Google OAuth client for sign-in,
-and an API key for one supported AI provider (OpenAI, Anthropic, Google
-Gemini, Groq, Mistral, or an OpenAI-compatible endpoint). You only need that
-key to run the app against a real model. The test suites need none; see
-[Testing AI behavior](#testing-ai-behavior).
+This gets the dashboard and the bot running on your machine, with a local
+database. When you finish, the app is at <http://localhost:3000>.
 
-### 1. Clone and configure
+### Prerequisites
+
+- **Git**, to clone the repository.
+- **Docker with Compose**, to run Postgres.
+- **Node.js 22 and pnpm 11 or newer**, to run the app and the tests. If you use
+  nvm, `nvm use` picks the right Node version from [`.nvmrc`](./.nvmrc). You can
+  skip these only if you run everything in Docker (see Step 3).
+- **A Google OAuth client**, because Google is the only way to sign in.
+  [This guide](https://answerloops.com/docs/self-hosting/oauth) shows how to
+  create one.
+- **An OpenAI API key**, optional. You only need it to see AI answers. The app
+  starts and the tests run without one. To use another provider or a local
+  model, see the [self-hosting FAQ](https://answerloops.com/docs/self-hosting/faq).
+
+### Step 1. Clone the app
 
 ```bash
 git clone https://github.com/answerLoops/answerLoops.git
@@ -44,84 +55,139 @@ cd answerLoops
 cp .env.example .env
 ```
 
-Generate independent secrets:
+The last command copies the example file to `.env`. You fill it in next, and the
+app reads it when it starts.
 
-```bash
-openssl rand -hex 32 # AUTH_SECRET
-openssl rand -hex 32 # ENCRYPTION_KEY
-openssl rand -hex 32 # BOT_SECRET
-```
+### Step 2. Values
 
-Set at least these values in `.env`:
+Open `.env` and set these seven values. Each line is `NAME=value`.
 
-```dotenv
-AUTH_URL=http://localhost:3000
-AUTH_SECRET=<your-generated-auth-secret>
-ENCRYPTION_KEY=<your-generated-32-byte-hex-key>
-BOT_SECRET=<your-generated-bot-secret>
+| Variable | Value |
+|---|---|
+| `AUTH_URL` | `http://localhost:3000` |
+| `AUTH_SECRET` | A random value. Generate one with `openssl rand -hex 32` |
+| `ENCRYPTION_KEY` | A second random value from the same command |
+| `BOT_SECRET` | A third random value from the same command |
+| `AUTH_GOOGLE_ID` | The client ID from your Google OAuth client |
+| `AUTH_GOOGLE_SECRET` | The client secret from the same client |
+| `OPENAI_API_KEY` | Your OpenAI key, or leave it empty for now |
 
-AUTH_GOOGLE_ID=<your-google-oauth-client-id>
-AUTH_GOOGLE_SECRET=<your-google-oauth-client-secret>
+Run `openssl rand -hex 32` three times and use a different result each time.
+In your Google OAuth client, the redirect URI must be exactly
+`http://localhost:3000/api/auth/callback/google`.
 
-OPENAI_API_KEY=<your-openai-api-key>
-```
+### Step 3. Run it
 
-Use `http://localhost:3000/api/auth/callback/google` as the Google OAuth
-redirect URI.
+There are two ways to run it. Choose one.
 
-### 2. Start the stack
+| | Option A: the app on your machine (recommended) | Option B: everything in Docker |
+|---|---|---|
+| What runs in Docker | Postgres only | Postgres, the app, and the bot |
+| What you install | Node.js 22 and pnpm | Nothing beyond Docker |
+| Pick it if | You are changing code, docs, or blog posts and running tests | You would rather not install Node.js and pnpm |
+| Edits reload | Yes | Yes, the source folder is mounted |
+
+Most contributors should pick **Option A**. The `pnpm test`, `pnpm lint`, and
+`pnpm build` commands in this guide run on your machine, and Docker runs
+`pnpm install` every time it starts.
+
+Both options start Postgres on port 5432. If Docker says `port is already
+allocated`, another Postgres is already running on your machine. Stop it and run
+the command again.
+
+### Step 3, Option A: the app on your machine, Postgres in Docker (recommended)
+
+1. Start only the database, in the background:
+
+   ```bash
+   docker compose up -d postgres
+   ```
+
+2. Add one more line to your `.env`. These are the credentials the compose file
+   gives Postgres:
+
+   ```dotenv
+   DATABASE_URL=postgres://community:community@localhost:5432/community
+   ```
+
+3. Install the packages (the first time, and whenever dependencies change):
+
+   ```bash
+   pnpm install
+   ```
+
+4. Load `.env` into your terminal, then start the app and the bot together.
+   Run both commands in the same terminal:
+
+   ```bash
+   set -a; source .env; set +a
+   pnpm dev:all
+   ```
+
+   `pnpm dev:all` runs `pnpm dev` (the app) and `pnpm bot` (the Discord and Slack
+   listener) at the same time. Next.js reads `.env` by itself, but the bot does
+   not, which is why you load the file first. If you are only working on the
+   dashboard, `pnpm dev` alone is enough.
+
+5. Open <http://localhost:3000>.
+
+To stop, press Ctrl+C. Postgres keeps running until you run `docker compose down`.
+Your data is kept.
+
+### Step 3, Option B: everything in Docker
 
 ```bash
 docker compose up --build
 ```
 
-Open [http://localhost:3000](http://localhost:3000), sign in, and complete
-onboarding. Verify the server independently:
+This starts Postgres, the app, and the bot, and sets the database address for
+you, so you do not set `DATABASE_URL`. The first start takes a while because it
+installs packages inside the containers. When it is up, open
+<http://localhost:3000>.
+
+To stop everything, press Ctrl+C and run `docker compose down`. That keeps your
+data. `docker compose down -v` also deletes the database.
+
+### Step 3, then check that it works
 
 ```bash
 curl http://localhost:3000/api/health
 # {"ok":true}
 ```
 
-> [!WARNING]
-> `docker compose down` stops the stack and preserves your database. Adding
-> `-v` deletes the named Postgres volume and its data.
+Then open <http://localhost:3000/login> and click the Google button. It says
+"Sign up with Google" the first time and "Sign in with Google" after that.
+Finish the onboarding. If the page says "Sign-in is not set up on this
+deployment", `AUTH_GOOGLE_ID` or `AUTH_GOOGLE_SECRET` is missing from `.env`.
+Add them and restart. For anything else, see
+[Troubleshooting](https://answerloops.com/docs/self-hosting/troubleshooting).
 
-### Or run natively
+### Expected behavior
 
-Use Node.js 22 (see [`.nvmrc`](./.nvmrc)) and pnpm. Run Postgres in Docker
-while the app and bot run on the host:
+- **The bot logs an error and exits.** Without a Discord token, the bot prints
+  `No Discord token found` and stops. This is expected until you connect Discord
+  under Settings → Integrations, and it does not affect the app. On the first
+  start with an empty database, the bot may also log
+  `relation "integrations" does not exist`. It starts before the app has created
+  the tables during boot. No action is needed.
+- **`AGENTS.md` appears as modified in `git status`.** The Next.js development
+  server rewrites a heading in that file each time it runs. Do not include it in
+  your commit. Run `git restore AGENTS.md` to discard the change.
 
-```bash
-docker compose up -d postgres
-pnpm install
-cp .env.example .env.local
-```
+### Main commands
 
-Set `DATABASE_URL=<your-local-postgres-connection-string>` and the other
-values above in `.env.local`. Then run both the app and listener together:
-
-```bash
-set -a
-source .env.local
-set +a
-pnpm dev:all
-```
-
-Main commands:
-
-| Command | Purpose |
+| Command | What it does |
 |---|---|
-| `pnpm dev` | Start the Next.js development server |
-| `pnpm bot` | Start the Discord/Slack listener in watch mode |
-| `pnpm dev:all` | Run the app and listener together |
-| `pnpm lint` | Run Oxlint |
-| `pnpm test` | Run the Vitest unit and integration suite |
-| `pnpm test:e2e` | Run Playwright end-to-end tests |
-| `pnpm test:e2e:typecheck` | Type-check the Playwright suite |
-| `pnpm build` | Create the production Next.js build |
+| `pnpm dev` | Starts the app (Next.js development server) |
+| `pnpm bot` | Starts the Discord and Slack listener in watch mode |
+| `pnpm dev:all` | Starts the app and the listener together |
+| `pnpm lint` | Runs Oxlint |
+| `pnpm test` | Runs the Vitest unit and integration tests |
+| `pnpm test:e2e` | Runs the Playwright end-to-end tests |
+| `pnpm test:e2e:typecheck` | Type-checks the Playwright tests |
+| `pnpm build` | Creates the production Next.js build |
 
-Full setup detail, every env var, and deployment options are in the
+Every environment variable and the deployment options are in the
 [self-hosting documentation](https://answerloops.com/docs/quickstart-self-host).
 
 ### Repository map
