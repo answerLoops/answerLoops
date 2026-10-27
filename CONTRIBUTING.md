@@ -192,21 +192,24 @@ a cover image if you have one; ask in your PR if you need help generating one.
   find where a change belongs (`app/`, `bot/`, `lib/`, `components/`,
   `packages/agent-sdk/`).
 - Changing something under `lib/ai/`? See
-  [Testing AI behavior](#testing-ai-behavior) for how to fake the model.
+  [Testing AI behavior](#testing-ai-behavior) for how to mock the model.
 
 ## Testing AI behavior
 
 None of the test suites call a real provider, so `pnpm test` and
-`pnpm test:e2e` need no AI key. There are three ways to fake the AI. Pick the
+`pnpm test:e2e` need no AI key. There are three ways to mock the AI. Pick the
 cheapest one that exercises what you changed. The
 [self-hosting FAQ](https://answerloops.com/docs/self-hosting/faq) has the short
 version, including how to run the app itself without a key.
 
-| Fake | Use it when | Example |
+| Mock | Use it when | Example |
 |---|---|---|
 | Replace the function, e.g. `vi.mock('@/lib/ai/assess')` | You're testing the code around the AI: routing, thresholds, billing | `tests/unit/kb-answer-capture-core.test.ts` |
 | Replace the agent library the app calls | You want the real `lib/ai/triage.ts` and `lib/ai/assess.ts` to run on a result you choose | `tests/unit/ai-empty-structured-output.test.ts`, `tests/unit/generate-answer-empty-assessment.test.ts` |
 | [AIMock](https://github.com/CopilotKit/aimock) over HTTP | You need the real request, the wire, and the reply parsing and validation | `tests/unit/ai-provider-replies.aimock.test.ts` |
+
+A rule of thumb: if the AI's answer is an input to your code, replace the
+function. If the format of the AI's reply is what you are testing, use AIMock.
 
 ### AIMock in a test
 
@@ -257,113 +260,71 @@ Put the tag in the text you pass to the function, for example
 answers with the fixture whose `userMessage` appears in the prompt. Its
 [docs](https://aimock.copilotkit.dev) list every fixture option.
 
-Things to know:
-
-- **Reply shape.** Triage must reply with JSON holding `category`,
-  `severity_score`, `summary`, `suggested_priority` and `reasoning`. Grading
-  must reply with `confidence` (0 to 1), `answered_fully` (a boolean) and
-  `reasoning`. The schemas sit at the top of `lib/ai/triage.ts` and
-  `lib/ai/assess.ts`.
-- **Embeddings.** Knowledge-base vectors are 1536 numbers long (the column is
-  `vector(1536)`), so a shorter fake vector fails on insert.
-- **Outages are slow.** A 500, a 429 or a dropped connection is retried with
-  backoff, which takes about 6 seconds per case. Keep those out of the default
-  suite or accept the delay.
-
 ### End-to-end mock mode
 
 `pnpm test:e2e` runs the production build with `MOCK_EXTERNALS=1` (set in
 `playwright.config.ts`). That swaps the AI, Discord, email and web-crawl
-services for deterministic in-process fakes (`lib/mock-mode.ts`,
+services for deterministic in-process mocks (`lib/mock-mode.ts`,
 `lib/ai/mock.ts`). In an e2e message, `[[needhuman]]` forces the
 low-confidence, human-review path and `[[urgent]]` forces critical severity.
 Mock mode is for test suites: a production process refuses to start with it
-set.
+set. The suite needs a local Postgres. The one from
+`docker compose up -d postgres` works, and the `community_test` database is
+created for you.
 
 ## FAQ
 
 <details>
-<summary><strong>Do I need an AI API key to run the tests?</strong></summary>
+<summary><strong>What does the mock have to reply with?</strong></summary>
 
-No. `pnpm test` and `pnpm test:e2e` never call a real provider. The end-to-end
-suite needs a local Postgres. The one from `docker compose up -d postgres`
-works, and the `community_test` database is created for you.
+Triage must reply with JSON holding `category`, `severity_score`, `summary`,
+`suggested_priority` and `reasoning`. Grading must reply with `confidence` (0 to
+1), `answered_fully` (a boolean) and `reasoning`. The schemas sit at the top of
+`lib/ai/triage.ts` and `lib/ai/assess.ts`, and a reply that does not match makes
+the step fail.
 
-</details>
-
-<details>
-<summary><strong>How do I test code that calls an AI provider without an API key?</strong></summary>
-
-Fake the AI at the level you are testing, using the table in
-[Testing AI behavior](#testing-ai-behavior). A rule of thumb: if the AI's
-answer is an input to your code, replace the function. If the format of the
-AI's reply is what you are testing, use AIMock.
+Embeddings must be 1536 numbers long, because the knowledge-base column is
+`vector(1536)`. A shorter mock vector fails on insert.
 
 </details>
 
 <details>
-<summary><strong>How do I make the fake AI return a specific result?</strong></summary>
+<summary><strong>How do I mock the result of a single AI call?</strong></summary>
 
-- **Replace the function.** Mock every export the code under test imports from
-  that module, as `tests/unit/kb-answer-capture-core.test.ts` does:
+Replace the function, and mock every export the code under test imports from
+that module, as `tests/unit/kb-answer-capture-core.test.ts` does:
 
-  ```ts
-  vi.doMock('@/lib/ai/assess', () => ({
-    assessAnswer: async () => ({ confidence: 0.9, answered_fully: true, reasoning: 'ok' }),
-    shouldAutoDeflect: () => true,
-  }))
-  ```
+```ts
+vi.doMock('@/lib/ai/assess', () => ({
+  assessAnswer: async () => ({ confidence: 0.9, answered_fully: true, reasoning: 'ok' }),
+  shouldAutoDeflect: () => true,
+}))
+```
 
-- **Use AIMock.** Add a fixture whose `userMessage` appears in the prompt:
-
-  ```ts
-  mock.on({ userMessage: 'CASE_79' }, { content: '{"confidence":0.79,"answered_fully":true,"reasoning":"r"}' })
-  ```
-
-- **In an e2e test,** put `[[needhuman]]` or `[[urgent]]` in the message. Those
-  are the only two steering markers.
+To mock a reply at the HTTP level instead, add another fixture to the AIMock
+example above.
 
 </details>
 
 <details>
-<summary><strong>How do I test what happens when the AI fails?</strong></summary>
+<summary><strong>What should a test of an AI failure check?</strong></summary>
 
-For a rejected call, make the fake throw, for example
+That a failed AI step never drops a question and never posts an answer on its
+own. [How the backend fits together](#how-the-backend-fits-together) describes
+what happens to the ticket for each step.
+
+To simulate a failure, make the mock throw, for example
 `assessAnswer: async () => { throw new Error('boom') }`. For an empty,
 malformed, or out-of-range reply, add an AIMock fixture. See
 `tests/unit/ai-provider-replies.aimock.test.ts`.
 
-The rule your test should hold to: a failed AI step never drops a question and
-never posts an answer on its own. The ticket exists before the AI runs. A failed
-assessment routes the draft to human review, and a failed triage leaves the
-ticket open and pending for the retry sweep (see
-[How the backend fits together](#how-the-backend-fits-together)). Provider
-outages (a 500 or a 429) are retried with backoff, about 6 seconds per case, so
-keep them out of the fast suite.
-
 </details>
 
 <details>
-<summary><strong>Can I run the app itself without an API key?</strong></summary>
+<summary><strong>Why is my test for a provider outage slow?</strong></summary>
 
-Yes, with a local model that speaks the OpenAI API, such as Ollama or LM
-Studio. Open **Settings → AI Model**, choose **OpenAI-compatible**, enter the
-base URL (for example `http://localhost:11434/v1`), and leave the key blank. If
-the app runs in Docker, `localhost` means the container, so on Docker Desktop
-use `host.docker.internal` instead. The
-[self-hosting FAQ](https://answerloops.com/docs/self-hosting/faq) has the
-details. Do not set `MOCK_EXTERNALS` outside the test suites.
-
-</details>
-
-<details>
-<summary><strong>Why are two different things called AIMock?</strong></summary>
-
-`lib/ai/mock.ts` is the project's own set of in-process fake models. Its
-comments call it "AIMock". `MOCK_EXTERNALS=1` switches it on, and the e2e suite
-uses it. The `@copilotkit/aimock` package is a separate tool that serves an
-OpenAI-compatible API over HTTP, and the unit tests use it. To keep them apart,
-this guide calls the first one "mock mode" and the second one "AIMock".
+A 500, a 429 or a dropped connection is retried with backoff, which takes about
+6 seconds per case. Keep those out of the default suite, or accept the delay.
 
 </details>
 

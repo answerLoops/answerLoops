@@ -2,7 +2,7 @@ import { MockLanguageModelV3, MockEmbeddingModelV3 } from 'ai/test'
 import type { LanguageModel, EmbeddingModel } from 'ai'
 
 /**
- * AIMock — deterministic stand-ins for the OpenAI models, used by the e2e suite.
+ * Mock mode: deterministic stand-ins for the OpenAI models, used by the e2e suite.
  *
  * The mocks are pure functions of their input, so they behave identically in
  * the test runner and in a separately-spawned `next start` process (which is
