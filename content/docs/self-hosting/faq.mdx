@@ -1,0 +1,59 @@
+---
+title: FAQ
+description: Answers for people who run or modify answerLoops themselves, starting with how to run and test the AI without an API key.
+icon: CircleHelp
+---
+
+Short answers for self-hosters and developers. If you hit an error instead, see [Troubleshooting](/docs/self-hosting/troubleshooting).
+
+## Running without an AI API key
+
+<Accordions>
+  <Accordion title="Can I run answerLoops without an AI provider API key?">
+    Yes, if you have a model you can reach over an OpenAI-compatible API, such as Ollama, LM Studio, or vLLM running on your own machine or network.
+
+    <Steps>
+      <Step>
+        Open **Settings → AI Model**.
+      </Step>
+      <Step>
+        Choose **OpenAI-compatible (Ollama, LM Studio, vLLM…)** as the chat provider.
+      </Step>
+      <Step>
+        Enter the **Base URL**, for example `http://localhost:11434/v1` for Ollama or `http://localhost:1234/v1` for LM Studio.
+      </Step>
+      <Step>
+        Leave the API key blank. The form says to leave it empty for local endpoints that don't require auth.
+      </Step>
+    </Steps>
+
+    A self-hosted install can point at hosts on its own network. If answerLoops runs in Docker, `localhost` means the container, not your machine. On Docker Desktop use `host.docker.internal` instead, or run the app natively.
+
+    Knowledge-base features also need an embedding model. You set that in the Embeddings section of the same page.
+  </Accordion>
+  <Accordion title="Can I turn on MOCK_EXTERNALS to run a demo without keys?">
+    No. `MOCK_EXTERNALS` is for the test suites. It replaces real services with fakes, and a production process refuses to start with it set. For a demo without keys, use a local model as described above.
+  </Accordion>
+</Accordions>
+
+## Testing your changes
+
+<Accordions>
+  <Accordion title="Do the test suites need an AI API key?">
+    No. `pnpm test` and `pnpm test:e2e` never call a real provider. The end-to-end suite does need a local Postgres.
+  </Accordion>
+  <Accordion title="How do I test code that calls an AI provider without an API key?">
+    Fake the AI at the level you are testing. There are three options, from cheapest to most realistic:
+
+    - **Replace the function** that calls the AI, when you are testing the code around it, such as routing, thresholds, or billing.
+    - **Replace the agent library** the app calls, when you want the real triage and grading code to run on a result you choose.
+    - **Run [AIMock](https://github.com/CopilotKit/aimock) over HTTP**, when you need the real request, the wire format, and the parsing of the reply. AIMock behaves like an OpenAI-compatible server and starts inside a test, so there is nothing to run by hand.
+
+    The [Testing AI behavior](https://github.com/answerLoops/answerLoops/blob/main/CONTRIBUTING.md#testing-ai-behavior) section of the contributing guide has a working example of each.
+  </Accordion>
+  <Accordion title="How do I test what happens when the AI fails?">
+    Use AIMock to return an empty reply, malformed JSON, or an out-of-range value, and check what your code does. The rule to hold to is that a failed AI step never drops a question and never posts an answer on its own: the ticket is still created and goes to the human queue.
+
+    Provider outages, such as a 500 or a 429, are retried with backoff, so each of those cases takes several seconds. Keep them out of a fast test run.
+  </Accordion>
+</Accordions>
