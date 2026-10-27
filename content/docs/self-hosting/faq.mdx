@@ -52,7 +52,7 @@ Short answers for self-hosters and developers. If you hit an error instead, see 
     The [Testing AI behavior](https://github.com/answerLoops/answerLoops/blob/main/CONTRIBUTING.md#testing-ai-behavior) section of the contributing guide has a working example of each.
   </Accordion>
   <Accordion title="How do I test what happens when the AI fails?">
-    Use AIMock to return an empty reply, malformed JSON, or an out-of-range value, and check what your code does. The rule to hold to is that a failed AI step never drops a question and never posts an answer on its own: the ticket is still created and goes to the human queue.
+    Use AIMock to return an empty reply, malformed JSON, or an out-of-range value, and check what your code does. The rule to hold to is that a failed AI step never drops a question and never posts an answer on its own. The ticket exists before the AI runs. If grading fails, the draft goes to human review. If triage fails, the ticket stays open and pending until the background retry picks it up.
 
     Provider outages, such as a 500 or a 429, are retried with backoff, so each of those cases takes several seconds. Keep them out of a fast test run.
   </Accordion>

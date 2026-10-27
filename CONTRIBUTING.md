@@ -161,8 +161,11 @@ If auto-reply is on, the grade is at or above the confidence threshold (0.8 by
 default), and the question was fully answered, the answer posts automatically.
 Otherwise it goes to the human review queue with the draft attached.
 
-If an AI step fails, the ticket is still created and goes to the human queue.
-A failed AI step must never drop a question or post an answer on its own. Data
+The ticket is created before any AI step runs, so a failed AI step never drops
+a question and never posts an answer on its own. A failed assessment routes the
+draft to human review. A failed triage stops the rest of that run (no
+notification, embedding or draft) and leaves the ticket open and pending. The
+bot's background sweep retries it every 5 minutes for up to 24 hours. Data
 lives in PostgreSQL through Drizzle (`lib/db/schema.ts`), and every query is
 scoped by organization.
 
@@ -331,9 +334,12 @@ malformed, or out-of-range reply, add an AIMock fixture. See
 `tests/unit/ai-provider-replies.aimock.test.ts`.
 
 The rule your test should hold to: a failed AI step never drops a question and
-never posts an answer on its own. The ticket is still created and goes to the
-human queue. Provider outages (a 500 or a 429) are retried with backoff, about 6
-seconds per case, so keep them out of the fast suite.
+never posts an answer on its own. The ticket exists before the AI runs. A failed
+assessment routes the draft to human review, and a failed triage leaves the
+ticket open and pending for the retry sweep (see
+[How the backend fits together](#how-the-backend-fits-together)). Provider
+outages (a 500 or a 429) are retried with backoff, about 6 seconds per case, so
+keep them out of the fast suite.
 
 </details>
 
