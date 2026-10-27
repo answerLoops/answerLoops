@@ -206,7 +206,7 @@ importers:
         specifier: '>=0.24.3'
         version: 0.28.1
       happy-dom:
-        specifier: 21.0.4
+        specifier: ^21.0.4
         version: 21.0.4
       oxlint:
         specifier: 1.88.0
