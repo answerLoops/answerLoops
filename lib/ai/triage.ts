@@ -1,6 +1,7 @@
 import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
 import { chatModel, DEFAULT_FAST_MODEL } from '@/lib/ai/models'
+import { EmptyAIResponseError } from '@/lib/ai/errors'
 import { z } from 'zod'
 import type { TriageResult } from '@/types'
 
@@ -51,6 +52,9 @@ ${content}
 <<<END UNTRUSTED MESSAGE>>>`,
     { structuredOutput: { schema: TriageSchema } }
   )
+
+  // See assessAnswer: an empty completion resolves with no object.
+  if (!object) throw new EmptyAIResponseError('triage')
 
   return {
     category: object.category,

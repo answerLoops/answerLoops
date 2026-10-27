@@ -1,6 +1,7 @@
 import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
 import { chatModel, DEFAULT_FAST_MODEL } from '@/lib/ai/models'
+import { EmptyAIResponseError } from '@/lib/ai/errors'
 import { z } from 'zod'
 
 export const ASSESS_MODEL = DEFAULT_FAST_MODEL
@@ -59,6 +60,11 @@ ${answer}
 <<<END UNTRUSTED ANSWER>>>`,
     { structuredOutput: { schema: AssessmentSchema } }
   )
+
+  // An empty completion or a refusal resolves with no object rather than
+  // throwing. Reject here so every caller's failure path (route to human
+  // review) runs instead of an undefined assessment reaching shouldAutoDeflect.
+  if (!object) throw new EmptyAIResponseError('assessment')
 
   return object
 }
