@@ -13,6 +13,11 @@ describe('MODEL_PRICES coverage', () => {
     (id) => expect(hasPrice(id)).toBe(true),
   )
 
+  // Priced ahead of the default moving to them: a PLATFORM_AI_*_MODEL that
+  // names an unpriced model turns that role off for every workspace without
+  // its own key, so the price has to ship before the host variable changes.
+  it.each(['gpt-6.1-terra', 'gpt-6-luna'])('%s has a price', (id) => expect(hasPrice(id)).toBe(true))
+
   it('embedding models have no output price', () => {
     for (const id of ['text-embedding-3-small', 'text-embedding-3-large', 'text-embedding-ada-002']) {
       expect(MODEL_PRICES[id].outputPerMillionMicros).toBe(0)
@@ -29,6 +34,13 @@ describe('costMicros', () => {
     const p = MODEL_PRICES[DEFAULT_CHAT_MODEL]
     const cost = costMicros(DEFAULT_CHAT_MODEL, { input: 1_000_000, cachedInput: 1_000_000, output: 1_000_000 })
     expect(cost).toBe(p.inputPerMillionMicros + p.cachedInputPerMillionMicros + p.outputPerMillionMicros)
+  })
+
+  it('prices the newer generation at the published per-million rates', () => {
+    expect(costMicros('gpt-6.1-terra', { input: 1_000_000, cachedInput: 0, output: 0 })).toBe(1_000_000)
+    expect(costMicros('gpt-6.1-terra', { input: 0, cachedInput: 1_000_000, output: 1_000_000 })).toBe(5_050_000)
+    expect(costMicros('gpt-6-luna', { input: 1_000_000, cachedInput: 0, output: 0 })).toBe(100_000)
+    expect(costMicros('gpt-6-luna', { input: 0, cachedInput: 1_000_000, output: 1_000_000 })).toBe(510_000)
   })
 
   it('rounds a fractional micro-dollar up, never down to zero', () => {
