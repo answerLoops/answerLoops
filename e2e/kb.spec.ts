@@ -42,11 +42,16 @@ test.describe('knowledge base', () => {
     })) as KBArticle
     expect(listed.question).toContain('configure')
 
-    // And semantic search surfaces it for a related query.
+    // And semantic search surfaces it for a related query. Tests in this file
+    // promote tickets with identical text, and search returns each exact article
+    // once (the best-ranked copy), so match on the text, not on which ticket's
+    // copy came back.
     const { results } = (await request
       .get(`/api/kb/search?q=${encodeURIComponent('how do I configure the client')}`)
       .then((r) => r.json())) as { results: KBArticle[]; degraded: boolean }
-    expect(results.some((a) => a.source_ticket_id === ticketId)).toBe(true)
+    expect(results.some((a) => a.question === listed.question && a.answer === listed.answer)).toBe(true)
+    const copies = results.filter((a) => a.question === listed.question && a.answer === listed.answer)
+    expect(copies).toHaveLength(1)
   })
 
   test('search returns nothing for a blank query', async ({ request }) => {
