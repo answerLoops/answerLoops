@@ -5,7 +5,7 @@
  *
  * Source: https://developers.openai.com/api/docs/pricing, standard tier,
  * short context, checked 2026-10-27. Update this table whenever a DEFAULT_*
- * model in lib/ai/models.ts changes or OpenAI changes list prices;
+ * model in lib/ai/model-defaults.ts changes or OpenAI changes list prices;
  * tests/unit/ai-pricing.test.ts fails if a default has no entry.
  * Embedding models have no cached-input or output price, so cached input
  * is priced like input and output is zero.
