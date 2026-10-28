@@ -1,18 +1,15 @@
 import { describe, it, expect, beforeEach, afterAll, vi } from 'vitest'
 
 /**
- * The changelog links (docs header, dashboard sidebar) must disappear on a
- * self-hosted install.
+ * The changelog link must exist on the managed deployment and vanish
+ * everywhere else.
  *
- * One image serves both the managed deployment and every self-hosted install,
- * so without the gate every self-hoster renders a link to /changelog — a page
- * their deployment 404s. A dead link in a dashboard is worse than no link.
- *
- * The polarity matters more than the test itself: `getDeploymentMode()`
- * returns 'self-hosted' whenever DEPLOYMENT_MODE is unset, so the safe state
- * is the default. A refactor that inverts this reintroduces the dead link
- * everywhere at once. See tests/unit/marketing-surface-gate.test.ts for the
- * same reasoning applied to the marketing surface as a whole.
+ * The changelog is a marketing page, and a self-hosted install serves no
+ * marketing site — so /changelog 404s there and a link to it is a dead end in
+ * the middle of somebody's dashboard. The docs tree itself is deliberately not
+ * gated (documentation is useful to whoever is running the thing), so this
+ * helper is the one place the conditional lives, and these tests are what keep
+ * it there rather than spreading back into app/docs/layout.tsx.
  */
 
 const ORIGINAL_MODE = process.env.DEPLOYMENT_MODE
@@ -27,22 +24,35 @@ afterAll(() => {
   else process.env.DEPLOYMENT_MODE = ORIGINAL_MODE
 })
 
-describe('changelog link is hidden when the marketing site is off', () => {
-  it('is hidden when DEPLOYMENT_MODE is unset', async () => {
+describe('docsChangelogLink', () => {
+  it('is null when DEPLOYMENT_MODE is unset, the default a clone gets', async () => {
     delete process.env.DEPLOYMENT_MODE
-    const { marketingSiteEnabled } = await import('@/lib/site')
-    expect(marketingSiteEnabled()).toBe(false)
+    const { docsChangelogLink } = await import('@/lib/marketing/changelog-link')
+    expect(docsChangelogLink()).toBeNull()
   })
 
-  it('is hidden on an explicitly self-hosted deployment', async () => {
+  it('is null on an explicitly self-hosted deployment', async () => {
     process.env.DEPLOYMENT_MODE = 'self-hosted'
-    const { marketingSiteEnabled } = await import('@/lib/site')
-    expect(marketingSiteEnabled()).toBe(false)
+    const { docsChangelogLink } = await import('@/lib/marketing/changelog-link')
+    expect(docsChangelogLink()).toBeNull()
   })
 
-  it('is shown only on the managed deployment', async () => {
+  it('is the full changelog address on the managed deployment', async () => {
     process.env.DEPLOYMENT_MODE = 'cloud'
-    const { marketingSiteEnabled } = await import('@/lib/site')
-    expect(marketingSiteEnabled()).toBe(true)
+    const { docsChangelogLink } = await import('@/lib/marketing/changelog-link')
+    expect(docsChangelogLink()).toEqual({
+      text: 'Changelog',
+      url: 'https://answerloops.com/changelog',
+    })
+  })
+
+  it('points at the marketing origin, not a relative path', async () => {
+    // On a split-host deployment a relative /changelog would be served by the
+    // app, which has no such route.
+    process.env.DEPLOYMENT_MODE = 'cloud'
+    const { docsChangelogLink } = await import('@/lib/marketing/changelog-link')
+    const link = docsChangelogLink()
+    expect(link).not.toBeNull()
+    expect(new URL(link!.url).origin).toBe('https://answerloops.com')
   })
 })

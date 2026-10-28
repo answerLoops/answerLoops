@@ -5,6 +5,7 @@ import { RootProvider } from 'fumadocs-ui/provider/next'
 import { DocsLayout } from 'fumadocs-ui/layouts/docs'
 import { docsSource } from '@/lib/docs/source'
 import { GITHUB_SOURCE_URL } from '@/lib/site'
+import { docsChangelogLink } from '@/lib/marketing/changelog-link'
 import './docs.css'
 import Script from 'next/script'
 
@@ -17,6 +18,13 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
   // NEXT_PUBLIC_DOCS_WIDGET_TOKEN in .env.local (gitignored) to test the
   // widget on the docs site; the script simply doesn't render without it.
   const widgetToken = process.env.NEXT_PUBLIC_DOCS_WIDGET_TOKEN
+
+  // Null on a self-hosted install, which 404s /changelog. The gate lives in
+  // the helper rather than here: documentation stays reachable on every
+  // deployment, and only this one link is conditional. See the
+  // marketing-surface-gate test, which asserts this file never mentions the
+  // flag so a future refactor cannot quietly gate the whole docs tree.
+  const changelogLink = docsChangelogLink()
 
   return (
     <RootProvider
@@ -63,6 +71,9 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
           // links in production, in-app routes in local/dev (nav-shared.ts).
           { text: SIGNIN_LABEL, url: SIGNIN_HREF },
           { type: 'button', text: START_LABEL, url: START_HREF },
+          // Resolved by the helper: absolute on a split-host deployment, and
+          // absent on a self-hosted install that serves no /changelog.
+          ...(changelogLink ? [changelogLink] : []),
         ]}
       >
         {widgetToken && (
