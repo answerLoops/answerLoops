@@ -187,6 +187,12 @@ It follows the security-disclosure rule: a security fix is one sentence ("This r
 
 Skip for `agent-sdk-v*` tags unless the user asks; those releases are described in the SDK's own changelog entry.
 
+# Changelog-sync skill — keep /changelog matching GitHub releases
+
+The marketing site's `/changelog` page mirrors the GitHub releases page. It renders generated files in `content/changelog/` (one per published release) written by `scripts/sync-changelog.mjs`. Never hand-edit them: edit the release on GitHub, then re-sync.
+
+After publishing any release (the last step of `/project:release-notes`), run `/project:changelog-sync`. It syncs, runs the disclosure gate, and prepares a PR; `main` is protected, so the new entry ships as a normal PR and still needs the user's explicit approval before the commit. CI does not check this, because a release is cut after merge and a check would fail every open PR in between. Run `pnpm changelog:check` to see whether the page has drifted.
+
 # Subagent concurrency limit
 
 **Maximum 4 subagents running at any given time.** No exceptions.
@@ -209,6 +215,7 @@ Before opening any PR, re-read this file (`AGENTS.md`) and verify all rules are 
 7. If a component with real logic changed: `/project:component-test` ran and orchestrator signed off
 8. If integration pages or top-level capabilities changed in `content/docs/`: `/project:update-llms-txt` ran
 9. If cutting a release: `/project:release-notes` ran and the user approved the draft
+10. If a release was published: `/project:changelog-sync` ran so `/changelog` shows it
 
 # Placeholder format — HARD RULE
 

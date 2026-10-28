@@ -137,6 +137,10 @@ gh release edit   vX.Y.Z --notes-file <draft-file>                              
 
 Publishing a release triggers the image publish workflow, so confirm the version and target commit with the user in the same approval. Report the release URL afterwards.
 
+### Step 8 — put the release on the changelog page
+
+The marketing site's `/changelog` page mirrors the GitHub releases page from generated files. Once the release is public, run `/project:changelog-sync` to add it. Do not skip this: a release that is not on the page leaves the page stale, and nothing else updates it.
+
 ---
 
 ## When this applies

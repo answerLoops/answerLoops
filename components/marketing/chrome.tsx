@@ -136,6 +136,7 @@ const GROUPS = [
     links: [
       ['About', '/about'],
       ['Blog', '/blog'],
+      ['Changelog', '/changelog'],
       ['Community', 'https://dub.sh/github-community'],
       ['Contact', 'mailto:hello@answerloops.com'],
     ],

@@ -61,6 +61,31 @@ export const blog = defineDocs({
   },
 })
 
+// Release notes, one plain-markdown file per GitHub release under
+// content/changelog/. Never hand-edited: `pnpm changelog:sync`
+// (scripts/sync-changelog.mjs) regenerates every file from the GitHub release,
+// so the /changelog page is always a mirror of the releases page. Rendered by
+// app/changelog/page.tsx on the marketing layout, not a docs shell.
+export const changelog = defineDocs({
+  dir: 'content/changelog',
+  docs: {
+    schema: pageSchema.extend({
+      // Git tag, e.g. "v0.6.6". `title` is the release name, which is usually
+      // the same string but is whatever the release author typed on GitHub.
+      tag: z.string(),
+      // Full ISO timestamp of when the release was published on GitHub; the
+      // page orders by it, newest first, exactly like the releases page.
+      datePublished: z.string(),
+      // The release's own page on GitHub.
+      url: z.string().url(),
+      prerelease: z.boolean(),
+      // First paragraph of the notes as plain text, for the page's meta
+      // description and structured data.
+      summary: z.string(),
+    }),
+  },
+})
+
 export default defineConfig({
   mdxOptions: {
     // Mintlify's `<Note>` etc. compiled fine without extra remark/rehype

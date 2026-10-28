@@ -72,6 +72,7 @@ All hosted plans have a 14-day trial with a card required. AI usage is included 
 - About: https://answerloops.com/about
 - Agentic support overview: https://answerloops.com/agentic-support
 - Blog: https://answerloops.com/blog
+- Changelog: https://answerloops.com/changelog
 - /architecture: https://answerloops.com/architecture
 - /circle-ai-answers: https://answerloops.com/circle-ai-answers
 - /discord-github-support: https://answerloops.com/discord-github-support
