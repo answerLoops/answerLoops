@@ -9,6 +9,8 @@ import { resolveOrgIdForSessionUpdate, resolveOrgAccess } from '@/lib/auth/membe
 import { orgHasProductAccess, isAccessExempt } from '@/lib/billing/access'
 import { appOrigin } from '@/lib/site'
 import { isWebsitePath } from '@/lib/marketing/website-paths'
+import { isKnownRoute } from '@/lib/marketing/known-routes'
+import { notFoundResponse } from '@/lib/marketing/not-found-response'
 
 const PUBLIC_PATHS = ['/', '/login', '/api/auth', '/api/ingest', '/api/feedback', '/api/slack', '/api/widget', '/widget', '/widget.js', '/api/billing/webhook', '/api/newsletter', '/unsubscribe', '/api/health', '/api/github/webhook', '/api/telegram/webhook', '/api/circle/webhook', '/api/discourse/webhook', '/api/email/ingest', '/api/mcp', '/api/v1/agent', '/openapi.json', '/.well-known', '/api/google-chat', '/api/nav-state', '/api/kb/sync-jobs/run', '/api/kb/embedding-migration/run','/vs', '/alternatives', '/about', '/blog', '/pricing', '/agentic-support', '/docs', '/privacy', '/terms', '/robots.txt', '/sitemap.xml', '/llms.txt', '/llms-full.txt', '/architecture', '/circle-ai-answers', '/discourse-ai-answers', '/dual-agent-ai-support', '/discord-github-support', '/mcp-support-agents', '/open-source-support', '/self-hosted-ai-support', '/self-hosting-proof', '/support-example', '/support-workflow']
 const ONBOARDING_PATH = '/onboarding'
@@ -259,6 +261,14 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
       const incomingHost = request.headers.get('x-forwarded-host') ?? request.headers.get('host')
       const incomingProto = request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '')
       const incomingOrigin = incomingHost ? `${incomingProto}://${incomingHost}` : request.nextUrl.origin
+
+      // A URL no route answers to gets a real 404, before any host or sign-in
+      // logic can turn it into a redirect. Without this an anonymous request
+      // for a retired or mistyped URL was sent to the app's /login, and
+      // search engines treat a login page standing in for a missing page as a
+      // soft 404. Answered here rather than by rewriting to Next's not-found
+      // page, which breaks on a host that differs from AUTH_URL's.
+      if (!isKnownRoute(pathname, PUBLIC_PATHS)) return notFoundResponse()
 
       // Checked before anything else, including the public-path exemption
       // below: an anonymous request for a platform page on the wrong host
