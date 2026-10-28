@@ -53,7 +53,7 @@ Schema: `lib/db/schema.ts`. Migrations: hand-authored SQL in `drizzle/`, applied
 | Table | Purpose |
 |-------|---------|
 | `orgs`, `users`, `memberships` | multi-tenant org/user/role structure |
-| `tickets`, `ticket_replies`, `ticket_events` | one row per community question, staff replies, audit log |
+| `tickets`, `ticket_replies`, `ticket_events` | one row per community question; the conversation after it (staff replies, customer follow-ups, maintainer context, each tagged with its author role and the channel's message id); audit log |
 | `ticket_embeddings`, `ticket_links` | semantic vector per ticket + nearest-neighbour graph |
 | `ai_assessments` | confidence grade per drafted answer |
 | `kb_articles`, `kb_sources` | knowledge base Q&A articles + their source documents/URLs |

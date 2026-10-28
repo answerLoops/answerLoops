@@ -92,7 +92,33 @@ Select any row to open the ticket. The header gathers the key facts as badges: s
   }}
 />
 
-The page has two columns. On the left is the conversation: the **Original Message**, the **AI Draft Answer**, the **AI Confidence** card, earlier **Replies**, and the **Reply** form. On the right are the **Details**, **Related Questions**, **Update Status**, and **Activity** panels.
+The page has two columns. On the left is the conversation: the **Original Message**, the **AI Draft Answer**, the **AI Confidence** card, the **Conversation** (every later message in the thread), and the **Reply** form. On the right are the **Details**, **Related Questions**, **Update Status**, and **Activity** panels.
+
+### Read the whole conversation
+
+A question is often a conversation, not one message. When someone keeps talking in the same place, their follow-ups join the ticket they belong to instead of opening new ones, and the **Conversation** section shows every message in order, oldest first. Each message carries its author, the time, and a label:
+
+| Label | Who wrote it |
+| --- | --- |
+| **Customer** | The person who asked, or anyone else who joined in. |
+| **Staff** | A member of your team, replying from the dashboard. |
+| **Maintainer** | A maintainer's message, kept so the thread reads completely. It never opens a ticket or sends a notification. |
+
+What counts as "the same conversation" depends on the channel:
+
+| Channel | A message joins the ticket when it is |
+| --- | --- |
+| Slack | A reply in the same thread. |
+| Discord | A reply inside a thread that already has a ticket. |
+| Google Chat | A reply in the same space thread. |
+| Telegram | A reply to the opening message or to any reply already in the thread. |
+| Discourse | A post in the same topic. |
+| Circle | A comment on the same post. |
+| GitHub | A comment on the same issue or discussion. |
+| Email | A reply in the same email conversation, from the address that opened it. |
+| Agent | Not applicable. Each call is its own question. |
+
+A follow-up on a resolved or closed ticket reopens it. Your team is notified of each follow-up, and the AI does not re-answer them. On Slack, Google Chat, Telegram, GitHub, Discourse, and Circle, a short follow-up like "thanks, that worked" is kept when it continues a conversation you already have. Delivering the same message twice never adds it twice.
 
 ### Jump back to the original message
 
