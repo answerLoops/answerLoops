@@ -248,7 +248,7 @@ describe('nothing that rewrites an article touches its verification', () => {
   })
 
   it('new articles from a sync or import are created unverified', async () => {
-    respond = (c) => (c.sql.includes('count(*)') ? [[0]] : [articleRow()])
+    respond = (c) => (c.sql.includes('count(*)') ? [[0]] : c.sql.includes('regexp_replace') ? [] : [articleRow()])
     const { createArticleFromSource } = await import('@/lib/db/queries/kb')
     const { createArticleFromSourceWithinCap } = await import('@/lib/db/queries/kb-article-cap')
     await createArticleFromSource({ ...article, sourceId: 5, sourcePage: 1 }, 3)

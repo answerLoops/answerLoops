@@ -25,7 +25,7 @@ const src = () => readSrc('app/(dashboard)/kb/page.tsx')
 describe('UrlIngestSection — status color reflects whether anything was actually imported', () => {
   it('is red when created is 0, checked before the incomplete (amber) case', () => {
     const s = src()
-    const idx = s.indexOf("result.created === 0 ? 'text-red-600' : result.incomplete ? 'text-amber-600' : 'text-green-600'")
+    const idx = s.indexOf("result.created === 0 && !result.duplicates ? 'text-red-600' : result.incomplete ? 'text-amber-600' : 'text-green-600'")
     expect(idx).toBeGreaterThan(-1)
   })
 

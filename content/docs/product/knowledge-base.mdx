@@ -57,6 +57,8 @@ Pick the method that matches where your knowledge already lives. Importing, uplo
 
     Each page becomes its own entry in the Sources list. When you import a URL again, pages already imported are skipped and only new ones are processed, so you can safely re-run a site import after adding new docs. If a run stops short of the whole site, the result message tells you to click **Import** again to continue.
 
+    A section whose exact text is already in your knowledge base is left out, and the result message says how many were skipped. See [Exact duplicates](#exact-duplicates).
+
     If the address cannot be found, the import stops with a message asking you to check it. If an import fails before anything is saved, no source is left behind, so you can simply run it again.
 
     <Callout>
@@ -190,6 +192,15 @@ If semantic search is unavailable, for example because no AI provider is connect
 
 The **Sources** list shows everything you imported. Each row has a type tag (`url`, `pdf`, `docx`, `md`, `txt`, `csv`, `github`, `github-discussion`, or `notion`), the file name, page address, or repository, and a count of chunks and size. A source marked **Unpublished** is indexed and searchable from the dashboard but held back from customer-facing answers and the website widget.
 
+### Exact duplicates
+
+An article is an exact duplicate of another when its question and its answer are the same words. Line breaks, extra spaces, and trailing whitespace are ignored, so a re-wrapped copy still counts. Anything else is a different article: a changed word, different capitalisation or punctuation, or the same title over a different answer.
+
+- **Uploads, URL imports, and articles written by hand** never add an exact copy of an article already in the workspace. An import leaves that section out and reports how many it skipped. If every section of a file was already there, nothing is added and the message says so. Adding an article by hand shows **This exact question and answer is already in the knowledge base.**
+- **GitHub and Notion syncs** are not checked, because each page keeps its own place in its source. If a sync does bring in text that already exists elsewhere, the assistant is still protected, as described next.
+- **The assistant is never given the same article twice.** When it looks for the closest articles, exact copies count once, so a repeated article cannot push a different, relevant one out of the top results.
+- **Copies that already exist** stay until you delete them. Older imports can have created them. The ticket Sources panel lists an exact source once and notes how many identical copies were supplied, which tells you where a duplicate is hiding.
+
 To remove content, tick one or more sources or articles, click **Delete selected**, and confirm. Deleting a source also deletes the articles imported from it. Only owners and admins can delete.
 
 ## See what the assistant knows
@@ -262,7 +273,7 @@ Below a ticket's AI draft, the **Sources** panel lists the articles that were su
 | **Unpublished** | The article is no longer live, so the assistant cannot use it now. |
 | **Deleted** | The article no longer exists. |
 
-Articles that are live link to their place in the knowledge base. A draft that failed still lists what was supplied to it, and says it failed. Tickets drafted before this was added, and drafts older than 90 days, show no panel.
+Articles that are live link to their place in the knowledge base. If identical copies of one article were supplied, the panel lists it once, links it once, and notes how many identical copies were also supplied. A draft that failed still lists what was supplied to it, and says it failed. Tickets drafted before this was added, and drafts older than 90 days, show no panel.
 
 ### On an article
 

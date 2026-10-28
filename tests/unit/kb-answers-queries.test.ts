@@ -361,12 +361,15 @@ describe('getAnswerSourcesForTicket', () => {
     expect(refs.sql).toMatch(/order by "kb_answer_references"\."rank", "kb_answer_references"\."id"/)
   })
 
+  // Each article gets its own text, so the sources are different from one another.
+  const art = (n: number) => ({ q: `Question ${n}`, a: `Answer ${n}`, hash: contentHash(`Question ${n}`, `Answer ${n}`) })
+
   it('gives current, changed, unpublished and deleted sources in rank order, each with its status', async () => {
     scriptedTicket([
-      [11, HASH, 1, Q, A, 1], // unchanged and live
-      [12, HASH, 2, Q, `${A} Edited.`, 1], // edited since
-      [13, HASH, 3, Q, A, 0], // no longer live
-      [null, HASH, 4, null, null, null], // article deleted (join found nothing)
+      [11, art(1).hash, 1, art(1).q, art(1).a, 1], // unchanged and live
+      [12, art(2).hash, 2, art(2).q, `${art(2).a} Edited.`, 1], // edited since
+      [13, art(3).hash, 3, art(3).q, art(3).a, 0], // no longer live
+      [null, art(4).hash, 4, null, null, null], // article deleted (join found nothing)
     ])
     const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
     expect(await getAnswerSourcesForTicket(42, 7)).toEqual({
@@ -374,12 +377,33 @@ describe('getAnswerSourcesForTicket', () => {
       outcome: 'generated',
       created_at: '2026-10-25T10:00:00+00:00',
       sources: [
-        { article_id: 11, title: Q, rank: 1, status: 'current' },
-        { article_id: 12, title: Q, rank: 2, status: 'changed' },
-        { article_id: 13, title: Q, rank: 3, status: 'unpublished' },
-        { article_id: null, title: null, rank: 4, status: 'deleted' },
+        { article_id: 11, title: art(1).q, rank: 1, status: 'current', copies: 0 },
+        { article_id: 12, title: art(2).q, rank: 2, status: 'changed', copies: 0 },
+        { article_id: 13, title: art(3).q, rank: 3, status: 'unpublished', copies: 0 },
+        { article_id: null, title: null, rank: 4, status: 'deleted', copies: 0 },
       ],
     })
+  })
+
+  it('lists three identical copies of one article once, links the first, and says how many more were supplied', async () => {
+    scriptedTicket([
+      [11, HASH, 1, Q, A, 1],
+      [12, HASH, 2, Q, A, 1],
+      [13, HASH, 3, Q, A, 1],
+    ])
+    const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
+    const out = await getAnswerSourcesForTicket(42, 7)
+    expect(out!.sources).toEqual([{ article_id: 11, title: Q, rank: 1, status: 'current', copies: 2 }])
+  })
+
+  it('keeps different articles apart even when they share a title', async () => {
+    scriptedTicket([
+      [11, HASH, 1, Q, A, 1],
+      [12, art(2).hash, 2, Q, art(2).a, 1],
+    ])
+    const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
+    const out = await getAnswerSourcesForTicket(42, 7)
+    expect(out!.sources.map((x) => [x.article_id, x.copies])).toEqual([[11, 0], [12, 0]])
   })
 
   it('returns only the article title, never the article body or anything from the conversation', async () => {
@@ -387,7 +411,7 @@ describe('getAnswerSourcesForTicket', () => {
     const { getAnswerSourcesForTicket } = await import('@/lib/db/queries/kb-answers')
     const out = await getAnswerSourcesForTicket(42, 7)
     expect(JSON.stringify(out)).not.toContain(A)
-    expect(Object.keys(out!.sources[0]).sort()).toEqual(['article_id', 'rank', 'status', 'title'])
+    expect(Object.keys(out!.sources[0]).sort()).toEqual(['article_id', 'copies', 'rank', 'status', 'title'])
   })
 
   it('reports a failed draft as failed, with the sources that were supplied', async () => {

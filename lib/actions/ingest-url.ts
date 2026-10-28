@@ -27,6 +27,8 @@ export interface IngestUrlResult {
   pages?: number
   pagesFound?: number
   skipped?: number
+  /** Sections left out because their exact text is already in the knowledge base. */
+  duplicates?: number
   /**
    * Pages discovered and not yet ingested that this run did not have budget
    * for. Non-zero means running the import again will make further progress —
@@ -70,12 +72,13 @@ export async function ingestUrlAction(
         pages: result.pages,
         pagesFound: result.pagesFound,
         skipped: result.skipped,
+        duplicates: result.duplicates,
         remaining: result.remaining,
         incomplete: result.incomplete,
       }
     } else {
       const result = await ingestValidatedUrl(checked, orgId, url.trim())
-      return { created: result.created, skipped: result.skipped ? 1 : 0 }
+      return { created: result.created, skipped: result.skipped ? 1 : 0, duplicates: result.duplicates ?? 0 }
     }
   } catch (err) {
     if (err instanceof IngestLimitError || err instanceof UrlValidationError) return { error: err.message }

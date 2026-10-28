@@ -159,7 +159,7 @@ describe('source article events', () => {
   })
 
   it('an upload or URL import is recorded as created by the import, with no actor', async () => {
-    respond = (c) => (c.sql.includes('count(*)') ? [[0]] : [[42]])
+    respond = (c) => (c.sql.includes('count(*)') ? [[0]] : c.sql.includes('regexp_replace') ? [] : [[42]])
     const { createArticleFromSourceWithinCap } = await import('@/lib/db/queries/kb-article-cap')
     await expect(createArticleFromSourceWithinCap(fromSource, 3, 2000)).resolves.toEqual({ id: 42 })
     expect(event()).toMatchObject({ article_id: 42, type: 'created', origin: 'import' })

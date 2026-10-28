@@ -20,6 +20,9 @@ vi.mock('@/lib/ai/embed', () => ({
   assertEmbeddingAvailable: vi.fn(async () => {}),
 }))
 vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles }))
+// The exact-duplicate lookup and the database handle it needs: nothing is a duplicate unless a test says so.
+vi.mock('@/lib/db/drizzle', () => ({ getDb: () => ({}) }))
+vi.mock('@/lib/db/queries/kb-duplicates', () => ({ findExactDuplicate: vi.fn(async () => null) }))
 vi.mock('@/lib/db/queries/kb-article-cap', () => ({ createArticleFromSourceWithinCap: h.insertWithinCap }))
 vi.mock('@/lib/db/queries/kb-sources', () => ({
   createKBSource: h.createKBSource,

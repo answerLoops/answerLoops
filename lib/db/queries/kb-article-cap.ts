@@ -3,6 +3,7 @@ import { getDb } from '../drizzle'
 import { kbArticles } from '../schema'
 import { recordArticleEvent } from './kb-events'
 import { contentHash } from '@/lib/kb/revision'
+import { findExactDuplicate } from './kb-duplicates'
 
 /** Thrown when an article cannot be added because the workspace is at its cap. */
 export class ArticleCapReachedError extends Error {
@@ -42,6 +43,11 @@ export async function assertWithinArticleCap(tx: Executor, orgId: number, cap: n
  * Returns the new article id, or null when the workspace is already at the cap
  * (nothing is written in that case). File uploads and URL imports use this, so
  * the history event it writes has origin 'import' and no actor.
+ *
+ * An exact copy of the text already in the workspace is not added: the id of
+ * the existing article comes back as `duplicateOf` and nothing is written. The
+ * check runs after the per-org lock is taken, so two imports of the same text
+ * at once add it once.
  */
 export async function createArticleFromSourceWithinCap(
   input: {
@@ -55,7 +61,7 @@ export async function createArticleFromSourceWithinCap(
   },
   orgId: number,
   cap: number,
-): Promise<{ id: number } | null> {
+): Promise<{ id: number } | { duplicateOf: number } | null> {
   return getDb().transaction(async (tx) => {
     try {
       await assertWithinArticleCap(tx, orgId, cap)
@@ -63,6 +69,9 @@ export async function createArticleFromSourceWithinCap(
       if (err instanceof ArticleCapReachedError) return null
       throw err
     }
+
+    const duplicateOf = await findExactDuplicate(tx, orgId, input.question, input.answer)
+    if (duplicateOf !== null) return { duplicateOf }
 
     const [created] = await tx
       .insert(kbArticles)

@@ -7,6 +7,7 @@ import { logger } from '@/lib/logger'
 import { getTicketById } from '@/lib/db/queries/tickets'
 import { countArticles, createArticle, getArticleBySourceTicket, verifyArticle } from '@/lib/db/queries/kb'
 import { ArticleCapReachedError } from '@/lib/db/queries/kb-article-cap'
+import { DuplicateArticleError } from '@/lib/db/queries/kb-duplicates'
 import { embedTextWithModel } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { aiUnavailableMessage } from '@/lib/ai/errors'
@@ -181,11 +182,12 @@ export async function addKnowledgeAction(
     // Same `question\n\nanswer` convention as promote-to-KB, file upload and
     // review-queue approval.
     const { embedding, model } = await embedTextWithModel(`${question}\n\n${answer}`, orgId)
-    const article = await createArticle({ question, answer, embedding, model, createdBy: access.userId, ...(sourceTicketId !== undefined ? { sourceTicketId } : {}) }, orgId, MAX_ARTICLES_PER_ORG)
+    const article = await createArticle({ question, answer, embedding, model, createdBy: access.userId, ...(sourceTicketId !== undefined ? { sourceTicketId } : {}) }, orgId, MAX_ARTICLES_PER_ORG, true)
     refresh()
     return { ok: true, articleId: article.id }
   } catch (err) {
     if (err instanceof ArticleCapReachedError) return { error: `Your knowledge base is full (${MAX_ARTICLES_PER_ORG} articles). Delete some before adding more.` }
+    if (err instanceof DuplicateArticleError) return { error: 'This exact question and answer is already in the knowledge base.' }
     if (err instanceof NoAIProviderConfiguredError) {
       return { error: aiUnavailableMessage(err, 'Connect an AI provider in Settings → AI Model first, so new articles can be made searchable.') }
     }

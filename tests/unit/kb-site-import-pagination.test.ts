@@ -62,7 +62,7 @@ describe('site import: remaining count reaches the user', () => {
 
   it('returns remaining from ingestSite', () => {
     const s = read('lib/ingest/url.ts')
-    expect(s).toContain('return { created, pages: scraped, pagesFound, skipped, remaining, incomplete }')
+    expect(s).toContain('return { created, pages: scraped, pagesFound, skipped, duplicates, remaining, incomplete }')
   })
 
   it('mock mode reports remaining too, so callers can rely on the field existing', () => {

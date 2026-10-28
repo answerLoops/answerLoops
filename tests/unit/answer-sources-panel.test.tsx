@@ -14,6 +14,7 @@ import type { KBAnswerSource, KBTicketAnswerSources } from '@/types'
 const source = (over: Partial<KBAnswerSource> & Pick<KBAnswerSource, 'rank' | 'status'>): KBAnswerSource => ({
   article_id: over.rank * 10,
   title: `Article ${over.rank}`,
+  copies: 0,
   ...over,
 })
 
@@ -148,6 +149,27 @@ describe('AnswerSourcesPanel copy and states', () => {
     expect(document.body.textContent).toContain('Generation failed')
   })
 
+  it('says when identical copies of an article were also supplied, and links the article once', () => {
+    render(<AnswerSourcesPanel data={data([source({ rank: 1, status: 'current', article_id: 11, copies: 2 })])} />)
+    expect(items()).toHaveLength(1)
+    expect(screen.getAllByRole('link')).toHaveLength(1)
+    expect(screen.getByText('2 identical copies of this article were also supplied.')).toBeTruthy()
+  })
+
+  it('uses the singular for one extra copy, and says nothing when there were none', () => {
+    const { unmount } = render(<AnswerSourcesPanel data={data([source({ rank: 1, status: 'current', copies: 1 })])} />)
+    expect(screen.getByText('An identical copy of this article was also supplied.')).toBeTruthy()
+    unmount()
+    render(<AnswerSourcesPanel data={data([source({ rank: 1, status: 'current', copies: 0 })])} />)
+    expect(screen.queryByText(/identical cop/)).toBeNull()
+  })
+
+  it('notes copies of a deleted article without linking anything', () => {
+    render(<AnswerSourcesPanel data={data([source({ rank: 1, status: 'deleted', article_id: null, title: null, copies: 3 })])} />)
+    expect(screen.getByText('3 identical copies of this article were also supplied.')).toBeTruthy()
+    expect(screen.queryByRole('link')).toBeNull()
+  })
+
   it('shows the time the answer was generated', () => {
     render(<AnswerSourcesPanel data={data([])} />)
     expect(document.querySelector('time')?.getAttribute('datetime')).toBe('2026-10-25T10:00:00.000Z')
@@ -155,6 +177,6 @@ describe('AnswerSourcesPanel copy and states', () => {
 
   it('shows only the article title, nothing from the conversation', () => {
     render(<AnswerSourcesPanel data={data([source({ rank: 1, status: 'current', title: 'Reset a password' })])} />)
-    expect(Object.keys(data([source({ rank: 1, status: 'current' })]).sources[0]).sort()).toEqual(['article_id', 'rank', 'status', 'title'])
+    expect(Object.keys(data([source({ rank: 1, status: 'current' })]).sources[0]).sort()).toEqual(['article_id', 'copies', 'rank', 'status', 'title'])
   })
 })

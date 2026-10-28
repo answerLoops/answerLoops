@@ -7,6 +7,8 @@ import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { countArticles } from '@/lib/db/queries/kb'
 import { createArticleFromSourceWithinCap } from '@/lib/db/queries/kb-article-cap'
+import { findExactDuplicate } from '@/lib/db/queries/kb-duplicates'
+import { getDb } from '@/lib/db/drizzle'
 import { createKBSource, deleteKBSource, updateKBSourceChunkCount } from '@/lib/db/queries/kb-sources'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyBytesCapped } from '@/lib/http/read-body-capped'
@@ -126,12 +128,20 @@ export async function POST(req: NextRequest) {
 
   const budget = Math.min(chunks.length, MAX_ARTICLES_PER_ORG - existing)
   let created = 0
+  // Sections whose exact text is already in the knowledge base, left out.
+  let duplicates = 0
   // Set when AI becomes unavailable mid-file (for example, included usage is
   // used up): every remaining chunk would fail the same way, so stop there.
   let stoppedBecause: string | null = null
 
   for (const chunk of chunks.slice(0, budget)) {
     try {
+      // Checked before embedding so a section already in the knowledge base
+      // costs nothing; the insert checks again under the workspace lock.
+      if ((await findExactDuplicate(getDb(), orgId, chunk.question, chunk.answer)) !== null) {
+        duplicates++
+        continue
+      }
       const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
       const row = await createArticleFromSourceWithinCap({
         question: chunk.question,
@@ -143,6 +153,10 @@ export async function POST(req: NextRequest) {
       if (!row) {
         stoppedBecause = `Knowledge base is full (${MAX_ARTICLES_PER_ORG} articles). Delete some before uploading more.`
         break
+      }
+      if ('duplicateOf' in row) {
+        duplicates++
+        continue
       }
       created++
     } catch (err) {
@@ -160,6 +174,12 @@ export async function POST(req: NextRequest) {
     await deleteKBSource(source.id, orgId).catch((err) =>
       logger.warn('could not remove empty upload source', { module: MOD, sourceId: source.id, error: err }),
     )
+    if (!stoppedBecause && duplicates > 0) {
+      return Response.json(
+        { error: `Everything in ${fileName} is already in your knowledge base, so nothing was added.`, duplicates },
+        { status: 409 },
+      )
+    }
     return Response.json(
       { error: stoppedBecause ?? 'None of the content in this file could be added. Try again in a moment.' },
       { status: stoppedBecause ? 400 : 502 },
@@ -168,7 +188,7 @@ export async function POST(req: NextRequest) {
 
   await updateKBSourceChunkCount(source.id, created)
 
-  logger.info('file ingested', { module: MOD, filename: fileName, created, sourceId: source.id, stopped: !!stoppedBecause })
+  logger.info('file ingested', { module: MOD, filename: fileName, created, duplicates, sourceId: source.id, stopped: !!stoppedBecause })
 
   if (stoppedBecause) {
     // Some of the file made it in: keep it and say how far the upload got.
@@ -176,9 +196,10 @@ export async function POST(req: NextRequest) {
       created,
       sourceId: source.id,
       filename: fileName,
+      duplicates,
       error: `Added ${created} of ${budget} sections from ${fileName}. ${stoppedBecause}`,
     })
   }
 
-  return Response.json({ created, sourceId: source.id, filename: fileName })
+  return Response.json({ created, duplicates, sourceId: source.id, filename: fileName })
 }

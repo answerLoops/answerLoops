@@ -126,8 +126,8 @@ describe('a failed or partial batch-scrape does not silently report full success
 
   it('returns pagesFound (total discovered) alongside pages (actually scraped) and incomplete', () => {
     const src = read('lib/ingest/url.ts')
-    expect(src).toMatch(/pagesFound: number\s+skipped: number\s+remaining: number\s+incomplete: boolean/)
-    expect(src).toContain('return { created, pages: scraped, pagesFound, skipped, remaining, incomplete }')
+    expect(src).toMatch(/pagesFound: number\s+skipped: number\s+(?:\/\*\*[^]*?\*\/\s+)?duplicates: number\s+remaining: number\s+incomplete: boolean/)
+    expect(src).toContain('return { created, pages: scraped, pagesFound, skipped, duplicates, remaining, incomplete }')
   })
 
   it('the server action passes pagesFound and incomplete through to the UI', () => {

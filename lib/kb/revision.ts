@@ -12,6 +12,12 @@ import { createHash } from 'node:crypto'
  * from one to the other changes the hash.
  */
 export function contentHash(question: string, answer: string): string {
-  const normalize = (s: string) => s.replace(/\r\n?/g, '\n').replace(/\s+/g, ' ').trim()
-  return createHash('sha256').update(JSON.stringify([normalize(question), normalize(answer)])).digest('hex')
+  return createHash('sha256')
+    .update(JSON.stringify([normalizeForHash(question), normalizeForHash(answer)]))
+    .digest('hex')
+}
+
+/** The text as the fingerprint sees it: one line ending style, runs of whitespace collapsed, trimmed. */
+export function normalizeForHash(text: string): string {
+  return text.replace(/\r\n?/g, '\n').replace(/\s+/g, ' ').trim()
 }

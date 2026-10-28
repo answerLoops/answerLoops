@@ -71,7 +71,8 @@ describe('addKnowledgeAction', () => {
     expect(h.createArticle).toHaveBeenCalledExactlyOnceWith(
       { question: good.question, answer: good.answer, embedding: [0.1, 0.2], model: 'test-embedding', createdBy: 3 },
       7,
-      2000
+      2000,
+      true
     )
     expect(h.refresh).toHaveBeenCalledOnce()
   })
@@ -121,6 +122,14 @@ describe('addKnowledgeAction', () => {
     expect(await run()).toMatchObject({ error: expect.stringMatching(/full \(2000 articles\)/) })
     expect(h.embedText).not.toHaveBeenCalled()
     expect(h.createArticle).not.toHaveBeenCalled()
+  })
+
+  it('asks the write to refuse an exact copy, and says so when it does', async () => {
+    const { DuplicateArticleError } = await import('@/lib/db/queries/kb-duplicates')
+    h.createArticle.mockRejectedValue(new DuplicateArticleError(9))
+    expect(await run()).toEqual({ error: 'This exact question and answer is already in the knowledge base.' })
+    expect(h.createArticle.mock.calls[0][3]).toBe(true)
+    expect(h.refresh).not.toHaveBeenCalled()
   })
 
   it('turns a refusal at write time (a concurrent add filled the last slot) into the full message', async () => {

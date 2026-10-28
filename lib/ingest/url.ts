@@ -2,6 +2,8 @@ import FirecrawlApp from '@mendable/firecrawl-js'
 import { embedTextWithModel, assertEmbeddingAvailable } from '@/lib/ai/embed'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { countArticles } from '@/lib/db/queries/kb'
+import { findExactDuplicate } from '@/lib/db/queries/kb-duplicates'
+import { getDb } from '@/lib/db/drizzle'
 import { createArticleFromSourceWithinCap } from '@/lib/db/queries/kb-article-cap'
 import { createKBSource, deleteKBSource, getKBSourceByFilename, getExistingSourceFilenames, updateKBSourceChunkCount } from '@/lib/db/queries/kb-sources'
 import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
@@ -140,13 +142,15 @@ function applyImportCaps(chunks: Chunk[], budget: ImportBudget): Chunk[] {
 // Embed and persist chunks linked to a kb_sources row. The per-org article
 // ceiling is enforced by the insert itself (serialised per org), so concurrent
 // imports cannot overshoot it. `progress.created` is kept current so a caller
-// can tell whether anything landed if this throws part-way.
+// can tell whether anything landed if this throws part-way. A chunk whose exact
+// text is already in the workspace is left out and counted in
+// `progress.duplicates`.
 async function saveChunks(
   chunks: Chunk[],
   orgId: number,
   sourceId: number,
   budget: ImportBudget,
-  progress: { created: number },
+  progress: { created: number; duplicates: number },
 ): Promise<number> {
   const existing = await countArticles(orgId)
   if (existing >= MAX_ARTICLES_PER_ORG) throw new IngestLimitError(KB_FULL_MESSAGE)
@@ -155,6 +159,12 @@ async function saveChunks(
   let lastError: unknown
   for (const chunk of budgeted) {
     try {
+      // Checked before embedding so a section already in the knowledge base
+      // costs nothing; the insert checks again under the workspace lock.
+      if ((await findExactDuplicate(getDb(), orgId, chunk.question, chunk.answer)) !== null) {
+        progress.duplicates++
+        continue
+      }
       const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
       const row = await createArticleFromSourceWithinCap(
         { question: chunk.question, answer: chunk.answer, embedding, model, sourceId },
@@ -164,6 +174,10 @@ async function saveChunks(
       if (!row) {
         if (progress.created === 0) throw new IngestLimitError(KB_FULL_MESSAGE)
         break
+      }
+      if ('duplicateOf' in row) {
+        progress.duplicates++
+        continue
       }
       progress.created++
     } catch (err) {
@@ -191,14 +205,14 @@ async function importAsSource(opts: {
   sizeBytes: number
   chunks: Chunk[]
   budget: ImportBudget
-}): Promise<number> {
+}): Promise<{ created: number; duplicates: number }> {
   const source = await createKBSource({
     orgId: opts.orgId,
     filename: opts.filename,
     fileType: 'url',
     sizeBytes: opts.sizeBytes,
   })
-  const progress = { created: 0 }
+  const progress = { created: 0, duplicates: 0 }
   try {
     await saveChunks(opts.chunks, opts.orgId, source.id, opts.budget, progress)
   } catch (err) {
@@ -212,7 +226,7 @@ async function importAsSource(opts: {
     throw err
   }
   await updateKBSourceChunkCount(source.id, progress.created)
-  return progress.created
+  return { created: progress.created, duplicates: progress.duplicates }
 }
 
 /** True when a source for this page already exists, under its canonical name or the raw name older imports used. */
@@ -222,7 +236,7 @@ async function sourceExists(orgId: number, canonical: string, raw?: string): Pro
 }
 
 /** Validate a typed address, then scrape it and save each heading section as a KB article. */
-export async function ingestUrl(rawUrl: string, orgId: number): Promise<{ created: number; skipped?: boolean }> {
+export async function ingestUrl(rawUrl: string, orgId: number): Promise<{ created: number; duplicates?: number; skipped?: boolean }> {
   const url = await assertImportableUrl(rawUrl, { resolveDns: !MOCK_EXTERNALS })
   return ingestValidatedUrl(url, orgId, rawUrl.trim())
 }
@@ -238,15 +252,15 @@ export async function ingestValidatedUrl(
   url: ValidatedImportUrl,
   orgId: number,
   rawUrl?: string,
-): Promise<{ created: number; skipped?: boolean }> {
+): Promise<{ created: number; duplicates?: number; skipped?: boolean }> {
   // Refuse before scraping when this workspace has no usable embedding provider.
   await assertEmbeddingAvailable(orgId)
   if (MOCK_EXTERNALS) {
     const mockMd = `## Mock Page\n\nThis is mock content for ${url}. It contains enough text to be chunked into a KB article for testing purposes.`
     if (await sourceExists(orgId, url, rawUrl)) return { created: 0, skipped: true }
     const chunks = chunkMarkdown(mockMd, 'Mock Page')
-    const created = await importAsSource({ orgId, filename: url, sizeBytes: mockMd.length, chunks, budget: newBudget() })
-    return { created }
+    const { created, duplicates } = await importAsSource({ orgId, filename: url, sizeBytes: mockMd.length, chunks, budget: newBudget() })
+    return { created, duplicates }
   }
 
   // Skip if already ingested
@@ -263,14 +277,14 @@ export async function ingestValidatedUrl(
   // failure never leaves a source behind that blocks a retry.
   const title = (result as { metadata?: { title?: string } }).metadata?.title ?? url
   const chunks = chunkMarkdown(result.markdown, title)
-  const created = await importAsSource({
+  const { created, duplicates } = await importAsSource({
     orgId,
     filename: url,
     sizeBytes: result.markdown.length,
     chunks,
     budget: newBudget(),
   })
-  return { created }
+  return { created, duplicates }
 }
 
 /**
@@ -291,6 +305,8 @@ export interface SiteImportResult {
   pages: number
   pagesFound: number
   skipped: number
+  /** Sections left out because their exact text is already in the knowledge base. */
+  duplicates: number
   remaining: number
   incomplete: boolean
 }
@@ -315,10 +331,10 @@ export async function ingestValidatedSite(
   await assertEmbeddingAvailable(orgId)
   if (MOCK_EXTERNALS) {
     const mockMd = `## Mock Site Page\n\nThis is mock site content for ${url}. It contains enough text to be chunked into a KB article for testing purposes. The site crawl returns multiple pages.`
-    if (await sourceExists(orgId, url, rawUrl)) return { created: 0, pages: 1, pagesFound: 1, skipped: 1, remaining: 0, incomplete: false }
+    if (await sourceExists(orgId, url, rawUrl)) return { created: 0, pages: 1, pagesFound: 1, skipped: 1, duplicates: 0, remaining: 0, incomplete: false }
     const chunks = chunkMarkdown(mockMd, 'Mock Site Page')
-    const created = await importAsSource({ orgId, filename: url, sizeBytes: mockMd.length, chunks, budget: newBudget() })
-    return { created, pages: 1, pagesFound: 1, skipped: 0, remaining: 0, incomplete: false }
+    const { created, duplicates } = await importAsSource({ orgId, filename: url, sizeBytes: mockMd.length, chunks, budget: newBudget() })
+    return { created, pages: 1, pagesFound: 1, skipped: 0, duplicates, remaining: 0, incomplete: false }
   }
 
   const app = makeClient()
@@ -372,6 +388,7 @@ export async function ingestValidatedSite(
   const remaining = notYetIngested.length - candidateUrls.length
 
   let created = 0
+  let duplicates = 0
   let scraped = 0
   let incomplete = false
   // One allowance for the whole run, shared by every page below.
@@ -429,13 +446,15 @@ export async function ingestValidatedSite(
 
       const title = page.metadata?.title ?? pageUrl
       const chunks = chunkMarkdown(page.markdown, title)
-      created += await importAsSource({
+      const imported = await importAsSource({
         orgId,
         filename: pageUrl,
         sizeBytes: page.markdown.length,
         chunks,
         budget,
       })
+      created += imported.created
+      duplicates += imported.duplicates
     }
 
     // The job can also complete but return fewer documents than requested
@@ -447,5 +466,5 @@ export async function ingestValidatedSite(
     }
   }
 
-  return { created, pages: scraped, pagesFound, skipped, remaining, incomplete }
+  return { created, pages: scraped, pagesFound, skipped, duplicates, remaining, incomplete }
 }

@@ -196,7 +196,7 @@ describe('addKnowledgeAction with a source ticket', () => {
   it('links the article to an org-scoped ticket', async () => {
     expect(await add(fields)).toEqual({ ok: true, articleId: 42 })
     expect(h.getTicketById).toHaveBeenCalledWith(12, 7)
-    expect(h.createArticle).toHaveBeenCalledWith(expect.objectContaining({ sourceTicketId: 12 }), 7, 2000)
+    expect(h.createArticle).toHaveBeenCalledWith(expect.objectContaining({ sourceTicketId: 12 }), 7, 2000, true)
   })
 
   it('rejects an invalid, foreign or already-covered ticket without writing', async () => {

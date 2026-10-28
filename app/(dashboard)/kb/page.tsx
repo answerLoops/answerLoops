@@ -308,10 +308,15 @@ function GitHubKBSection({ onSynced }: { onSynced: () => void }) {
   )
 }
 
+/** Tells the person how many imported sections were left out because their exact text is already in the knowledge base. */
+function duplicatesNote(duplicates: number | undefined): string {
+  return duplicates ? ` ${duplicates} section${duplicates !== 1 ? 's were' : ' was'} already in your knowledge base, so ${duplicates !== 1 ? 'they were' : 'it was'} not added again.` : ''
+}
+
 function FileUploadSection({ onImported }: { onImported: () => void }) {
   const [dragging, setDragging] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [result, setResult] = useState<{ error?: string; created?: number; filename?: string } | null>(null)
+  const [result, setResult] = useState<{ error?: string; created?: number; duplicates?: number; filename?: string } | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const upload = useCallback(async (file: File) => {
@@ -321,7 +326,7 @@ function FileUploadSection({ onImported }: { onImported: () => void }) {
     fd.append('file', file)
     try {
       const res = await fetch('/api/kb/upload', { method: 'POST', body: fd })
-      const data = await res.json() as { error?: string; created?: number; filename?: string }
+      const data = await res.json() as { error?: string; created?: number; duplicates?: number; filename?: string }
       setResult(data)
       // A partial upload still added sections, so refresh the list for those too.
       if (!data.error || data.created) onImported()
@@ -395,13 +400,13 @@ function FileUploadSection({ onImported }: { onImported: () => void }) {
       </div>
 
       {result?.error && (
-        <p className="text-xs text-red-500">{result.error}</p>
+        <p className="break-words text-xs text-red-500">{result.error}</p>
       )}
       {result?.created != null && !result.error && (
-        <p className={`text-xs ${result.created === 0 ? 'text-red-600' : 'text-green-600'}`}>
+        <p className={`break-words text-xs ${result.created === 0 ? 'text-red-600' : 'text-green-600'}`}>
           {result.created === 0
             ? `No chunks extracted from ${result.filename} — the file may be empty, unreadable, or too short to embed.`
-            : `Ingested ${result.created} chunk${result.created !== 1 ? 's' : ''} from ${result.filename}.`}
+            : `Ingested ${result.created} chunk${result.created !== 1 ? 's' : ''} from ${result.filename}.${duplicatesNote(result.duplicates)}`}
         </p>
       )}
     </div>
@@ -505,17 +510,17 @@ function UrlIngestSection({ onImported }: { onImported: () => void }) {
         )}
 
         {result.error && (
-          <p className="text-xs text-red-500">{result.error}</p>
+          <p className="break-words text-xs text-red-500">{result.error}</p>
         )}
         {result.created != null && !result.error && (
-          <p className={`text-xs ${
-            result.created === 0 ? 'text-red-600' : result.incomplete ? 'text-amber-600' : 'text-green-600'
+          <p className={`break-words text-xs ${
+            result.created === 0 && !result.duplicates ? 'text-red-600' : result.incomplete ? 'text-amber-600' : 'text-green-600'
           }`}>
             {result.pages != null
               ? result.pages === 0 && !result.skipped
                 ? `No pages found at this URL — check that the site is publicly reachable (not behind a login/waitlist, and not blocked by robots.txt).`
-                : `Imported ${result.created} articles from ${result.pages}${result.pagesFound ? ` of ${result.pagesFound}` : ''} pages${result.skipped ? ` (${result.skipped} already in KB, skipped)` : ''}.`
-              : `Imported ${result.created} articles${result.skipped ? ` (${result.skipped} already in KB, skipped)` : ''}.`}
+                : `Imported ${result.created} articles from ${result.pages}${result.pagesFound ? ` of ${result.pagesFound}` : ''} pages${result.skipped ? ` (${result.skipped} already in KB, skipped)` : ''}.${duplicatesNote(result.duplicates)}`
+              : `Imported ${result.created} articles${result.skipped ? ` (${result.skipped} already in KB, skipped)` : ''}.${duplicatesNote(result.duplicates)}`}
             {result.incomplete && ' Import was interrupted partway through — click Import again to pick up the remaining pages.'}
             {!result.incomplete && result.remaining ? ` ${result.remaining} more page${result.remaining !== 1 ? 's' : ''} found — click Import again to continue.` : ''}
           </p>

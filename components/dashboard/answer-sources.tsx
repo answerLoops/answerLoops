@@ -66,6 +66,13 @@ export function AnswerSourcesPanel({ data }: { data: KBTicketAnswerSources }) {
                     <span className="font-medium">{SOURCE_STATUS[s.status].label}</span>
                     <span className="text-slate-600"> · {SOURCE_STATUS[s.status].detail}</span>
                   </p>
+                  {s.copies > 0 && (
+                    <p className="break-words text-xs text-slate-600">
+                      {s.copies === 1
+                        ? 'An identical copy of this article was also supplied.'
+                        : `${s.copies} identical copies of this article were also supplied.`}
+                    </p>
+                  )}
                 </div>
               </li>
             )

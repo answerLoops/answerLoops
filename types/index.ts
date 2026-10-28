@@ -263,6 +263,8 @@ export interface KBAnswerSource {
   title: string | null
   rank: number
   status: KBAnswerSourceStatus
+  /** How many more articles with exactly the same text were supplied and are folded into this one. 0 when there were none. */
+  copies: number
 }
 
 /** The sources behind a ticket's most recent draft. */

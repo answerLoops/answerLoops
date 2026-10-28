@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   createKBSource: vi.fn(),
   updateKBSourceChunkCount: vi.fn(),
   deleteKBSource: vi.fn(),
+  findExactDuplicate: vi.fn(),
   chunks: [{ question: 'q', answer: 'a'.repeat(100) }] as { question: string; answer: string }[],
 }))
 
@@ -20,6 +21,9 @@ vi.mock('@/lib/ai/embed', () => ({
   assertEmbeddingAvailable: h.assertEmbeddingAvailable,
 }))
 vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles }))
+// The exact-duplicate lookup and the database handle it needs: nothing is a duplicate unless a test says so.
+vi.mock('@/lib/db/drizzle', () => ({ getDb: () => ({}) }))
+vi.mock('@/lib/db/queries/kb-duplicates', () => ({ findExactDuplicate: h.findExactDuplicate }))
 vi.mock('@/lib/db/queries/kb-article-cap', () => ({ createArticleFromSourceWithinCap: h.createArticleFromSource }))
 vi.mock('@/lib/db/queries/kb-sources', () => ({
   createKBSource: h.createKBSource,
@@ -57,6 +61,7 @@ beforeEach(() => {
   h.embedText.mockResolvedValue([0.1])
   h.createArticleFromSource.mockResolvedValue({ id: 1 })
   h.deleteKBSource.mockResolvedValue(undefined)
+  h.findExactDuplicate.mockResolvedValue(null)
 })
 
 describe('app/api/kb/upload/route.ts', () => {
@@ -157,5 +162,51 @@ describe('app/api/kb/upload/route.ts — included usage runs out mid-file', () =
     expect(res.status).toBe(200)
     expect(body.created).toBe(4)
     expect(body.error).toBeUndefined()
+  })
+})
+
+describe('app/api/kb/upload/route.ts — exact duplicates', () => {
+  const three = () => [
+    { question: 'q1', answer: 'a'.repeat(100) },
+    { question: 'q2', answer: 'b'.repeat(100) },
+    { question: 'q3', answer: 'c'.repeat(100) },
+  ]
+
+  it('leaves out a section already in the knowledge base, without embedding it, and counts it', async () => {
+    h.chunks = three()
+    h.findExactDuplicate.mockImplementation(async (_db: unknown, _org: number, q: string) => (q === 'q2' ? 9 : null))
+    const { POST } = await import('@/app/api/kb/upload/route')
+    const res = await POST(upload(1024) as never)
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ created: 2, duplicates: 1 })
+    expect(h.embedText).toHaveBeenCalledTimes(2)
+    expect(h.createArticleFromSource).toHaveBeenCalledTimes(2)
+    expect(h.findExactDuplicate).toHaveBeenCalledWith(expect.anything(), 7, 'q2', 'b'.repeat(100))
+  })
+
+  it('counts a section the insert finds is a duplicate (an upload racing another), and keeps going', async () => {
+    h.chunks = three()
+    h.createArticleFromSource.mockResolvedValueOnce({ id: 1 }).mockResolvedValueOnce({ duplicateOf: 4 }).mockResolvedValueOnce({ id: 3 })
+    const { POST } = await import('@/app/api/kb/upload/route')
+    const body = await (await POST(upload(1024) as never)).json()
+    expect(body).toMatchObject({ created: 2, duplicates: 1 })
+  })
+
+  it('tells the person nothing was added, and removes the empty source, when every section is already there', async () => {
+    h.chunks = three()
+    h.findExactDuplicate.mockResolvedValue(9)
+    const { POST } = await import('@/app/api/kb/upload/route')
+    const res = await POST(upload(1024) as never)
+    const body = await res.json()
+    expect(res.status).toBe(409)
+    expect(body.error).toMatch(/already in your knowledge base/)
+    expect(body.duplicates).toBe(3)
+    expect(h.embedText).not.toHaveBeenCalled()
+    expect(h.deleteKBSource).toHaveBeenCalledWith(3, 7)
+  })
+
+  it('reports no duplicates on an ordinary upload', async () => {
+    const { POST } = await import('@/app/api/kb/upload/route')
+    expect(await (await POST(upload(1024) as never)).json()).toMatchObject({ created: 1, duplicates: 0 })
   })
 })

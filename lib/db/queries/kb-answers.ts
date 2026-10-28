@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, sql } from 'drizzle-orm'
 import { ANSWER_REFERENCE_RETENTION_DAYS } from '@/lib/kb/coverage'
 import { contentHash } from '@/lib/kb/revision'
-import { sourceStatus } from '@/lib/kb/answer-sources'
+import { collapseExactSources, sourceStatus } from '@/lib/kb/answer-sources'
 import type {
   KBAnswerOutcome,
   KBAnswerRecord,
@@ -210,17 +210,24 @@ export async function getAnswerSourcesForTicket(ticketId: number, orgId: number)
     .where(eq(kbAnswerReferences.answerId, answer.id))
     .orderBy(kbAnswerReferences.rank, kbAnswerReferences.id)
 
-  const sources: KBAnswerSource[] = rows.map((r) => {
-    const live = r.question === null || r.answer === null || r.published === null
-      ? null
-      : { question: r.question, answer: r.answer, published: r.published }
-    return {
-      article_id: live ? r.articleId : null,
-      title: live ? live.question : null,
-      rank: r.rank,
-      status: sourceStatus(r.hash, live),
-    }
-  })
+  // Exact copies are shown once, so the same source is never listed or linked twice.
+  const sources: KBAnswerSource[] = collapseExactSources(
+    rows.map((r) => {
+      const live = r.question === null || r.answer === null || r.published === null
+        ? null
+        : { question: r.question, answer: r.answer, published: r.published }
+      return {
+        source: {
+          article_id: live ? r.articleId : null,
+          title: live ? live.question : null,
+          rank: r.rank,
+          status: sourceStatus(r.hash, live),
+        },
+        recordedHash: r.hash,
+        currentHash: live ? contentHash(live.question, live.answer) : null,
+      }
+    })
+  )
   return {
     answer_id: answer.id,
     outcome: answer.outcome as KBAnswerOutcome,

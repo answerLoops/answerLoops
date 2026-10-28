@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   assertEmbeddingAvailable: vi.fn(),
   countArticles: vi.fn(),
   insertWithinCap: vi.fn(),
+  findExactDuplicate: vi.fn(),
   createKBSource: vi.fn(),
   deleteKBSource: vi.fn(),
   updateChunkCount: vi.fn(),
@@ -32,6 +33,9 @@ vi.mock('@/lib/ai/embed', () => ({
   assertEmbeddingAvailable: h.assertEmbeddingAvailable,
 }))
 vi.mock('@/lib/db/queries/kb', () => ({ countArticles: h.countArticles }))
+// The exact-duplicate lookup and the database handle it needs: nothing is a duplicate unless a test says so.
+vi.mock('@/lib/db/drizzle', () => ({ getDb: () => ({}) }))
+vi.mock('@/lib/db/queries/kb-duplicates', () => ({ findExactDuplicate: h.findExactDuplicate }))
 vi.mock('@/lib/db/queries/kb-article-cap', () => ({ createArticleFromSourceWithinCap: h.insertWithinCap }))
 vi.mock('@/lib/db/queries/kb-sources', () => ({
   createKBSource: h.createKBSource,
@@ -64,6 +68,7 @@ beforeEach(() => {
   h.countArticles.mockResolvedValue(0)
   h.embed.mockResolvedValue([0.1])
   h.insertWithinCap.mockResolvedValue({ id: 1 })
+  h.findExactDuplicate.mockResolvedValue(null)
   h.createKBSource.mockImplementation(async () => ({ id: nextSourceId++ }))
   h.deleteKBSource.mockResolvedValue(undefined)
   h.updateChunkCount.mockResolvedValue(undefined)
@@ -363,5 +368,36 @@ describe('rate-limit keys', () => {
     fd.set('mode', 'page')
     const res = await ingestUrlAction(null, fd)
     expect(res.error).toBe('We could not find that website. Check the address and try again.')
+  })
+})
+
+describe('exact duplicates in an import', () => {
+  it('leaves out a section whose exact text is already in the knowledge base, without embedding it', async () => {
+    h.scrapeUrl.mockResolvedValue({ ...page(3, 'https://docs.example.com/x') })
+    h.findExactDuplicate.mockImplementation(async (_db: unknown, _org: number, q: string) => (q === 'Section 1' ? 9 : null))
+    const result = await ingestUrl('https://docs.example.com/x', 1)
+    expect(result).toMatchObject({ created: 2, duplicates: 1 })
+    expect(h.embed).toHaveBeenCalledTimes(2)
+    expect(h.insertWithinCap).toHaveBeenCalledTimes(2)
+  })
+
+  it('counts a section the insert finds is a duplicate (an import racing another)', async () => {
+    h.scrapeUrl.mockResolvedValue({ ...page(3, 'https://docs.example.com/x') })
+    h.insertWithinCap.mockResolvedValueOnce({ id: 1 }).mockResolvedValueOnce({ duplicateOf: 4 }).mockResolvedValueOnce({ id: 3 })
+    expect(await ingestUrl('https://docs.example.com/x', 1)).toMatchObject({ created: 2, duplicates: 1 })
+  })
+
+  it('adds nothing and fails nothing when the whole page is already in the knowledge base', async () => {
+    h.scrapeUrl.mockResolvedValue({ ...page(2, 'https://docs.example.com/x') })
+    h.findExactDuplicate.mockResolvedValue(9)
+    expect(await ingestUrl('https://docs.example.com/x', 1)).toMatchObject({ created: 0, duplicates: 2 })
+    expect(h.embed).not.toHaveBeenCalled()
+  })
+
+  it('adds up duplicates across the pages of a site import', async () => {
+    h.mapUrl.mockResolvedValue({ links: [1, 2].map((i) => ({ url: `https://docs.example.com/p${i}` })) })
+    h.batchScrape.mockResolvedValue({ data: [1, 2].map((i) => page(2, `https://docs.example.com/p${i}`)) })
+    h.findExactDuplicate.mockResolvedValue(9)
+    expect(await ingestSite('https://docs.example.com/', 1)).toMatchObject({ created: 0, duplicates: 4 })
   })
 })

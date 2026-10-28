@@ -4,6 +4,8 @@ import { kbArticles, tickets, users } from '../schema'
 import { assertWithinArticleCap } from './kb-article-cap'
 import { recordArticleEvent } from './kb-events'
 import { contentHash } from '@/lib/kb/revision'
+import { dropExactDuplicates } from '@/lib/kb/duplicates'
+import { DuplicateArticleError, findExactDuplicate } from './kb-duplicates'
 import { toVerification, VERIFICATION_NOTE_MAX } from '@/lib/kb/verification'
 import type { KBArticle, KBSearchResult, PriorAnswer } from '@/types'
 
@@ -45,7 +47,11 @@ export async function createArticle(
   // When given, a new row is added only while the workspace is under this many
   // articles (ArticleCapReachedError otherwise). Refreshing an article that
   // already exists for the ticket adds no row, so it is never refused.
-  cap?: number
+  cap?: number,
+  // When true, a new row is refused with DuplicateArticleError if the workspace
+  // already holds the exact same question and answer. Refreshing an article for
+  // the same ticket is unaffected.
+  rejectExactDuplicate = false
 ): Promise<KBArticle> {
   // The article and its history event commit together, so a failed write never
   // leaves a history entry behind.
@@ -96,6 +102,10 @@ export async function createArticle(
     }
 
     if (cap !== undefined) await assertWithinArticleCap(tx, orgId, cap)
+    if (rejectExactDuplicate) {
+      const duplicateOf = await findExactDuplicate(tx, orgId, input.question, input.answer)
+      if (duplicateOf !== null) throw new DuplicateArticleError(duplicateOf)
+    }
 
     const [row] = await tx
       .insert(kbArticles)
@@ -275,6 +285,9 @@ export function escapeLikePattern(text: string): string {
   return text.replace(/[\\%_]/g, (c) => `\\${c}`)
 }
 
+// How many times `limit` candidates searchArticles reads before dropping exact copies.
+const DUPLICATE_OVERFETCH = 3
+
 export async function searchArticles(vector: number[], limit = 10, orgId: number): Promise<KBSearchResult[]> {
   const distance = cosineDistance(kbArticles.embeddingVec, vector)
   const maxDistance = 1 - KB_MATCH_THRESHOLD
@@ -309,13 +322,21 @@ export async function searchArticles(vector: number[], limit = 10, orgId: number
         )
       )
       .orderBy(distance)
-      .limit(limit)
+      // More than asked for, so that after exact copies are dropped there are
+      // still `limit` different articles to return.
+      .limit(limit * DUPLICATE_OVERFETCH)
   })
 
-  return rows.map((r) => ({
-    ...toArticle(r.article),
-    score: 1 - Number(r.distance),
-  }))
+  // Exact copies score identically and sit side by side, so without this one
+  // article imported twice would fill every slot and push out different ones.
+  // The best-ranked copy stays.
+  return dropExactDuplicates(
+    rows.map((r) => ({
+      ...toArticle(r.article),
+      score: 1 - Number(r.distance),
+    })),
+    limit
+  )
 }
 
 export async function textSearchArticles(query: string, limit = 10, orgId: number): Promise<KBArticle[]> {
