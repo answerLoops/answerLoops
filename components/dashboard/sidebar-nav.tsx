@@ -129,7 +129,7 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function SidebarNav({ changelogLink }: { changelogLink?: { text: string; url: string } }) {
+export function SidebarNav({ changelogUrl }: { changelogUrl?: string }) {
   const pathname = usePathname()
   const groups = ['Monitor', 'Support', 'Improve', 'Configure'] as const
   const [planId, setPlanId] = useState<string | null>(null)
@@ -193,11 +193,11 @@ export function SidebarNav({ changelogLink }: { changelogLink?: { text: string; 
           </svg>
         </a>
         {/* Passed down from the dashboard layout, which is a server component
-            and can read the deployment flag directly. Null on a self-hosted
+            and can read the deployment flag directly. Absent on a self-hosted
             install, which 404s /changelog. */}
-        {changelogLink && (
+        {changelogUrl && (
           <a
-            href={changelogLink.url}
+            href={changelogUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.8125rem] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"

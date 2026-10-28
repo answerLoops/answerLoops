@@ -53,7 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // link to and the sidebar drops the entry. Resolved here rather than in the
   // sidebar because this is a server component and can read the deployment
   // flag; the sidebar is a client component and cannot.
-  const changelogEntry = docsChangelogLink()
+  const changelogUrl = docsChangelogLink()?.url
 
   const sidebarContent = (
     <>
@@ -68,7 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </Link>
       </div>
-      <SidebarNav changelogLink={changelogEntry ?? undefined} />
+      <SidebarNav changelogUrl={changelogUrl} />
     </>
   )
 
