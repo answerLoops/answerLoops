@@ -26,6 +26,7 @@ const STATIC_ROUTES: { path: string; priority: number; changeFrequency: ChangeFr
   { path: '/about', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/agentic-support', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/blog', priority: 0.6, changeFrequency: 'weekly' },
+  { path: '/changelog', priority: 0.6, changeFrequency: 'weekly' },
   { path: '/architecture', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/circle-ai-answers', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/discord-github-support', priority: 0.7, changeFrequency: 'monthly' },

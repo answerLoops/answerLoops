@@ -25,6 +25,7 @@ const LABELS = {
   '/alternatives': 'Alternatives & comparisons',
   '/about': 'About',
   '/blog': 'Blog',
+  '/changelog': 'Changelog',
   '/privacy': 'Privacy policy',
   '/terms': 'Terms of service',
   '/vs/bettermode': 'answerLoops vs Bettermode',

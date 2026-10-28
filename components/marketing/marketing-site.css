@@ -1707,3 +1707,124 @@
     max-height: none;
   }
 }
+
+/* Changelog: one entry per GitHub release, date column beside the notes. */
+.marketing-releases {
+  max-width: 62rem;
+}
+.marketing-release {
+  display: grid;
+  grid-template-columns: 12rem minmax(0, 1fr);
+  gap: 2.5rem;
+  padding: 2.5rem 0;
+  border-top: 1px solid var(--marketing-border);
+  scroll-margin-top: 5rem;
+}
+.marketing-release:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+.marketing-release-meta {
+  align-self: start;
+  position: sticky;
+  top: 5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.marketing-release-meta h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  overflow-wrap: anywhere;
+}
+.marketing-release-meta h2 a {
+  color: inherit;
+}
+.marketing-release-meta time {
+  color: var(--marketing-muted);
+  font-size: 0.875rem;
+}
+.marketing-release-badge {
+  border: 1px solid var(--marketing-accent);
+  border-radius: 999px;
+  color: var(--marketing-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.6rem;
+}
+.marketing-release-badge-pre {
+  border-color: var(--marketing-muted);
+  color: var(--marketing-muted);
+}
+.marketing-release-body {
+  min-width: 0;
+  color: var(--marketing-muted);
+  overflow-wrap: anywhere;
+}
+.marketing-release-body > * + * {
+  margin-top: 1rem;
+}
+.marketing-release-body h3 {
+  color: var(--marketing-ink);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 2rem;
+}
+.marketing-release-body h3:first-child {
+  margin-top: 0;
+}
+.marketing-release-body ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.marketing-release-body li + li {
+  margin-top: 0.5rem;
+}
+.marketing-release-body strong {
+  color: var(--marketing-ink);
+}
+.marketing-release-body a {
+  color: var(--marketing-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.marketing-release-body code {
+  background: var(--marketing-soft);
+  border-radius: 4px;
+  font-size: 0.875em;
+  padding: 0.1em 0.35em;
+}
+.marketing-release-body table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+.marketing-release-body th,
+.marketing-release-body td {
+  border: 1px solid var(--marketing-border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+.marketing-release-body th {
+  color: var(--marketing-ink);
+  background: var(--marketing-soft);
+}
+@media (max-width: 767px) {
+  .marketing-release {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  .marketing-release-meta {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+  }
+  .marketing-release-meta h2 {
+    flex-basis: 100%;
+  }
+}

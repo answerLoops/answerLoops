@@ -32,6 +32,13 @@ describe('readPlatformModels', () => {
     })).toEqual({ chat: 'gpt-5.6-luna', fast: 'gpt-5.6-luna', embedding: 'text-embedding-3-large' })
   })
 
+  it('accepts the newer generation as host overrides', async () => {
+    const { mod } = await load()
+    const models = mod.readPlatformModels({ PLATFORM_AI_FAST_MODEL: 'gpt-6-luna', PLATFORM_AI_CHAT_MODEL: 'gpt-6.1-terra' })
+    expect(models.fast).toBe('gpt-6-luna')
+    expect(models.chat).toBe('gpt-6.1-terra')
+  })
+
   it('an unpriced model makes that role unusable', async () => {
     const { mod } = await load()
     expect(mod.readPlatformModels({ PLATFORM_AI_CHAT_MODEL: 'gpt-unknown' }).chat).toBeNull()
