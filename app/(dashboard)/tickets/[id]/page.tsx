@@ -25,6 +25,7 @@ import { telegramMessageIdFromSource } from '@/lib/telegram/message-id'
 import { getIntegration, parseGuildChannelMap } from '@/lib/db/queries/integrations'
 import { getEmailMessagesForTicket } from '@/lib/db/queries/email-messages'
 import { TicketContent } from '@/components/tickets/ticket-content'
+import { TicketThread } from '@/components/tickets/ticket-thread'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 
 // Always reflect the latest ticket state (drafts, assessments, feedback).
@@ -312,21 +313,8 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
             </div>
           )}
 
-          {/* Replies */}
-          {replies.length > 0 && (
-            <div className="space-y-3">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Replies</h2>
-              {replies.map((reply) => (
-                <div key={reply.id} className="bg-white rounded-lg border border-gray-200 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-medium text-gray-700">{reply.staff_name}</span>
-                    <span className="text-xs text-gray-400"><LocalDate iso={reply.created_at} time /></span>
-                  </div>
-                  <TicketContent content={reply.content} />
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Conversation: every message after the opening one, any channel */}
+          <TicketThread replies={replies} />
 
           {/* Reply form */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
