@@ -14,6 +14,7 @@ const ROLE_LABEL: Record<ThreadEntryRole, string> = {
   customer: 'Customer',
   staff: 'Staff',
   context: 'Maintainer',
+  ai: 'answerLoops',
 }
 
 export function threadRoleLabel(role: ThreadEntryRole): string {

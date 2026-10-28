@@ -7,6 +7,7 @@ const ROLE_STYLE: Record<ThreadEntryRole, string> = {
   customer: 'bg-amber-50 text-amber-700',
   staff: 'bg-blue-50 text-blue-700',
   context: 'bg-gray-100 text-gray-600',
+  ai: 'bg-brand-50 text-brand-700',
 }
 
 // The conversation after the opening message, in order, for every channel.

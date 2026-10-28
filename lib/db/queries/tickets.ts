@@ -672,6 +672,33 @@ export async function recordCustomerReply(
 }
 
 /**
+ * Keep a reply answerLoops itself posted to the channel in the ticket's thread,
+ * so the conversation reads in full. It is a record of something already sent:
+ * it does not change the ticket's status, log an event, or notify anyone. The
+ * channel's id for the posted message is what makes a repeat store once, and
+ * lets a later reply to that message find this ticket. Returns false when this
+ * exact message is already stored.
+ */
+export async function recordAnswerLoopsReply(
+  ticketId: number,
+  content: string,
+  input: ThreadMessageInput = {}
+): Promise<boolean> {
+  const inserted = await getDb()
+    .insert(ticketReplies)
+    .values({
+      ticketId,
+      staffName: 'answerLoops',
+      content,
+      authorRole: 'ai',
+      sourceMessageId: input.messageId ?? null,
+    })
+    .onConflictDoNothing()
+    .returning({ id: ticketReplies.id })
+  return inserted.length > 0
+}
+
+/**
  * Keep a message in a ticket's thread without treating it as a customer
  * follow-up: it does not reopen the ticket, log an event, or notify anyone.
  * Used for maintainers' messages so the conversation reads completely.

@@ -19,6 +19,7 @@ const {
   getRepoByOwnerAndName,
   getTicketById,
   updateTicketAIDraftStatus,
+  recordAnswerLoopsReply,
   auth,
 } = vi.hoisted(() => ({
   sendToSlackChannel: vi.fn(async (_channel: string, _content: string, _orgId: number, _threadTs?: string) => 'slack-msg-id'),
@@ -30,6 +31,7 @@ const {
   getRepoByOwnerAndName: vi.fn(async () => ({ id: 1, org_id: 3, installation_id: 42 })),
   getTicketById: vi.fn(),
   updateTicketAIDraftStatus: vi.fn(),
+  recordAnswerLoopsReply: vi.fn(async (_ticketId: number, _content: string, _input?: { messageId?: string }) => true),
   auth: vi.fn(async () => ({ orgId: 3, user: { id: '1' } })),
 }))
 
@@ -52,6 +54,7 @@ vi.mock('@/lib/db/queries/tickets', () => ({
   addTicketReply: vi.fn(),
   updateTicketStatus: vi.fn(),
   updateTicketAIDraftStatus,
+  recordAnswerLoopsReply,
 }))
 vi.mock('@/lib/email/send', () => ({ sendTicketResolvedEmail: vi.fn() }))
 vi.mock('next/cache', () => ({ refresh: vi.fn() }))
@@ -186,6 +189,53 @@ describe('updateAIDraftAction: edit dispatches on slack/telegram/email too (prev
 
     expect(sendEmailReply).toHaveBeenCalled()
     expect(sendEmailReply.mock.calls[0][1]).toContain('a corrected answer')
+  })
+})
+
+describe('updateAIDraftAction: a sent answer joins the ticket conversation as answerLoops', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('an approved draft is kept under the id the channel gave the post, as the text the customer read', async () => {
+    getTicketById.mockResolvedValue(ticket({ source_platform: 'slack' }))
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
+    await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
+    expect(recordAnswerLoopsReply).toHaveBeenCalledExactlyOnceWith(1, 'the approved answer', { messageId: 'slack-msg-id' })
+  })
+
+  it('an edited draft is kept as the edited text, without the channel wrapper', async () => {
+    getTicketById.mockResolvedValue(ticket({ source_platform: 'slack' }))
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
+    await updateAIDraftAction(null, formData({ ticketId: '1', action: 'edit', newDraft: 'a corrected answer' }))
+    expect(recordAnswerLoopsReply).toHaveBeenCalledExactlyOnceWith(1, 'a corrected answer', { messageId: 'slack-msg-id' })
+  })
+
+  it('records nothing when nothing was posted (a channel with no live destination)', async () => {
+    getTicketById.mockResolvedValue(ticket({ source_platform: 'mcp', source_channel_id: 'mcp-synthetic-id' }))
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
+    await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
+    expect(recordAnswerLoopsReply).not.toHaveBeenCalled()
+  })
+
+  it('records nothing when posting failed', async () => {
+    getTicketById.mockResolvedValue(ticket({ source_platform: 'slack' }))
+    sendToSlackChannel.mockRejectedValueOnce(new Error('channel_not_found'))
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
+    await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
+    expect(recordAnswerLoopsReply).not.toHaveBeenCalled()
+  })
+
+  it('does not record an override, which sends nothing', async () => {
+    getTicketById.mockResolvedValue(ticket({ source_platform: 'slack' }))
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
+    await updateAIDraftAction(null, formData({ ticketId: '1', action: 'override' }))
+    expect(recordAnswerLoopsReply).not.toHaveBeenCalled()
+  })
+
+  it('still finishes the action when keeping the reply fails, since the reply already went out', async () => {
+    getTicketById.mockResolvedValue(ticket({ source_platform: 'slack' }))
+    recordAnswerLoopsReply.mockRejectedValueOnce(new Error('db down'))
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
+    await expect(updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))).resolves.toBeNull()
   })
 })
 

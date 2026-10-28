@@ -101,7 +101,8 @@ A question is often a conversation, not one message. When someone keeps talking 
 | Label | Who wrote it |
 | --- | --- |
 | **Customer** | The person who asked, or anyone else who joined in. |
-| **Staff** | A member of your team, replying from the dashboard. |
+| **Staff** | A member of your team, replying from the dashboard. Each team member who replies appears under the name they entered, in the order they replied. |
+| **answerLoops** | A reply answerLoops posted to the channel: an automatic answer, an acknowledgment that a person will follow up, or an AI draft a team member approved or edited and sent. |
 | **Maintainer** | A maintainer's message, kept so the thread reads completely. It never opens a ticket or sends a notification. |
 
 What counts as "the same conversation" depends on the channel:
@@ -117,6 +118,8 @@ What counts as "the same conversation" depends on the channel:
 | GitHub | A comment on the same issue or discussion. |
 | Email | A reply in the same email conversation, from the address that opened it. |
 | Agent | Not applicable. Each call is its own question. |
+
+Because every message is kept, a ticket that several people answered reads as one history: the customer's question, what answerLoops replied, each team member's reply, and the customer's follow-ups, in the order they happened. An answer that was held as a draft and never sent does not appear; it stays in the **AI Draft Answer** panel until someone approves it. Replies and answers sent before this was recorded are not added to the Conversation of older tickets.
 
 A follow-up on a resolved or closed ticket reopens it. Your team is notified of each follow-up, and the AI does not re-answer them. On Slack, Google Chat, Telegram, GitHub, Discourse, and Circle, a short follow-up like "thanks, that worked" is kept when it continues a conversation you already have. Delivering the same message twice never adds it twice.
 

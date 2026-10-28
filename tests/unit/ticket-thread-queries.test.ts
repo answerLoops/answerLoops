@@ -112,6 +112,38 @@ describe('recordThreadContext', () => {
   })
 })
 
+describe('recordAnswerLoopsReply', () => {
+  it('stores what answerLoops posted under the ai role and the channel message id, and touches nothing else on the ticket', async () => {
+    const { calls, queries } = await withDb((c) => (c.sql.toLowerCase().startsWith('insert') ? [[12]] : []))
+    const stored = await queries.recordAnswerLoopsReply(1, 'Use the reset link.', { messageId: 'posted-1' })
+
+    expect(stored).toBe(true)
+    // One insert: no status change, no event, no notification, no ticket lookup.
+    expect(calls).toHaveLength(1)
+    const sql = calls[0].sql.toLowerCase()
+    expect(sql).toContain('insert into "ticket_replies"')
+    expect(sql).toContain('on conflict do nothing')
+    expect(calls[0].params).toEqual(expect.arrayContaining(['answerLoops', 'Use the reset link.', 'ai', 'posted-1']))
+  })
+
+  it('reports false when the same posted message is already stored', async () => {
+    const { queries } = await withDb()
+    expect(await queries.recordAnswerLoopsReply(1, 'again', { messageId: 'posted-1' })).toBe(false)
+  })
+
+  it('stores a reply with no channel id (the id column stays empty)', async () => {
+    const { calls, queries } = await withDb((c) => (c.sql.toLowerCase().startsWith('insert') ? [[13]] : []))
+    await queries.recordAnswerLoopsReply(1, 'text')
+    expect(calls[0].params).toContain(null)
+  })
+
+  it('is found by getTicketByThreadId, so a reply to the bot\'s message reaches the ticket', async () => {
+    const { calls, queries } = await withDb()
+    await queries.getTicketByThreadId('posted-1', 3)
+    expect(calls[0].sql.toLowerCase()).toContain('from "ticket_replies" where "ticket_replies"."source_message_id"')
+  })
+})
+
 describe('getTicketReplies', () => {
   it('loads the thread oldest first, breaking ties by id', async () => {
     const { calls, queries } = await withDb()

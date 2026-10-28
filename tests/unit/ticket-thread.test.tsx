@@ -70,6 +70,25 @@ describe('TicketThread', () => {
     expect(within(items[2]).getByText('Staff')).toBeInTheDocument()
   })
 
+  it('shows answerLoops\'s own reply in its place between the customer\'s messages, labeled answerLoops', () => {
+    render(
+      <TicketThread
+        replies={[
+          reply('staff', 'Sam', 'Following up by hand', '2026-05-01T11:00:00.000Z'),
+          reply('customer', 'alice', 'That did not work', '2026-05-01T10:00:00.000Z'),
+          reply('ai', 'answerLoops', 'Try the reset link.', '2026-05-01T09:00:00.000Z'),
+          reply('customer', 'alice', 'Still broken', '2026-05-01T08:00:00.000Z'),
+        ]}
+      />
+    )
+    const items = screen.getAllByRole('listitem')
+    expect(items.map((li) => li.getAttribute('data-role'))).toEqual(['customer', 'ai', 'customer', 'staff'])
+    expect(within(items[1]).getByText('answerLoops', { selector: 'span.truncate' })).toBeInTheDocument()
+    expect(within(items[1]).getAllByText('answerLoops')).toHaveLength(2) // the author, and the role label
+    expect(within(items[1]).getByText('Try the reset link.')).toBeInTheDocument()
+    expect(within(items[0]).queryByText('answerLoops')).not.toBeInTheDocument()
+  })
+
   it('counts the messages in its heading', () => {
     const { rerender } = render(<TicketThread replies={[reply('customer', 'a', 'one', '2026-05-01T09:00:00.000Z')]} />)
     expect(screen.getByRole('heading', { name: /1 message$/ })).toBeInTheDocument()

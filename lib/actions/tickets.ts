@@ -5,6 +5,7 @@ import { refresh } from 'next/cache'
 import {
   updateTicketStatus,
   addTicketReply,
+  recordAnswerLoopsReply,
   updateTicketAIDraftStatus,
 } from '@/lib/db/queries/tickets'
 import { postReply, postReplyToGithub } from '@/lib/channels/post-reply'
@@ -139,6 +140,16 @@ const UpdateDraftSchema = z.object({
   newDraft: z.string().optional(),
 })
 
+// An answer a person approved or edited and sent is still answerLoops's answer
+// to the customer, so it joins the ticket's conversation like an auto-posted
+// one. Best-effort: the reply has already gone out.
+async function keepPostedAnswer(ticketId: number, text: string, postedMessageId: string | null): Promise<void> {
+  if (!postedMessageId) return
+  await recordAnswerLoopsReply(ticketId, text, { messageId: postedMessageId }).catch((err) => {
+    logger.warn('could not keep the posted answer in the ticket conversation', { module: 'actions/tickets', ticketId, error: err })
+  })
+}
+
 export async function updateAIDraftAction(
   _prevState: unknown,
   formData: FormData
@@ -161,10 +172,11 @@ export async function updateAIDraftAction(
     // answer looks to the customer — an approved draft and an auto-answer
     // should read identically on the other end.
     if (ticket.ai_draft) {
-      await sendReply(ticket, ticket.ai_draft, orgId).catch((err) => {
+      const postedMessageId = await sendReply(ticket, ticket.ai_draft, orgId).catch((err) => {
         logger.warn('failed to post approved draft', { module: 'actions/tickets', platform: ticket.source_platform, error: err })
         return null
       })
+      await keepPostedAnswer(ticketId, ticket.ai_draft, postedMessageId)
     }
   } else if (action === 'override') {
     await updateTicketAIDraftStatus(ticketId, 'overridden')
@@ -177,10 +189,11 @@ export async function updateAIDraftAction(
       : ticket.source_platform === 'google_chat'
         ? `[Updated AI Answer]\n${newDraft}`
         : `**[Updated AI Answer]**\n${newDraft}`
-    await sendReply(ticket, message, orgId).catch((err) => {
+    const postedMessageId = await sendReply(ticket, message, orgId).catch((err) => {
       logger.warn('failed to post edited draft', { module: 'actions/tickets', platform: ticket.source_platform, error: err })
       return null
     })
+    await keepPostedAnswer(ticketId, newDraft, postedMessageId)
   }
 
   refresh()

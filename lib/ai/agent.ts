@@ -17,7 +17,7 @@ import { reserveAutoDeflect } from '@/lib/billing/usage'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
 import { getIntegration } from '@/lib/db/queries/integrations'
-import { updateTicketAIDraftStatus, getTicketById } from '@/lib/db/queries/tickets'
+import { updateTicketAIDraftStatus, getTicketById, recordAnswerLoopsReply } from '@/lib/db/queries/tickets'
 import { logger } from '@/lib/logger'
 import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
 import type { AIDraftSkipReason, PriorAnswer, TicketCategory } from '@/types'
@@ -46,6 +46,23 @@ async function dispatch(
     return postReplyToGithub(ticket.source_channel_id, ticket.source_message_id, content, orgId)
   }
   return postReply(channelId, content, orgId, platform, ticketId, slackChannelId, slackThreadTs)
+}
+
+// After answerLoops posts a reply to a ticket's channel: remember the message
+// so a reaction or reply to it finds the ticket, and keep the reply in the
+// ticket's conversation so the thread reads in full. `text` is what the
+// customer reads, without any mention or reaction footer. Best-effort: it runs
+// beside a reply that has already gone out, so a failure is logged and never
+// thrown. Nothing is recorded when the channel gave no id for the post (nothing
+// was posted, or the channel doesn't report one).
+async function recordPostedReply(ticketId: number, postedMessageId: string | null, text: string): Promise<void> {
+  if (!postedMessageId) return
+  await mapAnswerMessage(postedMessageId, ticketId)
+  try {
+    await recordAnswerLoopsReply(ticketId, text, { messageId: postedMessageId })
+  } catch (err) {
+    logger.warn('could not keep the posted reply in the ticket conversation', { module: MOD, ticketId, error: err })
+  }
 }
 
 // Formats the "needs human review" @mention for the configured escalation
@@ -139,11 +156,11 @@ async function postNeedsHumanReview(
     return
   }
   const escalationMention = formatEscalationMention(escalationRoleId, platform, escalationReasonText)
-  const message = postDraftPublicly
-    ? `${bodyText}\n\n*A team member will follow up shortly.*${escalationMention}`
-    : `Thanks for reaching out — a team member will follow up shortly.${escalationMention}`
-  const postedMessageId = await dispatch(channelId, message, orgId, platform, ticketId, slackChannelId, slackThreadTs)
-  if (postedMessageId) await mapAnswerMessage(postedMessageId, ticketId)
+  const acknowledgment = postDraftPublicly
+    ? `${bodyText}\n\n*A team member will follow up shortly.*`
+    : 'Thanks for reaching out — a team member will follow up shortly.'
+  const postedMessageId = await dispatch(channelId, `${acknowledgment}${escalationMention}`, orgId, platform, ticketId, slackChannelId, slackThreadTs)
+  await recordPostedReply(ticketId, postedMessageId, acknowledgment)
 }
 
 export async function runAIAgent(
@@ -238,7 +255,7 @@ export async function runAIAgent(
           await updateTicketAIDraft(ticketId, text)
           const message = `${text}\n\n*React 👍 / 👎 if this helped. A team member will follow up if not.*`
           const postedMessageId = await dispatch(channelId, message, orgId, platform, ticketId, slackChannelId, slackThreadTs)
-          if (postedMessageId) await mapAnswerMessage(postedMessageId, ticketId)
+          await recordPostedReply(ticketId, postedMessageId, text)
         } else {
           // Automatic Deflections off — draft stays saved for approval, no real content posts to the channel.
           await updateTicketAIDraftStatus(ticketId, 'needs_human', text)
@@ -263,7 +280,7 @@ export async function runAIAgent(
           await updateTicketAIDraft(ticketId, text)
           const message = `${text}\n\n*React 👍 / 👎 if this helped. A team member will follow up if not.*`
           const postedMessageId = await dispatch(channelId, message, orgId, platform, ticketId, slackChannelId, slackThreadTs)
-          if (postedMessageId) await mapAnswerMessage(postedMessageId, ticketId)
+          await recordPostedReply(ticketId, postedMessageId, text)
         } else {
           // Automatic Deflections off — draft stays saved for approval, no real content posts to the channel.
           await updateTicketAIDraftStatus(ticketId, 'needs_human', text)
@@ -447,7 +464,7 @@ Guidelines:
       await createNotification('ai_draft_ready', `Auto-answered (${pct}%) — ticket #${orgTicketNumber}`, ticketId, orgId)
       const message = `${text}\n\n*React 👍 / 👎 if this helped. A team member will follow up if not.*`
       const postedMessageId = await dispatch(channelId, message, orgId, platform, ticketId, slackChannelId, slackThreadTs)
-      if (postedMessageId) await mapAnswerMessage(postedMessageId, ticketId)
+      await recordPostedReply(ticketId, postedMessageId, text)
 
       // Post CSAT prompt as follow-up and store its message ID
       const csatPrompt = `*How would you rate this answer?*\n1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣\n_(React with a number to rate)_`

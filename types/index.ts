@@ -75,7 +75,7 @@ export interface TicketReply {
   created_at: string
 }
 
-export type TicketReplyRole = 'staff' | 'customer' | 'context'
+export type TicketReplyRole = 'staff' | 'customer' | 'context' | 'ai'
 
 export interface TicketEvent {
   id: number

@@ -42,7 +42,7 @@ The diagram shows the key relationships only. The link from an article to its im
 | Records | Purpose |
 | --- | --- |
 | `tickets` | Question, source, category, priority, status, AI draft state, and the reason a ticket went to a person without a draft. |
-| `ticket_replies` | Every message in a ticket's conversation after the first: staff replies, customer follow-ups, and maintainer messages kept for context. Each row records who wrote it (`author_role`) and the channel's own message id, which makes redeliveries harmless and lets a reply to a reply find its ticket. |
+| `ticket_replies` | Every message in a ticket's conversation after the first: staff replies, customer follow-ups, replies answerLoops posted, and maintainer messages kept for context. Each row records who wrote it (`author_role`) and the channel's own message id, which makes redeliveries harmless and lets a reply to a reply find its ticket. |
 | `ticket_events` | Recorded changes in the ticket's history. |
 | `ticket_links` | Relationships between tickets. |
 | `ai_assessments` | Results of AI assessment. |

@@ -23,7 +23,7 @@ async function reply(request: import('@playwright/test').APIRequestContext, opts
 }
 
 test.describe('ticket conversation thread', () => {
-  test('every message in the conversation appears on one ticket, in order, with its author', async ({ request, page }) => {
+  test('the whole history is on one ticket: the customer, answerLoops, and each team member, in order', async ({ request, page }) => {
     const run = randomUUID().slice(0, 8)
     const channelId = `thread-chan-${run}`
     const rootId = `root-${run}`
@@ -37,15 +37,32 @@ test.describe('ticket conversation thread', () => {
 
     await page.goto(`/tickets/${ticketId}`)
     const thread = page.getByRole('region', { name: 'Conversation' })
-    await expect(thread.getByRole('heading', { name: /2 messages/ })).toBeVisible()
+
+    // Two team members answer from the dashboard, one after the other.
+    for (const [name, text] of [['Sarah', 'Sarah here: restarting the agent usually fixes it'], ['Dev', 'Dev here: the fix ships in the next release']]) {
+      const form = page.locator('form', { has: page.getByPlaceholder(/Type your response/) })
+      await form.getByPlaceholder('e.g. Sarah').fill(name)
+      await form.getByPlaceholder(/Type your response/).fill(text)
+      await form.getByRole('button', { name: /^Send reply/ }).click()
+      await expect(thread.getByText(text)).toBeVisible()
+    }
 
     const items = thread.getByRole('listitem')
-    await expect(items).toHaveCount(2)
-    await expect(items.nth(0)).toContainText('bob')
-    await expect(items.nth(0)).toContainText('Same problem here after the update')
-    await expect(items.nth(1)).toContainText('carol')
-    await expect(items.nth(1)).toContainText('Restarting did not help me either')
-    await expect(items.nth(0)).toHaveAttribute('data-role', 'customer')
+    await expect(thread.getByRole('heading', { name: /5 messages/ })).toBeVisible()
+    await expect(items).toHaveCount(5)
+    // answerLoops's own answer comes first (it was posted before anyone else replied).
+    await expect(items.nth(0)).toHaveAttribute('data-role', 'ai')
+    await expect(items.nth(0)).toContainText('answerLoops')
+    await expect(items.nth(1)).toContainText('bob')
+    await expect(items.nth(1)).toContainText('Same problem here after the update')
+    await expect(items.nth(1)).toHaveAttribute('data-role', 'customer')
+    await expect(items.nth(2)).toContainText('carol')
+    await expect(items.nth(2)).toContainText('Restarting did not help me either')
+    // Each team member appears under their own name, in the order they replied.
+    await expect(items.nth(3)).toContainText('Sarah')
+    await expect(items.nth(3)).toHaveAttribute('data-role', 'staff')
+    await expect(items.nth(4)).toContainText('Dev')
+    await expect(items.nth(4)).toHaveAttribute('data-role', 'staff')
 
     // The opening message stays above the conversation.
     const original = page.locator('div:has(> h2:text-is("Original Message"))')
@@ -61,7 +78,11 @@ test.describe('ticket conversation thread', () => {
     expect(other).not.toBe(ticketId)
 
     await page.goto(`/tickets/${ticketId}`)
-    await expect(page.getByRole('region', { name: 'Conversation' })).toHaveCount(0)
+    // Only this ticket's own conversation (answerLoops's answer to it) is shown.
+    const thread = page.getByRole('region', { name: 'Conversation' })
+    await expect(thread).not.toContainText('billing invoices')
+    await expect(thread.getByRole('listitem')).toHaveCount(1)
+    await expect(thread.getByRole('listitem').first()).toHaveAttribute('data-role', 'ai')
   })
 
   test('the thread is readable on a phone-width screen', async ({ request, page }) => {

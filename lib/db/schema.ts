@@ -184,7 +184,8 @@ export const ticketReplies = pgTable('ticket_replies', {
   // Who wrote this message: 'staff' (a team member replying from the
   // dashboard), 'customer' (an inbound message that continued the thread), or
   // 'context' (a maintainer's message kept so the thread reads completely; it
-  // never created a ticket or a notification).
+  // never created a ticket or a notification), or 'ai' (a reply answerLoops
+  // itself posted to the channel).
   authorRole: text('author_role').notNull().default('staff'),
   // The channel's own id for an inbound message. Unique per ticket so a
   // redelivered webhook is stored once, and searched by getTicketByThreadId

@@ -19,10 +19,10 @@ const statements = sql
   .filter(Boolean)
 
 describe(MIGRATION, () => {
-  it('sorts after every earlier migration', () => {
+  it('sorts after the migration before it and is the only one with its number', () => {
     const numbered = fs.readdirSync(path.join(ROOT, 'drizzle')).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort()
-    expect(numbered.at(-1)).toBe(MIGRATION)
     expect(numbered.filter((f) => f.startsWith('0064_'))).toEqual([MIGRATION])
+    expect(numbered[numbered.indexOf(MIGRATION) - 1]).toMatch(/^0063_/)
   })
 
   it('is safe to run twice', () => {
@@ -72,10 +72,10 @@ describe('ticketReplies agrees with the migration', () => {
     expect(indexes.find((i) => i.config.name === 'ticket_replies_ticket_source_message_unique')!.config.unique).toBe(true)
   })
 
-  it('the roles the SQL allows are the roles the TypeScript union names', () => {
+  it('the roles it allows are still named by the TypeScript union (a later migration adds ai)', () => {
     const allowed = /author_role IN \(([^)]+)\)/.exec(sql)![1].match(/'([a-z]+)'/g)!.map((s) => s.replace(/'/g, ''))
     const types = fs.readFileSync(path.join(ROOT, 'types/index.ts'), 'utf-8')
     const union = /type TicketReplyRole = ([^\n]+)/.exec(types)![1].match(/'([a-z]+)'/g)!.map((s) => s.replace(/'/g, ''))
-    expect(union.sort()).toEqual(allowed.sort())
+    expect(union.filter((r) => r !== 'ai').sort()).toEqual(allowed.sort())
   })
 })
