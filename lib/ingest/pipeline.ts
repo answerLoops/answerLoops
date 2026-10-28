@@ -1,7 +1,7 @@
 import { after } from 'next/server'
 import { triageMessage } from '@/lib/ai/triage'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
-import { createTicket, getTicketBySourceMessageId, getTicketByThreadId, recordCustomerReply, updateTicketTriage } from '@/lib/db/queries/tickets'
+import { createTicket, getTicketBySourceMessageId, getTicketByThreadId, recordCustomerReply, recordThreadContext, updateTicketTriage } from '@/lib/db/queries/tickets'
 import { createNotification } from '@/lib/db/queries/notifications'
 import { calculateDeadlines, checkSlaBreaches } from '@/lib/sla/engine'
 import { sendPushToAll } from '@/lib/push/notify'
@@ -87,7 +87,10 @@ export async function processCommunityMessage(
   if (threadId) {
     const threadTicket = await getTicketByThreadId(threadId, orgId)
     if (threadTicket) {
-      await recordCustomerReply(threadTicket.id, content)
+      const stored = await recordCustomerReply(threadTicket.id, content, { authorName, messageId })
+      // A redelivered webhook for a reply already in the thread: nothing new
+      // to record, notify about, or acknowledge a second time.
+      if (!stored) return { ticket_id: threadTicket.id, duplicate: true }
       await createNotification(
         'new_question',
         `${authorName} replied to ticket #${threadTicket.org_ticket_number}`,
@@ -166,6 +169,25 @@ export async function processCommunityMessage(
   }
 
   return { ticket_id: ticket.id }
+}
+
+/**
+ * Keep a message in the thread of the ticket it belongs to, without making it
+ * a ticket or telling anyone: a maintainer's comment, say, which is never a
+ * support request but belongs in the conversation staff read. A message with
+ * no ticket to attach to is dropped. Returns whether it was stored.
+ */
+export async function recordThreadContextMessage(
+  payload: Pick<MessagePayload, 'messageId' | 'content' | 'authorName' | 'threadId'>,
+  orgId: number
+): Promise<boolean> {
+  if (!payload.threadId) return false
+  const threadTicket = await getTicketByThreadId(payload.threadId, orgId)
+  if (!threadTicket) return false
+  return recordThreadContext(threadTicket.id, clampIngestContent(payload.content), {
+    authorName: payload.authorName,
+    messageId: payload.messageId,
+  })
 }
 
 // Embeddings, duplicate detection, prior-answer lookup, and the AI agent —

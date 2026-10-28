@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getIntegrationByDiscourseSite, parseChannelIds } from '@/lib/db/queries/integrations'
+import { getTicketByThreadId } from '@/lib/db/queries/tickets'
 import { verifyDiscourseSignature } from '@/lib/discourse/client'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
@@ -100,7 +101,11 @@ export async function POST(req: NextRequest) {
   }
 
   const content = clampIngestContent((post.raw ?? (post.cooked ? stripHtml(post.cooked) : '')).trim())
-  if (content.length < 10) return Response.json({ ok: true })
+  // A short reply ("thanks, that worked") in a topic we already track is part
+  // of the conversation; only a post that would open a new ticket must be
+  // long enough to be a question.
+  const isTrackedReply = !!(await getTicketByThreadId(String(post.topic_id), integration.org_id))
+  if (content.length < 10 && !isTrackedReply) return Response.json({ ok: true })
 
   const siteUrl = integration.team_id ?? instance.replace(/\/+$/, '')
   const slug = post.topic_slug ?? 'topic'

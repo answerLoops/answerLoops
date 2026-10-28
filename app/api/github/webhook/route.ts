@@ -2,7 +2,9 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { createHmac, timingSafeEqual } from 'node:crypto'
 import { getRepoByOwnerAndName } from '@/lib/db/queries/github'
 import { enqueueKbSyncJob } from '@/lib/db/queries/kb-sync-jobs'
-import { processCommunityMessage } from '@/lib/ingest/pipeline'
+import { processCommunityMessage, recordThreadContextMessage } from '@/lib/ingest/pipeline'
+import { githubThreadId } from '@/lib/ingest/thread-keys'
+import { getTicketByThreadId } from '@/lib/db/queries/tickets'
 import { syncSingleDiscussionToKB } from '@/lib/github/kb-sync'
 import { getInstallationOctokitById } from '@/lib/github/app'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
@@ -160,9 +162,19 @@ export async function POST(req: NextRequest) {
     if (issue.state !== 'open') return NextResponse.json({ ok: true })
     const comment = payload.comment as { id: number; body: string; author_association?: string; user: { login: string; id: number; type?: string } }
     if (comment.user.type === 'Bot') return NextResponse.json({ ok: true })
-    if (isMaintainerAuthored(comment.author_association)) return NextResponse.json({ ok: true })
+    const issueThreadId = githubThreadId(owner, repoName, 'issue', issue.number)
+    const issueCommentId = `github-issue-comment-${owner}-${repoName}-${comment.id}`
+    if (isMaintainerAuthored(comment.author_association)) {
+      // Never a support request, but part of the conversation staff read.
+      await recordThreadContextMessage(
+        { messageId: issueCommentId, content: comment.body, authorName: comment.user.login, threadId: issueThreadId },
+        actualOrgId
+      )
+      return NextResponse.json({ ok: true })
+    }
     await handleTicket({
-      messageId: `github-issue-comment-${owner}-${repoName}-${comment.id}`,
+      messageId: issueCommentId,
+      threadId: issueThreadId,
       content: comment.body,
       authorId: String(comment.user.id),
       authorName: comment.user.login,
@@ -189,11 +201,21 @@ export async function POST(req: NextRequest) {
     })
   } else if (event === 'discussion_comment' && action === 'created') {
     if (monitored !== 'discussions' && monitored !== 'both') return NextResponse.json({ ok: true })
+    const discussion = payload.discussion as { number: number }
     const comment = payload.comment as { id: number; body: string; author_association?: string; user: { login: string; id: number; type?: string } }
     if (comment.user.type === 'Bot') return NextResponse.json({ ok: true })
-    if (isMaintainerAuthored(comment.author_association)) return NextResponse.json({ ok: true })
+    const discussionThreadId = githubThreadId(owner, repoName, 'discussion', discussion.number)
+    const discussionCommentId = `github-discussion-comment-${owner}-${repoName}-${comment.id}`
+    if (isMaintainerAuthored(comment.author_association)) {
+      await recordThreadContextMessage(
+        { messageId: discussionCommentId, content: comment.body, authorName: comment.user.login, threadId: discussionThreadId },
+        actualOrgId
+      )
+      return NextResponse.json({ ok: true })
+    }
     await handleTicket({
-      messageId: `github-discussion-comment-${owner}-${repoName}-${comment.id}`,
+      messageId: discussionCommentId,
+      threadId: discussionThreadId,
       content: comment.body,
       authorId: String(comment.user.id),
       authorName: comment.user.login,
@@ -208,6 +230,7 @@ export async function POST(req: NextRequest) {
 
 async function handleTicket({
   messageId,
+  threadId,
   content,
   authorId,
   authorName,
@@ -216,6 +239,9 @@ async function handleTicket({
   replyFn,
 }: {
   messageId: string
+  // Set for a comment: the issue or discussion it sits under, which is also
+  // the message id that issue's or discussion's own ticket was created under.
+  threadId?: string
   content: string
   authorId: string
   authorName: string
@@ -223,9 +249,13 @@ async function handleTicket({
   orgId: number
   replyFn: ((text: string) => Promise<void>) | null
 }) {
-  if (!content.trim() || content.trim().length < 10) return
-
   try {
+    // A short comment ("thanks, that fixed it") is worth keeping when it
+    // continues a conversation we already track, and noise when it would
+    // open a new ticket on its own.
+    if (!content.trim()) return
+    if (content.trim().length < 10 && !(threadId && (await getTicketByThreadId(threadId, orgId)))) return
+
     if (await isIngestRateLimited(orgId)) {
       logger.warn('github ticket ingest rate limited', { module: MOD, orgId })
       return
@@ -233,6 +263,7 @@ async function handleTicket({
 
     const result = await processCommunityMessage({
       messageId,
+      threadId,
       content,
       authorId,
       authorName,
@@ -241,7 +272,9 @@ async function handleTicket({
     }, orgId)
 
     // Post AI draft back to GitHub if confidence is high enough
-    if (replyFn && result && !result.duplicate) {
+    // An appended comment continues a ticket we already answered; the AI
+    // draft is not re-posted into a live conversation.
+    if (replyFn && result && !result.duplicate && !result.appended) {
       const { getDb } = await import('@/lib/db/drizzle')
       const { tickets } = await import('@/lib/db/schema')
       const { eq } = await import('drizzle-orm')

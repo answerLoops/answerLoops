@@ -321,7 +321,10 @@ export async function POST(req: NextRequest) {
     // reply is exactly the shape of a mail loop, and the loop-guard headers
     // above don't catch every case. A staff notification keeps the loop-risk
     // surface minimal; a human decides whether an automated reply is safe.
-    await recordCustomerReply(existingTicketId, clampIngestContent(cleanText || content))
+    await recordCustomerReply(existingTicketId, clampIngestContent(cleanText || content), {
+      authorName: senderName,
+      messageId: rfcMessageId,
+    })
     await setEmailMessageTicket(recorded.id, existingTicketId)
     await updateEmailMessageStatus(recorded.id, 'processed')
     await createNotification(

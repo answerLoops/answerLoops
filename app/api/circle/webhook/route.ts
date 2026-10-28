@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server'
 import { getIntegrationByBotSecret, parseChannelIds } from '@/lib/db/queries/integrations'
+import { getTicketByThreadId } from '@/lib/db/queries/tickets'
 import { normalizeCircleContent, fetchCirclePost, fetchCircleComment, type CircleContent } from '@/lib/circle/client'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { decryptToken } from '@/lib/crypto/tokens'
@@ -121,7 +122,10 @@ export async function POST(req: NextRequest) {
   }
 
   // 3. Filters — all acknowledged with 200 so Circle does not retry.
-  if (!content.body || content.body.length < 10) return Response.json({ ok: true })
+  // A short comment on a post we already track is part of the conversation;
+  // only content that would open a new ticket must be long enough.
+  const isTrackedReply = !!content.body && !!(await getTicketByThreadId(content.postId, integration.org_id))
+  if (!content.body || (content.body.length < 10 && !isTrackedReply)) return Response.json({ ok: true })
   if (!content.authorId || content.authorId === '0') return Response.json({ ok: true })
 
   const watched = parseChannelIds(integration)

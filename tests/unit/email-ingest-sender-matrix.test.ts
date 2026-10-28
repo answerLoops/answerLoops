@@ -82,7 +82,7 @@ describe('inbound sender check at the route', () => {
     it(`a matching sender with ${label} joins the existing ticket and is not held`, async () => {
       const { POST } = await import('@/app/api/email/ingest/route')
       await POST(inbound(headers) as never)
-      expect(h.recordCustomerReply).toHaveBeenCalledWith(77, expect.any(String))
+      expect(h.recordCustomerReply).toHaveBeenCalledWith(77, expect.any(String), expect.objectContaining({ messageId: expect.any(String) }))
       expect(h.processCommunityMessage).not.toHaveBeenCalled()
       expect(h.updateTicketAIDraftStatus).not.toHaveBeenCalled()
     })
@@ -153,7 +153,7 @@ describe('inbound sender check at the route', () => {
     for (const [label, build] of shapes) {
       it(`${label}: a passing result lets the reply join the ticket`, async () => {
         await post(build(ar))
-        expect(h.recordCustomerReply).toHaveBeenCalledWith(77, expect.any(String))
+        expect(h.recordCustomerReply).toHaveBeenCalledWith(77, expect.any(String), expect.objectContaining({ messageId: expect.any(String) }))
         expect(h.updateTicketAIDraftStatus).not.toHaveBeenCalled()
       })
       it(`${label}: a failing result holds the new ticket for a person`, async () => {

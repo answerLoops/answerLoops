@@ -1,10 +1,11 @@
 import { NextRequest } from 'next/server'
 import { getIntegrationByBotSecret, parseChannelIds } from '@/lib/db/queries/integrations'
-import { getTicketBySourceMessageInChannel } from '@/lib/db/queries/tickets'
+import { getTicketBySourceMessageInChannel, getTicketByThreadId } from '@/lib/db/queries/tickets'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { clampIngestContent, isIngestRateLimited, WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { telegramSourceMessageId } from '@/lib/telegram/message-id'
+import { telegramThreadId } from '@/lib/ingest/thread-keys'
 import { logger } from '@/lib/logger'
 
 const MOD = 'api/telegram/webhook'
@@ -27,6 +28,8 @@ interface TelegramMessage {
   chat: TelegramChat
   text?: string
   date: number
+  // Present when this message is a reply; carries the message it answers.
+  reply_to_message?: { message_id: number }
 }
 
 interface TelegramUpdate {
@@ -82,7 +85,21 @@ export async function POST(req: NextRequest) {
     return Response.json({ ok: true })
   }
 
-  if (message.text.trim().length < 10) return Response.json({ ok: true })
+  // A reply points at the message it answers. That message is the ticket's
+  // opening message or a reply already stored in its thread, so the reply
+  // continues that ticket. A ticket stored under the bare id (created before
+  // ids were namespaced by chat) is found by that id and its stored id used.
+  let threadId: string | undefined
+  if (message.reply_to_message) {
+    const repliedTo = message.reply_to_message.message_id
+    const legacyRoot = await getTicketBySourceMessageInChannel(String(repliedTo), chatId, orgId)
+    threadId = legacyRoot?.source_message_id ?? telegramThreadId(chatId, repliedTo) ?? undefined
+  }
+
+  // A short reply ("thanks, that worked") belongs to a conversation we already
+  // track; only a message that would open a new ticket must be long enough.
+  const isTrackedReply = threadId ? !!(await getTicketByThreadId(threadId, orgId)) : false
+  if (!isTrackedReply && message.text.trim().length < 10) return Response.json({ ok: true })
 
   // Telegram message ids repeat across chats, so new tickets are keyed by
   // chat + message. A ticket stored under the bare message id (created before
@@ -109,6 +126,7 @@ export async function POST(req: NextRequest) {
       authorId: String(message.from.id),
       authorName: message.from.username ?? message.from.first_name,
       channelId: chatId,
+      threadId,
       platform: 'telegram',
     },
     orgId

@@ -78,6 +78,7 @@ const EXISTING_TICKET = {
 beforeEach(() => {
   vi.clearAllMocks()
   getTicketBySourceMessageId.mockResolvedValue(null)
+  recordCustomerReply.mockResolvedValue(true)
 })
 
 describe('processCommunityMessage: thread replies append instead of creating a new ticket', () => {
@@ -100,7 +101,10 @@ describe('processCommunityMessage: thread replies append instead of creating a n
 
     expect(result).toEqual({ ticket_id: 42, appended: true })
     expect(getTicketByThreadId).toHaveBeenCalledWith('T123', 3)
-    expect(recordCustomerReply).toHaveBeenCalledWith(42, 'a follow-up reply in the thread')
+    expect(recordCustomerReply).toHaveBeenCalledWith(42, 'a follow-up reply in the thread', {
+      authorName: expect.any(String),
+      messageId: expect.any(String),
+    })
   })
 
   it('notifies staff with the org-local ticket number, not the raw id', async () => {

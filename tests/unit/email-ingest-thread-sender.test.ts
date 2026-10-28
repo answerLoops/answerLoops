@@ -75,7 +75,7 @@ describe('email ingest — threading by sender', () => {
     const { POST } = await import('@/app/api/email/ingest/route')
     const res = await POST(inbound('Customer <Customer@Example.com>') as never)
     expect(res.status).toBe(200)
-    expect(h.recordCustomerReply).toHaveBeenCalledWith(77, expect.any(String))
+    expect(h.recordCustomerReply).toHaveBeenCalledWith(77, expect.any(String), expect.objectContaining({ messageId: expect.any(String) }))
     expect(h.processCommunityMessage).not.toHaveBeenCalled()
   })
 
@@ -140,7 +140,7 @@ describe('email ingest — sender verification', () => {
   it('accepts provider payload fields as the sender check when no header is present', async () => {
     const { POST } = await import('@/app/api/email/ingest/route')
     await POST(inbound('Customer <customer@example.com>', { ...unverified, spf: 'pass', dkim: '{@example.com : pass}' }) as never)
-    expect(h.recordCustomerReply).toHaveBeenCalledWith(77, expect.any(String))
+    expect(h.recordCustomerReply).toHaveBeenCalledWith(77, expect.any(String), expect.objectContaining({ messageId: expect.any(String) }))
     expect(h.updateTicketAIDraftStatus).not.toHaveBeenCalled()
   })
 
