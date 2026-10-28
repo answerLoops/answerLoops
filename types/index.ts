@@ -70,8 +70,12 @@ export interface TicketReply {
   staff_name: string
   content: string
   discord_msg_id: string | null
+  author_role: TicketReplyRole
+  source_message_id: string | null
   created_at: string
 }
+
+export type TicketReplyRole = 'staff' | 'customer' | 'context'
 
 export interface TicketEvent {
   id: number

@@ -15,7 +15,7 @@ import {
   csatRatings,
   kbArticles,
 } from '../schema'
-import type { Ticket, CreateTicketInput, TicketFilters, TicketReply, TicketEvent, AIDraftSkipReason } from '@/types'
+import type { Ticket, CreateTicketInput, TicketFilters, TicketReply, TicketReplyRole, TicketEvent, AIDraftSkipReason } from '@/types'
 
 function toTicket(row: typeof tickets.$inferSelect): Ticket {
   return {
@@ -60,6 +60,8 @@ function toReply(row: typeof ticketReplies.$inferSelect): TicketReply {
     staff_name: row.staffName,
     content: row.content,
     discord_msg_id: row.discordMsgId,
+    author_role: row.authorRole as TicketReplyRole,
+    source_message_id: row.sourceMessageId,
     created_at: row.createdAt,
   }
 }
@@ -338,11 +340,23 @@ export async function getTicketBySourceMessageInChannel(
 // common case — even on the webhook path, which otherwise receives every
 // reply correctly.
 export async function getTicketByThreadId(threadId: string, orgId: number): Promise<Ticket | null> {
-  const [row] = await getDb()
+  const db = getDb()
+  // A reply to a message that was itself appended to a ticket (a reply to a
+  // reply) carries that message's id, which only exists on the stored thread
+  // message, so that is searched too. Scoped by org through the ticket row.
+  const appendedTo = db
+    .select({ ticketId: ticketReplies.ticketId })
+    .from(ticketReplies)
+    .where(eq(ticketReplies.sourceMessageId, threadId))
+  const [row] = await db
     .select()
     .from(tickets)
     .where(and(
-      or(eq(tickets.sourceThreadId, threadId), eq(tickets.sourceMessageId, threadId)),
+      or(
+        eq(tickets.sourceThreadId, threadId),
+        eq(tickets.sourceMessageId, threadId),
+        inArray(tickets.id, appendedTo)
+      ),
       eq(tickets.orgId, orgId)
     ))
     .orderBy(desc(tickets.createdAt))
@@ -465,7 +479,7 @@ export async function getTicketReplies(ticketId: number): Promise<TicketReply[]>
     .select()
     .from(ticketReplies)
     .where(eq(ticketReplies.ticketId, ticketId))
-    .orderBy(ticketReplies.createdAt)
+    .orderBy(ticketReplies.createdAt, ticketReplies.id)
   return rows.map(toReply)
 }
 
@@ -599,19 +613,45 @@ export async function markThreadDiscordDeleted(threadId: string): Promise<void> 
     .where(eq(tickets.sourceThreadId, threadId))
 }
 
+export interface ThreadMessageInput {
+  /** Who wrote it, as the channel names them. Defaults to "Customer". */
+  authorName?: string
+  /** The channel's own id for this message; makes a redelivery a no-op. */
+  messageId?: string
+}
+
 /**
- * Record an inbound customer email reply as a follow-up on an existing ticket.
- * Reopens the ticket if it was resolved/closed — a reply means the issue
+ * Record an inbound customer message as a follow-up on an existing ticket:
+ * an email reply, or a message in a chat/forum/issue thread the ticket came
+ * from. Reopens the ticket if it was resolved/closed — a reply means the issue
  * isn't actually done. System path (webhook ingest), so unscoped by design.
+ * Returns false, changing nothing, when this exact message is already stored.
  */
-export async function recordCustomerReply(ticketId: number, content: string): Promise<void> {
+export async function recordCustomerReply(
+  ticketId: number,
+  content: string,
+  input: ThreadMessageInput = {}
+): Promise<boolean> {
   const ticket = await getTicketByIdUnscoped(ticketId)
   if (!ticket) throw new Error('Ticket not found')
 
+  const db = getDb()
+  const authorName = input.authorName ?? 'Customer'
+  const inserted = await db
+    .insert(ticketReplies)
+    .values({
+      ticketId,
+      staffName: authorName,
+      content,
+      authorRole: 'customer',
+      sourceMessageId: input.messageId ?? null,
+    })
+    .onConflictDoNothing()
+    .returning({ id: ticketReplies.id })
+  if (inserted.length === 0) return false
+
   const now = new Date().toISOString()
   const wasClosed = ticket.status === 'resolved' || ticket.status === 'closed'
-  const db = getDb()
-
   if (wasClosed) {
     await db
       .update(tickets)
@@ -628,12 +668,32 @@ export async function recordCustomerReply(ticketId: number, content: string): Pr
     newValue: wasClosed ? 'open' : null,
     actor: 'customer',
   })
+  return true
+}
 
-  await db.insert(ticketReplies).values({
-    ticketId,
-    staffName: 'Customer',
-    content,
-  })
+/**
+ * Keep a message in a ticket's thread without treating it as a customer
+ * follow-up: it does not reopen the ticket, log an event, or notify anyone.
+ * Used for maintainers' messages so the conversation reads completely.
+ * Returns false when this exact message is already stored.
+ */
+export async function recordThreadContext(
+  ticketId: number,
+  content: string,
+  input: ThreadMessageInput & { authorName: string }
+): Promise<boolean> {
+  const inserted = await getDb()
+    .insert(ticketReplies)
+    .values({
+      ticketId,
+      staffName: input.authorName,
+      content,
+      authorRole: 'context',
+      sourceMessageId: input.messageId ?? null,
+    })
+    .onConflictDoNothing()
+    .returning({ id: ticketReplies.id })
+  return inserted.length > 0
 }
 
 // Real bug found live: this only ever cleared 3 of the ~9 tables that

@@ -181,8 +181,24 @@ export const ticketReplies = pgTable('ticket_replies', {
   staffName: text('staff_name').notNull(),
   content: text('content').notNull(),
   discordMsgId: text('discord_msg_id'),
+  // Who wrote this message: 'staff' (a team member replying from the
+  // dashboard), 'customer' (an inbound message that continued the thread), or
+  // 'context' (a maintainer's message kept so the thread reads completely; it
+  // never created a ticket or a notification).
+  authorRole: text('author_role').notNull().default('staff'),
+  // The channel's own id for an inbound message. Unique per ticket so a
+  // redelivered webhook is stored once, and searched by getTicketByThreadId
+  // so a reply to this message finds the ticket it belongs to.
+  sourceMessageId: text('source_message_id'),
   createdAt: text('created_at').notNull().default(now),
-})
+}, (t) => [
+  uniqueIndex('ticket_replies_ticket_source_message_unique')
+    .on(t.ticketId, t.sourceMessageId)
+    .where(sql`${t.sourceMessageId} IS NOT NULL`),
+  index('idx_ticket_replies_source_message')
+    .on(t.sourceMessageId)
+    .where(sql`${t.sourceMessageId} IS NOT NULL`),
+])
 
 export const ticketEvents = pgTable('ticket_events', {
   id: serial('id').primaryKey(),
