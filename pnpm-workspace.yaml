@@ -82,3 +82,5 @@ overrides:
   '@azure/msal-node@<7.1.0': '7.1.0'   # keep on a patched release — reached via @copilotkit/channels-teams (Teams adapter, not loaded by this app)
   'happy-dom@<21.0.4': '21.0.4'   # keep on a patched release — reached via the CopilotKit runtime channel packages
   'zod@>=3.0.0 <4.0.0': '4.6.6'   # keep on a patched release — reached via @ag-ui/client, @a2ui/web_core and @microsoft/agents-activity, which declare ^3
+  graphql-scalars: '>=2.0.1 <3.0.0'   # keep on a patched release — reached via the CopilotKit runtime and type-graphql, which declare ^1.x. No 1.x release carries the fix, so this forces a major past their declared range (same risk as the katex entry above); the scalars they use (JSON, JSON object, ISO date-time) are unchanged in 2.x. Capped below 3.x per the open-range lesson above
+  re2js: '>=2.8.7 <3.0.0'   # keep on a patched release — reached via @mastra/core, which declares ^2.8.6 (satisfied). Capped below 3.x per the open-range lesson above

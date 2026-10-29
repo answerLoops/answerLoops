@@ -129,11 +129,13 @@ const nextConfig: NextConfig = {
       },
       // Let Next.js manage asset caching: production hashes are immutable,
       // while development chunks must refresh as source files change.
-      // Static marketing + docs pages. These carry no per-visitor content (the
+      // Marketing + docs pages. These carry no per-visitor content (the
       // header CTA is a client island that calls /api/nav-state after
       // hydration), and the auth proxy is scoped off them in proxy.ts so no
       // session cookie is set — so Cloudflare can hold them at the edge and
-      // revalidate in the background. Kept off /pricing, which stays dynamic
+      // revalidate in the background. The docs render per request (their
+      // header link follows the deployment setting), and this header still
+      // applies to those responses. Kept off /pricing, which stays dynamic
       // for its resume-flow redirect. `max-age=0` keeps browsers revalidating
       // while `s-maxage` lets the shared cache serve hits.
       {

@@ -35,6 +35,29 @@ describe('dashboard navigation', () => {
     expect(screen.getByRole('link', { name: /Tickets/ })).toHaveAttribute('aria-current', 'page')
     expect(screen.getByRole('link', { name: /Dashboard/ })).not.toHaveAttribute('aria-current')
   })
+
+  it('shows the changelog link, in a new tab, when one is passed down', () => {
+    render(<SidebarNav changelogUrl="https://answerloops.com/changelog" />)
+
+    const link = screen.getByRole('link', { name: /What.s new/ })
+    expect(link).toHaveAttribute('href', 'https://answerloops.com/changelog')
+    // Opens outside the app, so it must not hand the dashboard's origin away
+    // to the tab it lands in.
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('shows no changelog link when none is passed down', () => {
+    // A self-hosted install serves no /changelog, and the layout passes nothing
+    // rather than a link that 404s.
+    render(<SidebarNav />)
+
+    // Match the text, not the link role: without an address the entry would be
+    // an anchor with no href, which is not exposed as a link, so a role query
+    // would pass even if the entry rendered. The label also uses a typographic
+    // apostrophe, so match any character there.
+    expect(screen.queryByText(/What.s new/)).not.toBeInTheDocument()
+  })
 })
 
 describe('dashboard stats', () => {

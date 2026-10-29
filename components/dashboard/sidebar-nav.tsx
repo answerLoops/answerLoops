@@ -129,7 +129,7 @@ const navItems: NavItem[] = [
   },
 ]
 
-export function SidebarNav() {
+export function SidebarNav({ changelogUrl }: { changelogUrl?: string }) {
   const pathname = usePathname()
   const groups = ['Monitor', 'Support', 'Improve', 'Configure'] as const
   const [planId, setPlanId] = useState<string | null>(null)
@@ -192,6 +192,27 @@ export function SidebarNav() {
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
           </svg>
         </a>
+        {/* Passed down from the dashboard layout, which is a server component
+            and can read the deployment flag directly. Absent on a self-hosted
+            install, which 404s /changelog. */}
+        {changelogUrl && (
+          <a
+            href={changelogUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-[0.8125rem] font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
+          >
+            <span className="text-slate-400">
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2v4"/><path d="m16.2 7.8 2.9-2.9"/><path d="M18 12h4"/><path d="m16.2 16.2 2.9 2.9"/><path d="M12 18v4"/><path d="m4.9 19.1 2.9-2.9"/><path d="M2 12h4"/><path d="m4.9 4.9 2.9 2.9"/>
+              </svg>
+            </span>
+            What&rsquo;s new
+            <svg className="ml-auto h-3 w-3 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+          </a>
+        )}
       </div>
     </nav>
   )

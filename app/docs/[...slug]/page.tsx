@@ -36,10 +36,6 @@ export default async function DocPage({
   )
 }
 
-export async function generateStaticParams() {
-  return docsSource.generateParams()
-}
-
 export async function generateMetadata({
   params,
 }: {

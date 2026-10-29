@@ -17,6 +17,7 @@ import { getBudgetStatus } from '@/lib/billing/platform-ai-budget'
 import { listIntegrations } from '@/lib/db/queries/integrations'
 import { getRepos } from '@/lib/db/queries/github'
 import { MARKETING_URL } from '@/lib/site'
+import { docsChangelogLink } from '@/lib/marketing/changelog-link'
 
 const PLATFORM_LABEL: Record<string, string> = {
   discord: 'Discord',
@@ -48,6 +49,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .map((i) => PLATFORM_LABEL[i.platform] ?? i.platform)
   if (repos.some((r) => r.auto_deflect_enabled === 0)) offPlatforms.push('GitHub')
 
+  // The changelog is a marketing page, so a self-hosted install has none to
+  // link to and the sidebar drops the entry. Resolved here rather than in the
+  // sidebar because this is a server component and can read the deployment
+  // flag; the sidebar is a client component and cannot.
+  const changelogUrl = docsChangelogLink()?.url
+
   const sidebarContent = (
     <>
       <div className="border-b border-slate-200 px-4 py-5">
@@ -61,7 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </div>
         </Link>
       </div>
-      <SidebarNav />
+      <SidebarNav changelogUrl={changelogUrl} />
     </>
   )
 
