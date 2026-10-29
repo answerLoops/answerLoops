@@ -16,6 +16,17 @@ describe('bot knowledge-base retention sweep', () => {
     expect(bot).toMatch(/import \{[^}]*\bpurgeExpiredReviewText\b[^}]*\} from '(?:@|\.\.)\/lib\/db\/queries\/kb-review'/)
     expect(bot).toMatch(/import \{[^}]*\bpruneArticleUsage\b[^}]*\} from '(?:@|\.\.)\/lib\/db\/queries\/kb-usage'/)
     expect(bot).toMatch(/import \{[^}]*\bpruneAnswerReferences\b[^}]*\} from '(?:@|\.\.)\/lib\/db\/queries\/kb-answers'/)
+    expect(bot).toMatch(/import \{[^}]*\bsweepSupportAssessments\b[^}]*\} from '(?:@|\.\.)\/lib\/db\/queries\/kb-support'/)
+  })
+
+  it('sweeps source-support evidence in the same pass, before the answers they hang from', () => {
+    const support = fn.indexOf('await sweepSupportAssessments()')
+    const answers = fn.indexOf('await pruneAnswerReferences()')
+    expect(support).toBeGreaterThan(-1)
+    expect(support).toBeLessThan(answers)
+    expect(fn).toMatch(/support\.excerptsCleared > 0 \|\| support\.assessmentsDeleted > 0/)
+    expect(fn).toMatch(/supportExcerptsCleared: support\.excerptsCleared/)
+    expect(fn).toMatch(/supportAssessmentsDeleted: support\.assessmentsDeleted/)
   })
 
   it('runs once a day', () => {

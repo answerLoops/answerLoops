@@ -533,6 +533,121 @@ export const kbAnswerReferences = pgTable(
   ]
 )
 
+// Source support (#437): where an assessment of whether a supplied article
+// supports a generated answer is stored. See drizzle/0066 for the design: one
+// assessment per answer and method version, one finding per supplied article
+// under it, one per claim the judge tied to a passage, human flags in their own
+// table, and per-workspace switches that all default to off. Evidence text is
+// bounded, opt-in and expires on its own; the findings stay.
+export const kbSupportSettings = pgTable('kb_support_settings', {
+  orgId: integer('org_id').primaryKey().references(() => orgs.id, { onDelete: 'cascade' }),
+  widgetEnabled: integer('widget_enabled').notNull().default(0),
+  ticketEnabled: integer('ticket_enabled').notNull().default(0),
+  discordEnabled: integer('discord_enabled').notNull().default(0),
+  agentApiEnabled: integer('agent_api_enabled').notNull().default(0),
+  // Null is unset, which assesses nothing; 0..1 otherwise.
+  samplingRate: doublePrecision('sampling_rate'),
+  // Most assessments per day; null is unset, which assesses nothing.
+  dailyLimit: integer('daily_limit'),
+  excerptStorageEnabled: integer('excerpt_storage_enabled').notNull().default(0),
+  updatedBy: integer('updated_by').references(() => users.id, { onDelete: 'set null' }),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+})
+
+export const kbSupportAssessments = pgTable(
+  'kb_support_assessments',
+  {
+    id: serial('id').primaryKey(),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    answerId: uuid('answer_id').notNull().references(() => kbAnswers.id, { onDelete: 'cascade' }),
+    method: text('method').notNull(),
+    methodVersion: integer('method_version').notNull(),
+    rubricVersion: integer('rubric_version').notNull(),
+    // 'completed' | 'failed' | 'skipped'
+    executionState: text('execution_state').notNull(),
+    skipReason: text('skip_reason'),
+    failReason: text('fail_reason'),
+    // 'supporting' | 'no_support' | 'inconclusive' | 'not_assessed'
+    answerSummary: text('answer_summary').notNull(),
+    judgeModel: text('judge_model'),
+    similarityFloor: doublePrecision('similarity_floor'),
+    judgeInputTokens: integer('judge_input_tokens'),
+    judgeOutputTokens: integer('judge_output_tokens'),
+    embeddingTokens: integer('embedding_tokens'),
+    assessedAt: timestamp('assessed_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  },
+  (t) => [
+    unique('uq_kb_support_assessments_answer_method').on(t.answerId, t.methodVersion, t.rubricVersion),
+    index('idx_kb_support_assessments_org_assessed').on(t.orgId, t.assessedAt),
+    index('idx_kb_support_assessments_assessed').on(t.assessedAt),
+  ]
+)
+
+export const kbSupportArticleFindings = pgTable(
+  'kb_support_article_findings',
+  {
+    id: serial('id').primaryKey(),
+    assessmentId: integer('assessment_id').notNull().references(() => kbSupportAssessments.id, { onDelete: 'cascade' }),
+    // The reference row, not the article: it survives the article's deletion.
+    referenceId: integer('reference_id').notNull().references(() => kbAnswerReferences.id, { onDelete: 'cascade' }),
+    articleContentHash: text('article_content_hash').notNull(),
+    // 'supporting' | 'no_support' | 'inconclusive'; a pair not assessed has no row.
+    summary: text('summary').notNull(),
+    reasons: text('reasons').array().notNull().default(sql`'{}'::text[]`),
+    sharedWithReferenceIds: integer('shared_with_reference_ids').array().notNull().default(sql`'{}'::integer[]`),
+  },
+  (t) => [
+    unique('uq_kb_support_article_findings_assessment_reference').on(t.assessmentId, t.referenceId),
+    index('idx_kb_support_article_findings_reference').on(t.referenceId),
+  ]
+)
+
+export const kbSupportClaimFindings = pgTable(
+  'kb_support_claim_findings',
+  {
+    id: serial('id').primaryKey(),
+    articleFindingId: integer('article_finding_id').notNull().references(() => kbSupportArticleFindings.id, { onDelete: 'cascade' }),
+    claimIndex: integer('claim_index').notNull(),
+    // 'supports' | 'partial' | 'contradicts' | 'inconclusive'; "none" is implicit.
+    label: text('label').notNull(),
+    passageIndex: integer('passage_index').notNull(),
+    claimExcerpt: text('claim_excerpt'),
+    passageExcerpt: text('passage_excerpt'),
+    evidenceExpiresAt: timestamp('evidence_expires_at', { withTimezone: true, mode: 'string' }),
+  },
+  (t) => [
+    unique('uq_kb_support_claim_findings_article_claim').on(t.articleFindingId, t.claimIndex),
+    index('idx_kb_support_claim_findings_expiry')
+      .on(t.evidenceExpiresAt)
+      .where(sql`${t.claimExcerpt} IS NOT NULL OR ${t.passageExcerpt} IS NOT NULL`),
+  ]
+)
+
+export const kbSupportFlags = pgTable(
+  'kb_support_flags',
+  {
+    id: serial('id').primaryKey(),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    articleFindingId: integer('article_finding_id').notNull().references(() => kbSupportArticleFindings.id, { onDelete: 'cascade' }),
+    claimFindingId: integer('claim_finding_id').references(() => kbSupportClaimFindings.id, { onDelete: 'cascade' }),
+    userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+    // 'agree' | 'disagree'
+    verdict: text('verdict').notNull(),
+    note: text('note'),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('uq_kb_support_flags_article_user')
+      .on(t.articleFindingId, t.userId)
+      .where(sql`${t.claimFindingId} IS NULL AND ${t.userId} IS NOT NULL`),
+    uniqueIndex('uq_kb_support_flags_claim_user')
+      .on(t.claimFindingId, t.userId)
+      .where(sql`${t.claimFindingId} IS NOT NULL AND ${t.userId} IS NOT NULL`),
+    index('idx_kb_support_flags_org').on(t.orgId, t.articleFindingId),
+  ]
+)
+
 // Questions the assistant answered without any knowledge-base coverage,
 // captured so a person can review, fine-tune and approve the answer before it
 // becomes a published article. Nothing here is searchable or served to anyone

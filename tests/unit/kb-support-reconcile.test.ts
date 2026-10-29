@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { ReconciliationError, reconcileAnswers, reconcilePairs, type PairItem } from '@/lib/kb/support/reconcile'
+import {
+  ReconciliationError,
+  reconcileAnswerGroups,
+  reconcileAnswers,
+  reconcilePairGroups,
+  reconcilePairs,
+  type Group,
+  type PairItem,
+} from '@/lib/kb/support/reconcile'
 import type { SupportSummary } from '@/lib/kb/support/summary'
 
 const pairs = (spec: Record<SupportSummary, number>, outcome: PairItem['outcome'] = 'generated'): PairItem[] => {
@@ -121,5 +129,49 @@ describe('reconcileAnswers', () => {
     const r = reconcileAnswers(answers({ supporting: 1, no_support: 1, inconclusive: 0, not_assessed: 3 }))
     expect(r.notAssessed).toBe(3)
     expect(r.completedAssessments).toBe(2)
+  })
+})
+
+describe('reconcile from groups, as a database counts them', () => {
+  const groups: Group[] = [
+    { outcome: 'generated', summary: 'supporting', count: 20 },
+    { outcome: 'generated', summary: 'no_support', count: 35 },
+    { outcome: 'generated', summary: 'inconclusive', count: 5 },
+    { outcome: 'generated', summary: 'not_assessed', count: 40 },
+    { outcome: 'failed', summary: 'not_assessed', count: 12 },
+  ]
+
+  it('gives the same numbers as counting the rows one by one, without loading them', () => {
+    const items = pairs({ supporting: 20, no_support: 35, inconclusive: 5, not_assessed: 40 })
+    expect(reconcilePairGroups(groups, { expectedSupplied: 100 })).toEqual({ ...reconcilePairs(items), failed: { pairs: 12 } })
+  })
+
+  it('reconciles answers the same way, with failed generations apart', () => {
+    expect(reconcileAnswerGroups(groups, { expectedCompleted: 100 })).toMatchObject({ completed: 100, supporting: 20, noSupport: 35, inconclusive: 5, notAssessed: 40, failed: { answers: 12 } })
+  })
+
+  it('adds up several groups that share an outcome and summary', () => {
+    const split: Group[] = [
+      { outcome: 'generated', summary: 'supporting', count: 3 },
+      { outcome: 'generated', summary: 'supporting', count: 4 },
+    ]
+    expect(reconcilePairGroups(split)).toMatchObject({ supplied: 7, supporting: 7 })
+  })
+
+  it('throws when the independently counted total disagrees', () => {
+    expect(() => reconcilePairGroups(groups, { expectedSupplied: 99 })).toThrow(/Expected 99 supplied, found 100/)
+    expect(() => reconcileAnswerGroups(groups, { expectedCompleted: 101 })).toThrow(/Expected 101 completed answers, found 100/)
+  })
+
+  it('throws on a summary, an outcome or a count it does not recognise', () => {
+    expect(() => reconcilePairGroups([{ outcome: 'generated', summary: 'used' as never, count: 1 }])).toThrow(/Unknown summary: used/)
+    expect(() => reconcilePairGroups([{ outcome: 'maybe' as never, summary: 'supporting', count: 1 }])).toThrow(/Unknown outcome/)
+    for (const count of [-1, 1.5, Number.NaN]) {
+      expect(() => reconcilePairGroups([{ outcome: 'generated', summary: 'supporting', count }])).toThrow(/Bad count/)
+    }
+  })
+
+  it('reconciles an empty population', () => {
+    expect(reconcilePairGroups([])).toMatchObject({ supplied: 0, supportRate: null, failed: { pairs: 0 } })
   })
 })
