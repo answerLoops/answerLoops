@@ -1,6 +1,7 @@
 import { eq, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { subscriptions, webhookEvents } from '../schema'
+import { isAppManagedTrial, trialHasEnded } from '@/lib/billing/trial'
 
 interface Subscription {
   id: number
@@ -19,12 +20,26 @@ interface Subscription {
   updatedAt: string
 }
 
+/**
+ * The status every access check reads. A trial this app started has no Stripe
+ * subscription to end it, so nothing would ever flip the stored row: the
+ * expiry is applied here, at the one place all subscription reads pass
+ * through, so no caller can forget it. `trial_expired` is outside the set of
+ * statuses that grant access (hasActiveAccess) and outside the AI budget tiers
+ * (tierForStatus), so the org is locked out until it subscribes and a card is
+ * taken at checkout.
+ */
+function effectiveStatus(row: typeof subscriptions.$inferSelect): string {
+  const trial = { status: row.status, stripeSubscriptionId: row.stripeSubscriptionId }
+  return isAppManagedTrial(trial) && trialHasEnded(row.trialEndsAt) ? 'trial_expired' : row.status
+}
+
 function toSub(row: typeof subscriptions.$inferSelect): Subscription {
   return {
     id: row.id,
     orgId: row.orgId,
     planId: row.planId,
-    status: row.status,
+    status: effectiveStatus(row),
     stripeCustomerId: row.stripeCustomerId,
     stripeSubscriptionId: row.stripeSubscriptionId,
     stripePriceId: row.stripePriceId,

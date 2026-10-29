@@ -128,18 +128,34 @@ export async function POST(req: Request) {
           break
         }
 
+        // The trial is card-free and runs in this app (lib/billing/trial.ts),
+        // so a completed checkout is always a purchase, never a trial: Stripe
+        // sessions no longer carry trial_period_days. Access is granted only
+        // when the money side is settled — 'paid', or 'no_payment_required'
+        // for a fully discounted code. A delayed payment method that has not
+        // cleared yet stays 'incomplete', which grants nothing, until
+        // customer.subscription.updated reports it active.
+        const checkoutStatus =
+          session.payment_status === 'paid' || session.payment_status === 'no_payment_required'
+            ? 'active'
+            : 'incomplete'
+
         // The read and write must be one transaction. Stripe can deliver two
         // checkout events for an org concurrently; a standalone read-before-
         // write lets both requests decide they are the first subscription.
         const isFirstSubscription = await upsertSubscriptionAndClaimWelcome({
           orgId,
           planId: requestedPlan.id,
-          status: 'trialing',
+          status: checkoutStatus,
           stripeCustomerId: session.customer as string,
           stripeSubscriptionId: session.subscription as string,
+          // Clears the app-managed trial window. The trial is over the moment
+          // someone subscribes; keeping its end date on the row would leave a
+          // paid subscription reading as a trial.
+          trialEndsAt: null,
           lastEventCreated: event.created,
         })
-        logger.info('Trial started via checkout', { module: MOD, orgId })
+        logger.info('Subscription started via checkout', { module: MOD, orgId, status: checkoutStatus })
 
         // The welcome email is sent from here rather than from account
         // creation. Finishing OAuth makes someone a user; finishing checkout

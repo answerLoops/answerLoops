@@ -77,7 +77,33 @@ export const users = pgTable('users', {
   name: text('name'),
   image: text('image'),
   provider: text('provider'),
+  // The sign-in provider's own stable id for this person (Google's `sub`).
+  // Unlike the email it never changes, and it is what the trial ledger keys on.
+  providerAccountId: text('provider_account_id'),
+  // Acceptance of the terms of service, and which version of them. Null for
+  // accounts created before consent was recorded.
+  termsAcceptedAt: timestamp('terms_accepted_at', { withTimezone: true }),
+  termsVersion: text('terms_version'),
+  // Explicit, separate consent to product updates. Never defaults to true.
+  marketingOptIn: boolean('marketing_opt_in').notNull().default(false),
+  marketingOptInAt: timestamp('marketing_opt_in_at', { withTimezone: true }),
+  lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: text('created_at').notNull().default(now),
+})
+
+// One row per person who has ever started a trial. Not cascaded from orgs or
+// users on purpose: deleting a workspace or an account must not hand the same
+// person another trial. Both keys are UNIQUE, so the database refuses a second
+// claim whichever path asks for it. See lib/billing/trial.ts.
+export const trialClaims = pgTable('trial_claims', {
+  id: serial('id').primaryKey(),
+  // SHA-256 of the normalized email, never the address itself.
+  identityKey: text('identity_key').notNull().unique('uq_trial_claims_identity_key'),
+  providerSubject: text('provider_subject').unique('uq_trial_claims_provider_subject'),
+  userId: integer('user_id').references(() => users.id, { onDelete: 'set null' }),
+  orgId: integer('org_id').references(() => orgs.id, { onDelete: 'set null' }),
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().default(now),
+  endsAt: timestamp('ends_at', { withTimezone: true }).notNull(),
 })
 
 export const memberships = pgTable('memberships', {
@@ -944,6 +970,10 @@ export const subscriptions = pgTable('subscriptions', {
   // (e.g. a stale 'active' update arriving after a newer cancellation)
   // instead of blindly overwriting newer state with older state.
   lastEventCreated: integer('last_event_created'),
+  // When each trial-ending reminder email was claimed; null = not sent. See
+  // lib/billing/trial-reminders.ts.
+  trialReminder3dSentAt: timestamp('trial_reminder_3d_sent_at', { withTimezone: true }),
+  trialReminder1dSentAt: timestamp('trial_reminder_1d_sent_at', { withTimezone: true }),
   createdAt: text('created_at').notNull().default(now),
   updatedAt: text('updated_at').notNull().default(now),
 })

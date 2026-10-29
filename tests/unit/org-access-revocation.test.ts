@@ -34,9 +34,13 @@ vi.mock('@/lib/db/drizzle', () => ({ getDb: () => fakeDb }))
 const mod = () => import('@/lib/auth/membership')
 
 // Column order matches the select in resolveOrgAccess: onboardedAt, deletedAt,
-// membershipId. pg-proxy returns positional rows.
-const row = (onboardedAt: string | null, deletedAt: string | null, membershipId: number | null) =>
-  [[onboardedAt, deletedAt, membershipId]]
+// membershipId, termsAcceptedAt. pg-proxy returns positional rows.
+const row = (
+  onboardedAt: string | null,
+  deletedAt: string | null,
+  membershipId: number | null,
+  termsAcceptedAt: string | null = '2026-01-01T00:00:00.000Z',
+) => [[onboardedAt, deletedAt, membershipId, termsAcceptedAt]]
 
 beforeEach(() => {
   calls.length = 0
@@ -56,7 +60,7 @@ describe('resolveOrgAccess: membership is required on every request', () => {
     const { resolveOrgAccess } = await mod()
     orgRow.value = row('2026-01-01', null, 900)
 
-    expect(await resolveOrgAccess(5, 42)).toEqual({ status: 'ok', onboardedAt: '2026-01-01' })
+    expect(await resolveOrgAccess(5, 42)).toMatchObject({ status: 'ok', onboardedAt: '2026-01-01' })
   })
 
   it('reports org-missing when the org row does not exist', async () => {

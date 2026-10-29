@@ -61,7 +61,7 @@ export const PRICING_FAQ = [
   },
   {
     q: 'What does the trial include?',
-    a: 'A hosted plan starts with a 14-day subscription trial, with the features and answer allowance of your selected plan. A card is required. Cancel before the trial ends to avoid the subscription charge. AI usage is included during the trial, up to a limit, so you can try everything without a provider key.',
+    a: 'Every new hosted account gets one free 14-day trial with every feature included. No card is required and there is no obligation. When it ends you choose a plan and add a card to continue; nothing is charged before then. AI usage is included during the trial, up to a limit, so you can try everything without a provider key.',
   },
   {
     q: 'Are AI model costs included?',

@@ -149,10 +149,11 @@ describe('the plan cards the header CTA points at', () => {
     expect(section).toMatch(/scroll-mt-/)
   })
 
-  it('carries the billing period through sign-in, not just the plan', () => {
-    // Direct sign-in URLs must still preserve an explicitly selected interval.
+  it('does not route an already-signed-in visitor through a plan', () => {
+    // The trial is card-free and starts with the account, so a plan chosen on
+    // the pricing page has nothing to buy and is not carried through sign-in.
     const src = read('app/login/page.tsx')
-    expect(src).toContain('parseBillingInterval')
-    expect(src).toMatch(/interval=\$\{parsed\}/)
+    expect(src).not.toContain('parseBillingInterval')
+    expect(src).toContain("'/dashboard'")
   })
 })

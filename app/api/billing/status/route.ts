@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { getSubscription } from '@/lib/db/queries/billing'
 import { checkDeflectionLimit } from '@/lib/billing/usage'
+import { isAppManagedTrial } from '@/lib/billing/trial'
 import { logger } from '@/lib/logger'
 
 const MOD = 'api/billing/status'
@@ -27,6 +28,9 @@ export async function GET() {
       planId: usage.planId,
       status,
       isTrialing,
+      // A trial this app runs, with no card and no Stripe subscription behind
+      // it: there is no billing portal to open, and "subscribe" is the action.
+      isAppTrial: !!sub && isAppManagedTrial(sub),
       trialEndsAt: sub?.trialEndsAt ?? null,
       used: usage.used,
       limit: usage.limit,

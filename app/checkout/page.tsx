@@ -7,14 +7,13 @@ import { LogoMark } from '@/components/logo'
 import { EmbeddedCheckoutPanel } from '@/components/billing/embedded-checkout-panel'
 import {
   ORDERED_PLANS,
-  TRIAL_DAYS,
-  HIGHLIGHTED_PLAN_ID,
+    HIGHLIGHTED_PLAN_ID,
   getPlan,
   parseBillingInterval,
   stripeConfigured,
   isCloudMisconfigured,
 } from '@/lib/billing/plans'
-import { orgHasProductAccess } from '@/lib/billing/access'
+import { orgHasProductAccess, orgIsOnAppTrial } from '@/lib/billing/access'
 import { parsePromoCode } from '@/lib/billing/promo-code'
 import { BillingMisconfigured } from '@/components/billing/billing-misconfigured'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
@@ -22,7 +21,7 @@ import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: 'Start your trial — answerLoops',
+  title: 'Choose your plan — answerLoops',
   robots: { index: false, follow: false },
 }
 
@@ -73,8 +72,10 @@ export default async function CheckoutPage({
   const orgId = session.orgId ?? DEFAULT_ORG_ID
 
   // Already paying. Sending them back through checkout would create a second
-  // subscription for an org that has one.
-  if (await orgHasProductAccess(orgId)) redirect('/dashboard')
+  // subscription for an org that has one. An org inside its free trial has
+  // access but no subscription, and is exactly who may subscribe early.
+  const onTrial = await orgIsOnAppTrial(orgId)
+  if (!onTrial && (await orgHasProductAccess(orgId))) redirect('/dashboard')
 
   // Arriving with no plan is the normal path now, not an error: every "start"
   // button goes to auth, and auth lands here. The plan is chosen on this page,
@@ -115,11 +116,12 @@ export default async function CheckoutPage({
       <main className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">
         <div className="max-w-2xl">
           <h1 className="text-3xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-4xl">
-            Start your {TRIAL_DAYS}-day trial.
+            {onTrial ? 'Keep everything you are using.' : 'Choose a plan to keep going.'}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base">
-            Nothing is charged for {TRIAL_DAYS} days. Cancel any time before then and you will not
-            be billed at all.
+            {onTrial
+              ? 'Subscribe now and your plan starts today. Your card is charged when you confirm.'
+              : 'Your free trial has ended, and your workspace and knowledge base are kept as you left them. Pick a plan and add a card to pick up where you stopped.'}
           </p>
         </div>
 

@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db/drizzle'
-import { memberships, orgs } from '@/lib/db/schema'
+import { memberships, orgs, users } from '@/lib/db/schema'
 
 /**
  * Is this user actually a member of this org?
@@ -74,7 +74,8 @@ export type OrgAccess =
   | { status: 'org-missing' }
   | { status: 'not-member' }
   | { status: 'org-deleted' }
-  | { status: 'ok'; onboardedAt: string | null }
+  // termsAcceptedAt is read here, with the rest, so the terms gate costs no extra query.
+  | { status: 'ok'; onboardedAt: string | null; termsAcceptedAt: Date | null }
 
 export async function resolveOrgAccess(userId: unknown, orgId: unknown): Promise<OrgAccess> {
   const uid = Number(userId)
@@ -89,9 +90,11 @@ export async function resolveOrgAccess(userId: unknown, orgId: unknown): Promise
       onboardedAt: orgs.onboardedAt,
       deletedAt: orgs.deletedAt,
       membershipId: memberships.id,
+      termsAcceptedAt: users.termsAcceptedAt,
     })
     .from(orgs)
     .leftJoin(memberships, and(eq(memberships.orgId, orgs.id), eq(memberships.userId, uid)))
+    .leftJoin(users, eq(users.id, uid))
     .where(eq(orgs.id, oid))
     .limit(1)
 
@@ -100,5 +103,5 @@ export async function resolveOrgAccess(userId: unknown, orgId: unknown): Promise
   // an org has no claim on it whatever state it is in, including a restore.
   if (row.membershipId === null) return { status: 'not-member' }
   if (row.deletedAt) return { status: 'org-deleted' }
-  return { status: 'ok', onboardedAt: row.onboardedAt }
+  return { status: 'ok', onboardedAt: row.onboardedAt, termsAcceptedAt: row.termsAcceptedAt ?? null }
 }

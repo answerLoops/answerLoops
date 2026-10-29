@@ -8,7 +8,7 @@ icon: CreditCard
   platform="stripe"
   source={{
     title: 'Your workspace',
-    text: 'On the hosted service, you pick a plan and start a trial through Stripe Checkout. A card is required up front, and the trial runs for 14 days.',
+    text: 'On the hosted service, every new account gets a 14-day free trial with no card. When it ends, you pick a plan and pay through Stripe Checkout. The card is charged when you confirm.',
   }}
   sourceLabel="Your billing"
   trigger={{
@@ -16,12 +16,12 @@ icon: CreditCard
     text: 'Stripe sends events such as checkout.session.completed to /api/billing/webhook. The webhook is the source of truth for your subscription, so access can take a moment to appear after Checkout.',
   }}
   steps={[
-    { title: 'Start the subscription', text: 'When Checkout completes, answerLoops records your plan as trialing and attaches the Stripe Customer to your workspace. Your welcome email is sent the first time only.' },
+    { title: 'Start the subscription', text: 'When Checkout completes and the payment succeeds, answerLoops records your plan as active, ends the free trial, and attaches the Stripe Customer to your workspace.' },
     { title: 'Keep it in sync', text: 'Plan changes, cancellations, and failed payments each arrive as their own event and update the subscription record. Opening or abandoning Checkout does not create a customer.' },
     { title: 'Check access locally', text: 'Access is read from answerLoops’s own subscription record, not from Stripe on each request. Self-hosted instances have no subscription and are never gated.' },
   ]}
   outcomes={[
-    { tone: 'post', title: 'Trial and plan active', text: 'Your workspace has access while the subscription is trialing or active. Your billing page shows days left in the trial and usage this month, and owners can open Manage subscription for invoices and payment details.' },
+    { tone: 'post', title: 'Trial and plan active', text: 'Your workspace has access during its free trial and while a subscription is active. Your billing page shows days left in the trial and usage this month, and owners can open Manage subscription for invoices and payment details.' },
     { tone: 'review', title: 'Payment past due', text: 'Access continues, and your billing page shows a past-due notice. Choose Manage subscription to add or update a payment method.' },
     { tone: 'escalate', title: 'Subscription canceled', text: 'When Stripe reports the subscription deleted, answerLoops marks it canceled and access ends.' },
   ]}
@@ -29,9 +29,26 @@ icon: CreditCard
   replyLabel="Your billing page reflects the subscription state Stripe reported"
 />
 
-answerLoops uses Stripe Checkout for hosted-plan trials and subscriptions. Stripe
-handles payment details, trial timing, invoices, and the customer portal; the
-application stores the subscription state needed to grant access.
+answerLoops uses Stripe Checkout for hosted-plan subscriptions. Stripe handles
+payment details, invoices, and the customer portal; the application stores the
+subscription state needed to grant access. The free trial is not a Stripe trial:
+it runs inside answerLoops, needs no card, and never touches Stripe.
+
+## The free trial
+
+Accepting the terms on a new hosted account starts one 14-day trial with every
+feature included. The trial is a subscription record with the `trialing` status
+and no Stripe subscription behind it, so it ends on its own date: once that
+passes, the record reads as `trial_expired`, access stops, and the person is sent
+to checkout to subscribe. Checkout then charges the card immediately; Stripe
+sessions carry no trial period.
+
+A trial is limited to one per person. Each trial is written to a ledger
+(`trial_claims`) keyed by a hash of the normalized email (case, `+tag` and Gmail dots
+folded, so the ledger never holds an address) and by the sign-in provider's own
+account id, each with a unique constraint, so the database refuses a second claim. The ledger is not removed
+when a workspace or account is deleted. Sign-in is refused for an email the
+provider has not verified. Included AI usage still applies during the trial. Three days and one day before the trial ends, a background sweep on the bot service emails the workspace owner a link straight to checkout, and the dashboard shows a banner for the last three days. Each email is recorded on the subscription so it is sent at most once.
 
 ## Customer lifecycle
 
@@ -39,7 +56,8 @@ Signing in with Google creates an answerLoops user and workspace, but it does
 not create a Stripe Customer. Opening or abandoning Checkout also does not count
 as becoming a customer. A Stripe Customer is attached to the workspace when
 Stripe sends the successful `checkout.session.completed` webhook, at the same
-time the subscription and welcome email are processed.
+time the subscription is recorded as active. The welcome email is sent when the
+free trial starts.
 
 When an existing subscriber changes plans, answerLoops reuses that workspace's
 Stripe Customer so the billing history stays together.

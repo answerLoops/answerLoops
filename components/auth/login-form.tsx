@@ -22,29 +22,19 @@ const ICONS: Record<SignInProviderId, () => React.JSX.Element> = {
 
 interface Props {
   providers: SignInProvider[]
-  signingIn?: boolean
-  /**
-   * Origin that serves the terms and privacy pages, or '' for this origin.
-   * On the hosted product those pages live on the marketing host, so a
-   * relative link from the app host resolves to an app-host URL that only
-   * redirects, and crawlers record each one as a "page with redirect".
-   */
-  legalBaseUrl?: string
 }
 
 /**
- * The sign-in methods, and the consent that gates creating an account.
- *
- * Signing up asks for agreement to the terms and privacy policy and holds the
- * buttons until it is given; signing in does not, because an existing account
- * has already agreed. The box starts checked so signup costs no extra click.
+ * The sign-in methods. One action for everyone: a person with an account is
+ * signed in, and a new person gets one created and then accepts the terms on
+ * the next step (see app/accept-terms), so nothing here needs to know which
+ * of the two it is talking to.
  *
  * Only the methods in `providers` are rendered. With none configured the page
  * says so instead of showing a button that cannot work.
  */
-export function LoginForm({ providers, signingIn = false, legalBaseUrl = '' }: Props) {
+export function LoginForm({ providers }: Props) {
   const [pendingId, setPendingId] = useState<SignInProviderId | null>(null)
-  const [agreed, setAgreed] = useState(true)
 
   if (providers.length === 0) {
     return (
@@ -62,81 +52,41 @@ export function LoginForm({ providers, signingIn = false, legalBaseUrl = '' }: P
     )
   }
 
-  const gated = !signingIn && !agreed
-
   return (
-    <div className="space-y-4">
-      <div className="space-y-3">
-        {providers.map((provider) => {
-          const Icon = ICONS[provider.id]
-          const pending = pendingId === provider.id
-          return (
-            <form
-              key={provider.id}
-              // Set from the submit event, not inside the action: a form action
-              // runs as a transition, and React holds state set inside one
-              // until it finishes — which for an OAuth redirect is the moment
-              // the page is already leaving.
-              onSubmit={() => setPendingId(provider.id)}
-              action={async () => {
-                try {
-                  await loginWithProvider(provider.id)
-                } catch (err) {
-                  // A failure must not leave every button disabled. The
-                  // redirect Next throws on success is rethrown untouched.
-                  setPendingId(null)
-                  throw err
-                }
-              }}
+    <div className="space-y-3">
+      {providers.map((provider) => {
+        const Icon = ICONS[provider.id]
+        const pending = pendingId === provider.id
+        return (
+          <form
+            key={provider.id}
+            // Set from the submit event, not inside the action: a form action
+            // runs as a transition, and React holds state set inside one
+            // until it finishes — which for an OAuth redirect is the moment
+            // the page is already leaving.
+            onSubmit={() => setPendingId(provider.id)}
+            action={async () => {
+              try {
+                await loginWithProvider(provider.id)
+              } catch (err) {
+                // A failure must not leave every button disabled. The
+                // redirect Next throws on success is rethrown untouched.
+                setPendingId(null)
+                throw err
+              }
+            }}
+          >
+            <button
+              type="submit"
+              disabled={pendingId !== null}
+              className="flex w-full items-center justify-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <button
-                type="submit"
-                disabled={pendingId !== null || gated}
-                className="flex w-full items-center justify-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Icon />
-                {pending
-                  ? 'Redirecting…'
-                  : `${signingIn ? 'Sign in' : 'Sign up'} with ${provider.label}`}
-              </button>
-            </form>
-          )
-        })}
-      </div>
-
-      {signingIn ? (
-        <p className="text-center text-xs leading-relaxed text-slate-500">
-          By continuing, you agree to our{' '}
-          <Link href={`${legalBaseUrl}/terms`} className="underline underline-offset-2 hover:text-slate-800">
-            Terms of Service
-          </Link>{' '}
-          and acknowledge our{' '}
-          <Link href={`${legalBaseUrl}/privacy`} className="underline underline-offset-2 hover:text-slate-800">
-            Privacy Policy
-          </Link>
-          .
-        </p>
-      ) : (
-        <label className="flex items-start gap-2.5 text-xs leading-relaxed text-slate-600">
-          <input
-            type="checkbox"
-            checked={agreed}
-            onChange={(e) => setAgreed(e.target.checked)}
-            className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 accent-slate-900"
-          />
-          <span>
-            I agree to the{' '}
-            <Link href={`${legalBaseUrl}/terms`} className="font-medium text-slate-900 underline underline-offset-2">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link href={`${legalBaseUrl}/privacy`} className="font-medium text-slate-900 underline underline-offset-2">
-              Privacy Policy
-            </Link>
-            .
-          </span>
-        </label>
-      )}
+              <Icon />
+              {pending ? 'Redirecting…' : `Sign in with ${provider.label}`}
+            </button>
+          </form>
+        )
+      })}
     </div>
   )
 }
