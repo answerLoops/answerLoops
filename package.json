@@ -1,6 +1,6 @@
 {
   "name": "community-platform",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "private": true,
   "scripts": {
     "prepare": "test -f scripts/install-hooks.sh && sh scripts/install-hooks.sh || true",

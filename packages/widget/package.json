@@ -1,6 +1,6 @@
 {
   "name": "@answerloops/widget",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "description": "Add the answerLoops chat widget to a React, Next.js or plain JavaScript site. Loads the widget from your answerLoops instance and answers from your published knowledge base.",
   "license": "AGPL-3.0",
   "type": "module",
