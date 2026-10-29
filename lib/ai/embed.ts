@@ -1,4 +1,4 @@
-import { embed } from 'ai'
+import { embed, embedMany } from 'ai'
 import { embeddingModel, resolveEmbedding, DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/models'
 
 export const EMBEDDING_MODEL = DEFAULT_EMBEDDING_MODEL
@@ -34,4 +34,20 @@ export async function embedText(text: string, orgId?: number): Promise<number[]>
  */
 export async function assertEmbeddingAvailable(orgId: number): Promise<void> {
   await embeddingModel(EMBEDDING_MODEL, orgId)
+}
+
+/**
+ * Embed several texts in one call, for work that compares texts with each other
+ * and stores nothing (source support's similarity check). Returns the vectors
+ * in the order given and the tokens the provider reported, so the cost can be
+ * recorded. Uses the workspace's own embedding provider, or its included
+ * usage, exactly like every other embedding call.
+ */
+export async function embedTexts(
+  texts: string[],
+  orgId?: number
+): Promise<{ embeddings: number[][]; tokens: number; model: string }> {
+  const { model, modelId } = await resolveEmbedding(EMBEDDING_MODEL, orgId)
+  const { embeddings, usage } = await embedMany({ model, values: texts })
+  return { embeddings, tokens: usage?.tokens ?? 0, model: modelId }
 }

@@ -27,6 +27,7 @@
     "changelog:sync": "node scripts/sync-changelog.mjs",
     "changelog:check": "node scripts/sync-changelog.mjs --check",
     "load-test": "tsx scripts/load-test-mcp-agent.ts",
+    "support:eval": "tsx scripts/support-eval.ts",
     "docs:seed": "tsx scripts/docs-demo/seed.ts",
     "docs:session": "tsx scripts/docs-demo/session.ts",
     "docs:shots": "tsx scripts/docs-demo/capture.ts",
