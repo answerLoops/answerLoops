@@ -5,12 +5,13 @@ import { RootProvider } from 'fumadocs-ui/provider/next'
 import { DocsLayout } from 'fumadocs-ui/layouts/docs'
 import { docsSource } from '@/lib/docs/source'
 import { GITHUB_SOURCE_URL } from '@/lib/site'
-import { docsChangelogLink } from '@/lib/marketing/changelog-link'
+import { resolveChangelogUrl } from '@/lib/marketing/changelog-link'
+import { DocsSidebarFooter } from '@/components/docs/docs-sidebar-footer'
 import './docs.css'
 import Script from 'next/script'
 
-// Rendered per request, not at build time. The changelog link in the header
-// depends on the deployment flag, which is resolved at request time — a value
+// Rendered per request, not at build time. The changelog link in the sidebar
+// footer depends on the deployment flag, which is resolved at request time — a value
 // the build machine does not have. Without this, the link would be baked in
 // (or baked out) by whatever the build environment happened to be, so the
 // managed deployment would ship docs with no Changelog entry. Same treatment
@@ -37,7 +38,7 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
   // deployment, and only this one link is conditional. See the
   // marketing-surface-gate test, which asserts this file never mentions the
   // flag so a future refactor cannot quietly gate the whole docs tree.
-  const changelogLink = docsChangelogLink()
+  const changelogUrl = resolveChangelogUrl()
 
   return (
     <RootProvider
@@ -72,6 +73,10 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
           url: 'https://answerloops.com',
         }}
         githubUrl={GITHUB_SOURCE_URL}
+        // The changelog sits at the foot of the sidebar, below the GitHub
+        // button, not in the header: the header is for getting in. Fumadocs
+        // renders the same footer in the mobile drawer.
+        sidebar={{ footer: <DocsSidebarFooter changelogUrl={changelogUrl} /> }}
         // RootProvider's theme.enabled: false above stops next-themes from
         // tracking a mode at all, but DocsLayout renders its own toggle
         // button regardless of that — a separate prop. Without this, the
@@ -84,9 +89,6 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
           // links in production, in-app routes in local/dev (nav-shared.ts).
           { text: SIGNIN_LABEL, url: SIGNIN_HREF },
           { type: 'button', text: START_LABEL, url: START_HREF },
-          // Resolved by the helper: absolute on a split-host deployment, and
-          // absent on a self-hosted install that serves no /changelog.
-          ...(changelogLink ? [changelogLink] : []),
         ]}
       >
         {widgetToken && (

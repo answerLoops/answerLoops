@@ -2,14 +2,15 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import type { ReactElement } from 'react'
 
 /**
- * The docs header decides whether to show the Changelog link when a page is
+ * The docs sidebar decides whether to show the Changelog link when a page is
  * requested, not when the site is built.
  *
  * The deployment setting is only known at request time, and the build machine
  * does not have it. A layout that read it while building would ship the same
  * answer to every deployment, and the managed one would get docs with no link.
  * Source-text checks cannot prove that, so this imports the real layout, sets
- * the setting after the import, and reads the links the header would receive.
+ * the setting after the import, and reads what the sidebar footer would
+ * receive. The link lives at the foot of the sidebar, never in the header.
  */
 
 vi.mock('fumadocs-ui/provider/next', () => ({ RootProvider: () => null }))
@@ -19,15 +20,22 @@ vi.mock('@/components/logo', () => ({ LogoMark: () => null }))
 vi.mock('next/script', () => ({ default: () => null }))
 
 import * as docsLayout from '@/app/docs/layout'
+import { DocsSidebarFooter } from '@/components/docs/docs-sidebar-footer'
 
 type HeaderLink = { text: unknown; url: string; type?: string }
+type LayoutProps = {
+  links: HeaderLink[]
+  sidebar?: { footer?: ReactElement<{ changelogUrl: string | null }> }
+}
 
 const ORIGINAL_MODE = process.env.DEPLOYMENT_MODE
 
-function headerLinks(): HeaderLink[] {
-  const root = docsLayout.default({ children: null }) as ReactElement<{ children: ReactElement<{ links: HeaderLink[] }> }>
-  return root.props.children.props.links
+function layoutProps(): LayoutProps {
+  const root = docsLayout.default({ children: null }) as ReactElement<{ children: ReactElement<LayoutProps> }>
+  return root.props.children.props
 }
+
+const footerUrl = () => layoutProps().sidebar?.footer?.props.changelogUrl
 
 afterEach(() => {
   if (ORIGINAL_MODE === undefined) delete process.env.DEPLOYMENT_MODE
@@ -39,34 +47,45 @@ describe('docs layout changelog link', () => {
     expect(docsLayout.dynamic).toBe('force-dynamic')
   })
 
-  it('adds the Changelog link on the managed deployment', () => {
+  it('puts the link in the sidebar footer on the managed deployment', () => {
     process.env.DEPLOYMENT_MODE = 'cloud'
-    expect(headerLinks()).toContainEqual({ text: 'Changelog', url: 'https://answerloops.com/changelog' })
+    const footer = layoutProps().sidebar?.footer
+    expect(footer?.type).toBe(DocsSidebarFooter)
+    expect(footer?.props.changelogUrl).toBe('https://answerloops.com/changelog')
   })
 
-  it('leaves the link out when the deployment is unset', () => {
+  it('hands the footer nothing when the deployment is unset', () => {
     delete process.env.DEPLOYMENT_MODE
-    expect(headerLinks().some((l) => l.text === 'Changelog')).toBe(false)
+    expect(footerUrl()).toBeNull()
   })
 
-  it('leaves the link out on a self-hosted deployment', () => {
+  it('hands the footer nothing on a self-hosted deployment', () => {
     process.env.DEPLOYMENT_MODE = 'self-hosted'
-    expect(headerLinks().some((l) => l.text === 'Changelog')).toBe(false)
+    expect(footerUrl()).toBeNull()
   })
 
   it('follows the setting on each call instead of fixing it once', () => {
     process.env.DEPLOYMENT_MODE = 'cloud'
-    expect(headerLinks().some((l) => l.text === 'Changelog')).toBe(true)
+    expect(footerUrl()).toBe('https://answerloops.com/changelog')
     process.env.DEPLOYMENT_MODE = 'self-hosted'
-    expect(headerLinks().some((l) => l.text === 'Changelog')).toBe(false)
+    expect(footerUrl()).toBeNull()
     process.env.DEPLOYMENT_MODE = 'cloud'
-    expect(headerLinks().some((l) => l.text === 'Changelog')).toBe(true)
+    expect(footerUrl()).toBe('https://answerloops.com/changelog')
+  })
+
+  it('keeps the changelog out of the header, in every deployment', () => {
+    for (const mode of ['cloud', 'self-hosted', undefined]) {
+      if (mode === undefined) delete process.env.DEPLOYMENT_MODE
+      else process.env.DEPLOYMENT_MODE = mode
+      const links = layoutProps().links
+      expect(links.some((l) => l.text === 'Changelog' || /changelog/i.test(l.url)), String(mode)).toBe(false)
+    }
   })
 
   it('keeps the sign-in and start entries in the header either way', () => {
     delete process.env.DEPLOYMENT_MODE
-    const links = headerLinks()
-    expect(links.length).toBeGreaterThanOrEqual(2)
+    const links = layoutProps().links
+    expect(links).toHaveLength(2)
     expect(links.some((l) => l.type === 'button')).toBe(true)
   })
 })

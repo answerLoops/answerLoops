@@ -1,8 +1,8 @@
 import { MARKETING_URL, marketingSiteEnabled } from '@/lib/site'
 
 /**
- * The changelog link for the docs header, or null when there is nothing to
- * link to.
+ * The changelog address for the docs sidebar and the dashboard sidebar, or null
+ * when there is nothing to link to.
  *
  * The changelog is a marketing page, and a self-hosted install serves no
  * marketing site — so /changelog 404s there and the link must not render. The
@@ -17,7 +17,7 @@ import { MARKETING_URL, marketingSiteEnabled } from '@/lib/site'
  * answer on different origins and a relative /changelog would be served by
  * the app, which has no such route.
  */
-export function docsChangelogLink(): { text: string; url: string } | null {
+export function resolveChangelogUrl(): string | null {
   if (!marketingSiteEnabled()) return null
-  return { text: 'Changelog', url: `${MARKETING_URL}/changelog` }
+  return `${MARKETING_URL}/changelog`
 }

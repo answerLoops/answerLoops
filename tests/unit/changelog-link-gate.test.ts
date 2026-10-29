@@ -24,35 +24,32 @@ afterAll(() => {
   else process.env.DEPLOYMENT_MODE = ORIGINAL_MODE
 })
 
-describe('docsChangelogLink', () => {
+describe('resolveChangelogUrl', () => {
   it('is null when DEPLOYMENT_MODE is unset, the default a clone gets', async () => {
     delete process.env.DEPLOYMENT_MODE
-    const { docsChangelogLink } = await import('@/lib/marketing/changelog-link')
-    expect(docsChangelogLink()).toBeNull()
+    const { resolveChangelogUrl } = await import('@/lib/marketing/changelog-link')
+    expect(resolveChangelogUrl()).toBeNull()
   })
 
   it('is null on an explicitly self-hosted deployment', async () => {
     process.env.DEPLOYMENT_MODE = 'self-hosted'
-    const { docsChangelogLink } = await import('@/lib/marketing/changelog-link')
-    expect(docsChangelogLink()).toBeNull()
+    const { resolveChangelogUrl } = await import('@/lib/marketing/changelog-link')
+    expect(resolveChangelogUrl()).toBeNull()
   })
 
   it('is the full changelog address on the managed deployment', async () => {
     process.env.DEPLOYMENT_MODE = 'cloud'
-    const { docsChangelogLink } = await import('@/lib/marketing/changelog-link')
-    expect(docsChangelogLink()).toEqual({
-      text: 'Changelog',
-      url: 'https://answerloops.com/changelog',
-    })
+    const { resolveChangelogUrl } = await import('@/lib/marketing/changelog-link')
+    expect(resolveChangelogUrl()).toBe('https://answerloops.com/changelog')
   })
 
   it('points at the marketing origin, not a relative path', async () => {
     // On a split-host deployment a relative /changelog would be served by the
     // app, which has no such route.
     process.env.DEPLOYMENT_MODE = 'cloud'
-    const { docsChangelogLink } = await import('@/lib/marketing/changelog-link')
-    const link = docsChangelogLink()
-    expect(link).not.toBeNull()
-    expect(new URL(link!.url).origin).toBe('https://answerloops.com')
+    const { resolveChangelogUrl } = await import('@/lib/marketing/changelog-link')
+    const url = resolveChangelogUrl()
+    expect(url).not.toBeNull()
+    expect(new URL(url!).origin).toBe('https://answerloops.com')
   })
 })
