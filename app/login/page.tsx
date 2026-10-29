@@ -138,7 +138,8 @@ export default async function LoginPage({ searchParams }: Props) {
             </p>
           </section>
 
-          <main className="flex flex-col justify-center rounded-3xl border border-slate-200 bg-white px-6 py-8 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] sm:px-8 sm:py-10">
+          {/* First on a phone, so the sign-in button is on screen without scrolling past the summary. */}
+          <main className="order-first flex flex-col justify-center rounded-3xl lg:order-none border border-slate-200 bg-white px-6 py-8 shadow-[0_20px_60px_-30px_rgba(15,23,42,0.25)] sm:px-8 sm:py-10">
             <h2 className="text-2xl font-semibold tracking-tight text-slate-950">
               Get started or sign in
             </h2>
