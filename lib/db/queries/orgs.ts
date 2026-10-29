@@ -24,6 +24,9 @@ import {
   kbReviewItems,
   kbArticleUsage,
   kbAnswers,
+  kbSupportAssessments,
+  kbSupportFlags,
+  kbSupportSettings,
   kbArticleEvents,
   integrations,
   emailMessages,
@@ -171,6 +174,11 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     await tx.delete(kbArticleEvents).where(eq(kbArticleEvents.orgId, orgId))
     await tx.delete(kbReviewItems).where(eq(kbReviewItems.orgId, orgId))
     await tx.delete(kbArticleUsage).where(eq(kbArticleUsage.orgId, orgId))
+    // Source support: flags, then the assessments (their findings go with them), then the
+    // settings, all before the answers and references they hang from.
+    await tx.delete(kbSupportFlags).where(eq(kbSupportFlags.orgId, orgId))
+    await tx.delete(kbSupportAssessments).where(eq(kbSupportAssessments.orgId, orgId))
+    await tx.delete(kbSupportSettings).where(eq(kbSupportSettings.orgId, orgId))
     // References go with their answers, before the articles they point at.
     await tx.delete(kbAnswers).where(eq(kbAnswers.orgId, orgId))
     await tx.delete(kbArticles).where(eq(kbArticles.orgId, orgId))

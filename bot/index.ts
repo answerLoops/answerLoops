@@ -33,6 +33,7 @@ import { claimNextKbSyncJob, reclaimStuckKbSyncJobs } from '../lib/db/queries/kb
 import { purgeExpiredReviewText } from '../lib/db/queries/kb-review'
 import { pruneArticleUsage } from '../lib/db/queries/kb-usage'
 import { pruneAnswerReferences } from '../lib/db/queries/kb-answers'
+import { sweepSupportAssessments } from '../lib/db/queries/kb-support'
 import { getDirectDatabaseUrl } from '../lib/db/direct-url'
 import { getDeploymentMode } from '../lib/billing/plans'
 import { getOrgIdsWithFlag } from '../lib/db/queries/feature-flags'
@@ -54,9 +55,19 @@ function startKbRetentionSweep(): void {
     try {
       const cleared = await purgeExpiredReviewText()
       const pruned = await pruneArticleUsage()
+      // Source-support evidence first: expired text goes, then assessments past the window,
+      // then the answers they hang from (which would remove any left anyway).
+      const support = await sweepSupportAssessments()
       const prunedAnswers = await pruneAnswerReferences()
-      if (cleared > 0 || pruned > 0 || prunedAnswers > 0) {
-        logger.info('kb retention sweep complete', { module: MOD, cleared, pruned, prunedAnswers })
+      if (cleared > 0 || pruned > 0 || prunedAnswers > 0 || support.excerptsCleared > 0 || support.assessmentsDeleted > 0) {
+        logger.info('kb retention sweep complete', {
+          module: MOD,
+          cleared,
+          pruned,
+          prunedAnswers,
+          supportExcerptsCleared: support.excerptsCleared,
+          supportAssessmentsDeleted: support.assessmentsDeleted,
+        })
       }
     } catch (err) {
       logger.error('kb retention sweep failed', { module: MOD, error: err })

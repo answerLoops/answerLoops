@@ -11,8 +11,8 @@ import path from 'node:path'
  * leaves a link that looks wired — the helper still works, its tests still
  * pass — but nothing on screen. The sidebar's own rendering is covered in
  * dashboard-navigation.test.tsx; this pins the hand-off from the layout. The
- * docs header is covered by docs-layout-changelog.test.tsx, which runs the
- * real layout.
+ * docs sidebar footer is covered by docs-layout-changelog.test.tsx, which runs
+ * the real layout.
  */
 
 const repoRoot = process.cwd()
@@ -27,7 +27,7 @@ describe('the dashboard hands the changelog link to the sidebar', () => {
     expect(src).toContain("from '@/lib/marketing/changelog-link'")
     // Inside the component, so it is read per request rather than once at load.
     const componentStart = src.indexOf('export default async function DashboardLayout')
-    const call = src.search(/const changelogUrl = docsChangelogLink\(\)\?\.url/)
+    const call = src.search(/const changelogUrl = resolveChangelogUrl\(\) \?\? undefined/)
     expect(componentStart).toBeGreaterThanOrEqual(0)
     expect(call).toBeGreaterThan(componentStart)
   })
@@ -45,6 +45,6 @@ describe('the dashboard hands the changelog link to the sidebar', () => {
     // the deployment setting or the helper itself.
     expect(src).not.toContain('marketingSiteEnabled')
     expect(src).not.toContain('changelog-link')
-    expect(src).not.toContain('docsChangelogLink')
+    expect(src).not.toContain('resolveChangelogUrl')
   })
 })

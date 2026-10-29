@@ -17,7 +17,7 @@ import { getBudgetStatus } from '@/lib/billing/platform-ai-budget'
 import { listIntegrations } from '@/lib/db/queries/integrations'
 import { getRepos } from '@/lib/db/queries/github'
 import { MARKETING_URL } from '@/lib/site'
-import { docsChangelogLink } from '@/lib/marketing/changelog-link'
+import { resolveChangelogUrl } from '@/lib/marketing/changelog-link'
 
 const PLATFORM_LABEL: Record<string, string> = {
   discord: 'Discord',
@@ -53,7 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // link to and the sidebar drops the entry. Resolved here rather than in the
   // sidebar because this is a server component and can read the deployment
   // flag; the sidebar is a client component and cannot.
-  const changelogUrl = docsChangelogLink()?.url
+  const changelogUrl = resolveChangelogUrl() ?? undefined
 
   const sidebarContent = (
     <>
