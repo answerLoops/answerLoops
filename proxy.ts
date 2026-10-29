@@ -8,8 +8,9 @@ export const config = {
   //
   // Every response the proxy touches gets Auth.js's CSRF + callback-url
   // `Set-Cookie`, which forces `Cache-Control: private` and leaves Cloudflare
-  // nothing to cache. The pages excluded here are prerendered and need no
-  // session check, so excluding them is what lets them be cached at the edge.
+  // nothing to cache. The pages excluded here show every visitor the same
+  // content and need no session check, so excluding them is what lets them be
+  // cached at the edge.
   // `/` and `/pricing` stay matched (they still resolve a session for their own
   // logic); `/api/*`, `/dashboard/*`, the auth pages, and the not-yet-launched
   // intent pages (/architecture, /support-*, /self-*, /mcp-support-agents,

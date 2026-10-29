@@ -52,7 +52,11 @@ describe('dashboard navigation', () => {
     // rather than a link that 404s.
     render(<SidebarNav />)
 
-    expect(screen.queryByRole('link', { name: /What's new/ })).not.toBeInTheDocument()
+    // Match the text, not the link role: without an address the entry would be
+    // an anchor with no href, which is not exposed as a link, so a role query
+    // would pass even if the entry rendered. The label also uses a typographic
+    // apostrophe, so match any character there.
+    expect(screen.queryByText(/What.s new/)).not.toBeInTheDocument()
   })
 })
 

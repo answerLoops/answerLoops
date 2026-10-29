@@ -3,18 +3,16 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 
 /**
- * Both surfaces have to actually receive the changelog link.
+ * The dashboard has to actually hand the changelog link to the sidebar.
  *
- * The wiring is three steps that are individually invisible: the helper
- * resolves it, each layout passes it down, and the sidebar renders it. A
- * refactor that drops any one step leaves a link that looks wired — the
- * helper still works, its tests still pass — but nothing on screen. These
- * tests pin the two hand-offs so that failure is loud.
- *
- * The docs layout is checked for the flag indirectly rather than by reading
- * its source: it resolves the link through the helper, and the gate test in
- * marketing-surface-gate.test.ts asserts the layout never names
- * marketingSiteEnabled() itself. This file pins that the call is there.
+ * The wiring is two steps that are individually invisible: the dashboard
+ * layout resolves the link through the helper and passes the address down, and
+ * the sidebar renders it when it arrives. A refactor that drops either step
+ * leaves a link that looks wired — the helper still works, its tests still
+ * pass — but nothing on screen. The sidebar's own rendering is covered in
+ * dashboard-navigation.test.tsx; this pins the hand-off from the layout. The
+ * docs header is covered by docs-layout-changelog.test.tsx, which runs the
+ * real layout.
  */
 
 const repoRoot = process.cwd()
@@ -23,32 +21,28 @@ function read(rel: string): string {
   return readFileSync(path.join(repoRoot, rel), 'utf-8')
 }
 
-describe('the changelog link reaches both surfaces', () => {
-  it('resolves it in the docs layout through the helper', () => {
-    const src = read('app/docs/layout.tsx')
-    expect(src).toContain("from '@/lib/marketing/changelog-link'")
-    expect(src).toContain('docsChangelogLink()')
-    // Rendered per request, not baked in at build time: the docs are
-    // statically generated, and the deployment flag is a request-time value.
-    expect(src).toContain("dynamic = 'force-dynamic'")
-  })
-
-  it('resolves it in the dashboard layout through the helper', () => {
+describe('the dashboard hands the changelog link to the sidebar', () => {
+  it('resolves the address through the helper inside the layout', () => {
     const src = read('app/(dashboard)/layout.tsx')
     expect(src).toContain("from '@/lib/marketing/changelog-link'")
-    expect(src).toContain('docsChangelogLink()')
-    // Passed to the sidebar as a prop, because the sidebar is a client
-    // component and cannot read the flag itself.
-    expect(src).toContain('changelogUrl=')
+    // Inside the component, so it is read per request rather than once at load.
+    const componentStart = src.indexOf('export default async function DashboardLayout')
+    const call = src.search(/const changelogUrl = docsChangelogLink\(\)\?\.url/)
+    expect(componentStart).toBeGreaterThanOrEqual(0)
+    expect(call).toBeGreaterThan(componentStart)
   })
 
-  it('renders it in the sidebar from the prop', () => {
+  it('passes it to the sidebar as a prop', () => {
+    // A prop because the sidebar is a client component and cannot read the
+    // deployment setting itself.
+    expect(read('app/(dashboard)/layout.tsx')).toMatch(/<SidebarNav changelogUrl=\{changelogUrl\} \/>/)
+  })
+
+  it('has the sidebar read the prop and nothing else', () => {
     const src = read('components/dashboard/sidebar-nav.tsx')
-    expect(src).toContain('changelogUrl')
-    expect(src).toContain('changelogUrl &&')
-    // The sidebar never reaches for the flag itself, and never fetches the
-    // changelog — the value arrives as a prop from the server layout. (It does
-    // still fetch /api/billing/status for the plan lock, which is unrelated.)
+    expect(src).toMatch(/export function SidebarNav\(\{ changelogUrl \}/)
+    // The value arrives from the server layout; the sidebar never reaches for
+    // the deployment setting or the helper itself.
     expect(src).not.toContain('marketingSiteEnabled')
     expect(src).not.toContain('changelog-link')
     expect(src).not.toContain('docsChangelogLink')
