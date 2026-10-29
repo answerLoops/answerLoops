@@ -56,13 +56,30 @@ export class ReconciliationError extends Error {
 
 const SUMMARIES: readonly SupportSummary[] = ['supporting', 'no_support', 'inconclusive', 'not_assessed']
 
-function tally(items: readonly { summary: SupportSummary }[]) {
-  const counts = { supporting: 0, no_support: 0, inconclusive: 0, not_assessed: 0 }
-  for (const item of items) {
-    if (!SUMMARIES.includes(item.summary)) throw new ReconciliationError(`Unknown summary: ${String(item.summary)}`)
-    counts[item.summary]++
+/** A count of pairs or answers that share an outcome and a summary, as a database groups them. */
+export interface Group {
+  outcome: GenerationOutcome
+  summary: SupportSummary
+  count: number
+}
+
+function checkGroups(groups: readonly Group[]) {
+  for (const g of groups) {
+    if (!SUMMARIES.includes(g.summary)) throw new ReconciliationError(`Unknown summary: ${String(g.summary)}`)
+    if (g.outcome !== 'generated' && g.outcome !== 'failed') throw new ReconciliationError(`Unknown outcome: ${String(g.outcome)}`)
+    if (!Number.isInteger(g.count) || g.count < 0) throw new ReconciliationError(`Bad count: ${String(g.count)}`)
   }
-  return counts
+}
+
+function tallyGroups(groups: readonly Group[]) {
+  checkGroups(groups)
+  const completed = { supporting: 0, no_support: 0, inconclusive: 0, not_assessed: 0 }
+  let failed = 0
+  for (const g of groups) {
+    if (g.outcome === 'generated') completed[g.summary] += g.count
+    else failed += g.count
+  }
+  return { completed, failed }
 }
 
 function rate(supporting: number, concluded: number): Rate | null {
@@ -70,66 +87,78 @@ function rate(supporting: number, concluded: number): Rate | null {
 }
 
 /**
- * Counts a population of answer/article pairs into the four buckets, all drawn
- * from the same pairs. Failed generations are reported separately and never
- * counted as supplied or as "not assessed". When the caller knows how many
- * pairs it expects (`expectedSupplied`, counted independently from the
- * references), a mismatch throws instead of showing numbers that do not add up.
+ * Counts pairs the way a database groups them (outcome, summary, count), so a
+ * large population never has to be loaded row by row. Failed generations are
+ * reported separately and never counted as supplied or as "not assessed". When
+ * the caller knows how many pairs it expects (`expectedSupplied`, counted
+ * independently from the references), a mismatch throws instead of showing
+ * numbers that do not add up.
  */
-export function reconcilePairs(
-  items: readonly PairItem[],
-  options: { expectedSupplied?: number } = {}
-): Reconciliation {
-  const completed = items.filter((i) => i.outcome === 'generated')
-  const counts = tally(completed)
-  const supplied = completed.length
-  const sum = counts.supporting + counts.no_support + counts.inconclusive + counts.not_assessed
-  if (sum !== supplied) throw new ReconciliationError(`Buckets sum to ${sum}, not the ${supplied} supplied`)
+export function reconcilePairGroups(groups: readonly Group[], options: { expectedSupplied?: number } = {}): Reconciliation {
+  const { completed: c, failed } = tallyGroups(groups)
+  const supplied = c.supporting + c.no_support + c.inconclusive + c.not_assessed
   if (options.expectedSupplied !== undefined && options.expectedSupplied !== supplied) {
     throw new ReconciliationError(`Expected ${options.expectedSupplied} supplied, found ${supplied}`)
   }
-  const concluded = counts.supporting + counts.no_support + counts.inconclusive
+  const concluded = c.supporting + c.no_support + c.inconclusive
   return {
     supplied,
-    supporting: counts.supporting,
-    noSupport: counts.no_support,
-    inconclusive: counts.inconclusive,
-    notAssessed: counts.not_assessed,
+    supporting: c.supporting,
+    noSupport: c.no_support,
+    inconclusive: c.inconclusive,
+    notAssessed: c.not_assessed,
     completedAssessments: concluded,
-    supportRate: rate(counts.supporting, concluded),
-    failed: { pairs: items.length - completed.length },
+    supportRate: rate(c.supporting, concluded),
+    failed: { pairs: failed },
   }
 }
 
+/** The same, one state per answer: the four states sum to the completed-answer total. */
+export function reconcileAnswerGroups(groups: readonly Group[], options: { expectedCompleted?: number } = {}): AnswerReconciliation {
+  const { completed: c, failed } = tallyGroups(groups)
+  const completed = c.supporting + c.no_support + c.inconclusive + c.not_assessed
+  if (options.expectedCompleted !== undefined && options.expectedCompleted !== completed) {
+    throw new ReconciliationError(`Expected ${options.expectedCompleted} completed answers, found ${completed}`)
+  }
+  const concluded = c.supporting + c.no_support + c.inconclusive
+  return {
+    completed,
+    supporting: c.supporting,
+    noSupport: c.no_support,
+    inconclusive: c.inconclusive,
+    notAssessed: c.not_assessed,
+    completedAssessments: concluded,
+    supportRate: rate(c.supporting, concluded),
+    failed: { answers: failed },
+  }
+}
+
+function groupsOf(items: readonly { outcome: GenerationOutcome; summary: SupportSummary }[]): Group[] {
+  const counts = new Map<string, Group>()
+  for (const item of items) {
+    const key = `${item.outcome}:${item.summary}`
+    const group = counts.get(key)
+    if (group) group.count++
+    else counts.set(key, { outcome: item.outcome, summary: item.summary, count: 1 })
+  }
+  return [...counts.values()]
+}
+
 /**
- * The same, one state per answer. The four states sum to the completed-answer
- * total; failed generations are counted apart. An answer id may appear once.
+ * Counts a population of answer/article pairs into the four buckets, all drawn
+ * from the same pairs. See reconcilePairGroups for how failed generations and
+ * an expected total are handled.
  */
-export function reconcileAnswers(
-  items: readonly AnswerItem[],
-  options: { expectedCompleted?: number } = {}
-): AnswerReconciliation {
+export function reconcilePairs(items: readonly PairItem[], options: { expectedSupplied?: number } = {}): Reconciliation {
+  return reconcilePairGroups(groupsOf(items), options)
+}
+
+/** The same, one state per answer. An answer id may appear once. */
+export function reconcileAnswers(items: readonly AnswerItem[], options: { expectedCompleted?: number } = {}): AnswerReconciliation {
   const seen = new Set<string>()
   for (const item of items) {
     if (seen.has(item.answerId)) throw new ReconciliationError(`Answer ${item.answerId} appears twice`)
     seen.add(item.answerId)
   }
-  const completed = items.filter((i) => i.outcome === 'generated')
-  const counts = tally(completed)
-  const sum = counts.supporting + counts.no_support + counts.inconclusive + counts.not_assessed
-  if (sum !== completed.length) throw new ReconciliationError(`States sum to ${sum}, not the ${completed.length} completed answers`)
-  if (options.expectedCompleted !== undefined && options.expectedCompleted !== completed.length) {
-    throw new ReconciliationError(`Expected ${options.expectedCompleted} completed answers, found ${completed.length}`)
-  }
-  const concluded = counts.supporting + counts.no_support + counts.inconclusive
-  return {
-    completed: completed.length,
-    supporting: counts.supporting,
-    noSupport: counts.no_support,
-    inconclusive: counts.inconclusive,
-    notAssessed: counts.not_assessed,
-    completedAssessments: concluded,
-    supportRate: rate(counts.supporting, concluded),
-    failed: { answers: items.length - completed.length },
-  }
+  return reconcileAnswerGroups(groupsOf(items), options)
 }
