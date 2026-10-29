@@ -98,6 +98,8 @@ updates:
       - dependency-name: "body-parser"
       - dependency-name: "@azure/msal-node"
       - dependency-name: "happy-dom"
+      - dependency-name: "graphql-scalars"
+      - dependency-name: "re2js"
       # zod is also a direct dependency on 4.x, which Dependabot should keep
       # updating; only the 3.x copies pulled in by third-party packages are
       # pinned by the override, so only 3.x is ignored.
