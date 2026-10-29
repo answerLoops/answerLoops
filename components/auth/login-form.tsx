@@ -23,6 +23,13 @@ const ICONS: Record<SignInProviderId, () => React.JSX.Element> = {
 interface Props {
   providers: SignInProvider[]
   signingIn?: boolean
+  /**
+   * Origin that serves the terms and privacy pages, or '' for this origin.
+   * On the hosted product those pages live on the marketing host, so a
+   * relative link from the app host resolves to an app-host URL that only
+   * redirects, and crawlers record each one as a "page with redirect".
+   */
+  legalBaseUrl?: string
 }
 
 /**
@@ -35,7 +42,7 @@ interface Props {
  * Only the methods in `providers` are rendered. With none configured the page
  * says so instead of showing a button that cannot work.
  */
-export function LoginForm({ providers, signingIn = false }: Props) {
+export function LoginForm({ providers, signingIn = false, legalBaseUrl = '' }: Props) {
   const [pendingId, setPendingId] = useState<SignInProviderId | null>(null)
   const [agreed, setAgreed] = useState(true)
 
@@ -100,11 +107,11 @@ export function LoginForm({ providers, signingIn = false }: Props) {
       {signingIn ? (
         <p className="text-center text-xs leading-relaxed text-slate-500">
           By continuing, you agree to our{' '}
-          <Link href="/terms" className="underline underline-offset-2 hover:text-slate-800">
+          <Link href={`${legalBaseUrl}/terms`} className="underline underline-offset-2 hover:text-slate-800">
             Terms of Service
           </Link>{' '}
           and acknowledge our{' '}
-          <Link href="/privacy" className="underline underline-offset-2 hover:text-slate-800">
+          <Link href={`${legalBaseUrl}/privacy`} className="underline underline-offset-2 hover:text-slate-800">
             Privacy Policy
           </Link>
           .
@@ -119,11 +126,11 @@ export function LoginForm({ providers, signingIn = false }: Props) {
           />
           <span>
             I agree to the{' '}
-            <Link href="/terms" className="font-medium text-slate-900 underline underline-offset-2">
+            <Link href={`${legalBaseUrl}/terms`} className="font-medium text-slate-900 underline underline-offset-2">
               Terms of Service
             </Link>{' '}
             and{' '}
-            <Link href="/privacy" className="font-medium text-slate-900 underline underline-offset-2">
+            <Link href={`${legalBaseUrl}/privacy`} className="font-medium text-slate-900 underline underline-offset-2">
               Privacy Policy
             </Link>
             .

@@ -20,6 +20,11 @@ const APP_ROUTES = [
   '/api/',
 ]
 
+// Cloudflare serves these itself (email obfuscation rewrites mailto links to
+// /cdn-cgi/l/email-protection). They are not pages, and a crawler that follows
+// one gets a 404 that Search Console reports against the site.
+const EDGE_PATHS = ['/cdn-cgi/']
+
 // Content Signals (https://contentsignals.org, co-authored by Cloudflare)
 // separates crawl access from reuse permission: a bot can already be allowed
 // to fetch a page via Allow/Disallow above while this states what it may do
@@ -48,6 +53,7 @@ function buildRobotsTxt(): string {
     'User-agent: *',
     'Allow: /',
     ...APP_ROUTES.map((route) => `Disallow: ${route}`),
+    ...EDGE_PATHS.map((route) => `Disallow: ${route}`),
     `Content-Signal: ${CONTENT_SIGNAL}`,
     '',
     `Sitemap: ${MARKETING_URL}/sitemap.xml`,

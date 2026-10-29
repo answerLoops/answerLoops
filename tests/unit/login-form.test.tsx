@@ -57,6 +57,20 @@ describe('LoginForm — sign up', () => {
   })
 })
 
+describe('LoginForm — legal links', () => {
+  it('points at the marketing origin when one is given, for both sign up and sign in', () => {
+    const base = 'https://answerloops.com'
+    const { unmount } = render(<LoginForm providers={GOOGLE} legalBaseUrl={base} />)
+    expect(screen.getByRole('link', { name: 'Terms of Service' }).getAttribute('href')).toBe(`${base}/terms`)
+    expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe(`${base}/privacy`)
+    unmount()
+
+    render(<LoginForm providers={GOOGLE} legalBaseUrl={base} signingIn />)
+    expect(screen.getByRole('link', { name: 'Terms of Service' }).getAttribute('href')).toBe(`${base}/terms`)
+    expect(screen.getByRole('link', { name: 'Privacy Policy' }).getAttribute('href')).toBe(`${base}/privacy`)
+  })
+})
+
 describe('LoginForm — failure', () => {
   it('re-enables the button if starting sign-in fails, rather than leaving it dead', async () => {
     const unhandled = vi.fn()

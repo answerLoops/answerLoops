@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
@@ -9,8 +10,17 @@ import { IntegrationIcon } from '@/components/marketing/integration-icon'
 import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 import { Logo } from '@/components/logo'
 import { TRIAL_DAYS } from '@/lib/billing/plans'
+import { MARKETING_URL, marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
+
+// Sign-in is not a search result. It is reachable under many query strings
+// (?plan=…&interval=…&mode=…) that all render the same form, which Search
+// Console reports as duplicates with no canonical. noindex keeps every
+// variant out; robots.txt must keep allowing /login or the tag is never read.
+export const metadata: Metadata = {
+  robots: { index: false, follow: true },
+}
 
 const ERROR_MESSAGES: Record<string, string> = {
   OAuthSignin: 'Could not start sign-in. Try again.',
@@ -112,7 +122,11 @@ export default async function LoginPage({ searchParams }: Props) {
           )}
 
           <div className="mt-6">
-            <LoginForm providers={providers} signingIn={signingIn} />
+            <LoginForm
+              providers={providers}
+              signingIn={signingIn}
+              legalBaseUrl={marketingSiteEnabled() ? MARKETING_URL : ''}
+            />
           </div>
 
           <p className="mt-6 text-sm text-slate-500">
