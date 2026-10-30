@@ -27,6 +27,7 @@ work on.
   behavior, architecture, setup, or an integration.
 - Report security issues privately through [SECURITY.md](./SECURITY.md) —
   never in a public issue or PR.
+- Write the product name as `answerLoops` in prose. Preserve the established casing of code identifiers, file and package names, URLs and domains, GitHub organization and repository paths, environment variables, and the `X-AnswerLoops-Token` header.
 
 ## Run it locally in 3 steps
 
