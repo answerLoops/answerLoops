@@ -29,6 +29,7 @@ const ticketRow = (status: string) => [
     if (key === 'status') return status
     if (key === 'id') return 1
     if (key === 'orgId') return 3
+    if (key === 'lastActivityAt') return '2026-10-01T00:00:00.000Z'
     return null
   }),
 ]
@@ -100,10 +101,15 @@ describe('recordThreadContext', () => {
     const stored = await queries.recordThreadContext(1, 'Looking into it', { authorName: 'maint', messageId: 'm-1' })
 
     expect(stored).toBe(true)
-    expect(calls).toHaveLength(1)
+    // The insert, then a bump of the ticket's last-activity time and nothing else.
+    expect(calls).toHaveLength(2)
     expect(calls[0].sql.toLowerCase()).toContain('insert into "ticket_replies"')
     expect(calls[0].sql.toLowerCase()).toContain('on conflict do nothing')
     expect(calls[0].params).toEqual(expect.arrayContaining(['maint', 'Looking into it', 'context', 'm-1']))
+    const touch = calls[1].sql.toLowerCase()
+    expect(touch).toMatch(/^update "tickets" set "last_activity_at" = \$1 where/)
+    expect(touch).not.toContain('"status"')
+    expect(touch).not.toContain('last_customer_reply_at')
   })
 
   it('reports false when the message was already stored', async () => {
@@ -118,8 +124,11 @@ describe('recordAnswerLoopsReply', () => {
     const stored = await queries.recordAnswerLoopsReply(1, 'Use the reset link.', { messageId: 'posted-1' })
 
     expect(stored).toBe(true)
-    // One insert: no status change, no event, no notification, no ticket lookup.
-    expect(calls).toHaveLength(1)
+    // The insert, then a bump of the last-activity time: no status change, no
+    // event, no notification, no ticket lookup, and not counted as customer activity.
+    expect(calls).toHaveLength(2)
+    expect(calls[1].sql.toLowerCase()).toMatch(/^update "tickets" set "last_activity_at" = \$1 where/)
+    expect(calls[1].sql.toLowerCase()).not.toContain('last_customer_reply_at')
     const sql = calls[0].sql.toLowerCase()
     expect(sql).toContain('insert into "ticket_replies"')
     expect(sql).toContain('on conflict do nothing')

@@ -62,6 +62,12 @@ export interface Ticket {
   resolved_at: string | null
   created_at: string
   updated_at: string
+  /** When anything last happened on the conversation. */
+  last_activity_at: string
+  /** When the customer last wrote on this ticket after it opened; null if they never did. */
+  last_customer_reply_at: string | null
+  /** When the team last opened the ticket. */
+  last_seen_at: string | null
 }
 
 export interface TicketReply {
@@ -122,7 +128,7 @@ export interface GitHubRepo {
 export interface Notification {
   id: number
   ticket_id: number | null
-  type: 'new_question' | 'sla_breach' | 'ai_draft_ready'
+  type: 'new_question' | 'sla_breach' | 'ai_draft_ready' | 'ticket_activity'
   message: string
   read: 0 | 1
   created_at: string
@@ -341,6 +347,10 @@ export interface TicketFilters {
   pendingDraft?: boolean
   /** Tickets with a breached response or resolution SLA, excluding duplicates. */
   slaBreached?: boolean
+  /** Tickets with customer replies the team hasn't opened yet. */
+  newActivity?: boolean
+  /** Order by creation date (default) or by the most recent activity. */
+  sort?: 'created' | 'activity'
 }
 
 export interface CreateTicketInput {

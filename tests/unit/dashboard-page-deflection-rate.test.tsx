@@ -15,6 +15,8 @@ vi.mock('@/lib/db/queries/tickets', () => ({
   }),
   getSLABreachedTickets: async () => [],
   getTickets: async () => [],
+  getUnseenActivityTickets: async () => [],
+  countUnseenActivityTickets: async () => 0,
 }))
 vi.mock('@/lib/db/queries/analytics', () => ({ getDeflectionStats: h.getDeflectionStats }))
 vi.mock('@/components/dashboard/stats-cards', () => ({

@@ -17,6 +17,8 @@ interface SearchParams {
   needsReview?: string
   pendingDraft?: string
   slaBreached?: string
+  newActivity?: string
+  sort?: string
   cursor?: string
 }
 
@@ -51,12 +53,14 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
     needsReview: searchParams.needsReview === '1' || undefined,
     pendingDraft: searchParams.pendingDraft === '1' || undefined,
     slaBreached: searchParams.slaBreached === '1' || undefined,
+    newActivity: searchParams.newActivity === '1' || undefined,
+    sort: searchParams.sort === 'activity' ? ('activity' as const) : undefined,
   }
   const rows = await getTickets(filters, orgId, PAGE_SIZE + 1, cursor ?? undefined)
   const hasMore = rows.length > PAGE_SIZE
   const tickets = hasMore ? rows.slice(0, PAGE_SIZE) : rows
   const last = tickets[tickets.length - 1]
-  const nextCursor = hasMore && last ? encodeTicketCursor({ createdAt: last.created_at, id: last.id }) : null
+  const nextCursor = hasMore && last ? encodeTicketCursor({ createdAt: filters.sort === 'activity' ? last.last_activity_at : last.created_at, id: last.id }) : null
 
   const loadMoreParams = new URLSearchParams()
   if (filters.status) loadMoreParams.set('status', filters.status)
@@ -66,6 +70,8 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
   if (filters.needsReview) loadMoreParams.set('needsReview', '1')
   if (filters.pendingDraft) loadMoreParams.set('pendingDraft', '1')
   if (filters.slaBreached) loadMoreParams.set('slaBreached', '1')
+  if (filters.newActivity) loadMoreParams.set('newActivity', '1')
+  if (filters.sort) loadMoreParams.set('sort', filters.sort)
   if (nextCursor) loadMoreParams.set('cursor', nextCursor)
 
   const activeCardFilters = CARD_FILTERS.filter(({ param }) => filters[param])
@@ -73,6 +79,7 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
   if (filters.status) withoutCardFilters.set('status', filters.status)
   if (filters.priority) withoutCardFilters.set('priority', filters.priority)
   if (filters.category) withoutCardFilters.set('category', filters.category)
+  if (filters.sort) withoutCardFilters.set('sort', filters.sort)
   const clearCardFiltersQuery = withoutCardFilters.toString()
   const clearCardFiltersHref = clearCardFiltersQuery ? `/tickets?${clearCardFiltersQuery}` : '/tickets'
 
@@ -116,6 +123,14 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
             <option value="how_to">How-to</option>
             <option value="general_question">General Question</option>
           </select>
+          <select name="sort" defaultValue={filters.sort ?? ''} aria-label="Sort tickets" className="rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white">
+            <option value="">Newest first</option>
+            <option value="activity">Latest activity</option>
+          </select>
+          <label className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-700">
+            <input type="checkbox" name="newActivity" value="1" defaultChecked={!!filters.newActivity} />
+            New activity
+          </label>
           {activeCardFilters.map(({ param }) => (
             <input key={param} type="hidden" name={param} value="1" />
           ))}

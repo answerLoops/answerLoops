@@ -117,8 +117,8 @@ describe('processCommunityMessage: thread replies append instead of creating a n
     )
 
     expect(createNotification).toHaveBeenCalledWith(
-      'new_question',
-      expect.stringContaining('ticket #7'),
+      'ticket_activity',
+      expect.stringContaining('#7'),
       42,
       3
     )

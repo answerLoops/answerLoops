@@ -187,6 +187,14 @@ export const tickets = pgTable(
     resolvedAt: text('resolved_at'),
     createdAt: text('created_at').notNull().default(now),
     updatedAt: text('updated_at').notNull().default(now),
+    // When anything last happened on the conversation (a customer, staff or
+    // answerLoops message), when the customer last wrote, and when the team
+    // last opened the ticket. Activity is unseen while the customer's last
+    // message is newer than the team's last look. Written from the app in
+    // millisecond precision so a keyset cursor on last_activity_at is exact.
+    lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).notNull().default(sql`date_trunc('milliseconds', now())`),
+    lastCustomerReplyAt: timestamp('last_customer_reply_at', { withTimezone: true }),
+    lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   },
   (t) => [
     index('idx_tickets_status').on(t.status),

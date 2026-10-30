@@ -25,7 +25,7 @@ The **Tickets** page is a single inbox across every connected channel. Each row 
 | Column | What it shows |
 |---|---|
 | **#** | Your workspace's ticket number |
-| **Summary** | AI-written one-line summary of the question |
+| **Summary** | AI-written one-line summary of the question. A **New activity** badge appears under it when the customer has written since your team last opened the ticket |
 | **Source** | The platform the question came from |
 | **Category** | The AI's classification (see [categories](#how-the-ai-handles-each-category)) |
 | **Priority** | `critical`, `high`, `medium`, or `low` |
@@ -45,9 +45,27 @@ Use the dropdowns at the top of the page, then press **Filter**:
 - **Priority:** Critical, High, Medium, or Low
 - **Category:** Bug, Feature Request, Documentation, How-to, or General Question
 
-Filters stack, so you can combine all three. **Clear** resets the list.
+Two more controls sit beside them:
+
+- **Sort:** **Newest first** orders by when the ticket was created. **Latest activity** orders by the most recent message on the conversation, so an old ticket with a fresh reply comes to the top.
+- **New activity:** tick it to show only tickets where the customer has written since your team last opened them.
+
+Filters stack, so you can combine them. **Clear** resets the list.
 
 Selecting a [dashboard stat card](/docs/product/dashboard#stat-cards) opens this page with a matching card filter (Auto-Answered, Needs Review, AI Drafts Pending, or SLA Breaches). A "Filtered by" label appears above the list and stays in place when you change the dropdowns and press **Filter**. Select **Clear card filter** to remove only the card filter.
+
+### Know when a customer replies
+
+A customer can reply on a ticket that is days or weeks old, so a reply on any ticket, old or new, is announced in four places and goes quiet once someone has read it.
+
+- **The bell** in the top bar lists your workspace's recent notifications, newest first. Each one says who replied, on which ticket and on which channel, with a short snippet, and links straight to that ticket. Unread ones are marked with a dot. **Mark all read** clears the count.
+- **The Activity panel** on the [dashboard](/docs/product/dashboard#activity) lists the tickets with replies your team hasn't seen, most recent reply first.
+- **A "New activity" badge** on the ticket's row in the list, and the **New activity** filter and **Latest activity** sort described above.
+- **A push notification**, if your team has turned on browser notifications. It names the ticket number, who replied, and the channel, with a snippet, and opens the ticket when clicked. Replies on the same ticket replace each other instead of stacking.
+
+Opening a ticket marks it seen: its notifications are read and its badge and Activity entry go away. The same is true for everyone on your team, since a ticket your colleague already read doesn't need a second look. A later reply starts the cycle again.
+
+Tickets that existed before this was added start out as seen, so your history doesn't appear as new activity.
 
 ### Where tickets come from
 
@@ -121,7 +139,7 @@ What counts as "the same conversation" depends on the channel:
 
 Because every message is kept, a ticket that several people answered reads as one history: the customer's question, what answerLoops replied, each team member's reply, and the customer's follow-ups, in the order they happened. An answer that was held as a draft and never sent does not appear; it stays in the **AI Draft Answer** panel until someone approves it. Replies and answers sent before this was recorded are not added to the Conversation of older tickets.
 
-A follow-up on a resolved or closed ticket reopens it. Your team is notified of each follow-up, and the AI does not re-answer them. On Slack, Google Chat, Telegram, GitHub, Discourse, and Circle, a short follow-up like "thanks, that worked" is kept when it continues a conversation you already have. Delivering the same message twice never adds it twice.
+A follow-up on a resolved or closed ticket reopens it. Your team is [notified](#know-when-a-customer-replies) of each follow-up, and the AI does not re-answer them. On Slack, Google Chat, Telegram, GitHub, Discourse, and Circle, a short follow-up like "thanks, that worked" is kept when it continues a conversation you already have. Delivering the same message twice never adds it twice.
 
 ### Jump back to the original message
 

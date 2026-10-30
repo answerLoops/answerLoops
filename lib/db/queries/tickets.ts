@@ -1,4 +1,4 @@
-import { eq, and, or, inArray, sql, desc, lt, ne, type SQL } from 'drizzle-orm'
+import { eq, and, or, inArray, sql, desc, lt, ne, isNotNull, isNull, gt, type SQL } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import {
   tickets,
@@ -50,6 +50,9 @@ function toTicket(row: typeof tickets.$inferSelect): Ticket {
     resolved_at: row.resolvedAt,
     created_at: row.createdAt,
     updated_at: row.updatedAt,
+    last_activity_at: row.lastActivityAt.toISOString(),
+    last_customer_reply_at: row.lastCustomerReplyAt?.toISOString() ?? null,
+    last_seen_at: row.lastSeenAt?.toISOString() ?? null,
   }
 }
 
@@ -123,6 +126,7 @@ export async function createTicket(input: CreateTicketInput, orgId: number): Pro
       priority: input.priority,
       slaResponseDeadline: input.sla_response_deadline ?? null,
       slaResolveDeadline: input.sla_resolve_deadline ?? null,
+      lastActivityAt: new Date(),
     })
     .returning()
 
@@ -229,6 +233,61 @@ async function countTicketsMatching(filter: TicketCardFilter, orgId: number): Pr
   return row?.n ?? 0
 }
 
+// A ticket has activity the team hasn't seen while the customer's last message
+// is newer than the team's last look at it. Tickets that never had a customer
+// follow-up have none: a brand-new ticket is announced by its own notification.
+const unseenActivityCondition = and(
+  isNotNull(tickets.lastCustomerReplyAt),
+  or(isNull(tickets.lastSeenAt), gt(tickets.lastCustomerReplyAt, tickets.lastSeenAt))
+)!
+
+/**
+ * Tickets with customer replies the team hasn't opened yet, most recent reply
+ * first. Feeds the dashboard's Activity panel.
+ */
+export async function getUnseenActivityTickets(orgId: number, limit = 8): Promise<Ticket[]> {
+  const rows = await getDb()
+    .select()
+    .from(tickets)
+    .where(and(eq(tickets.orgId, orgId), unseenActivityCondition))
+    .orderBy(desc(tickets.lastCustomerReplyAt), desc(tickets.id))
+    .limit(limit)
+  return rows.map(toTicket)
+}
+
+export async function countUnseenActivityTickets(orgId: number): Promise<number> {
+  const [row] = await getDb()
+    .select({ n: sql<number>`COUNT(*)::int` })
+    .from(tickets)
+    .where(and(eq(tickets.orgId, orgId), unseenActivityCondition))
+  return row?.n ?? 0
+}
+
+/** Records that something happened on the conversation, without marking it as customer activity. */
+async function touchTicketActivity(ticketId: number): Promise<void> {
+  await getDb().update(tickets).set({ lastActivityAt: new Date() }).where(eq(tickets.id, ticketId))
+}
+
+/**
+ * The team opened the ticket: its activity is now seen and its notifications
+ * are read. Scoped by organization, so a ticket number from another workspace
+ * changes nothing. Returns whether the ticket was found.
+ */
+export async function markTicketSeen(ticketId: number, orgId: number): Promise<boolean> {
+  const db = getDb()
+  const updated = await db
+    .update(tickets)
+    .set({ lastSeenAt: new Date() })
+    .where(and(eq(tickets.id, ticketId), eq(tickets.orgId, orgId)))
+    .returning({ id: tickets.id })
+  if (updated.length === 0) return false
+  await db
+    .update(notifications)
+    .set({ read: 1 })
+    .where(and(eq(notifications.ticketId, ticketId), eq(notifications.orgId, orgId), eq(notifications.read, 0)))
+  return true
+}
+
 export async function getTickets(
   filters: TicketFilters = {},
   orgId: number,
@@ -242,23 +301,37 @@ export async function getTickets(
   for (const filter of Object.keys(ticketCardConditions) as TicketCardFilter[]) {
     if (filters[filter]) conditions.push(ticketCardConditions[filter])
   }
-  // Strictly older than the cursor row on the same (created_at, id) ordering
+  if (filters.newActivity) conditions.push(unseenActivityCondition)
+  // Strictly older than the cursor row on the same (sort key, id) ordering
   // the query sorts by, so a page picks up exactly where the previous one
-  // stopped regardless of inserts/deletes elsewhere in the table.
+  // stopped regardless of inserts/deletes elsewhere in the table. The cursor's
+  // `createdAt` carries the sort key: created_at, or last_activity_at when
+  // sorting by activity.
+  const byActivity = filters.sort === 'activity'
   if (cursor) {
-    conditions.push(
-      or(
-        lt(tickets.createdAt, cursor.createdAt),
-        and(eq(tickets.createdAt, cursor.createdAt), lt(tickets.id, cursor.id))
-      )!
-    )
+    if (byActivity) {
+      const at = new Date(cursor.createdAt)
+      conditions.push(
+        or(
+          lt(tickets.lastActivityAt, at),
+          and(eq(tickets.lastActivityAt, at), lt(tickets.id, cursor.id))
+        )!
+      )
+    } else {
+      conditions.push(
+        or(
+          lt(tickets.createdAt, cursor.createdAt),
+          and(eq(tickets.createdAt, cursor.createdAt), lt(tickets.id, cursor.id))
+        )!
+      )
+    }
   }
 
   let query = getDb()
     .select()
     .from(tickets)
     .where(and(...conditions))
-    .orderBy(desc(tickets.createdAt), desc(tickets.id))
+    .orderBy(...(byActivity ? [desc(tickets.lastActivityAt), desc(tickets.id)] : [desc(tickets.createdAt), desc(tickets.id)]))
     .$dynamic()
   if (limit) query = query.limit(limit)
 
@@ -458,6 +531,7 @@ export async function addTicketReply(
     .insert(ticketReplies)
     .values({ ticketId, staffName, content, discordMsgId: discordMsgId ?? null })
     .returning()
+  await touchTicketActivity(ticketId)
 
   const ticket = await getTicketByIdUnscoped(ticketId)
   if (ticket && ticket.status === 'open') {
@@ -650,15 +724,18 @@ export async function recordCustomerReply(
     .returning({ id: ticketReplies.id })
   if (inserted.length === 0) return false
 
-  const now = new Date().toISOString()
+  const at = new Date()
+  const now = at.toISOString()
   const wasClosed = ticket.status === 'resolved' || ticket.status === 'closed'
+  // The customer writing is the one kind of activity the team has not seen.
+  const activity = { updatedAt: now, lastActivityAt: at, lastCustomerReplyAt: at }
   if (wasClosed) {
     await db
       .update(tickets)
-      .set({ status: 'open', updatedAt: now })
+      .set({ status: 'open', ...activity })
       .where(eq(tickets.id, ticketId))
   } else {
-    await db.update(tickets).set({ updatedAt: now }).where(eq(tickets.id, ticketId))
+    await db.update(tickets).set(activity).where(eq(tickets.id, ticketId))
   }
 
   await db.insert(ticketEvents).values({
@@ -695,6 +772,7 @@ export async function recordAnswerLoopsReply(
     })
     .onConflictDoNothing()
     .returning({ id: ticketReplies.id })
+  if (inserted.length > 0) await touchTicketActivity(ticketId)
   return inserted.length > 0
 }
 
@@ -720,6 +798,7 @@ export async function recordThreadContext(
     })
     .onConflictDoNothing()
     .returning({ id: ticketReplies.id })
+  if (inserted.length > 0) await touchTicketActivity(ticketId)
   return inserted.length > 0
 }
 
