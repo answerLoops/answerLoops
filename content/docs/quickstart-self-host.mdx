@@ -20,6 +20,10 @@ If you'd rather skip all of this, the [cloud quickstart](/docs/quickstart-cloud)
 
 You need Node.js, Docker with Compose, pnpm, an AI provider key, and a Google OAuth client. The [prerequisites page](/docs/self-hosting/prerequisites) has the required versions and a list of accounts to set up first. For the Google client, follow [OAuth setup](/docs/self-hosting/oauth).
 
+## The flow at a glance
+
+Here is the whole flow in one picture; each step is spelled out below.
+
 <Mermaid
   caption="Install flow: clone the repo, copy .env.example to .env, then start Docker Compose, which runs the app, the bot, and Postgres. Open the app in your browser at localhost port 3000."
   chart={`flowchart TD
@@ -31,7 +35,7 @@ You need Node.js, Docker with Compose, pnpm, an AI provider key, and a Google OA
   App -->|migrations run on start| DB
   Bot -->|hands what it hears to the app| App
   Bot --> DB
-  Browser["Your browser"] -->|"port 3000"| App`} />
+  App -->|"open port 3000"| Browser["Your browser"]`} />
 
 ## 1. Clone the repo
 
