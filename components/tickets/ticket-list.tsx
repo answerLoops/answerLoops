@@ -4,6 +4,7 @@ import { StatusBadge, PriorityBadge, CategoryBadge, AIDraftBadge } from '@/compo
 import { getSLAStatus } from '@/lib/sla/engine'
 import { LocalDate } from '@/components/ui/local-date'
 import { NewActivityBadge } from '@/components/tickets/new-activity-badge'
+import { GithubReferenceLink } from '@/components/tickets/github-reference'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 
 const PLATFORM_BADGE: Record<string, { label: string; className: string }> = {
@@ -76,6 +77,7 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
               </td>
               <td className="px-4 py-3">
                 <PlatformBadge platform={ticket.source_platform} />
+                {ticket.source_platform === 'github' && <GithubReferenceLink ticket={ticket} variant="list" />}
               </td>
               <td className="px-4 py-3">
                 {ticket.category && <CategoryBadge category={ticket.category} />}
