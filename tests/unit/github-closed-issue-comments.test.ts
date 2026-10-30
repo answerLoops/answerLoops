@@ -2,9 +2,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createHmac } from 'node:crypto'
 
-// A comment on a closed issue is ignored outright: not a ticket, and not a
-// maintainer "context" message either (the thread-context path must sit behind
-// the open-issue check).
+// A comment on a closed issue joins the issue's existing ticket (the pipeline
+// reopens it if it was resolved) but never opens a ticket of its own, and a
+// maintainer's comment is kept as thread context only when that ticket exists.
 
 const SECRET = 'test-webhook-secret'
 const h = vi.hoisted(() => ({
@@ -55,14 +55,33 @@ beforeEach(() => {
 })
 
 describe('issue comments on a closed issue', () => {
-  it.each(['NONE', 'OWNER'])('are ignored for a %s author: no ticket, no thread context', async (assoc) => {
+  it('a customer comment is handed to the pipeline when the issue already has a ticket', async () => {
+    const res = await comment('NONE', 'closed')
+    expect(res.status).toBe(200)
+    expect(h.getTicketByThreadId).toHaveBeenCalledWith('github-issue-o-r-5', 9)
+    expect(h.processCommunityMessage).toHaveBeenCalledTimes(1)
+    expect(h.processCommunityMessage.mock.calls[0][0]).toMatchObject({
+      threadId: 'github-issue-o-r-5',
+      platform: 'github',
+    })
+  })
+
+  it('a maintainer comment is kept as thread context when the issue has a ticket', async () => {
+    await comment('OWNER', 'closed')
+    expect(h.recordThreadContextMessage).toHaveBeenCalledTimes(1)
+    expect(h.processCommunityMessage).not.toHaveBeenCalled()
+  })
+
+  it.each(['NONE', 'OWNER'])('a %s comment is ignored when the issue has no ticket', async (assoc) => {
+    h.getTicketByThreadId.mockResolvedValue(null)
     const res = await comment(assoc, 'closed')
     expect(res.status).toBe(200)
     expect(h.processCommunityMessage).not.toHaveBeenCalled()
     expect(h.recordThreadContextMessage).not.toHaveBeenCalled()
   })
 
-  it('control: the same comment on an open issue is processed', async () => {
+  it('control: a comment on an open issue is processed without a ticket lookup gate', async () => {
+    h.getTicketByThreadId.mockResolvedValue(null)
     await comment('NONE', 'open')
     expect(h.processCommunityMessage).toHaveBeenCalledTimes(1)
   })
