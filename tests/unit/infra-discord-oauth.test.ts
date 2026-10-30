@@ -70,25 +70,47 @@ describe('Discord OAuth state encoding', () => {
   })
 })
 
-describe('railway.toml: deployment config', () => {
-  const TOML_PATH = path.join(ROOT, 'railway.toml')
+describe('Railway: app deployment config (Infrastructure as Code)', () => {
+  const IAC_PATH = path.join(ROOT, '.railway', 'railway.ts')
 
-  it('railway.toml exists', () => {
-    expect(fs.existsSync(TOML_PATH)).toBe(true)
+  it('.railway/railway.ts exists and the deprecated railway.toml is gone', () => {
+    expect(fs.existsSync(IAC_PATH)).toBe(true)
+    // Config as Code stops being read on 2026-12-01; a service cannot be
+    // managed by both systems, so the old file must not come back.
+    expect(fs.existsSync(path.join(ROOT, 'railway.toml'))).toBe(false)
   })
 
-  it('railway.toml specifies startCommand', () => {
-    const content = fs.readFileSync(TOML_PATH, 'utf-8')
-    expect(content).toContain('startCommand')
+  it('declares the app health check that the deploy gates on', () => {
+    const content = fs.readFileSync(IAC_PATH, 'utf-8')
+    expect(content).toContain('healthcheck: "/api/health"')
+    expect(content).toContain('healthcheckTimeout: 30')
   })
 
-  it('railway.toml uses nixpacks builder', () => {
-    const content = fs.readFileSync(TOML_PATH, 'utf-8')
-    expect(content).toContain('nixpacks')
+  it('leaves service variables unmanaged so no secret enters the repo', () => {
+    const content = fs.readFileSync(IAC_PATH, 'utf-8')
+    expect(content).toContain('managed: false')
+    expect(content).not.toContain('--include-variables')
+    expect(content).not.toMatch(/\benv\s*:/)
   })
 
-  it('railway.toml has on_failure restart policy', () => {
-    const content = fs.readFileSync(TOML_PATH, 'utf-8')
+  it('is excluded from the app type-check', () => {
+    const tsconfig = fs.readFileSync(path.join(ROOT, 'tsconfig.json'), 'utf-8')
+    expect(tsconfig).toContain('".railway"')
+  })
+})
+
+describe('Railway: bot deployment config', () => {
+  const BOT_TOML = path.join(ROOT, 'railway.bot.toml')
+
+  // The bot service points at this file in Railway. Without its start command
+  // the bot would fall back to the Dockerfile CMD and run the web app instead.
+  it('railway.bot.toml still starts the bot, not the web app', () => {
+    const content = fs.readFileSync(BOT_TOML, 'utf-8')
+    expect(content).toContain('startCommand = "pnpm bot:start"')
+  })
+
+  it('railway.bot.toml has on_failure restart policy', () => {
+    const content = fs.readFileSync(BOT_TOML, 'utf-8')
     expect(content).toContain('on_failure')
   })
 })

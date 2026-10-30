@@ -97,6 +97,7 @@
     "esbuild": "^0.28.1",
     "happy-dom": "^21.0.4",
     "oxlint": "1.88.0",
+    "railway": "^3.16.0",
     "tailwindcss": "^4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5",
