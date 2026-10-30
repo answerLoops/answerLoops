@@ -62,11 +62,24 @@ describe('IntegrationLogo', () => {
     render(<IntegrationLogo name="openai" />)
     const logo = screen.getByRole('img', { name: 'OpenAI logo' })
     const svg = logo.querySelector('svg')!
-    expect(svg.querySelector('path')?.getAttribute('d')).toBe(LOGO_GLYPHS.openai.d)
-    expect(svg.getAttribute('viewBox')).toBe(LOGO_GLYPHS.openai.viewBox)
+    const d = svg.querySelector('path')?.getAttribute('d')
+    expect(d).toBe(LOGO_GLYPHS.openai.d)
+    // Literals on purpose: comparing only to the data file would still pass
+    // a bad crop or a swapped path.
+    expect(d?.startsWith('M508.749 317.399')).toBe(true)
+    expect(svg.getAttribute('viewBox')).toBe('174 174 368 368')
     expect(logo).not.toHaveTextContent(/\S/)
   })
 
+  it('applies each glyph its own viewBox and defaults the rest to 24 x 24', () => {
+    for (const [key, glyph] of Object.entries(LOGO_GLYPHS)) {
+      const { unmount } = render(<IntegrationLogo name={key} />)
+      const svg = screen.getByRole('img').querySelector('svg')
+      expect(svg, key).not.toBeNull()
+      expect(svg!.getAttribute('viewBox'), key).toBe(glyph.viewBox ?? '0 0 24 24')
+      unmount()
+    }
+  })
 
   it('uses the first letter of an unknown name and keeps the name in the label', () => {
     render(<IntegrationLogo name="Zendesk" />)
