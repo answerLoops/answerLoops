@@ -105,7 +105,7 @@ export function NotificationBell({ unreadCount }: { unreadCount: number }) {
             <button
               onClick={markAllRead}
               disabled={unread === 0}
-              className="text-xs font-medium text-brand-600 hover:underline disabled:cursor-default disabled:text-gray-400 disabled:no-underline"
+              className="shrink-0 whitespace-nowrap text-xs font-medium text-brand-600 hover:underline disabled:cursor-default disabled:text-gray-400 disabled:no-underline"
             >
               Mark all read
             </button>

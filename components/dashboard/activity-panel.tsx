@@ -23,7 +23,7 @@ export function ActivityPanel({ tickets, total }: { tickets: Ticket[]; total: nu
       className="overflow-hidden rounded-2xl border border-blue-200 bg-blue-50/50 shadow-[0_16px_45px_rgba(30,64,175,0.06)]"
     >
       <div className="flex items-center justify-between gap-3 border-b border-blue-100 px-5 py-4">
-        <div>
+        <div className="min-w-0">
           <h2 id="activity-heading" className="text-sm font-semibold text-slate-950">
             Activity
             <span className="ml-2 rounded-full bg-blue-600 px-2 py-0.5 text-[0.6875rem] font-semibold text-white">{total}</span>
@@ -46,7 +46,7 @@ export function ActivityPanel({ tickets, total }: { tickets: Ticket[]; total: nu
                   <span className="mr-1.5 text-xs font-normal text-slate-400">#{ticket.org_ticket_number}</span>
                   {title(ticket)}
                 </span>
-                <span className="block text-xs text-slate-500">
+                <span className="block break-words text-xs text-slate-500">
                   {ticket.source_author_name ?? 'A customer'} on {platformLabel(ticket.source_platform)}
                 </span>
               </span>
