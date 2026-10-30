@@ -194,29 +194,26 @@ describe('the signup entry point carries the chosen plan', () => {
     expect(src, 'a pricing CTA still points at the waitlist').not.toContain('href="#waitlist"')
   })
 
-  it('states plainly that the card is not charged', () => {
-    // The single sentence most likely to decide whether someone completes this
-    // step, so it belongs on the pricing card and again at Stripe's submit.
+  it('states plainly that no card is needed for the trial', () => {
+    // The single sentence most likely to decide whether someone signs up, so it
+    // belongs on the pricing card and on the sign-up page.
     const pricing = fs.readFileSync(
       path.join(process.cwd(), 'components/marketing/pricing-toggle.tsx'),
       'utf-8',
     )
-    expect(pricing).toMatch(/[Nn]ot charged/)
+    expect(pricing).toMatch(/No card required/)
 
-    const checkout = fs.readFileSync(path.join(process.cwd(), 'lib/billing/checkout.ts'), 'utf-8')
-    expect(checkout).toContain('custom_text')
-    expect(checkout).toMatch(/will not be charged/)
+    const login = fs.readFileSync(path.join(process.cwd(), 'app/login/page.tsx'), 'utf-8')
+    expect(login).toMatch(/no card required/i)
   })
 
-  it('only honours a real plan id when routing after sign-in', async () => {
-    // This value lands in a redirect target, so an unvalidated one is an open
-    // redirect.
+  it('does not put an unvalidated plan or interval into the post-sign-in redirect', async () => {
+    // Redirect targets must only be built from values this codebase defines. A
+    // plan no longer travels through sign-in at all, and the promotion code is
+    // narrowed to its allowed shape before it lands in the target.
     const src = fs.readFileSync(path.join(process.cwd(), 'lib/actions/auth.ts'), 'utf-8')
-    expect(src).toContain('getPlan(requestedPlan)')
-    // The destination moved from /start-trial to /checkout when plan choice
-    // moved after auth. What must not change is that the id is validated
-    // before it lands in a redirect target.
-    expect(src).toContain('/checkout?plan=')
+    expect(src).not.toContain("searchParams.get('plan')")
+    expect(src).toContain('parsePromoCode(')
   })
 
   it('sends an abandoned checkout back to the website, not into the product', () => {
@@ -248,14 +245,14 @@ describe('the signup entry point carries the chosen plan', () => {
     expect(successBlock.slice(0, 1200)).not.toContain("redirect('/pricing")
   })
 
-  it('keeps the chosen plan when an already-signed-in visitor clicks a CTA', () => {
+  it('sends an already-signed-in visitor to the dashboard, or to checkout only for a promotion code', () => {
     // Otherwise /login sends them to /dashboard and the gate bounces them,
     // losing the click they just made. The destination moved from
     // /start-trial to /checkout when plan choice moved after auth: that page
     // would only have forwarded here anyway, and it exists for the
     // post-checkout webhook wait rather than as a step on the way in.
     const src = fs.readFileSync(path.join(process.cwd(), 'app/login/page.tsx'), 'utf-8')
-    expect(src).toContain('/checkout?plan=')
+    expect(src).toContain("codeParam ? `/checkout?${codeParam}` : '/dashboard'")
   })
 
   it('explains itself when it sends someone back to pricing', () => {

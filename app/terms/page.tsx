@@ -324,13 +324,15 @@ export default function TermsOfServicePage() {
               fees, applicable taxes, and any other amount you approve.
             </p>
             <p>
-              Paid plans begin with a 14-day trial unless checkout says
-              otherwise. Your card is not charged for the subscription fee when
-              the trial begins. Unless you cancel before the trial ends, the
-              selected paid plan starts automatically when the trial expires and
-              your payment method is charged. After that, the subscription
-              automatically renews for successive periods matching your chosen
-              monthly or annual billing interval until canceled.
+              New accounts receive one 14-day free trial of the hosted service,
+              with every feature included. No payment method is required to
+              start it, and nothing is charged. A trial is limited to one per
+              person, and creating further accounts to obtain another is not
+              permitted. The trial ends automatically after 14 days: to keep
+              using the service you must choose a paid plan and provide a
+              payment method. Your subscription then renews for successive
+              periods matching your chosen monthly or annual billing interval
+              until canceled.
             </p>
             <p>
               A &ldquo;deflection&rdquo; is an automated answer counted toward

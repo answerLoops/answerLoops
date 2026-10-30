@@ -19,6 +19,7 @@
 export const PLATFORM_PATHS = [
   '/login',
   '/onboarding',
+  '/accept-terms',
   '/account-deleted',
   '/start-trial',
   '/checkout',

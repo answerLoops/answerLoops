@@ -18,7 +18,7 @@ This is the shortest working configuration. Everything else is optional and can 
 | `ENCRYPTION_KEY` | Random secret that protects saved API keys and tokens (required in production) |
 | `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` | Google sign-in, the only way to sign in |
 | `OPENAI_API_KEY` | Answers and knowledge-base search, unless each workspace saves its own key in Settings |
-| `BOT_SECRET` | Lets the bot service run background jobs such as knowledge-base syncs |
+| `BOT_SECRET` | Lets the bot service run background jobs such as knowledge-base syncs and, on the hosted service, trial-ending reminder emails |
 
 Generate each secret with `openssl rand -hex 32`.
 

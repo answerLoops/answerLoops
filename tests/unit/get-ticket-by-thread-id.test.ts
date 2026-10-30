@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { drizzle } from 'drizzle-orm/pg-proxy'
+import { getTableColumns } from 'drizzle-orm'
+import { tickets } from '@/lib/db/schema'
 
 // Real bug found live, in production, using the webhook path (which was
 // believed to work correctly for thread replies — see Roadmap item 75,
@@ -49,12 +51,14 @@ describe('getTicketByThreadId matches either source_thread_id or source_message_
       // equals the searched threadId even though source_thread_id is null.
       if (sqlText.trim().toLowerCase().startsWith('select')) {
         return {
-          rows: [[
-            1, 1, 'T123', null, 'C1', null, 'U1', 'nathan', null, 'slack',
-            'a question', null, null, null, null, null, 'pending', null,
-            'medium', 'open', null, null, null, null, null, null, null,
-            '2026-01-01', '2026-01-01',
-          ]],
+          rows: [Object.keys(getTableColumns(tickets)).map((key) => {
+            if (key === 'id' || key === 'orgId') return 1
+            if (key === 'sourceMessageId') return 'T123'
+            if (key === 'sourcePlatform') return 'slack'
+            if (key === 'createdAt' || key === 'updatedAt') return '2026-01-01'
+            if (key === 'lastActivityAt') return '2026-01-01T00:00:00.000Z'
+            return null
+          })],
         }
       }
       return { rows: [] }

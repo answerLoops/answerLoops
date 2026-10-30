@@ -2,7 +2,7 @@ import { publicPageMetadata } from '@/lib/marketing/metadata'
 import type { Metadata } from 'next'
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
-import { ORDERED_PLANS, TRIAL_DAYS } from '@/lib/billing/plans'
+import { ORDERED_PLANS } from '@/lib/billing/plans'
 import { PricingToggle } from '@/components/marketing/pricing-toggle'
 import { PricingComparisonTable } from '@/components/marketing/pricing-comparison-table'
 import {
@@ -149,11 +149,12 @@ export default async function PricingPage({
             navState === 'no-plan' && (
               <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-5">
                 <p className="font-medium">
-                  You’re signed in — pick a plan to finish setting up.
+                  You’re signed in — pick a plan to continue.
                 </p>
                 <p className="mt-1 text-sm">
-                  A card is required to start your {TRIAL_DAYS}-day trial.
-                  Nothing is charged today.
+                  Your free trial is over, or has already been used. Choose a
+                  plan and add a card to carry on. Your workspace is kept as
+                  you left it.
                 </p>
               </div>
             )}

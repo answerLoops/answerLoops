@@ -95,16 +95,16 @@ describe('sendWelcomeEmail — what it sends', () => {
 describe('the welcome email is sent to a customer, not to an account', () => {
   const read = async (rel: string) => (await import('node:fs')).readFileSync(rel, 'utf-8')
 
-  it('is no longer sent from the sign-in path at all', async () => {
-    // Finishing OAuth makes someone a user, not a customer. Under the
-    // auth-first signup flow the account exists before a plan has been seen or
-    // a card entered, so welcoming here greets everyone who abandons checkout
-    // with a message about a product they never started.
-    const src = await read('auth.ts')
-    expect(src, 'auth.ts must not send the welcome email').not.toContain('sendWelcomeEmail')
+  it('is sent when a trial actually starts, not on every sign-in', async () => {
+    // The trial is card-free, so starting one is the moment someone becomes a
+    // customer with a dashboard to be welcomed into. It is gated on the trial
+    // having started, so a person the ledger refuses is not greeted as new.
+    const src = await read('lib/auth/signup.ts')
+    expect(src).toContain("outcome.status !== 'started'")
+    expect(src.indexOf("outcome.status !== 'started'")).toBeLessThan(src.indexOf('sendWelcomeEmail(email'))
   })
 
-  it('is sent from the checkout handler instead', async () => {
+  it('is still sent from the checkout handler for an org that never had a trial row', async () => {
     const src = await read('app/api/billing/webhook/route.ts')
     const checkoutCase = src.slice(
       src.indexOf("case 'checkout.session.completed'"),

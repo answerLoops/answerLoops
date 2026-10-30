@@ -44,14 +44,9 @@ describe('the marketing header speaks to someone with no account', () => {
   })
 })
 
-describe('the login form matches the mode it was opened in', () => {
-  it('says sign up by default, because that is who arrives cold', () => {
+describe('the login form is one sign-in for everyone', () => {
+  it('says sign in, whoever is looking at it', () => {
     render(<LoginForm providers={GOOGLE} />)
-    expect(screen.getByRole('button', { name: /sign up with google/i })).toBeTruthy()
-  })
-
-  it('says sign in when the page is in sign-in mode', () => {
-    render(<LoginForm providers={GOOGLE} signingIn />)
     expect(screen.getByRole('button', { name: /sign in with google/i })).toBeTruthy()
   })
 
@@ -60,30 +55,22 @@ describe('the login form matches the mode it was opened in', () => {
     // Google's page is long enough to look broken without this.
     const src = read('components/auth/login-form.tsx')
     expect(src).toContain('Redirecting…')
-    expect(src).toContain('disabled={pendingId !== null || gated}')
+    expect(src).toContain('disabled={pendingId !== null}')
   })
 })
 
-describe('the login page offers both modes without losing the plan', () => {
+describe('the login page is one page for new and returning people', () => {
   const src = () => read('app/login/page.tsx')
 
-  it('defaults to the create-account framing and offers sign-in as the alternative', () => {
+  it('has a single framing and no create-account / sign-in toggle', () => {
     const s = src()
-    expect(s).toContain("mode === 'signin'")
-    expect(s).toContain('Create your account')
-    expect(s).toContain('Welcome back')
+    expect(s).toContain('Get started or sign in')
+    expect(s).not.toContain("mode === 'signin'")
+    expect(s).not.toContain('toggleHref')
   })
 
-  it('carries plan, interval and callbackUrl across the mode toggle', () => {
-    // These three are the only reason this page can send someone into checkout
-    // instead of dropping them at pricing. A toggle that drops them turns a
-    // chosen annual plan into a generic signup — the same class of bug as the
-    // interval being lost on the /login redirect.
-    const s = src()
-    const carried = s.slice(s.indexOf('const carried'), s.indexOf('const toggleHref'))
-    expect(carried).toContain("carried.set('plan'")
-    expect(carried).toContain("carried.set('interval'")
-    expect(carried).toContain("carried.set('callbackUrl'")
+  it('carries a promotion code through sign-in', () => {
+    expect(src()).toContain('parsePromoCode')
   })
 
   it('states the trial length from the billing config rather than a hardcoded number', () => {
@@ -93,31 +80,21 @@ describe('the login page offers both modes without losing the plan', () => {
   })
 })
 
-describe('signing in with no plan goes straight to checkout', () => {
-  it('does not route through the dashboard or back out to pricing', () => {
-    // Signing in does not grant access — a trial needs a card — so /dashboard
-    // only bounces off the gate. Pricing was the previous answer and it asked
-    // for the plan decision a second time, on a marketing page, after the
-    // visitor had already committed by signing in. /checkout is the one screen
-    // that can finish the job: it preselects a plan, allows switching, and
-    // takes the card.
+describe('signing in with nowhere in particular to go', () => {
+  it('lands on the dashboard, where a new trial starts and an ended one is sent to checkout', () => {
+    // A new account is given its card-free trial when it is created, so the
+    // dashboard is reachable. An account whose trial is over, or was refused,
+    // is sent on to /start-trial and then checkout by the access gate in
+    // auth.ts — so the fallback does not need to be checkout itself.
     const src = read('lib/actions/auth.ts')
     const fallback = src.slice(src.indexOf('const cb = url.searchParams'))
-    expect(fallback).toContain("return '/checkout'")
-    expect(fallback, 'the dashboard fallback is what caused the original detour').not.toContain(
-      "return '/dashboard'",
-    )
-    expect(fallback, 'pricing after auth is the extra step this removed').not.toContain(
-      "return '/pricing?resume=1'",
-    )
+    expect(fallback).toContain("return '/dashboard'")
+    expect(fallback).not.toContain("return '/pricing?resume=1'")
   })
 
-  it('still carries a chosen plan straight through to checkout', () => {
-    // Plan choice moved after auth, but the pricing cards still link with
-    // ?plan=, and that choice must survive the round trip — landing on the
-    // default plan after clicking a specific card is a silent downgrade.
+  it('does not carry a plan through sign-in, since the trial has nothing to buy', () => {
     const src = read('lib/actions/auth.ts')
-    expect(src).toContain('/checkout?plan=')
-    expect(src).toContain('getPlan(requestedPlan)')
+    expect(src).not.toContain('/checkout?plan=')
+    expect(src).not.toContain('getPlan(requestedPlan)')
   })
 })

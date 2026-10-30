@@ -3,7 +3,6 @@
 import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { signIn, signOut } from '@/auth'
-import { getPlan, parseBillingInterval } from '@/lib/billing/plans'
 import { parsePromoCode } from '@/lib/billing/promo'
 import { parseSignInProvider } from '@/lib/auth/providers'
 
@@ -13,29 +12,13 @@ async function getCallbackUrl(): Promise<string> {
   try {
     const url = new URL(referer)
 
-    // A plan chosen on the pricing page arrives as /login?plan=<id>. Signing in
-    // is only step one of starting a trial, so send them on to checkout for the
-    // plan they actually clicked rather than dropping them at the dashboard —
-    // which the access gate would bounce anyway, losing the choice.
-    //
-    // Resolved through getPlan so only real plan ids are honoured: this value
-    // ends up in a redirect target, so it must be one this codebase defines.
-    // The billing interval is narrowed the same way and for the same reason —
-    // it also lands in the redirect, and downstream it selects which Stripe
-    // price the person is charged.
-    //
-    // A promotion code rides along the same way, narrowed to its allowed shape
-    // because it too lands in the redirect.
-    const requestedPlan = url.searchParams.get('plan')
+    // Starting a trial no longer passes through checkout: a new account gets
+    // the card-free trial the moment it is created, so a plan chosen on the
+    // pricing page has nothing to buy yet and is not carried forward. A
+    // promotion code still is — someone holding one is headed to checkout for
+    // it — narrowed to its allowed shape because it lands in the redirect.
     const promoCode = parsePromoCode(url.searchParams.get('code'))
     const codeParam = promoCode ? `code=${encodeURIComponent(promoCode)}` : ''
-    if (requestedPlan && getPlan(requestedPlan)) {
-      const interval = parseBillingInterval(url.searchParams.get('interval'))
-      let target = `/checkout?plan=${encodeURIComponent(requestedPlan)}`
-      if (interval) target += `&interval=${interval}`
-      if (codeParam) target += `&${codeParam}`
-      return target
-    }
     if (codeParam) return `/checkout?${codeParam}`
 
     const cb = url.searchParams.get('callbackUrl')
@@ -44,19 +27,11 @@ async function getCallbackUrl(): Promise<string> {
   } catch {
     // ignore
   }
-  // No plan and nowhere they were headed: someone who clicked a bare "Start
-  // free trial" or "Sign in". Checkout, not the dashboard and not pricing.
-  //
-  // Signing in does not grant access on its own — a trial needs a card — so
-  // /dashboard would only bounce off the gate. Pricing was the previous answer
-  // and it asked for the plan decision a second time, after the visitor had
-  // already committed by signing in. /checkout is the one screen that finishes
-  // the job: it preselects a plan, allows switching, and takes the card.
-  //
-  // Safe for a returning subscriber too: /checkout sends anyone who already
-  // has access straight to the dashboard rather than selling them a second
-  // subscription.
-  return '/checkout'
+  // Nowhere in particular: the dashboard. A new account is mid-trial and goes
+  // on to onboarding from there; an account whose trial has ended or was
+  // already used is sent to /start-trial, then checkout, by the access gate in
+  // auth.ts.
+  return '/dashboard'
 }
 
 /**
@@ -66,6 +41,9 @@ async function getCallbackUrl(): Promise<string> {
  * methods this deployment has configured before anything starts. An id that
  * does not match goes back to the login page with a generic error rather than
  * reaching the auth library.
+ *
+ * Signing in and signing up are the same action. A new account accepts the
+ * terms on the step that follows (lib/actions/terms.ts).
  */
 export async function loginWithProvider(providerId: string): Promise<void> {
   const provider = parseSignInProvider(providerId)

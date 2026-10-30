@@ -10,6 +10,9 @@ import { FeedbackWidget } from '@/components/feedback/feedback-widget'
 import { isFeedbackWidgetEnabled } from '@/lib/product-feedback/enabled'
 import { AIUsageBanner } from '@/components/dashboard/ai-usage-banner'
 import { DeflectionStatusBanner } from '@/components/dashboard/deflection-status-banner'
+import { TrialEndingBanner } from '@/components/dashboard/trial-ending-banner'
+import { getSubscription } from '@/lib/db/queries/billing'
+import { trialDaysLeft, TRIAL_WARNING_DAYS } from '@/lib/billing/trial'
 import { logout } from '@/lib/actions/auth'
 import { auth } from '@/auth'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
@@ -38,6 +41,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // banner warns at 80% and when it's used up. Null for self-hosted, for a
   // workspace with its own key, or with no live subscription.
   const usageStatus = await getBudgetStatus(orgId)
+
+  // The card-free trial's last days. Only a trial this app runs qualifies; a
+  // paid plan, or a legacy trial with a card on file, has nothing to warn about.
+  const subscription = await getSubscription(orgId)
+  const trialDays = subscription ? trialDaysLeft(subscription) : null
+  const trialEnding = trialDays !== null && trialDays > 0 && trialDays <= TRIAL_WARNING_DAYS ? trialDays : null
 
   // Same "actually connected" check the Integrations page's tab-bar dots use —
   // a row can exist without the integration being genuinely connected (e.g.
@@ -123,6 +132,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <main className="dashboard-content relative flex-1 overflow-y-auto">
           <div className="dashboard-grid pointer-events-none absolute inset-0" />
           <div className="relative mx-auto w-full max-w-[1500px] p-4 sm:p-6 md:p-8 lg:p-10">
+            {trialEnding !== null && <TrialEndingBanner daysLeft={trialEnding} />}
             {usageStatus && <AIUsageBanner status={usageStatus} />}
             <DeflectionStatusBanner offPlatforms={offPlatforms} />
             {children}

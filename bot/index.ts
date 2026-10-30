@@ -188,6 +188,43 @@ function startEmbeddingMigrationSweep(): void {
   setInterval(() => { sweep().catch(() => {}) }, EMBEDDING_MIGRATION_SWEEP_INTERVAL_MS)
 }
 
+// Trial-ending reminder emails (3 days and 1 day before a card-free trial
+// ends). The app route decides who is due and sends; this process only keeps
+// the sweep running. Hourly is fine-grained enough for notices counted in days,
+// and each notice is claimed in the database, so a repeat or overlapping run
+// never sends twice.
+const TRIAL_REMINDER_SWEEP_INTERVAL_MS = 60 * 60 * 1000
+const TRIAL_REMINDER_REQUEST_TIMEOUT_MS = 2 * 60 * 1000
+
+function startTrialReminderSweep(): void {
+  const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
+  const botSecret = process.env.BOT_SECRET
+  let inFlight = false
+
+  const sweep = async () => {
+    if (!botSecret) return // the route requires BOT_SECRET; nothing to do without it
+    if (inFlight) return // the previous sweep is still running; never overlap
+    inFlight = true
+    try {
+      const res = await fetch(`${targetUrl}/api/billing/trial-reminders/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${botSecret}` },
+        signal: AbortSignal.timeout(TRIAL_REMINDER_REQUEST_TIMEOUT_MS),
+      })
+      if (!res.ok) {
+        logger.warn('trial reminder sweep: request failed', { module: MOD, status: res.status })
+      }
+    } catch (err) {
+      // Must not crash the bot process; it retries on the next sweep.
+      logger.error('trial reminder sweep failed', { module: MOD, error: err })
+    } finally {
+      inFlight = false
+    }
+  }
+  sweep().catch(() => {})
+  setInterval(() => { sweep().catch(() => {}) }, TRIAL_REMINDER_SWEEP_INTERVAL_MS)
+}
+
 // KB sync worker. Notion/GitHub KB syncs are enqueued into kb_sync_jobs (by the
 // "Sync now" buttons and the GitHub push webhook) instead of running inline in
 // those requests. This sweep claims queued jobs and drives each one via
@@ -829,6 +866,7 @@ async function main() {
   startKbRetentionSweep()
   startStuckTicketSweep()
   startEmbeddingMigrationSweep()
+  startTrialReminderSweep()
 
   client.login(initial.discordToken)
 }

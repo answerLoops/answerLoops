@@ -32,6 +32,7 @@ import { clampIngestContent } from '@/lib/ingest/limits'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped, readBodyBytesCapped } from '@/lib/http/read-body-capped'
 import { logger } from '@/lib/logger'
+import { notifyTicketActivity } from '@/lib/tickets/notify-activity'
 
 const MOD = 'api/email/ingest'
 const MAX_BODY_BYTES = 2_000_000
@@ -327,12 +328,12 @@ export async function POST(req: NextRequest) {
     })
     await setEmailMessageTicket(recorded.id, existingTicketId)
     await updateEmailMessageStatus(recorded.id, 'processed')
-    await createNotification(
-      'new_question',
-      `Customer replied to ticket #${existingTicket.org_ticket_number} — ${senderEmail}`,
-      existingTicketId,
-      orgId
-    )
+    await notifyTicketActivity({
+      ticket: existingTicket,
+      authorName: senderName,
+      content: cleanText || content,
+      orgId,
+    })
     logger.info('inbound email appended to existing ticket', { module: MOD, orgId, ticketId: existingTicketId })
     return Response.json({ ok: true })
   }

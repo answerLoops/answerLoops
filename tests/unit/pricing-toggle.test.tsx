@@ -52,8 +52,8 @@ describe('PricingToggle', () => {
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
       ).toHaveAttribute('href', START_HREF)
-      expect(card.getByText(/Card required/)).toHaveTextContent(
-        'Cancel before the 14-day trial ends',
+      expect(card.getByText(/No card required/)).toHaveTextContent(
+        'Every feature is included for 14 days',
       )
     }
   })
@@ -79,8 +79,8 @@ describe('PricingToggle', () => {
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
       ).toHaveAttribute('href', START_HREF)
-      expect(card.getByText(/Card required/)).toHaveTextContent(
-        'Cancel before the 14-day trial ends',
+      expect(card.getByText(/No card required/)).toHaveTextContent(
+        'Every feature is included for 14 days',
       )
     }
     await user.click(toggle)

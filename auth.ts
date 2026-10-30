@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 import { NextResponse } from 'next/server'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/drizzle'
 import { users, memberships, orgs } from '@/lib/db/schema'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
@@ -11,11 +11,13 @@ import { appOrigin } from '@/lib/site'
 import { isWebsitePath } from '@/lib/marketing/website-paths'
 import { isKnownRoute } from '@/lib/marketing/known-routes'
 import { notFoundResponse } from '@/lib/marketing/not-found-response'
+import { beginTrial } from '@/lib/auth/signup'
 
-const PUBLIC_PATHS = ['/', '/login', '/api/auth', '/api/ingest', '/api/feedback', '/api/slack', '/api/widget', '/widget', '/widget.js', '/api/billing/webhook', '/api/newsletter', '/unsubscribe', '/api/health', '/api/github/webhook', '/api/telegram/webhook', '/api/circle/webhook', '/api/discourse/webhook', '/api/email/ingest', '/api/mcp', '/api/v1/agent', '/openapi.json', '/.well-known', '/api/google-chat', '/api/nav-state', '/api/kb/sync-jobs/run', '/api/kb/embedding-migration/run','/vs', '/alternatives', '/about', '/blog', '/changelog', '/pricing', '/agentic-support', '/docs', '/privacy', '/terms', '/robots.txt', '/sitemap.xml', '/llms.txt', '/llms-full.txt', '/architecture', '/circle-ai-answers', '/discourse-ai-answers', '/dual-agent-ai-support', '/discord-github-support', '/mcp-support-agents', '/open-source-support', '/self-hosted-ai-support', '/self-hosting-proof', '/support-example', '/support-workflow']
+const PUBLIC_PATHS = ['/', '/login', '/api/auth', '/api/ingest', '/api/feedback', '/api/slack', '/api/widget', '/widget', '/widget.js', '/api/billing/webhook', '/api/newsletter', '/unsubscribe', '/api/health', '/api/github/webhook', '/api/telegram/webhook', '/api/circle/webhook', '/api/discourse/webhook', '/api/email/ingest', '/api/mcp', '/api/v1/agent', '/openapi.json', '/.well-known', '/api/google-chat', '/api/nav-state', '/api/kb/sync-jobs/run', '/api/kb/embedding-migration/run', '/api/billing/trial-reminders/run','/vs', '/alternatives', '/about', '/blog', '/changelog', '/pricing', '/agentic-support', '/docs', '/privacy', '/terms', '/robots.txt', '/sitemap.xml', '/llms.txt', '/llms-full.txt', '/architecture', '/circle-ai-answers', '/discourse-ai-answers', '/dual-agent-ai-support', '/discord-github-support', '/mcp-support-agents', '/open-source-support', '/self-hosted-ai-support', '/self-hosting-proof', '/support-example', '/support-workflow']
 const ONBOARDING_PATH = '/onboarding'
 const ACCOUNT_DELETED_PATH = '/account-deleted'
 const START_TRIAL_PATH = '/start-trial'
+const ACCEPT_TERMS_PATH = '/accept-terms'
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 }
@@ -36,36 +38,62 @@ async function provisionUser(
   email: string,
   name: string | null,
   image: string | null,
-  provider: string
+  provider: string,
+  providerAccountId: string | null
 ): Promise<{ userId: number; orgId: number }> {
   const db = getDb()
+  const signedInAt = new Date()
 
-  // Upsert user
+  // Upsert user. Everyone who signs in is recorded here — this table is the
+  // list of people we can later contact, subject to their marketing choice —
+  // and each sign-in stamps last_login_at. The provider's account id is
+  // written once; it is the stable identity the trial ledger keys on.
+  //
+  // Nothing about consent is written here. Signing in is one action for a new
+  // and a returning person, and this is the first moment we can tell them
+  // apart; a new person accepts the terms on the step that follows
+  // (lib/actions/terms.ts), and the access gate in `authorized` below holds
+  // them there until they have.
   await db
     .insert(users)
-    .values({ email, name, image, provider })
+    .values({ email, name, image, provider, providerAccountId, lastLoginAt: signedInAt })
     .onConflictDoUpdate({
       target: users.email,
       set: {
         name: name ?? undefined,
         image: image ?? undefined,
+        lastLoginAt: signedInAt,
+        providerAccountId: sql`COALESCE(${users.providerAccountId}, ${providerAccountId})`,
       },
     })
 
-  const [user] = await db.select({ id: users.id }).from(users).where(eq(users.email, email)).limit(1)
+  const [user] = await db
+    .select({ id: users.id, termsAcceptedAt: users.termsAcceptedAt })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1)
 
   // Returning user: find existing membership
   const [existing] = await db
-    .select({ orgId: memberships.orgId })
+    .select({ orgId: memberships.orgId, role: memberships.role })
     .from(memberships)
     .where(eq(memberships.userId, user.id))
     .limit(1)
 
   if (existing) {
+    // An account that predates the card-free trial and never subscribed has
+    // never had a trial. Offer it once; startTrial leaves an org that already
+    // has a subscription row alone and refuses anyone the ledger has seen, so
+    // this cannot reset a customer or hand out a second trial. Only once the
+    // terms are accepted: someone still on that step gets theirs from it.
+    if (existing.role === 'owner' && user.termsAcceptedAt) {
+      await beginTrial({ userId: user.id, orgId: existing.orgId, email, name, providerAccountId })
+    }
     return { userId: user.id, orgId: existing.orgId }
   }
 
-  // New user: create a fresh org workspace
+  // New user: create a fresh org workspace. The trial starts when they accept
+  // the terms, not here.
   const [newOrg] = await db
     .insert(orgs)
     .values({ name: 'My Workspace', slug: `org-${user.id}-${Date.now()}` })
@@ -76,19 +104,6 @@ async function provisionUser(
     .values({ userId: user.id, orgId: newOrg.id, role: 'owner' })
     .onConflictDoNothing()
 
-  // No welcome email here. Creating an account is not the same as becoming a
-  // customer: under the auth-first signup flow the account exists from the
-  // moment someone finishes OAuth, before they have seen a plan or entered a
-  // card. Sending "Welcome to answerLoops" at this point greets everyone who
-  // abandons checkout with a message about a product they never started, and
-  // it also meant an account created before its subscription — the ordinary
-  // shape of an abandoned-then-resumed signup — got its one welcome at the
-  // wrong moment and never again.
-  //
-  // It is sent from the Stripe checkout.session.completed handler instead, on
-  // the org's first subscription, which is the point at which someone is
-  // actually a customer with a dashboard to be welcomed into. See
-  // app/api/billing/webhook/route.ts.
   return { userId: user.id, orgId: newOrg.id }
 }
 
@@ -241,6 +256,18 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   }),
 
   callbacks: {
+    // Runs once per OAuth sign-in, before a session exists. An address the
+    // provider has not verified is refused here: the trial is limited to one per
+    // person by email identity, so an unverified address would let someone claim
+    // a mailbox that is not theirs, or spend a stranger's trial on it.
+    async signIn({ user, account, profile }) {
+      if (!user.email || !account) return false
+      if (account.provider === 'google' && (profile as { email_verified?: boolean } | undefined)?.email_verified !== true) {
+        return '/login?error=EmailNotVerified'
+      }
+      return true
+    },
+
     async authorized({ request, auth: session }) {
       const { pathname, search } = request.nextUrl
 
@@ -345,18 +372,32 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
           return NextResponse.redirect(new URL(ACCOUNT_DELETED_PATH, incomingOrigin))
         }
 
-        // Checked before onboarding on purpose. A trial requires a card up
-        // front, so authenticating is not the same as having started one —
-        // someone who signs in and abandons checkout has an account and
-        // nothing else, and must not reach the product. Onboarding counts as
-        // the product: it connects real channels and seeds a real knowledge
-        // base.
+        // Terms come first, before billing and onboarding. A new account has
+        // signed in but not yet agreed to the terms, and the free trial starts
+        // only when it does, so there is nothing to bill or onboard until then.
+        // Read in the same query as the membership check above. The step itself
+        // (/accept-terms) is exempt, and so is signing out.
+        if (!access.termsAcceptedAt && pathname !== ACCEPT_TERMS_PATH) {
+          if (pathname.startsWith('/api/')) {
+            return NextResponse.json({ error: 'Terms not accepted' }, { status: 403 })
+          }
+          const termsUrl = new URL(ACCEPT_TERMS_PATH, incomingOrigin)
+          // Where they were headed rides along, so an invite link or a deep link
+          // is not lost on the way through. Path and query of this request only.
+          if (pathname !== '/dashboard') termsUrl.searchParams.set('callbackUrl', `${pathname}${search}`)
+          return NextResponse.redirect(termsUrl)
+        }
+
+        // Checked before onboarding on purpose. A new account is given a
+        // card-free trial when it is created, so having access is normally
+        // automatic — but an account whose trial has ended, or that was
+        // refused one because the person already had theirs, has none and must
+        // not reach the product. Onboarding counts as the product: it connects
+        // real channels and seeds a real knowledge base.
         //
-        // Anyone without access is sent to /start-trial, which either resumes
-        // checkout for a chosen plan or, with no plan to resume, forwards to
-        // /checkout — where a plan is preselected and the card is taken on the
-        // same screen. See lib/billing/access.ts for why each exempt path is
-        // exempt.
+        // Anyone without access is sent to /start-trial, which forwards to
+        // /checkout, where subscribing to a plan takes a card. See
+        // lib/billing/access.ts for why each exempt path is exempt.
         if (!isAccessExempt(pathname)) {
           const hasAccess = await orgHasProductAccess(sessionOrgId as number)
           if (!hasAccess) {
@@ -408,7 +449,8 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
           user.email,
           user.name ?? null,
           user.image ?? null,
-          account.provider
+          account.provider,
+          account.providerAccountId ?? null
         )
         token.userId = String(userId)
         token.orgId = orgId

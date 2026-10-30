@@ -1,20 +1,25 @@
 import { getSubscription } from '@/lib/db/queries/billing'
 import { getDeploymentMode, hasActiveAccess } from './plans'
+import { isAppManagedTrial } from './trial'
 
 /**
  * Whether an org may use the product at all.
  *
- * Signing in is deliberately not sufficient. A trial requires a card up front,
- * so an account without an active subscription has not started one, and access
- * is scoped to subscriptions rather than to sessions. A dashboard that loads
- * while refusing every AI answer is also a worse first impression than being
+ * Signing in is not itself access. A new account is given a card-free trial
+ * (lib/billing/trial.ts) as a subscription row, and access is scoped to
+ * subscriptions rather than to sessions. When the trial runs out, or an
+ * account has already used its one trial, there is no live subscription and
+ * the person is sent to /checkout, where subscribing takes a card. A dashboard
+ * that loads while refusing every AI answer is a worse experience than being
  * asked to pick a plan.
  *
  * Read from our own `subscriptions` table rather than Stripe, so this stays a
  * cheap local check on every request and keeps working through a Stripe outage
  * or a rotated key. The webhook is what keeps the table current.
  *
- * `trialing` counts as active — that is the whole point of the trial.
+ * `trialing` counts as active — that is the whole point of the trial. An
+ * app-managed trial past its end date reads as `trial_expired` (see
+ * getSubscription), which does not.
  */
 export async function orgHasProductAccess(orgId: number): Promise<boolean> {
   // Self-hosted runs on the operator's own infrastructure and keys. There is
@@ -49,6 +54,9 @@ export const ACCESS_EXEMPT_PATHS: readonly string[] = [
   // subscription of its own, before accepting. Gating this would make it
   // impossible to join an org that is paying.
   '/invite/',
+  // The terms step a new account sees right after signing in. It comes before
+  // the trial starts, so the account has no subscription yet by design.
+  '/accept-terms',
   // Reachable while an org is soft-deleted so its owner can still restore it.
   '/account-deleted',
   // The branded checkout page. Same reason as /start-trial: an org reaches it
@@ -59,4 +67,16 @@ export const ACCESS_EXEMPT_PATHS: readonly string[] = [
 
 export function isAccessExempt(pathname: string): boolean {
   return ACCESS_EXEMPT_PATHS.some((p) => pathname === p || pathname.startsWith(p))
+}
+
+/**
+ * Whether the org is inside the app's own card-free trial, with no Stripe
+ * subscription behind it. Such an org has access but is still allowed through
+ * /checkout, so it can subscribe early; an org with a real subscription is not,
+ * because a second checkout would create a second subscription.
+ */
+export async function orgIsOnAppTrial(orgId: number): Promise<boolean> {
+  if (getDeploymentMode() === 'self-hosted') return false
+  const sub = await getSubscription(orgId)
+  return !!sub && isAppManagedTrial(sub)
 }

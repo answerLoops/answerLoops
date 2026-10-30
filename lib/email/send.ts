@@ -189,9 +189,10 @@ export async function sendWelcomeEmail(email: string, name: string | null): Prom
             ${greeting}
           </h2>
           <p style="${MUTED};margin-bottom:16px">
-            Thanks for signing up. answerLoops answers the questions your
-            community keeps asking, straight from your docs, so your team can focus
-            its time on building the product.
+            Thanks for signing up. Your 14-day trial has started, with every
+            feature included and no card needed. answerLoops answers the
+            questions your community keeps asking, straight from your docs, so
+            your team can focus its time on building the product.
           </p>
           <p style="${MUTED};margin-bottom:24px">
             The quickest start is to connect one channel and point us at your
@@ -219,6 +220,83 @@ export async function sendWelcomeEmail(email: string, name: string | null): Prom
     console.error('[email] welcome email failed', {
       error: err instanceof Error ? err.message : String(err),
     })
+  }
+}
+
+export type TrialEndingKind = '3d' | '1d'
+
+/**
+ * A heads-up that the free trial is about to end, with one button straight to
+ * checkout. Sent twice per trial: three days out, then one day out.
+ *
+ * Returns whether the message was actually handed to the mail provider, unlike
+ * the other senders here, which swallow failures. The reminder sweep needs the
+ * answer: a notice it could not send must be retried on the next pass, not
+ * recorded as sent.
+ */
+export async function sendTrialEndingEmail(
+  email: string,
+  name: string | null,
+  opts: { kind: TrialEndingKind; endsAt: Date; checkoutUrl: string },
+): Promise<boolean> {
+  if (MOCK_EXTERNALS || !process.env.RESEND_API_KEY) return false
+
+  const fromAddress = process.env.RESEND_FROM ?? 'hello@answerloops.com'
+  const first = name?.trim() ? name.trim().split(/\s+/)[0] : null
+  const greeting = first ? `Hi ${escapeHtml(first)},` : 'Hi,'
+  const lastDay = opts.kind === '1d'
+  const endDate = opts.endsAt.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+  })
+  const subject = lastDay
+    ? 'Last day of your answerLoops trial'
+    : 'Your answerLoops trial ends in 3 days'
+  const headline = lastDay ? 'Your trial ends tomorrow.' : 'Your trial ends in 3 days.'
+  const lead = lastDay
+    ? `Your free trial ends on ${endDate} (UTC). After that, answerLoops stops answering until you choose a plan.`
+    : `Your free trial ends on ${endDate} (UTC). To keep your community answers going without a break, choose a plan before then.`
+
+  try {
+    await client().emails.send({
+      from: fromAddress,
+      to: [email],
+      replyTo: SUPPORT_EMAIL,
+      subject,
+      html: `
+        <div style="${BASE_STYLE}">
+          <img src="https://answerloops.com/logo.png" alt="answerLoops" style="height:48px;margin-bottom:24px" />
+          <h2 style="font-size:20px;font-weight:700;color:#111827;margin-bottom:8px">${headline}</h2>
+          <p style="${MUTED};margin-bottom:16px">${greeting}</p>
+          <p style="${MUTED};margin-bottom:16px">${lead}</p>
+          <p style="${MUTED};margin-bottom:24px">
+            Nothing is charged unless you subscribe, and your workspace and
+            knowledge base are kept either way.
+          </p>
+          <a href="${opts.checkoutUrl}"
+             style="display:inline-block;background:#111827;color:#fff;font-size:14px;font-weight:500;padding:10px 20px;border-radius:8px;text-decoration:none">
+            Choose a plan
+          </a>
+          <p style="${MUTED};margin-top:24px">
+            Not sure which plan fits, or want more time to try it? Reply to
+            this email or write to
+            <a href="mailto:${SUPPORT_EMAIL}" style="color:#2563eb">${SUPPORT_EMAIL}</a>
+            — a person reads it.
+          </p>
+          <p style="color:#9ca3af;font-size:12px;margin-top:32px">
+            You're receiving this because your answerLoops trial is about to end.
+          </p>
+        </div>
+      `,
+    })
+    return true
+  } catch (err) {
+    console.error('[email] trial ending email failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+    return false
   }
 }
 

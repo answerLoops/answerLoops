@@ -20,13 +20,12 @@ beforeEach(() => {
 })
 
 describe('loginWithProvider', () => {
-  it('starts the flow for a configured method and keeps the plan, interval and code', async () => {
+  it('starts the flow for a configured method and keeps a promotion code, but not a plan', async () => {
     const { loginWithProvider } = await import('@/lib/actions/auth')
     await loginWithProvider('google')
 
-    expect(signIn).toHaveBeenCalledWith('google', {
-      redirectTo: '/checkout?plan=standard&interval=annual&code=SOMECODE',
-    })
+    // A plan has nothing to buy yet: the trial starts with the account.
+    expect(signIn).toHaveBeenCalledWith('google', { redirectTo: '/checkout?code=SOMECODE' })
   })
 
   it('never reaches the auth library for an unknown method', async () => {

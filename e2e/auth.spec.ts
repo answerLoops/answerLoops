@@ -19,6 +19,7 @@ test.describe('auth: unauthenticated redirects', () => {
     '/faq',
     '/leads',
     '/billing',
+    '/accept-terms',
   ]
 
   for (const route of protectedRoutes) {
@@ -28,11 +29,11 @@ test.describe('auth: unauthenticated redirects', () => {
     })
   }
 
-  test('login page renders sign-in form', async ({ page }) => {
-    // Bare /login defaults to the signup variant ("Create your account");
-    // ?mode=signin is what renders the sign-in copy this test checks for.
+  test('login page renders one sign-in for new and returning people', async ({ page }) => {
+    // There is a single page for everyone, so the old ?mode=signin link renders
+    // exactly what a bare /login does.
     await page.goto('/login?mode=signin')
-    await expect(page.getByText('Sign in to your workspace.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Get started or sign in' })).toBeVisible()
     // The configured provider's button is offered (the e2e server sets Google
     // credentials; with none configured the page shows an explanation instead).
     await expect(page.getByRole('button', { name: /sign in with google/i })).toBeVisible()

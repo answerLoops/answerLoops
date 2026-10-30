@@ -8,6 +8,7 @@ interface BillingData {
   planId: string
   status: string
   isTrialing: boolean
+  isAppTrial: boolean
   trialEndsAt: string | null
   used: number
   limit: number | null
@@ -61,7 +62,7 @@ function daysRemaining(isoDate: string): number {
   return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)))
 }
 
-function TrialBanner({ trialEndsAt }: { trialEndsAt: string }) {
+function TrialBanner({ trialEndsAt, isAppTrial }: { trialEndsAt: string; isAppTrial: boolean }) {
   const days = daysRemaining(trialEndsAt)
   const urgent = days <= 3
   return (
@@ -72,7 +73,9 @@ function TrialBanner({ trialEndsAt }: { trialEndsAt: string }) {
           {days === 0 ? 'Your trial ends today' : `${days} day${days === 1 ? '' : 's'} left in your trial`}
         </p>
         <p className={`mt-0.5 text-xs ${urgent ? 'text-amber-700' : 'text-brand-700'}`}>
-          Your card will be charged when the trial ends. Cancel anytime before then.
+          {isAppTrial
+            ? 'No card is on file and nothing will be charged. Subscribe to a plan before then to keep access.'
+            : 'Your card will be charged when the trial ends. Cancel anytime before then.'}
         </p>
       </div>
     </div>
@@ -84,7 +87,7 @@ function TrialExpiredBanner({ onUpgrade, pending }: { onUpgrade: (planId: string
   return (
     <div className="rounded-xl border-2 border-red-200 bg-red-50 p-6 text-center space-y-3">
       <p className="text-sm font-semibold text-red-800">Your trial has ended</p>
-      <p className="text-xs text-red-700">Choose a plan below to resume AI deflections and full access.</p>
+      <p className="text-xs text-red-700">Choose a plan below and add a card to resume AI deflections and full access.</p>
       <button
         onClick={() => onUpgrade('standard')}
         disabled={pending}
@@ -214,12 +217,14 @@ function PlanCard({
   plan,
   current,
   isTrialing,
+  isAppTrial,
   onUpgrade,
   pending,
 }: {
   plan: Plan
   current: boolean
   isTrialing: boolean
+  isAppTrial: boolean
   onUpgrade: (planId: string) => void
   pending: boolean
 }) {
@@ -283,7 +288,7 @@ function PlanCard({
               : 'border border-gray-200 bg-white text-gray-800 hover:bg-gray-50'
           }`}
         >
-          {pending ? 'Redirecting…' : `Upgrade to ${plan.name}`}
+          {pending ? 'Redirecting…' : `${isAppTrial ? 'Subscribe to' : 'Upgrade to'} ${plan.name}`}
         </button>
       )}
     </div>
@@ -317,7 +322,8 @@ export default function BillingPage() {
     })
   }
 
-  const isCanceled = data?.status === 'canceled'
+  const isCanceled = data?.status === 'canceled' || data?.status === 'trial_expired'
+  const isAppTrial = data?.isAppTrial ?? false
   const isTrialing = data?.isTrialing ?? false
   // 'none' (no subscription row yet — never started a trial) and
   // 'misconfigured'/'self-hosted' are not real plans; only show usage
@@ -349,7 +355,7 @@ export default function BillingPage() {
 
       {!loading && data && (
         <>
-          {isTrialing && data.trialEndsAt && <TrialBanner trialEndsAt={data.trialEndsAt} />}
+          {isTrialing && data.trialEndsAt && <TrialBanner trialEndsAt={data.trialEndsAt} isAppTrial={isAppTrial} />}
           {approachingLimit && <LimitWarningBanner planId={data.planId} onUpgrade={upgrade} pending={upgradePending} />}
           {isCanceled && <TrialExpiredBanner onUpgrade={upgrade} pending={upgradePending} />}
 
@@ -385,7 +391,7 @@ export default function BillingPage() {
               <div className="space-y-4">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-sm font-semibold text-gray-900">Plans</h2>
-                  <span className="text-xs text-gray-400">All plans include a 14-day free trial</span>
+                  <span className="text-xs text-gray-400">Every new account starts with a 14-day free trial, no card needed</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3">
                   {ORDERED_PLANS.map((plan) => (
@@ -394,6 +400,7 @@ export default function BillingPage() {
                       plan={plan}
                       current={plan.id === data.planId && !isCanceled}
                       isTrialing={isTrialing}
+                      isAppTrial={isAppTrial}
                       onUpgrade={upgrade}
                       pending={upgradePending}
                     />
@@ -401,7 +408,7 @@ export default function BillingPage() {
                 </div>
               </div>
 
-              {!isCanceled && (
+              {!isCanceled && !isAppTrial && (
                 <div className="flex flex-col items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-900">Subscription management</p>

@@ -48,6 +48,8 @@ interface PushPayload {
   title: string
   body: string
   url?: string
+  /** Pushes with the same tag replace each other on the device instead of stacking. */
+  tag?: string
 }
 
 export async function sendPushToAll(payload: PushPayload, orgId: number): Promise<void> {

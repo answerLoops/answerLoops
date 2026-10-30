@@ -45,9 +45,9 @@ describe('robots.txt on the hosted site', () => {
   })
 })
 
-describe('login page legal links', () => {
+describe('terms step legal links', () => {
   it('hands the form the marketing origin only on the hosted deployment', () => {
-    const src = fs.readFileSync('app/login/page.tsx', 'utf-8')
+    const src = fs.readFileSync('app/accept-terms/page.tsx', 'utf-8')
     expect(src).toMatch(/legalBaseUrl=\{marketingSiteEnabled\(\) \? MARKETING_URL : ''\}/)
   })
 })
