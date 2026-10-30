@@ -331,8 +331,12 @@ describe('lib/db/queries/widgets: compiled SQL', () => {
   it('getOrgByWidgetToken selects the allowlist column and returns it', async () => {
     const { getOrgByWidgetToken } = await queries()
     // Positional row, in select order: id, name, widget_token,
-    // widget_token_expires_at, widget_allowed_origins, plan_id.
-    rowsFor.push({ match: 'select', rows: [[7, 'Acme', 'tok-abc', null, 'example.com', 'pro']] })
+    // widget_token_expires_at, widget_allowed_origins,
+    // widget_lead_capture_mode, plan_id.
+    rowsFor.push({
+      match: 'select',
+      rows: [[7, 'Acme', 'tok-abc', null, 'example.com', 'on-failure', 'pro']],
+    })
 
     const org = await getOrgByWidgetToken('tok-abc')
 
@@ -353,6 +357,7 @@ describe('lib/db/queries/widgets: compiled SQL', () => {
       widget_token: 'tok-abc',
       plan_id: 'pro',
       widget_allowed_origins: 'example.com',
+      widget_lead_capture_mode: 'on-failure',
     })
   })
 

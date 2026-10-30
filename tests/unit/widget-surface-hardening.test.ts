@@ -178,10 +178,11 @@ describe('widget token actions cannot act on a defaulted org', () => {
     const s = src()
     expect(s).toContain("const WIDGET_ADMIN_ROLES = ['owner', 'admin'] as const")
     // Rotation breaks every live embed; the allowlist decides where the widget
-    // works at all. Both are owner/admin. Reading the token stays open to any
-    // member so they can still see the embed snippet.
+    // works at all; the lead-capture mode decides when a chat visitor is asked
+    // for an email. All three are owner/admin. Reading the token stays open to
+    // any member so they can still see the embed snippet.
     const gated = [...s.matchAll(/requireOrgAccess\(WIDGET_ADMIN_ROLES\)/g)]
-    expect(gated.length).toBe(2)
+    expect(gated.length).toBe(3)
     const ungated = [...s.matchAll(/requireOrgAccess\(\)/g)]
     expect(ungated.length).toBe(1)
   })
