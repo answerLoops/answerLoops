@@ -51,12 +51,34 @@ describe('IntegrationLogo', () => {
     expect(fills.size).toBeGreaterThan(1)
   })
 
-  it.each(['openai', 'groq'])('falls back to a monogram for %s, which has no mark', (key) => {
-    render(<IntegrationLogo name={key} />)
+  it('falls back to a monogram for groq, which has no mark yet', () => {
+    render(<IntegrationLogo name="groq" />)
     const logo = screen.getByRole('img')
     expect(logo.querySelector('svg')).toBeNull()
-    const expected = key === 'openai' ? 'O' : 'G'
-    expect(logo).toHaveTextContent(new RegExp(`^${expected}$`))
+    expect(logo).toHaveTextContent(/^G$/)
+  })
+
+  it('draws the official OpenAI mark instead of the letter O', () => {
+    render(<IntegrationLogo name="openai" />)
+    const logo = screen.getByRole('img', { name: 'OpenAI logo' })
+    const svg = logo.querySelector('svg')!
+    const d = svg.querySelector('path')?.getAttribute('d')
+    expect(d).toBe(LOGO_GLYPHS.openai.d)
+    // Literals on purpose: comparing only to the data file would still pass
+    // a bad crop or a swapped path.
+    expect(d?.startsWith('M508.749 317.399')).toBe(true)
+    expect(svg.getAttribute('viewBox')).toBe('174 174 368 368')
+    expect(logo).not.toHaveTextContent(/\S/)
+  })
+
+  it('applies each glyph its own viewBox and defaults the rest to 24 x 24', () => {
+    for (const [key, glyph] of Object.entries(LOGO_GLYPHS)) {
+      const { unmount } = render(<IntegrationLogo name={key} />)
+      const svg = screen.getByRole('img').querySelector('svg')
+      expect(svg, key).not.toBeNull()
+      expect(svg!.getAttribute('viewBox'), key).toBe(glyph.viewBox ?? '0 0 24 24')
+      unmount()
+    }
   })
 
   it('uses the first letter of an unknown name and keeps the name in the label', () => {
