@@ -75,7 +75,7 @@ export function IntegrationLogo({
           ))}
         </svg>
       ) : glyph ? (
-        <svg width={inner} height={inner} viewBox={key === 'openai' ? '0 0 716 716' : '0 0 24 24'} fill={glyph.color} aria-hidden="true">
+        <svg width={inner} height={inner} viewBox={glyph.viewBox ?? '0 0 24 24'} fill={glyph.color} aria-hidden="true">
           <path d={glyph.d} />
         </svg>
       ) : (
