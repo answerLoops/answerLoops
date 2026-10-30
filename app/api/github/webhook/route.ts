@@ -159,10 +159,15 @@ export async function POST(req: NextRequest) {
   } else if (event === 'issue_comment' && action === 'created') {
     if (monitored !== 'issues' && monitored !== 'both') return NextResponse.json({ ok: true })
     const issue = payload.issue as { number: number; state: string }
-    if (issue.state !== 'open') return NextResponse.json({ ok: true })
     const comment = payload.comment as { id: number; body: string; author_association?: string; user: { login: string; id: number; type?: string } }
     if (comment.user.type === 'Bot') return NextResponse.json({ ok: true })
     const issueThreadId = githubThreadId(owner, repoName, 'issue', issue.number)
+    // A comment on a closed issue still belongs to the conversation: it joins
+    // the issue's ticket (reopening it if staff had resolved it). It never
+    // opens a ticket of its own, so a stray comment on an old issue is ignored.
+    if (issue.state !== 'open' && !(await getTicketByThreadId(issueThreadId, actualOrgId))) {
+      return NextResponse.json({ ok: true })
+    }
     const issueCommentId = `github-issue-comment-${owner}-${repoName}-${comment.id}`
     if (isMaintainerAuthored(comment.author_association)) {
       // Never a support request, but part of the conversation staff read.

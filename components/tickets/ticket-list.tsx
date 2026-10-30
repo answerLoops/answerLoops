@@ -3,6 +3,8 @@ import type { Ticket } from '@/types'
 import { StatusBadge, PriorityBadge, CategoryBadge, AIDraftBadge } from '@/components/ui/badge'
 import { getSLAStatus } from '@/lib/sla/engine'
 import { LocalDate } from '@/components/ui/local-date'
+import { NewActivityBadge } from '@/components/tickets/new-activity-badge'
+import { GithubReferenceLink } from '@/components/tickets/github-reference'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 
 const PLATFORM_BADGE: Record<string, { label: string; className: string }> = {
@@ -71,9 +73,11 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
                 <Link href={`/tickets/${ticket.org_ticket_number}`} className="line-clamp-2 font-medium text-slate-900 hover:text-blue-700">
                   {ticket.ai_summary ?? rowSummary(ticket)}
                 </Link>
+                <NewActivityBadge ticket={ticket} />
               </td>
               <td className="px-4 py-3">
                 <PlatformBadge platform={ticket.source_platform} />
+                {ticket.source_platform === 'github' && <GithubReferenceLink ticket={ticket} variant="list" />}
               </td>
               <td className="px-4 py-3">
                 {ticket.category && <CategoryBadge category={ticket.category} />}

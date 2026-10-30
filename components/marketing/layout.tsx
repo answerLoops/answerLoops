@@ -78,8 +78,8 @@ export function TrialCta({
             Start a 14-day trial
           </Link>
           <p className="marketing-note">
-            A card is required. Cancel before the trial ends to avoid the
-            subscription charge.
+            No card required. Every feature is free for 14 days, with no
+            obligation.
           </p>
           <Link className="marketing-text-link" href={PRICING_HREF}>
             View plans and model costs

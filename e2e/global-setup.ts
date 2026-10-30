@@ -81,11 +81,14 @@ export default async function globalSetup() {
     .values({ installationId: 1, owner: 'acme', repo: 'demo', isPrivate: 0, orgId: DEFAULT_ORG_ID })
     .onConflictDoNothing()
 
-  // Seed a test staff user + membership
+  // Seed a test staff user + membership. The user has accepted the terms: an
+  // account without a recorded acceptance is held on /accept-terms (and its
+  // API calls are refused), and this migration-then-insert order means the
+  // migration's backfill for pre-existing users does not cover rows seeded here.
   await db.execute(sql`
-    INSERT INTO users (id, email, name, provider)
-    VALUES (1, 'staff@example.com', 'Test Staff', 'test')
-    ON CONFLICT (email) DO NOTHING
+    INSERT INTO users (id, email, name, provider, terms_accepted_at, terms_version)
+    VALUES (1, 'staff@example.com', 'Test Staff', 'test', NOW(), 'e2e')
+    ON CONFLICT (email) DO UPDATE SET terms_accepted_at = COALESCE(users.terms_accepted_at, NOW()), terms_version = COALESCE(users.terms_version, 'e2e')
   `)
 
   await db

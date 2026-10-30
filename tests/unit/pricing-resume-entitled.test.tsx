@@ -59,7 +59,7 @@ function loadPricing(state: NavState, params: Params = {}) {
   return PricingPage({ searchParams: Promise.resolve(params) })
 }
 
-const RESUME_BANNER = /pick a plan to finish setting up/i
+const RESUME_BANNER = /pick a plan to continue/i
 
 // The marketing surface only renders on the managed deployment; without this
 // the page 404s before any of the resume behaviour below is reachable. That

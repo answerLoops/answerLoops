@@ -25,6 +25,10 @@ work on.
 - Run `pnpm lint`, `pnpm test`, and `pnpm build` before pushing.
 - Update the matching page under `content/docs/` when changing product
   behavior, architecture, setup, or an integration.
+- Write the product name as `answerLoops` in prose. The rule does not cover
+  code identifiers, file and package names, URLs and domains, the GitHub
+  organization and repo paths, environment variable names, or the
+  `X-AnswerLoops-Token` header, which follow their own conventions.
 - Report security issues privately through [SECURITY.md](./SECURITY.md) —
   never in a public issue or PR.
 

@@ -62,14 +62,14 @@ describe('embedded checkout with a promotion code', () => {
     expect(options.idempotencyKey).toBe(`${PLAIN_KEY}:promo_1`)
   })
 
-  it('also skips the card for a 100% coupon that ends, and invoices at trial end', async () => {
+  it('also skips the card for a 100% coupon that ends', async () => {
     listPromoCodes.mockResolvedValue(promo({ percent_off: 100, duration: 'repeating', valid: true }))
     const { params } = await checkout('SIXMONTHS')
 
     expect(params.payment_method_collection).toBe('if_required')
-    expect(params.subscription_data.trial_settings).toEqual({
-      end_behavior: { missing_payment_method: 'create_invoice' },
-    })
+    // There is no Stripe trial any more, so nothing about trial end applies.
+    expect(params.subscription_data.trial_period_days).toBeUndefined()
+    expect(params.subscription_data.trial_settings).toBeUndefined()
   })
 
   it('applies a partial discount but still collects the card', async () => {

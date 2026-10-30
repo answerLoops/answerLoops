@@ -34,9 +34,8 @@ function normalize(name: string): string {
 
 /**
  * An integration's mark on a white, bordered tile, so dark and light brands
- * read the same on the docs background. A name with no mark yet (OpenAI,
- * Groq) renders a neutral monogram instead of a hand-drawn imitation of
- * someone else's logo.
+ * read the same on the docs background. Integrations without a brand mark
+ * (such as Groq) render a neutral monogram instead.
  */
 export function IntegrationLogo({
   name,
@@ -76,7 +75,7 @@ export function IntegrationLogo({
           ))}
         </svg>
       ) : glyph ? (
-        <svg width={inner} height={inner} viewBox="0 0 24 24" fill={glyph.color} aria-hidden="true">
+        <svg width={inner} height={inner} viewBox={glyph.viewBox ?? '0 0 24 24'} fill={glyph.color} aria-hidden="true">
           <path d={glyph.d} />
         </svg>
       ) : (

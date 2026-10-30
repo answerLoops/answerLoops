@@ -5,6 +5,7 @@ import { createTicket, getTicketBySourceMessageId, getTicketByThreadId, recordCu
 import { createNotification } from '@/lib/db/queries/notifications'
 import { calculateDeadlines, checkSlaBreaches } from '@/lib/sla/engine'
 import { sendPushToAll } from '@/lib/push/notify'
+import { notifyTicketActivity } from '@/lib/tickets/notify-activity'
 import { sendNewTicketEmail, sendSlaBreachEmails } from '@/lib/email/send'
 import { runAIAgent } from '@/lib/ai/agent'
 import { sendKeepAlive } from '@/lib/channels/post-reply'
@@ -91,12 +92,7 @@ export async function processCommunityMessage(
       // A redelivered webhook for a reply already in the thread: nothing new
       // to record, notify about, or acknowledge a second time.
       if (!stored) return { ticket_id: threadTicket.id, duplicate: true }
-      await createNotification(
-        'new_question',
-        `${authorName} replied to ticket #${threadTicket.org_ticket_number}`,
-        threadTicket.id,
-        orgId
-      )
+      await notifyTicketActivity({ ticket: threadTicket, authorName, content, orgId })
       // See sendKeepAlive's doc comment (lib/channels/post-reply.ts) — Google
       // Chat's UI flags the app as "not responding" for this silence too, so
       // it gets the same neutral, content-free receipt as the deflections-off

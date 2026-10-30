@@ -32,6 +32,13 @@ const ORG_FK_COLUMN = 'org_id'
 // entry added without justification defeats the point of the test.
 const EXEMPT = new Map<string, string>([
   [
+    'trial_claims',
+    'The one-trial-per-person ledger. It must survive workspace and account deletion or a ' +
+      'deleted account could start another trial. It holds a SHA-256 of the normalized ' +
+      'email and the sign-in provider account id, never the address; org_id and user_id ' +
+      'are ON DELETE SET NULL, so the purge neither blocks on it nor leaves a link to the org.',
+  ],
+  [
     'rate_limit_buckets',
     'Ephemeral abuse-control counters keyed by an opaque string, not customer data. ' +
       'Self-expiring via its own cleanup sweep, and no FK to orgs, so it neither blocks ' +

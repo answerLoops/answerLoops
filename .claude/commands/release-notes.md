@@ -105,10 +105,10 @@ Use this layout. Omit any section that is empty. Keep each bullet to one or two 
 ### Security
 This release includes security fixes.
 
-### Contributors
+### ⭐️ Contributors
 Thanks to @a, @b.
 
-## New Contributors
+## ❤️ New Contributors
 <verbatim from GitHub>
 
 **Full Changelog**: <verbatim from GitHub>

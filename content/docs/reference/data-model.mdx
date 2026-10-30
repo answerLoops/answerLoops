@@ -33,7 +33,8 @@ The diagram shows the key relationships only. The link from an article to its im
 | Records | Purpose |
 | --- | --- |
 | `orgs` | Workspace identity and configuration. |
-| `users`, `memberships` | User accounts and their workspace roles. |
+| `users`, `memberships` | User accounts and their workspace roles. Each user row records the sign-in provider's account id, when the terms of service were accepted and which version, an explicit marketing opt-in, and the last sign-in. |
+| `trial_claims` | One row per person who has started the free trial, keyed by a hash of the normalized email and the provider account id (each unique). It is kept when a workspace or account is deleted, so a trial cannot be restarted. |
 | `invitations` | Pending team invitations. |
 | `api_keys` | API key metadata and permissions. |
 

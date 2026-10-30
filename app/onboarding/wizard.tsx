@@ -1030,7 +1030,7 @@ export default function OnboardingWizard({ initialName }: { initialName: string 
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-[#f5f5f3] px-4">
       <div className="w-full max-w-md">
         <div className="rounded-lg border border-border bg-surface px-8 py-10">
           {/* Header */}

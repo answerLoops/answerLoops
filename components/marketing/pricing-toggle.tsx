@@ -110,8 +110,9 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
                 Start {TRIAL_DAYS}-day free trial
               </Link>
               <p className="mt-3 text-xs leading-relaxed text-slate-600">
-                Card required, but you&apos;re not charged today. Cancel before
-                the {TRIAL_DAYS}-day trial ends to avoid the charge.
+                No card required and no obligation. Every feature is included
+                for {TRIAL_DAYS} days, and you only add a card if you decide to
+                continue.
               </p>
               <ul className="mt-6 space-y-3 border-t border-slate-200 pt-5 text-sm text-slate-600">
                 {copy.features.map((feature) => (

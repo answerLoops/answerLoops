@@ -6,6 +6,8 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report this. Please don't include API keys, tokens, passwords, or customer data in this issue. If you think you've found a security problem, report it privately through [SECURITY.md](https://github.com/answerLoops/answerLoops/blob/main/SECURITY.md) instead.
+
+        > **Start here:** new to the project? Read [CONTRIBUTING.md](https://github.com/answerLoops/answerLoops/blob/main/CONTRIBUTING.md) first. It covers the ground rules, running answerLoops locally, and how to open a pull request.
   - type: dropdown
     id: deployment
     attributes:

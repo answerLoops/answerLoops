@@ -13,7 +13,7 @@ describe('the login page says where answerLoops supports a community', () => {
   })
 
   it('labels the logos so they cannot be mistaken for sign-in methods', () => {
-    expect(src).toContain('answerLoops supports your community on:')
+    expect(src).toContain('Works wherever your community asks')
   })
 
   it('has a logo for every channel in the list', () => {

@@ -80,7 +80,7 @@ describe('tickets query layer: customer follow-up handling', () => {
   it('reopens a resolved/closed ticket on a customer reply', () => {
     const src = readSrc('lib/db/queries/tickets.ts')
     const fnStart = src.indexOf('export async function recordCustomerReply')
-    const fnBody = src.slice(fnStart, fnStart + 1200)
+    const fnBody = src.slice(fnStart, fnStart + 2400)
     expect(fnBody).toMatch(/resolved[\s\S]*closed|closed[\s\S]*resolved/)
     expect(fnBody).toContain("status: 'open'")
     expect(fnBody).toContain("eventType: 'customer_reply'")

@@ -25,9 +25,9 @@ describe('the embedded session is the hosted one, minus the redirect', () => {
     expect(embedded).toContain("error: 'No Stripe price for this plan'")
   })
 
-  it('still attaches the trial, so nothing is charged on day one', () => {
+  it('attaches no Stripe trial: the free trial is card-free and runs in the app', () => {
     const embedded = src().slice(src().indexOf('createEmbeddedCheckoutSession'))
-    expect(embedded).toContain('trial_period_days: TRIAL_DAYS')
+    expect(embedded).not.toMatch(/trial_period_days\s*:/)
   })
 
   it('carries org and plan in metadata, which is how the webhook names the plan', () => {
@@ -80,7 +80,10 @@ describe('the checkout page guards match the ones on /start-trial', () => {
   })
 
   it('never lets an org that already pays start a second subscription', () => {
-    expect(src()).toContain('if (await orgHasProductAccess(orgId)) redirect')
+    // An org inside its free trial has access but no subscription, and is
+    // exactly who may subscribe early; anyone else with access already pays.
+    expect(src()).toContain('const onTrial = await orgIsOnAppTrial(orgId)')
+    expect(src()).toContain('if (!onTrial && (await orgHasProductAccess(orgId))) redirect')
   })
 
   it('falls back to the recommended plan rather than erroring or bouncing', () => {

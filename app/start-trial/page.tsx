@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { auth } from '@/auth'
-import { getPlan, isCloudMisconfigured, parseBillingInterval, stripeConfigured, TRIAL_DAYS } from '@/lib/billing/plans'
+import { getPlan, isCloudMisconfigured, parseBillingInterval, stripeConfigured } from '@/lib/billing/plans'
 import { orgHasProductAccess } from '@/lib/billing/access'
 import { parsePromoCode } from '@/lib/billing/promo'
 import { BillingMisconfigured } from '@/components/billing/billing-misconfigured'
@@ -28,18 +28,17 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
  *
  * Three kinds of visitor arrive:
  *
- * - **Mid-signup**, having picked a plan and just finished OAuth. Sent straight
- *   to Stripe. No interstitial — they already chose, and a "click to continue"
+ * - **Arriving with a plan** chosen on the pricing page. Sent straight on to
+ *   checkout. No interstitial — they already chose, and a "click to continue"
  *   page is only somewhere to abandon.
  *
  * - **Back from a completed checkout** (`?checkout=success`). Waits briefly for
  *   the webhook, then into the product. This is why the page is exempt from the
  *   access gate: at this moment they have paid but the row may not exist yet.
  *
- * - **Turned away by the gate** — abandoned checkout earlier, cancelled, or a
- *   lapsed trial. No plan to resume, so back to the public pricing page to
- *   choose one. Bouncing them into checkout for a plan they never selected
- *   would be presumptuous.
+ * - **Turned away by the gate** — the free trial ended, was already used, or a
+ *   subscription was cancelled. On to /checkout, where they pick a plan and
+ *   add a card to subscribe.
  */
 export default async function StartTrialPage({
   searchParams,
@@ -103,8 +102,8 @@ export default async function StartTrialPage({
           </div>
           <h1 className="text-base font-semibold text-ink-900">Finishing setup…</h1>
           <p className="mt-2 text-sm text-ink-500">
-            Your {TRIAL_DAYS}-day trial has started and your card has not been charged. This page
-            will continue on its own in a moment.
+            Your payment went through and your plan is being activated. This page will continue
+            on its own in a moment.
           </p>
         </div>
       </div>

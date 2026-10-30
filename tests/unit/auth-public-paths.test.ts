@@ -143,7 +143,7 @@ describe('auth.ts PUBLIC_PATHS covers every route the bot calls with BOT_SECRET'
     .map((f) => '/' + path.relative(path.join(process.cwd(), 'app'), path.dirname(f)).split(path.sep).join('/'))
 
   it('finds the bot routes it is guarding', () => {
-    expect(botRoutes).toEqual(expect.arrayContaining(['/api/kb/sync-jobs/run', '/api/kb/embedding-migration/run']))
+    expect(botRoutes).toEqual(expect.arrayContaining(['/api/kb/sync-jobs/run', '/api/kb/embedding-migration/run', '/api/billing/trial-reminders/run']))
   })
 
   it.each(botRoutes)('%s is covered by PUBLIC_PATHS', (route) => {

@@ -3,7 +3,7 @@ import { getStripe } from './stripe'
 import { STRIPE_FAILURE_STATUS } from './http-status'
 import { CHECKOUT_BRANDING, EMBEDDED_CHECKOUT_BRANDING } from './branding'
 import { resolvePromo, type PromoResolution } from './promo'
-import { getPlan, stripePriceFor, TRIAL_DAYS, type BillingInterval, type Plan } from './plans'
+import { getPlan, stripePriceFor, type BillingInterval, type Plan } from './plans'
 import { getSubscription } from '@/lib/db/queries/billing'
 import { getDb } from '@/lib/db/drizzle'
 import { users, memberships } from '@/lib/db/schema'
@@ -15,11 +15,11 @@ const MOD = 'billing/checkout'
 /**
  * Where Stripe sends someone who backs out of checkout.
  *
- * Deliberately the public pricing page rather than anywhere in the product. A
- * card is required to start a trial, so abandoning checkout means no trial was
- * started — and the dashboard is gated on having one (lib/billing/access.ts).
- * Pointing this at /billing would just bounce off that gate, so it goes
- * straight to the page where they can choose again.
+ * Deliberately the public pricing page rather than anywhere in the product.
+ * Checkout is where a lapsed or expired org subscribes, and the dashboard is
+ * gated on a subscription (lib/billing/access.ts), so pointing this at /billing
+ * would just bounce off that gate. It goes straight to the page where they can
+ * choose again.
  */
 const CANCEL_PATH = '/pricing'
 
@@ -156,21 +156,15 @@ export async function createCheckoutSession(
       success_url: `${base}/start-trial?checkout=success`,
       cancel_url: `${base}${CANCEL_PATH}`,
       metadata: { org_id: String(orgId), plan_id: plan.id },
+      // No trial_period_days. The free trial is card-free and runs in this app
+      // (lib/billing/trial.ts), so by the time someone is here they are
+      // subscribing, and the card is charged now. Re-adding a Stripe trial
+      // would hand out a second, card-backed trial the ledger knows nothing of.
       subscription_data: {
-        trial_period_days: TRIAL_DAYS,
         metadata: { org_id: String(orgId), plan_id: plan.id },
       },
       allow_promotion_codes: true,
       branding_settings: CHECKOUT_BRANDING,
-      // Stripe shows the trial dates on its own, but not in words. Saying it
-      // plainly at the submit button is the difference between "why does this
-      // want my card" and a understood commitment — and it is the single
-      // sentence most likely to decide whether someone completes this step.
-      custom_text: {
-        submit: {
-          message: `Your card will not be charged today. The first ${TRIAL_DAYS} days are free, and you can cancel any time before then at no cost.`,
-        },
-      },
     }, { idempotencyKey: checkoutIdempotencyKey(orgId, plan.id, interval) })
 
     if (!checkoutSession.url) {
@@ -277,15 +271,7 @@ export async function createEmbeddedCheckoutSession(
         return_url: `${base}/start-trial?checkout=success`,
         metadata: { org_id: String(orgId), plan_id: plan.id },
         subscription_data: {
-          trial_period_days: TRIAL_DAYS,
           metadata: { org_id: String(orgId), plan_id: plan.id },
-          // With no card on file, the end of the trial (or of a limited
-          // discount) must produce an invoice that can be paid, not a silent
-          // cancellation: 'cancel' and 'pause' would end the subscription of
-          // someone who owes nothing yet.
-          ...(noCard && {
-            trial_settings: { end_behavior: { missing_payment_method: 'create_invoice' as const } },
-          }),
         },
         // Codes are entered in the field on our checkout page and applied here,
         // so Stripe's own promotion-code box is off for this flow. A code typed

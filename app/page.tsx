@@ -157,7 +157,7 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="marketing-note">
-              A card is required. Cancel within 14 days to avoid the subscription charge.
+              No card required. Every feature is free for 14 days, with no obligation.
             </p>
           </div>
           <AnimatedChat />

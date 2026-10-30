@@ -6,6 +6,8 @@ body:
     attributes:
       value: |
         Thanks for the idea. For open-ended brainstorming, [Discussions](https://github.com/answerLoops/answerLoops/discussions) is a better fit. For anything concrete, this form is perfect.
+
+        > **Start here:** new to the project? Read [CONTRIBUTING.md](https://github.com/answerLoops/answerLoops/blob/main/CONTRIBUTING.md) first. It covers the ground rules, running answerLoops locally, and how to open a pull request.
   - type: textarea
     id: problem
     attributes:

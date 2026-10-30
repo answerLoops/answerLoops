@@ -7,7 +7,6 @@ import {
   ANNUAL_DISCOUNT_PCT,
   annualMonthlyPrice,
   annualTotalPrice,
-  TRIAL_DAYS,
   type BillingInterval,
   type Plan,
 } from '@/lib/billing/plans'
@@ -369,7 +368,7 @@ export function EmbeddedCheckoutPanel({
       <div className="order-3 lg:col-start-2 lg:row-start-2">
         <ul className="space-y-2.5 text-sm text-slate-700">
           {[
-            `${TRIAL_DAYS}-day free trial — pay nothing today`,
+            'Your plan starts the moment you confirm, with every feature',
             'Cancel any time from Settings, no email required',
             'Bring your own AI provider key — no usage markup',
             'MCP server and REST API included on every plan',
@@ -389,7 +388,7 @@ export function EmbeddedCheckoutPanel({
               q: 'Am I going to be charged today?',
               a: noCard
                 ? `No. Your code covers the full price, so there is nothing to charge and no card is needed. If the discount ever ends, you will be asked to add a payment method under Settings → Billing.`
-                : `No. The first ${TRIAL_DAYS} days are free. Your card is authorised now and charged only when the trial ends, and cancelling before then costs nothing.`,
+                : `Yes. The free trial has been used, so subscribing charges your card for the plan you pick when you confirm. You can cancel any time from Settings → Billing.`,
             },
             {
               q: 'Can I change plan later?',
