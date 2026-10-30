@@ -51,13 +51,22 @@ describe('IntegrationLogo', () => {
     expect(fills.size).toBeGreaterThan(1)
   })
 
-  it.each(['openai', 'groq'])('falls back to a monogram for %s, which has no mark', (key) => {
-    render(<IntegrationLogo name={key} />)
+  it('falls back to a monogram for groq, which has no mark yet', () => {
+    render(<IntegrationLogo name="groq" />)
     const logo = screen.getByRole('img')
     expect(logo.querySelector('svg')).toBeNull()
-    const expected = key === 'openai' ? 'O' : 'G'
-    expect(logo).toHaveTextContent(new RegExp(`^${expected}$`))
+    expect(logo).toHaveTextContent(/^G$/)
   })
+
+  it('draws the official OpenAI mark instead of the letter O', () => {
+    render(<IntegrationLogo name="openai" />)
+    const logo = screen.getByRole('img', { name: 'OpenAI logo' })
+    const svg = logo.querySelector('svg')!
+    expect(svg.querySelector('path')?.getAttribute('d')).toBe(LOGO_GLYPHS.openai.d)
+    expect(svg.getAttribute('viewBox')).toBe(LOGO_GLYPHS.openai.viewBox)
+    expect(logo).not.toHaveTextContent(/\S/)
+  })
+
 
   it('uses the first letter of an unknown name and keeps the name in the label', () => {
     render(<IntegrationLogo name="Zendesk" />)
