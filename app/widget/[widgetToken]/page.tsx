@@ -49,6 +49,7 @@ export default async function WidgetPage({ params }: Props) {
       widgetToken={widgetToken}
       orgName={org.name}
       showBranding={!whiteLabel}
+      leadCaptureMode={org.widget_lead_capture_mode}
     />
   )
 }

@@ -4,11 +4,18 @@ import { useChat } from '@ai-sdk/react'
 import { TextStreamChatTransport } from 'ai'
 import type { UIMessage } from 'ai'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  WIDGET_LEAD_SIGNAL_HEADER,
+  WIDGET_LEAD_SIGNALS,
+  type WidgetLeadCaptureMode,
+  type WidgetLeadSignal,
+} from '@/lib/widget/lead-capture'
 
 interface WidgetChatProps {
   widgetToken: string
   orgName: string
   showBranding: boolean
+  leadCaptureMode: WidgetLeadCaptureMode
 }
 
 const VISITOR_ID_STORAGE_KEY = 'al_visitor_id'
@@ -31,13 +38,44 @@ function getOrCreateVisitorId(): string {
   }
 }
 
-export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatProps) {
+function isWidgetLeadSignal(value: string | null): value is WidgetLeadSignal {
+  return value !== null && (WIDGET_LEAD_SIGNALS as readonly string[]).includes(value)
+}
+
+// Copy for the inline, non-blocking prompt shown in 'on-failure' mode. Kept
+// separate from the up-front gate's copy below — this one has context (the
+// conversation already happened) that the up-front ask never has.
+const ON_FAILURE_PROMPT_COPY: Record<Exclude<WidgetLeadSignal, 'none'>, string> = {
+  'no-kb-match': "I couldn't find anything on that in our knowledge base. Leave your email and someone will follow up.",
+  'human-requested': "I'll have someone follow up with you directly. Leave your email and we'll be in touch.",
+}
+
+export function WidgetChat({ widgetToken, orgName, showBranding, leadCaptureMode }: WidgetChatProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [input, setInput] = useState('')
   const [email, setEmail] = useState('')
-  const [emailSubmitted, setEmailSubmitted] = useState(false)
+  // 'up-front' starts gated (the original hardcoded behaviour); 'off' and
+  // 'on-failure' both let the visitor straight into the conversation — they
+  // differ only in whether a prompt can appear later. Computed once: the mode
+  // is a prop from the server and does not change during the widget's life.
+  const [emailSubmitted, setEmailSubmitted] = useState(() => leadCaptureMode !== 'up-front')
   const [emailPending, setEmailPending] = useState(false)
   const [emailError, setEmailError] = useState('')
+
+  // The on-failure prompt: which signal triggered it (null = not showing),
+  // and whether the visitor has already acted on one this conversation
+  // (submitted or dismissed) so repeated failures don't keep re-asking.
+  // Typed without 'none' so a truthy check can't accidentally let it through —
+  // the string 'none' is itself truthy, so `failurePrompt && ...` alone would
+  // not have excluded it.
+  const [failurePrompt, setFailurePrompt] = useState<Exclude<WidgetLeadSignal, 'none'> | null>(null)
+  const [leadHandled, setLeadHandled] = useState(false)
+  const [failureEmail, setFailureEmail] = useState('')
+  const [failureEmailPending, setFailureEmailPending] = useState(false)
+
+  // Read by the custom `fetch` below on every response, independent of React
+  // render timing — onFinish below runs once the stream actually closes.
+  const lastSignalRef = useRef<WidgetLeadSignal>('none')
 
   const visitorId = useMemo(() => getOrCreateVisitorId(), [])
 
@@ -45,14 +83,29 @@ export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatPro
     transport: new TextStreamChatTransport({
       api: '/api/widget/chat',
       body: { widgetToken, visitorId },
+      // Middleware-style hook (see the `ai` package's HttpChatTransport
+      // options): reads the lead-capture signal header off the real response
+      // without interfering with the body stream TextStreamChatTransport
+      // still reads from the same Response object below.
+      fetch: async (reqInput, init) => {
+        const res = await fetch(reqInput, init)
+        const header = res.headers.get(WIDGET_LEAD_SIGNAL_HEADER)
+        lastSignalRef.current = isWidgetLeadSignal(header) ? header : 'none'
+        return res
+      },
     }),
+    onFinish: () => {
+      if (leadCaptureMode !== 'on-failure' || leadHandled) return
+      const signal = lastSignalRef.current
+      if (signal !== 'none') setFailurePrompt(signal)
+    },
   })
 
   const isLoading = status === 'submitted' || status === 'streaming'
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+  }, [messages, failurePrompt])
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -61,22 +114,42 @@ export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatPro
     setInput('')
   }
 
-  async function handleEmailSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!email.trim()) { setEmailSubmitted(true); return }
-    setEmailPending(true)
-    setEmailError('')
+  async function submitLead(address: string): Promise<boolean> {
+    if (!address.trim()) return false
     try {
       await fetch('/api/widget/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ widgetToken, email: email.trim() }),
+        body: JSON.stringify({ widgetToken, email: address.trim() }),
       })
+      return true
     } catch {
       // non-blocking — still let them in
+      return false
     }
+  }
+
+  async function handleEmailSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setEmailPending(true)
+    setEmailError('')
+    await submitLead(email)
     setEmailPending(false)
     setEmailSubmitted(true)
+  }
+
+  async function handleFailurePromptSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setFailureEmailPending(true)
+    await submitLead(failureEmail)
+    setFailureEmailPending(false)
+    setFailurePrompt(null)
+    setLeadHandled(true)
+  }
+
+  function dismissFailurePrompt() {
+    setFailurePrompt(null)
+    setLeadHandled(true)
   }
 
   const BotIcon = () => (
@@ -98,7 +171,7 @@ export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatPro
         </div>
       </div>
 
-      {/* Email gate — shown before first message if email not submitted */}
+      {/* Email gate — 'up-front' mode only, shown before first message */}
       {!emailSubmitted ? (
         <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 mb-4">
@@ -183,6 +256,35 @@ export function WidgetChat({ widgetToken, orgName, showBranding }: WidgetChatPro
 
             {error && (
               <p className="text-center text-xs text-red-400">Something went wrong. Please try again.</p>
+            )}
+
+            {failurePrompt && (
+              <div className="rounded-xl border border-brand-100 bg-brand-50 px-3 py-2.5 space-y-2" data-testid="failure-lead-prompt">
+                <p className="text-xs text-gray-700">{ON_FAILURE_PROMPT_COPY[failurePrompt]}</p>
+                <form onSubmit={handleFailurePromptSubmit} className="flex items-center gap-1.5">
+                  <input
+                    type="email"
+                    value={failureEmail}
+                    onChange={(e) => setFailureEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="min-w-0 flex-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
+                  />
+                  <button
+                    type="submit"
+                    disabled={failureEmailPending || !failureEmail.trim()}
+                    className="shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-[0.6875rem] font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                  >
+                    {failureEmailPending ? 'Sending…' : 'Send'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={dismissFailurePrompt}
+                    className="shrink-0 text-[0.6875rem] text-gray-400 hover:text-gray-600 transition-colors"
+                  >
+                    No thanks
+                  </button>
+                </form>
+              </div>
             )}
 
             <div ref={bottomRef} />

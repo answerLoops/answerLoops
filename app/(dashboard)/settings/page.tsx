@@ -6,7 +6,8 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { updateSLAAction } from '@/app/actions/sla'
 import { saveDiscordIntegrationAction, deleteDiscordIntegrationAction, saveDiscordGuildChannelsAction, removeDiscordGuildAction, updateDiscordAutoDeflectAction, saveSlackChannelsAction, deleteSlackIntegrationAction, saveTelegramIntegrationAction, deleteTelegramIntegrationAction, saveDiscourseIntegrationAction, deleteDiscourseIntegrationAction, saveCircleIntegrationAction, deleteCircleIntegrationAction, saveEmailIntegrationAction, deleteEmailIntegrationAction, startEmailDomainVerificationAction, checkEmailDomainVerificationAction, removeEmailDomainAction, disconnectOauthAction, generateGoogleChatConnectCodeAction, saveGoogleChatSettingsAction, deleteGoogleChatIntegrationAction, getCurrentDeploymentMode } from '@/app/actions/integrations'
 import { sendInviteAction, revokeInviteAction, removeMemberAction, transferOwnershipAction } from '@/app/actions/invitations'
-import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction } from '@/app/actions/widget'
+import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction, saveWidgetLeadCaptureModeAction } from '@/app/actions/widget'
+import type { WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import { saveAIConfigAction, clearAIConfigAction } from '@/app/actions/ai-config'
 import { saveROIConfigAction } from '@/app/actions/roi'
 import { createApiKeyAction, revokeApiKeyAction } from '@/app/actions/api-keys'
@@ -3196,6 +3197,9 @@ function WidgetSection() {
   const [savedOrigins, setSavedOrigins] = useState('')
   const [savingOrigins, setSavingOrigins] = useState(false)
   const [originsMsg, setOriginsMsg] = useState<string | null>(null)
+  const [leadCaptureMode, setLeadCaptureMode] = useState<WidgetLeadCaptureMode>('on-failure')
+  const [savingLeadCaptureMode, setSavingLeadCaptureMode] = useState(false)
+  const [leadCaptureMsg, setLeadCaptureMsg] = useState<string | null>(null)
 
   async function loadToken() {
     setLoading(true)
@@ -3206,8 +3210,26 @@ function WidgetSection() {
       setCanManage(result.canManage === true)
       setOrigins(result.allowedOrigins ?? '')
       setSavedOrigins(result.allowedOrigins ?? '')
+      if (result.leadCaptureMode) setLeadCaptureMode(result.leadCaptureMode)
     }
     setLoading(false)
+  }
+
+  async function changeLeadCaptureMode(mode: WidgetLeadCaptureMode) {
+    const previous = leadCaptureMode
+    setLeadCaptureMode(mode)
+    setSavingLeadCaptureMode(true)
+    setLeadCaptureMsg(null)
+    const fd = new FormData()
+    fd.set('mode', mode)
+    const result = await saveWidgetLeadCaptureModeAction(null, fd)
+    if (result.error) {
+      setLeadCaptureMode(previous)
+      setLeadCaptureMsg(result.error)
+    } else {
+      setLeadCaptureMsg('Saved.')
+    }
+    setSavingLeadCaptureMode(false)
   }
 
   async function saveOrigins() {
@@ -3356,6 +3378,39 @@ function WidgetSection() {
                 {savedOrigins
                   ? `Allowed on: ${savedOrigins.split('\n').join(', ')}`
                   : 'No domains listed — the widget will not load on any site yet.'}
+                {' '}Only owners and admins can change this.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2 border-t border-gray-100 pt-3">
+            <div>
+              <p className="text-xs font-medium text-gray-900">Ask for an email</p>
+              <p className="text-[0.6875rem] text-gray-500">
+                When the widget collects a visitor&apos;s email address.
+              </p>
+            </div>
+            {canManage ? (
+              <>
+                <select
+                  value={leadCaptureMode}
+                  onChange={(e) => changeLeadCaptureMode(e.target.value as WidgetLeadCaptureMode)}
+                  disabled={savingLeadCaptureMode}
+                  className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs text-gray-700 bg-white sm:w-auto"
+                >
+                  <option value="on-failure">Only if it can&apos;t help — after an unanswered question</option>
+                  <option value="up-front">Before the conversation starts</option>
+                  <option value="off">Never</option>
+                </select>
+                {leadCaptureMsg && <p className="text-[0.6875rem] text-gray-600">{leadCaptureMsg}</p>}
+              </>
+            ) : (
+              <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-[0.6875rem] text-gray-600">
+                {leadCaptureMode === 'on-failure'
+                  ? 'Only asked after an unanswered question.'
+                  : leadCaptureMode === 'up-front'
+                    ? 'Asked before the conversation starts.'
+                    : 'Never asked.'}
                 {' '}Only owners and admins can change this.
               </p>
             )}

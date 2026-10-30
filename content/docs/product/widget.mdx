@@ -59,6 +59,18 @@ This is usually the highest-value place to put it: docs visitors are anonymous a
   On platforms with no build step, this means the embed token ends up committed to whatever repository holds your docs. The token is a public identifier rather than a secret — it appears in page HTML regardless — but committing it does mean rotating it requires a commit. If that matters for your setup, hold off until the hosted loader ships, which replaces the token in the snippet with a stable slug.
 </Note>
 
+## Lead capture
+
+**Settings → Widget → Ask for an email** controls whether, and when, the widget asks a visitor for their email address.
+
+- **Only if it can't help** (default) — the visitor goes straight into the conversation. The widget only asks for an email after a turn it couldn't really answer: no knowledge-base article matched the question, or the visitor explicitly asked to talk to a person. The ask appears inline, right under that answer, with a short line explaining why ("I couldn't find anything on that — leave your email and someone will follow up"), and a **No thanks** option that lets the visitor keep chatting without it. It only appears once per conversation.
+- **Before the conversation starts** — the original behaviour: the visitor sees an email field before they can ask anything, with a **Skip** link to bypass it.
+- **Never** — the widget never asks.
+
+<Callout>
+  Default changed to **Only if it can't help** for new workspaces. Asking up front, before the widget has done anything to earn the visitor's trust, was costing more conversations than the leads it produced — a visitor arrives with a question, not an intent to hand over an email, and bounces rather than answer a stranger-bot. Asking after a real miss gives the visitor context for why they're being asked, and the resulting address is attached to an actual unresolved question rather than a cold form fill.
+</Callout>
+
 ## Rotating the token
 
 Tokens expire after **90 days**. Settings warns you as the date approaches, and **Regenerate token** issues a new one.

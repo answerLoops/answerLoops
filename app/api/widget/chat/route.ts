@@ -13,6 +13,7 @@ import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
 import { reserveGeneration, commitDeflection, releaseGeneration } from '@/lib/billing/usage'
 import { logger } from '@/lib/logger'
+import { WIDGET_LEAD_SIGNAL_HEADER, requestsHuman, type WidgetLeadSignal } from '@/lib/widget/lead-capture'
 
 const MOD = 'api/widget/chat'
 
@@ -189,6 +190,17 @@ export async function POST(request: Request) {
         .join('\n')}`
     : ''
 
+  // Surfaced to the widget client as a response header (below) so the
+  // on-failure lead-capture prompt (see lib/widget/lead-capture.ts and issue
+  // #11) can trigger without the client trying to parse the model's prose.
+  // Checked in priority order: an explicit ask for a human is the strongest
+  // signal regardless of whether the KB happened to return something.
+  const leadSignal: WidgetLeadSignal = requestsHuman(query)
+    ? 'human-requested'
+    : allContext.length === 0
+      ? 'no-kb-match'
+      : 'none'
+
   let model: Awaited<ReturnType<typeof chatModel>>
   try {
     model = await chatModel(DEFAULT_FAST_MODEL, org.id)
@@ -247,5 +259,8 @@ If no article below covers the question, answer from general knowledge and do no
   // not the DOM lib global `createTextStreamResponse` expects — same
   // structurally-identical-but-nominally-distinct type gap as the
   // MastraModelConfig cast above. Cast at this one boundary.
-  return createTextStreamResponse({ textStream: result.textStream as unknown as ReadableStream<string> })
+  return createTextStreamResponse({
+    textStream: result.textStream as unknown as ReadableStream<string>,
+    headers: { [WIDGET_LEAD_SIGNAL_HEADER]: leadSignal },
+  })
 }

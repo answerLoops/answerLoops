@@ -6,8 +6,11 @@ import {
   rotateWidgetToken,
   setWidgetAllowedOrigins,
   getWidgetAllowedOrigins,
+  getWidgetLeadCaptureMode,
+  setWidgetLeadCaptureMode,
 } from '@/lib/db/queries/widgets'
 import { parseAllowedOrigins } from '@/lib/widget/origin'
+import { isWidgetLeadCaptureMode, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 
 // Restricting where the widget may be embedded, and rotating the token that
 // makes it work, are both configuration that breaks live embeds when set
@@ -21,6 +24,7 @@ export interface WidgetTokenResult {
   allowedOrigins?: string
   /** Whether the viewer may rotate the token or change the allowlist. */
   canManage?: boolean
+  leadCaptureMode?: WidgetLeadCaptureMode
   error?: string
 }
 
@@ -35,10 +39,12 @@ export async function getWidgetTokenAction(): Promise<WidgetTokenResult> {
   if (!access.ok) return { error: access.error }
   const info = await ensureWidgetToken(access.orgId)
   const allowedOrigins = await getWidgetAllowedOrigins(access.orgId)
+  const leadCaptureMode = await getWidgetLeadCaptureMode(access.orgId)
   return {
     token: info.token,
     expiresAt: info.expiresAt,
     allowedOrigins: allowedOrigins ?? '',
+    leadCaptureMode,
     canManage: (WIDGET_ADMIN_ROLES as readonly string[]).includes(access.role),
   }
 }
@@ -78,4 +84,28 @@ export async function saveWidgetOriginsAction(
   const origins = parseAllowedOrigins(raw)
   await setWidgetAllowedOrigins(access.orgId, origins)
   return { origins }
+}
+
+export interface WidgetLeadCaptureModeResult {
+  mode?: WidgetLeadCaptureMode
+  error?: string
+}
+
+/**
+ * Changes when the widget interrupts a visitor to ask for an email — the
+ * same class of "breaks the live widget's behaviour" decision as the token
+ * and allowlist actions above, so it gets the same owner/admin gate.
+ */
+export async function saveWidgetLeadCaptureModeAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<WidgetLeadCaptureModeResult> {
+  const access = await requireOrgAccess(WIDGET_ADMIN_ROLES)
+  if (!access.ok) return { error: access.error }
+
+  const mode = formData.get('mode')
+  if (!isWidgetLeadCaptureMode(mode)) return { error: 'Invalid mode' }
+
+  await setWidgetLeadCaptureMode(access.orgId, mode)
+  return { mode }
 }
