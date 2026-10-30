@@ -2,6 +2,10 @@ name: 📚 Documentation issue
 description: Something in the docs is missing, unclear, or wrong.
 labels: ["documentation"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Start here:** new to the project? Read [CONTRIBUTING.md](https://github.com/answerLoops/answerLoops/blob/main/CONTRIBUTING.md) first. It covers the ground rules, running answerLoops locally, and how to open a pull request.
   - type: input
     id: page
     attributes:

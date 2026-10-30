@@ -38,6 +38,12 @@ currently in this state.
 - If you believe a capability genuinely should not be advertised yet, raise it
   with the owner instead of quietly qualifying the copy.
 
+# GitHub issues — "Start here" footer — HARD RULE
+
+Every issue created for this repo ends with the footer below, as the last block of the body. Do not duplicate it if it is already there, and keep it in place when editing an existing issue.
+
+> **Start here:** new to the project? Read [CONTRIBUTING.md](https://github.com/answerLoops/answerLoops/blob/main/CONTRIBUTING.md) first. It covers the ground rules, running answerLoops locally, and how to open a pull request.
+
 # Commit message rules
 
 Every commit **must** have a subject line AND a body. No exceptions.
@@ -216,6 +222,7 @@ Before opening any PR, re-read this file (`AGENTS.md`) and verify all rules are 
 8. If integration pages or top-level capabilities changed in `content/docs/`: `/project:update-llms-txt` ran
 9. If cutting a release: `/project:release-notes` ran and the user approved the draft
 10. If a release was published: `/project:changelog-sync` ran so `/changelog` shows it
+11. If a GitHub issue was created or edited: its body ends with the "Start here" footer pointing at `CONTRIBUTING.md`
 
 # Placeholder format — HARD RULE
 

@@ -2,6 +2,10 @@ name: 👀 New channel or integration
 description: Ask for answerLoops to work with another chat platform, community tool, knowledge source, or AI provider.
 labels: ["enhancement"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        > **Start here:** new to the project? Read [CONTRIBUTING.md](https://github.com/answerLoops/answerLoops/blob/main/CONTRIBUTING.md) first. It covers the ground rules, running answerLoops locally, and how to open a pull request.
   - type: input
     id: name
     attributes:
