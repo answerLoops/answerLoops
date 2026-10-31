@@ -24,6 +24,11 @@ import {
   StepsCard,
   WidgetActionsProvider,
 } from './genui-cards'
+import {
+  isWidgetLeadSignal,
+  type WidgetLeadCaptureMode,
+  type WidgetLeadSignal,
+} from '@/lib/widget/lead-capture'
 
 interface WidgetChatProps {
   widgetToken: string
@@ -31,6 +36,7 @@ interface WidgetChatProps {
   orgName: string
   showBranding: boolean
   isSelfPreview: boolean
+  leadCaptureMode: WidgetLeadCaptureMode
 }
 
 const VISITOR_ID_STORAGE_KEY = 'al_visitor_id'
@@ -126,7 +132,27 @@ function useGenuiRenderers() {
   useRenderTool({ name: '*', render: () => null }, [])
 }
 
+// Copy for the inline, non-blocking prompt shown in 'on-failure' mode. Kept
+// separate from the up-front gate's copy below — this one has context (the
+// conversation already happened) that the up-front ask never has.
+const ON_FAILURE_PROMPT_COPY: Record<Exclude<WidgetLeadSignal, 'none'>, string> = {
+  'no-kb-match': "I couldn't find anything on that in our knowledge base. Leave your email and someone will follow up.",
+  'human-requested': "I'll have someone follow up with you directly. Leave your email and we'll be in touch.",
+}
+
 const EMPTY_RESULTS: Record<string, string> = {}
+
+// checkLeadSignal's retry budget: the client's one post-turn poll can race a
+// transient blip (a dropped connection, a shared rate-limit bucket that's
+// momentarily full) that has nothing to do with whether the turn actually
+// failed. Three tries with a short, linearly-increasing delay absorbs that
+// without turning a real outage into a long user-visible stall.
+const LEAD_SIGNAL_MAX_ATTEMPTS = 3
+const LEAD_SIGNAL_RETRY_DELAY_MS = 400
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 type ToolCallLike = NonNullable<Extract<Message, { role: 'assistant' }>['toolCalls']>[number]
 
@@ -208,7 +234,14 @@ const MessageRow = memo(
   }
 )
 
-export function WidgetChat({ widgetToken, renderToken, orgName, showBranding, isSelfPreview }: WidgetChatProps) {
+export function WidgetChat({
+  widgetToken,
+  renderToken,
+  orgName,
+  showBranding,
+  isSelfPreview,
+  leadCaptureMode,
+}: WidgetChatProps) {
   const visitorId = useMemo(() => getOrCreateVisitorId(), [])
 
   return (
@@ -225,6 +258,7 @@ export function WidgetChat({ widgetToken, renderToken, orgName, showBranding, is
         showBranding={showBranding}
         visitorId={visitorId}
         isSelfPreview={isSelfPreview}
+        leadCaptureMode={leadCaptureMode}
       />
     </CopilotKitProvider>
   )
@@ -237,6 +271,7 @@ function WidgetChatBody({
   showBranding,
   visitorId,
   isSelfPreview,
+  leadCaptureMode,
 }: {
   widgetToken: string
   renderToken: string
@@ -244,18 +279,71 @@ function WidgetChatBody({
   showBranding: boolean
   visitorId: string
   isSelfPreview: boolean
+  leadCaptureMode: WidgetLeadCaptureMode
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [input, setInput] = useState('')
   const [email, setEmail] = useState('')
-  const [emailSubmitted, setEmailSubmitted] = useState(false)
+  // 'up-front' starts gated (the original hardcoded behaviour); 'off' and
+  // 'on-failure' both let the visitor straight into the conversation — they
+  // differ only in whether a prompt can appear later. leadCaptureMode is a
+  // prop from the server and does not change during the widget's life.
+  const [emailSubmitted, setEmailSubmitted] = useState(leadCaptureMode !== 'up-front')
   const [emailPending, setEmailPending] = useState(false)
   const [emailError, setEmailError] = useState('')
+
+  // The on-failure prompt: which signal triggered it (null = not showing),
+  // and whether the visitor has already acted on one this conversation
+  // (submitted or dismissed) so repeated failures don't keep re-asking.
+  // Typed without 'none' so a truthy check can't accidentally let it through
+  // — the string 'none' is itself truthy.
+  const [failurePrompt, setFailurePrompt] = useState<Exclude<WidgetLeadSignal, 'none'> | null>(null)
+  const [leadHandled, setLeadHandled] = useState(false)
+  const [failureEmail, setFailureEmail] = useState('')
+  const [failureEmailPending, setFailureEmailPending] = useState(false)
+  const [failureEmailError, setFailureEmailError] = useState('')
+  // The visitor's own last message, attached to the lead when they submit
+  // through the failure prompt so the team sees what they couldn't get
+  // answered. A ref, not state: nothing in the UI needs to re-render on it.
+  const lastQueryRef = useRef('')
 
   const { agent } = useAgent()
   const [messages, setMessages] = useState<Message[]>(agent.messages)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const checkLeadSignal = useCallback(async () => {
+    if (leadCaptureMode !== 'on-failure' || leadHandled) return
+    for (let attempt = 0; attempt < LEAD_SIGNAL_MAX_ATTEMPTS; attempt++) {
+      const isLastAttempt = attempt === LEAD_SIGNAL_MAX_ATTEMPTS - 1
+      try {
+        const res = await fetch('/api/widget/lead-signal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ widgetToken, renderToken, visitorId }),
+        })
+        if (res.status === 429) {
+          if (isLastAttempt) return // Retries exhausted: leave existing state — see below.
+          await sleep(LEAD_SIGNAL_RETRY_DELAY_MS * (attempt + 1))
+          continue
+        }
+        if (!res.ok) return
+        const data: unknown = await res.json()
+        const signal = (data as { signal?: unknown })?.signal
+        if (!isWidgetLeadSignal(signal)) return
+        // A definitive 'none' clears any prompt left showing from an earlier
+        // call in this same retry loop; any other signal shows its prompt.
+        // Deliberately not reached on a retry-exhausted network error below
+        // — an indefinite result should never overwrite a real prompt that's
+        // already showing just because this one poll couldn't confirm it.
+        setFailurePrompt(signal === 'none' ? null : signal)
+        return
+      } catch {
+        if (isLastAttempt) return // Retries exhausted: leave existing state, don't guess.
+        await sleep(LEAD_SIGNAL_RETRY_DELAY_MS * (attempt + 1))
+      }
+    }
+  }, [leadCaptureMode, leadHandled, widgetToken, renderToken, visitorId])
 
   useEffect(() => {
     // `messages` starts as agent.messages (see the useState above) and every
@@ -267,7 +355,13 @@ function WidgetChatBody({
         setError(null)
         setIsLoading(true)
       },
-      onRunFinalized: () => setIsLoading(false),
+      onRunFinalized: () => {
+        setIsLoading(false)
+        // A failed run never reaches the chat route's onFinish, so the stash
+        // this reads has nothing for it — the fetch above just resolves to
+        // 'none' and the prompt stays hidden. Safe to call unconditionally.
+        void checkLeadSignal()
+      },
       // The server only puts a specific message in error.message when
       // isSelfPreview asked for one — see app/api/widget/chat/route.ts.
       // Real customer-site visitors get the generic fallback below.
@@ -280,13 +374,13 @@ function WidgetChatBody({
       },
     })
     return unsubscribe
-  }, [agent])
+  }, [agent, checkLeadSignal])
 
   useEffect(() => {
     // Smooth scrolling restarts its animation on every streamed token and
     // visibly lags behind the text; jump while a reply is arriving.
     bottomRef.current?.scrollIntoView({ behavior: isLoading ? 'auto' : 'smooth' })
-  }, [messages, isLoading])
+  }, [messages, isLoading, failurePrompt])
 
   useGenuiRenderers()
 
@@ -307,6 +401,12 @@ function WidgetChatBody({
     (raw: string) => {
       const text = raw.trim()
       if (!text || isLoading) return
+      // Visual only — leadHandled is untouched, so a later real failure can
+      // still show a fresh prompt. Without this, a stale "couldn't help"
+      // card from an earlier turn stays on screen under this turn's answer,
+      // even once that answer actually helps.
+      setFailurePrompt(null)
+      lastQueryRef.current = text
       agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: text })
       // addMessage() only mutates the agent's local message list — our
       // `messages` state otherwise only updates from server-pushed onEvent
@@ -330,22 +430,71 @@ function WidgetChatBody({
     sendMessage(input)
   }
 
+  // 'invalid' means the server rejected the address itself — the one case
+  // worth blocking on, since resubmitting with a better address can actually
+  // fix it. 'rate-limited' (HTTP 429) and 'network-error' are both outside
+  // the visitor's control in the moment, so callers below let them through
+  // rather than stranding them at a gate they can't do anything about right
+  // now — the alternative works against the product's actual goal (get the
+  // question asked).
+  async function postLead(
+    address: string,
+    question?: string
+  ): Promise<'ok' | 'invalid' | 'rate-limited' | 'network-error'> {
+    if (!address.trim()) return 'ok'
+    try {
+      const res = await fetch('/api/widget/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ widgetToken, renderToken, email: address.trim(), ...(question ? { question } : {}) }),
+      })
+      if (res.ok) return 'ok'
+      return res.status === 429 ? 'rate-limited' : 'invalid'
+    } catch {
+      return 'network-error'
+    }
+  }
+
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email.trim()) { setEmailSubmitted(true); return }
     setEmailPending(true)
     setEmailError('')
-    try {
-      await fetch('/api/widget/lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ widgetToken, renderToken, email: email.trim() }),
-      })
-    } catch {
-      // non-blocking — still let them in
-    }
+    const result = await postLead(email)
     setEmailPending(false)
+    if (result === 'invalid') {
+      setEmailError("That didn't go through — check the address and try again.")
+      return
+    }
+    // A rate limit or a network error still let them into the chat: neither
+    // is something resubmitting the same address fixes, and stranding a
+    // visitor at the gate over either works against the product's actual
+    // goal (get the question asked). Skip is also always visible below for
+    // the same reason.
     setEmailSubmitted(true)
+  }
+
+  async function handleFailurePromptSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setFailureEmailPending(true)
+    setFailureEmailError('')
+    const result = await postLead(failureEmail, lastQueryRef.current || undefined)
+    setFailureEmailPending(false)
+    if (result !== 'ok') {
+      setFailureEmailError(
+        result === 'rate-limited'
+          ? "That's one too many tries — wait a moment and try again, or No thanks to skip."
+          : "That didn't go through — try again, or No thanks to skip."
+      )
+      return
+    }
+    setFailurePrompt(null)
+    setLeadHandled(true)
+  }
+
+  function dismissFailurePrompt() {
+    setFailurePrompt(null)
+    setLeadHandled(true)
   }
 
   const lastMessage = messages[messages.length - 1]
@@ -434,6 +583,40 @@ function WidgetChatBody({
 
             {error && (
               <p className="break-words text-center text-xs text-red-400">{error}</p>
+            )}
+
+            {failurePrompt && (
+              <div className="rounded-xl border border-brand-100 bg-brand-50 px-3 py-2.5 space-y-2" data-testid="failure-lead-prompt">
+                <p className="break-words text-xs text-gray-700">{ON_FAILURE_PROMPT_COPY[failurePrompt]}</p>
+                {failureEmailError && (
+                  <p className="break-words text-[0.6875rem] text-red-500">{failureEmailError}</p>
+                )}
+                <form onSubmit={handleFailurePromptSubmit} className="flex flex-col gap-1.5">
+                  <input
+                    type="email"
+                    value={failureEmail}
+                    onChange={(e) => setFailureEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="submit"
+                      disabled={failureEmailPending || !failureEmail.trim()}
+                      className="min-w-[4.5rem] shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-center text-[0.6875rem] font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                    >
+                      {failureEmailPending ? 'Sending…' : 'Send'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={dismissFailurePrompt}
+                      className="shrink-0 text-[0.6875rem] text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      No thanks
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
 
             <div ref={bottomRef} />

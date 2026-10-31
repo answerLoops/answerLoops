@@ -293,7 +293,7 @@ describe('widget chat: a reservation whose run never gets dispatched still gets 
     vi.useFakeTimers()
     try {
       const { stashPendingRun, PENDING_RUN_TTL_MS } = await import('@/app/api/widget/chat/route')
-      stashPendingRun({ org: { id: 42, name: 'Acme' }, model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
+      stashPendingRun({ org: { id: 42, name: 'Acme' }, widgetToken: VALID_TOKEN, model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
 
       expect(h.releaseGeneration).not.toHaveBeenCalled()
       await vi.advanceTimersByTimeAsync(PENDING_RUN_TTL_MS)
@@ -307,7 +307,7 @@ describe('widget chat: a reservation whose run never gets dispatched still gets 
     vi.useFakeTimers()
     try {
       const { stashPendingRun, takePendingRun, PENDING_RUN_TTL_MS } = await import('@/app/api/widget/chat/route')
-      const requestId = stashPendingRun({ org: { id: 42, name: 'Acme' }, model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
+      const requestId = stashPendingRun({ org: { id: 42, name: 'Acme' }, widgetToken: VALID_TOKEN, model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
 
       const run = takePendingRun(requestId)
       expect(run?.reservationId).toBe(7)
