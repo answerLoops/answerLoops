@@ -6,7 +6,8 @@ name: answerloops
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
 # This compose file is the self-hosted Docker path. Railway does not use it —
-# it builds each service with Nixpacks per railway.toml / railway.bot.toml.
+# it builds each service from the Dockerfile, with settings from
+# .railway/railway.ts (app) and railway.bot.toml (bot).
 # BOT_TARGET_URL must be set to the app service's public URL when services are
 # deployed separately (e.g. https://your-app.up.railway.app).
 services:
