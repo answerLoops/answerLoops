@@ -8,6 +8,7 @@ import { verifyRenderToken } from '@/lib/widget/render-token'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 import { isValidWidgetToken } from '@/lib/widget/request-validation'
+import { verifyLeadQuestionToken } from '@/lib/widget/lead-question-token'
 
 const MOD = 'api/widget/lead'
 
@@ -32,11 +33,6 @@ const MAX_EMAIL_CHARS = 254
 // to prove deliverability.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/
 
-// Matches the widget chat route's own per-message cap (MAX_MESSAGE_CHARS) —
-// the question is a visitor's chat message, so it can't be longer than one
-// ever legitimately was.
-const MAX_QUESTION_CHARS = 4_000
-
 export async function POST(request: Request) {
   // Must precede clientIp(), which trusts the proxy-supplied client-IP header —
   // see lib/http/origin-guard.ts. The chat route next door already did this;
@@ -50,14 +46,14 @@ export async function POST(request: Request) {
   const raw = await readBodyCapped(request, MAX_BODY_BYTES)
   if (raw === null) return new Response('Request body too large', { status: 413 })
 
-  let body: { widgetToken?: string; renderToken?: string; email?: string; question?: string }
+  let body: { widgetToken?: string; renderToken?: string; email?: string; questionToken?: string }
   try {
     body = JSON.parse(raw || '{}')
   } catch {
     return new Response('Invalid JSON', { status: 400 })
   }
 
-  const { widgetToken, renderToken, email, question } = body
+  const { widgetToken, renderToken, email, questionToken } = body
   if (!isValidWidgetToken(widgetToken)) {
     return new Response('Missing widgetToken', { status: 400 })
   }
@@ -87,19 +83,18 @@ export async function POST(request: Request) {
   }
 
   // Optional: the question the visitor couldn't get answered, attached by the
-  // widget's on-failure prompt only — the up-front gate sends none. Malformed
-  // (wrong type, over length) is treated as simply absent rather than a 400:
-  // a lead missing its context is still a real lead worth saving.
-  const trimmedQuestion =
-    typeof question === 'string' && question.trim() && question.length <= MAX_QUESTION_CHARS
-      ? question.trim()
-      : undefined
+  // widget's on-failure prompt only — the up-front gate sends none. Never
+  // taken as text from the caller: only from a token this server signed for a
+  // real failed turn on this widget (lib/widget/lead-question-token.ts). A
+  // missing, expired or invalid token is treated as simply absent rather than
+  // a 400 — a lead missing its context is still a real lead worth saving.
+  const verifiedQuestion = verifyLeadQuestionToken(questionToken, widgetToken) ?? undefined
 
   try {
     const org = await getOrgByWidgetToken(widgetToken)
     if (!org) return new Response('Invalid widget token', { status: 404 })
 
-    await saveWidgetLead(org.id, widgetToken, normalized, trimmedQuestion)
+    await saveWidgetLead(org.id, widgetToken, normalized, verifiedQuestion)
     return Response.json({ ok: true })
   } catch (err) {
     logger.error('widget lead save failed', { module: MOD, requestId: getRequestId(request), widgetToken, error: err })

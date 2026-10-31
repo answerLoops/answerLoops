@@ -55,13 +55,25 @@ export function isWidgetLeadSignal(value: unknown): value is WidgetLeadSignal {
 // half-built signal the project's "no shortcuts" rule rules out. The two
 // signals below are real and deterministic; low confidence can be added later
 // if/when the pipeline actually produces a score to key off of.
-// "connect"/"transfer" are narrowed to the human-only nouns: "connect me to
-// an agent" and "transfer me to someone" are real API/integration questions
-// in this product's own domain (connecting to an agent framework, transferring
-// a call to an agent), so "agent"/"someone" stay out of their noun list even
-// though "talk to an agent" (no API meaning) keeps the full list.
-const HUMAN_REQUEST_PATTERN =
-  /\b(talk|speak|chat)\s+(me\s+)?(to|with)\s+(a\s+|an\s+)?(human|person|agent|someone|rep|representative)\b|\b(connect|transfer)\s+(me\s+)?(to|with)\s+(a\s+|an\s+)?(human|person|rep|representative)\b|\b(real|live)\s+(human|person|agent)\b|\bhuman\s+support\b|\bcustomer\s+service\s+(rep|agent|representative)\b/i
+// "connect"/"transfer"/"get" only count when aimed at the visitor ("connect
+// ME to an agent"): "how do I connect to an agent" or "transfer a call to an
+// agent" are real API/integration questions in this product's own domain, and
+// the word "me" is what separates a request for a person from a question about
+// the product. "talk/speak/chat to ..." has no such second meaning, so it keeps
+// the full noun list.
+const HUMAN_NOUN = '(?:a\\s+|an\\s+|the\\s+)?(?:human|person|agent|someone|somebody|rep|representative|manager|supervisor|support)'
+const HUMAN_REQUEST_PATTERN = new RegExp(
+  [
+    `\\b(?:talk|speak|chat)\\s+(?:me\\s+)?(?:to|with)\\s+${HUMAN_NOUN}\\b`,
+    `\\b(?:connect|transfer|put|get|pass|route|escalate)\\s+me\\s+(?:to|with|through\\s+to|over\\s+to)\\s+${HUMAN_NOUN}\\b`,
+    `\\b(?:i\\s+(?:need|want)|can\\s+i\\s+(?:get|have|see)|get\\s+me)\\s+(?:a\\s+|an\\s+)(?:human|real\\s+person|live\\s+person|rep|representative|manager)\\b`,
+    `\\b(?:real|live)\\s+(?:human|person|agent)\\b`,
+    `\\bhuman\\s+support\\b`,
+    `\\bcustomer\\s+service\\s+(?:rep|agent|representative)\\b`,
+    `\\bcontact\\s+(?:support|customer\\s+service|a\\s+human)\\b`,
+  ].join('|'),
+  'i'
+)
 
 /** Whether the visitor's message explicitly asks for a human. */
 export function requestsHuman(query: string): boolean {
@@ -80,7 +92,7 @@ export function requestsHuman(query: string): boolean {
 // normally — "for" isn't in the word list, so the run stops there and the
 // match fails to reach the end of the string.
 const GREETING_OR_ACK_PATTERN =
-  /^(?:(?:hi+|hello+|hey+|yo|sup|howdy|good\s+(?:morning|afternoon|evening|day)|no\s+thanks?(?:\s+you)?|thanks?(?:\s+you)?(?:\s+(?:so|very)\s+much|\s+a\s+lot)?|thx|ty|ok(?:ay)?|k|cool|great|nice|good|got it|sounds good|perfect|awesome|bye|goodbye|see\s*ya|cheers)\b[!.,?\s]*)+$/i
+  /^(?:(?:hi+|hello+|hey+|yo|sup|howdy|good\s+(?:morning|afternoon|evening|day)|no\s+thanks?(?:\s+you)?|thanks?(?:\s+you)?(?:\s+(?:so|very)\s+much|\s+a\s+lot)?|thx|ty|ok(?:ay)?|k|cool|great|nice|got it|sounds good|perfect|awesome|bye|goodbye|see\s*ya|cheers)\b[!.,?\s]*)+$/i
 
 /** Whether the message is a bare greeting/acknowledgement with nothing to look up. */
 export function isGreetingOrAck(query: string): boolean {

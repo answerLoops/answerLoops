@@ -90,10 +90,14 @@ describe('widget_leads can actually dedupe', () => {
     expect(globalEmailUnique).toBeUndefined()
   })
 
-  it('still issues onConflictDoNothing, so the constraint is actually used', async () => {
+  it('conflicts on (org_id, email) so the constraint is actually used, and only ever fills in a missing question', async () => {
     const { saveWidgetLead } = await import('@/lib/db/queries/widget-leads')
-    await saveWidgetLead(1, 'a'.repeat(48), 'lead@example.com')
-    expect(calls[0].sql.toLowerCase()).toContain('on conflict do nothing')
+    await saveWidgetLead(1, 'a'.repeat(48), 'lead@example.com', 'how do I export?')
+    const sql = calls[0].sql.toLowerCase()
+    expect(sql).toMatch(/on conflict \("org_id", ?"email"\) do update/)
+    // coalesce(existing, incoming): an existing question is never overwritten,
+    // but a row saved without one (the up-front gate) picks it up.
+    expect(sql).toMatch(/coalesce\("widget_leads"\."question", excluded\.question\)/)
   })
 
   it('stores the optional question when provided, attaching the context the on-failure prompt collected', async () => {

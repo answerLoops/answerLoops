@@ -100,14 +100,30 @@ async function renderWidget(fake: ReturnType<typeof makeFakeAgent>, mode: 'off' 
   )
 }
 
-/** Makes the fetch mock answer any /api/widget/lead-signal POST with `signal`. */
+const QUESTION_TOKEN = 'signed-question-token'
+
+/**
+ * Makes the fetch mock answer any /api/widget/lead-signal POST with `signal`
+ * (and, for a failed turn, the signed question token the real route returns).
+ */
 function mockLeadSignalResponse(signal: string) {
   h.fetchMock.mockImplementation(async (url: unknown) => {
     if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
-      return new Response(JSON.stringify({ signal }), { status: 200 })
+      return new Response(JSON.stringify(signal === 'none' ? { signal } : { signal, questionToken: QUESTION_TOKEN }), {
+        status: 200,
+      })
     }
     return new Response(null, { status: 200 })
   })
+}
+
+/**
+ * The visitor sends a message — which is what gives the widget a turn id to
+ * look the result up under. In the real flow a run only ever finishes after a
+ * send, so tests that finish a run send first.
+ */
+async function sendQuestion(text = 'how do I export my data?') {
+  await userEvent.setup().type(screen.getByPlaceholderText('Ask a question…'), `${text}{Enter}`)
 }
 
 function leadSignalCalls() {
@@ -145,6 +161,7 @@ describe('WidgetChat: on-failure lead prompt', () => {
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
+    await sendQuestion()
     await fake.emit.runFinalized()
 
     const prompt = await screen.findByTestId('failure-lead-prompt')
@@ -158,6 +175,7 @@ describe('WidgetChat: on-failure lead prompt', () => {
       widgetToken: TOKEN,
       renderToken: 'test-render-token',
       visitorId: expect.any(String),
+      turnId: expect.any(String),
     })
   })
 
@@ -166,6 +184,7 @@ describe('WidgetChat: on-failure lead prompt', () => {
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
+    await sendQuestion()
     await fake.emit.runFinalized()
 
     expect(leadSignalCalls().length).toBe(1)
@@ -177,6 +196,7 @@ describe('WidgetChat: on-failure lead prompt', () => {
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
+    await sendQuestion()
     await fake.emit.runFinalized()
     await screen.findByTestId('failure-lead-prompt')
 
@@ -192,6 +212,7 @@ describe('WidgetChat: on-failure lead prompt', () => {
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
+    await sendQuestion()
     await fake.emit.runFinalized()
     const prompt = await screen.findByTestId('failure-lead-prompt')
 
@@ -208,6 +229,7 @@ describe('WidgetChat: on-failure lead prompt', () => {
       widgetToken: TOKEN,
       renderToken: 'test-render-token',
       email: 'visitor@example.com',
+      questionToken: QUESTION_TOKEN,
     })
   })
 
@@ -232,6 +254,7 @@ describe('WidgetChat: on-failure lead prompt', () => {
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
+    await sendQuestion()
     await fake.emit.runFinalized()
     // A network error is retried (see the "checkLeadSignal retry logic" suite
     // below) — drain the full retry budget here so no pending retry timer
@@ -256,6 +279,7 @@ describe('WidgetChat: on-failure lead prompt', () => {
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
+    await sendQuestion()
     await fake.emit.runFinalized()
     // A 429 is retried (see the "checkLeadSignal retry logic" suite below) —
     // drain the full retry budget here so no pending retry timer fires into
@@ -273,6 +297,7 @@ describe('WidgetChat: on-failure prompt submission failure', () => {
     mockLeadSignalResponse('no-kb-match')
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
+    await sendQuestion()
     await fake.emit.runFinalized()
     const prompt = await screen.findByTestId('failure-lead-prompt')
 
@@ -300,6 +325,7 @@ describe('WidgetChat: on-failure prompt submission failure', () => {
     mockLeadSignalResponse('no-kb-match')
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
+    await sendQuestion()
     await fake.emit.runFinalized()
     const prompt = await screen.findByTestId('failure-lead-prompt')
 
@@ -325,6 +351,7 @@ describe('WidgetChat: on-failure prompt submission failure', () => {
     mockLeadSignalResponse('no-kb-match')
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
+    await sendQuestion()
     await fake.emit.runFinalized()
     const prompt = await screen.findByTestId('failure-lead-prompt')
 
@@ -356,6 +383,7 @@ describe('WidgetChat: sendMessage clears a stale failure prompt', () => {
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
+    await sendQuestion()
     await fake.emit.runFinalized()
     await screen.findByTestId('failure-lead-prompt')
 
@@ -379,6 +407,7 @@ describe('WidgetChat: checkLeadSignal retry logic', () => {
     mockLeadSignalResponse('no-kb-match')
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
+    await sendQuestion()
     await fake.emit.runFinalized()
     await screen.findByTestId('failure-lead-prompt')
 
@@ -401,6 +430,7 @@ describe('WidgetChat: checkLeadSignal retry logic', () => {
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
+    await sendQuestion()
     await fake.emit.runFinalized()
     // The retry waits LEAD_SIGNAL_RETRY_DELAY_MS (400ms) before the second
     // attempt; give it real time to land, wrapped in act() since it resolves
@@ -423,6 +453,7 @@ describe('WidgetChat: checkLeadSignal retry logic', () => {
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
+    await sendQuestion()
     await fake.emit.runFinalized()
     // 3 attempts with 400ms then 800ms delays between them: give it real
     // time to exhaust the retry budget, wrapped in act().
@@ -438,6 +469,7 @@ describe('WidgetChat: checkLeadSignal retry logic', () => {
     mockLeadSignalResponse('no-kb-match')
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
+    await sendQuestion()
     await fake.emit.runFinalized()
     await screen.findByTestId('failure-lead-prompt')
 
@@ -480,7 +512,7 @@ describe('WidgetChat: postLead outcomes at the up-front gate', () => {
     expect(screen.queryByPlaceholderText('Ask a question…')).toBeNull()
   })
 
-  it('lets the visitor into the chat when the lead endpoint rate-limits the up-front submission', async () => {
+  it('stays gated and says so when the lead endpoint rate-limits the up-front submission — Skip is still there', async () => {
     h.fetchMock.mockImplementation(async (url: unknown) => {
       if (typeof url === 'string' && url.includes('/api/widget/lead')) {
         return new Response('Too many requests', { status: 429 })
@@ -494,7 +526,27 @@ describe('WidgetChat: postLead outcomes at the up-front gate', () => {
     await user.type(screen.getByPlaceholderText('you@example.com'), 'visitor@example.com')
     await user.click(screen.getByRole('button', { name: 'Start chat' }))
 
-    await waitFor(() => expect(screen.getByPlaceholderText('Ask a question…')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/couldn.t save that right now/i)).toBeTruthy())
+    expect(screen.queryByPlaceholderText('Ask a question…')).toBeNull()
+    // The visitor is never trapped: Skip still lets them in.
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+    expect(screen.getByPlaceholderText('Ask a question…')).toBeTruthy()
+  })
+
+  it('stays gated and says so when the lead request never reaches the server', async () => {
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead')) throw new Error('network down')
+      return new Response(null, { status: 200 })
+    })
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'up-front')
+
+    const user = userEvent.setup()
+    await user.type(screen.getByPlaceholderText('you@example.com'), 'visitor@example.com')
+    await user.click(screen.getByRole('button', { name: 'Start chat' }))
+
+    await waitFor(() => expect(screen.getByText(/couldn.t save that right now/i)).toBeTruthy())
+    expect(screen.queryByPlaceholderText('Ask a question…')).toBeNull()
   })
 
   it('sends the up-front gate email with no question field, since no conversation has happened yet', async () => {
@@ -511,23 +563,78 @@ describe('WidgetChat: postLead outcomes at the up-front gate', () => {
   })
 })
 
-describe('WidgetChat: failure prompt sends the visitor\'s last question', () => {
-  it('includes the question field in the lead POST body, matching the last message the visitor typed', async () => {
+describe('WidgetChat: the failure prompt sends the server-signed question, never typed text', () => {
+  it('posts the question token from the lead-signal response and no question text', async () => {
     mockLeadSignalResponse('no-kb-match')
     const fake = makeFakeAgent()
     await renderWidget(fake, 'on-failure')
 
-    const user = userEvent.setup()
-    await user.type(screen.getByPlaceholderText('Ask a question…'), 'how do I reset my password?{Enter}')
-
+    await sendQuestion('how do I reset my password?')
     await fake.emit.runFinalized()
     const prompt = await screen.findByTestId('failure-lead-prompt')
 
+    const user = userEvent.setup()
     await user.type(within(prompt).getByPlaceholderText('you@example.com'), 'visitor@example.com')
     await user.click(within(prompt).getByRole('button', { name: 'Send' }))
 
     await waitFor(() => expect(leadCalls().length).toBe(1))
     const body = JSON.parse((leadCalls()[0][1] as RequestInit).body as string)
-    expect(body.question).toBe('how do I reset my password?')
+    expect(body.questionToken).toBe(QUESTION_TOKEN)
+    expect(body).not.toHaveProperty('question')
+  })
+})
+
+describe('WidgetChat: a late lead-signal result for an earlier turn is ignored', () => {
+  it('does not show turn 1\'s prompt, or attach its token, once the visitor has sent turn 2', async () => {
+    let releaseFirstPoll: (() => void) | undefined
+    let polls = 0
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
+        polls++
+        if (polls === 1) {
+          // Turn 1's lookup is held open (a slow network / a retry in flight).
+          await new Promise<void>((resolve) => {
+            releaseFirstPoll = resolve
+          })
+          return new Response(JSON.stringify({ signal: 'no-kb-match', questionToken: 'turn-1-token' }), { status: 200 })
+        }
+        return new Response(JSON.stringify({ signal: 'none' }), { status: 200 })
+      }
+      return new Response(null, { status: 200 })
+    })
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+
+    await sendQuestion('first question')
+    await fake.emit.runFinalized() // turn 1's lookup starts and hangs
+    await sendQuestion('second question') // the visitor moves on
+
+    await act(async () => {
+      releaseFirstPoll?.()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    // Turn 1's late 'no-kb-match' describes a turn that is already over.
+    expect(screen.queryByTestId('failure-lead-prompt')).toBeNull()
+  })
+
+  it('sends each turn\'s own id, so the server can tell the turns apart', async () => {
+    mockLeadSignalResponse('none')
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+
+    await sendQuestion('first')
+    await fake.emit.runFinalized()
+    await sendQuestion('second')
+    await fake.emit.runFinalized()
+
+    const ids = leadSignalCalls().map(([, init]) => JSON.parse((init as RequestInit).body as string).turnId)
+    expect(ids).toHaveLength(2)
+    expect(ids[0]).not.toBe(ids[1])
+    // And each matches what the chat request itself carried for that turn.
+    const sent = fake.runAgent.mock.calls.map(
+      (c) => (c as unknown as [{ forwardedProps: { turnId: string } }])[0].forwardedProps.turnId
+    )
+    expect(sent).toEqual(ids)
   })
 })

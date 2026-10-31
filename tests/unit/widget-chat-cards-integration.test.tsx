@@ -148,6 +148,7 @@ describe('WidgetChat + ChoicesCard: replying through a card', () => {
       widgetToken: TOKEN,
       renderToken: 'render-tok',
       visitorId: expect.any(String),
+      turnId: expect.any(String),
       isSelfPreview: false,
     })
     expect((runArg.forwardedProps.visitorId as string).length).toBeGreaterThan(0)

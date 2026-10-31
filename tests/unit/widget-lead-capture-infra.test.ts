@@ -229,6 +229,13 @@ describe('lib/widget/lead-capture: requestsHuman', () => {
       'is there human support available',
       'can I speak to a customer service rep',
       'get me a customer service representative',
+      'transfer me to an agent',
+      'connect me with someone',
+      'connect me to an agent',
+      'can you put me through to a person',
+      'I need a human',
+      'can I speak to a manager',
+      'how do I contact support',
     ]
     for (const q of positives) {
       expect(requestsHuman(q), q).toBe(true)
@@ -259,11 +266,12 @@ describe('lib/widget/lead-capture: requestsHuman', () => {
     expect(requestsHuman('')).toBe(false)
   })
 
-  it('"connect"/"transfer" are narrowed to human-only nouns, so an API/integration question about "an agent" is not mistaken for a request to talk to one', () => {
+  it('"connect"/"transfer" only count when aimed at the visitor ("me"), so an API/integration question about "an agent" is not mistaken for a request to talk to one', () => {
     const negatives = [
       'how do I connect to an agent through the API',
-      'can you transfer me to an agent in your system',
-      'connect me to someone who can help with the webhook',
+      'can I transfer a call to an agent via the REST API',
+      'how do I connect an agent to Slack',
+      'transfer the ticket to someone on the billing team',
     ]
     for (const q of negatives) {
       expect(requestsHuman(q), q).toBe(false)
@@ -291,14 +299,14 @@ describe('lib/widget/lead-capture: requestsHuman', () => {
 
 describe('lib/widget/lead-capture: isGreetingOrAck', () => {
   it('matches bare greetings and acknowledgements, with or without punctuation', () => {
-    const positives = ['hi', 'Hello!', 'hey', 'thanks', 'thank you', 'thx', 'ty', 'ok', 'okay', 'k', 'cool', 'great', 'nice', 'good', 'got it', 'sounds good', 'perfect', 'awesome', 'bye', 'cheers', '  hi  ', 'Thanks!!']
+    const positives = ['hi', 'Hello!', 'hey', 'thanks', 'thank you', 'thx', 'ty', 'ok', 'okay', 'k', 'cool', 'great', 'nice', 'got it', 'sounds good', 'perfect', 'awesome', 'bye', 'cheers', '  hi  ', 'Thanks!!']
     for (const q of positives) {
       expect(isGreetingOrAck(q), q).toBe(true)
     }
   })
 
   it('does not match a real question, even a short one', () => {
-    const negatives = ['pricing?', 'how do I reset my password', 'hi, how do I reset my password', 'thanks for the help, but I still have an issue', '']
+    const negatives = ['pricing?', 'good?', 'how do I reset my password', 'hi, how do I reset my password', 'thanks for the help, but I still have an issue', '']
     for (const q of negatives) {
       expect(isGreetingOrAck(q), q).toBe(false)
     }
@@ -327,6 +335,10 @@ describe('lib/widget/lead-capture: isGreetingOrAck', () => {
 // ---------------------------------------------------------------------------
 
 describe('lib/widget/lead-signal-stash', () => {
+  const TOKEN_A = 'a'.repeat(48)
+  const TOKEN_B = 'b'.repeat(48)
+  const NONE = { signal: 'none', question: '' }
+
   beforeEach(() => {
     vi.resetModules()
   })
@@ -335,82 +347,74 @@ describe('lib/widget/lead-signal-stash', () => {
     vi.useRealTimers()
   })
 
-  it('round-trips a signal for a given (widgetToken, visitorId) key', async () => {
+  it('round-trips a signal and its question for a given (widgetToken, visitorId, turnId) key', async () => {
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal('token-1', 'visitor-a', 'no-kb-match')
-    expect(getLeadSignal('token-1', 'visitor-a')).toBe('no-kb-match')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'turn-1', 'no-kb-match', 'how do I export?')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'turn-1')).toEqual({ signal: 'no-kb-match', question: 'how do I export?' })
   })
 
-  it('a different visitorId under the same widgetToken does not see another visitor\'s signal', async () => {
+  it('a different visitorId under the same widget does not see another visitor\'s signal', async () => {
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal('token-1', 'visitor-a', 'human-requested')
-    expect(getLeadSignal('token-1', 'visitor-b')).toBe('none')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'turn-1', 'human-requested', 'q')
+    expect(getLeadSignal(TOKEN_A, 'visitor-b', 'turn-1')).toEqual(NONE)
   })
 
-  it('the same visitorId under a different widgetToken does not see another token\'s signal', async () => {
+  it('the same visitorId under a different widget does not see another widget\'s signal', async () => {
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal('token-1', 'visitor-a', 'human-requested')
-    expect(getLeadSignal('token-2', 'visitor-a')).toBe('none')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'turn-1', 'human-requested', 'q')
+    expect(getLeadSignal(TOKEN_B, 'visitor-a', 'turn-1')).toEqual(NONE)
+  })
+
+  it('a later turn id can never read an earlier turn\'s result, so nothing needs clearing', async () => {
+    const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'turn-1', 'no-kb-match', 'old question') // turn 1: a real miss
+    // Turn 2 was rejected or failed before it recorded anything.
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'turn-2')).toEqual(NONE)
+  })
+
+  it('two tabs open as the same visitor keep separate results, because their turn ids differ', async () => {
+    const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-1-turn', 'no-kb-match', 'tab one question')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-2-turn', 'none', 'tab two question')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-1-turn').signal).toBe('no-kb-match')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-2-turn').signal).toBe('none')
   })
 
   it('returns "none" for a key that was never set', async () => {
     const { getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    expect(getLeadSignal('token-never-seen', 'never-seen')).toBe('none')
+    expect(getLeadSignal(TOKEN_A, 'never-seen', 'turn-1')).toEqual(NONE)
   })
 
   it('an expired entry reads back as "none"', async () => {
-    // Fake timers so Date.now() can be advanced past the module's 30s TTL
-    // without a real wait. The module's own sweep runs on a 60s interval
-    // gated by its own Date.now() check (not setInterval), so advancing
-    // Date.now() alone — without also running any queued timers — cannot
-    // trigger an unrelated background sweep mid-test; getLeadSignal's own
-    // expiry check (`entry.expiresAt < Date.now()`) is what this test
-    // exercises, independent of the sweep.
-    //
-    // Only one get() call here, deliberately: getLeadSignal deletes what it
-    // reads (see the next test), so reading once before expiry to confirm
-    // the value and again after would make the second read's "none" come
-    // from the first read's deletion, not from the TTL check this test is
-    // actually about.
     vi.useFakeTimers()
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal('token-1', 'visitor-a', 'human-requested')
-    vi.advanceTimersByTime(31_000) // TTL is 30_000ms
-    expect(getLeadSignal('token-1', 'visitor-a')).toBe('none')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'turn-1', 'human-requested', 'q')
+    vi.advanceTimersByTime(61_000) // TTL is 60_000ms
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'turn-1')).toEqual(NONE)
   })
 
-  it('getLeadSignal deletes the entry it reads, so a second poll does not see the same result twice', async () => {
+  it('reading does not consume the entry, so a lookup whose response was lost can simply be retried', async () => {
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal('token-1', 'visitor-a', 'no-kb-match')
-    expect(getLeadSignal('token-1', 'visitor-a')).toBe('no-kb-match')
-    expect(getLeadSignal('token-1', 'visitor-a')).toBe('none')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'turn-1', 'no-kb-match', 'q')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'turn-1').signal).toBe('no-kb-match')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'turn-1').signal).toBe('no-kb-match')
   })
 
-  it('clearLeadSignal removes a pending entry outright', async () => {
-    const { setLeadSignal, getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal('token-1', 'visitor-a', 'no-kb-match')
-    clearLeadSignal('token-1', 'visitor-a')
-    expect(getLeadSignal('token-1', 'visitor-a')).toBe('none')
+  it('sweeps expired entries on a read too, so a quiet widget does not hold them forever', async () => {
+    vi.useFakeTimers()
+    const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    setLeadSignal(TOKEN_A, 'visitor-old', 'turn-1', 'no-kb-match', 'q')
+    vi.advanceTimersByTime(121_000)
+    expect(getLeadSignal(TOKEN_B, 'visitor-x', 'turn-1')).toEqual(NONE)
+    expect(getLeadSignal(TOKEN_A, 'visitor-old', 'turn-1')).toEqual(NONE)
   })
 
-  it('clearLeadSignal is a no-op for a key with nothing stored', async () => {
-    const { getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    expect(() => clearLeadSignal('token-1', 'visitor-never-set')).not.toThrow()
-    expect(getLeadSignal('token-1', 'visitor-never-set')).toBe('none')
-  })
-
-  it('models the real failure-after-success scenario: a cleared signal from a prior turn never leaks into a later, failed one', async () => {
-    // app/api/widget/chat/route.ts calls clearLeadSignal as soon as the
-    // widgetToken and visitorId are known well-formed, before that run can
-    // fail without ever reaching the point where it would set its own
-    // signal. This proves the stash-level half of that guarantee: once
-    // cleared, nothing is left for the next poll to find.
-    const { setLeadSignal, getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal('token-1', 'visitor-a', 'no-kb-match') // turn 1: a real miss
-    clearLeadSignal('token-1', 'visitor-a') // turn 2 accepted, clears turn 1's result
-    // turn 2 then fails before reaching its own onFinish — no setLeadSignal
-    // call follows. The client's poll must not see turn 1's stale result.
-    expect(getLeadSignal('token-1', 'visitor-a')).toBe('none')
+  it('holds a bounded number of entries, dropping the oldest first', async () => {
+    const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    setLeadSignal(TOKEN_A, 'visitor-first', 'turn-1', 'no-kb-match', 'q')
+    for (let i = 0; i < 5_000; i++) setLeadSignal(TOKEN_B, 'filler', `t${i}`, 'none', '')
+    expect(getLeadSignal(TOKEN_A, 'visitor-first', 'turn-1')).toEqual(NONE)
+    expect(getLeadSignal(TOKEN_B, 'filler', 't4999').signal).toBe('none')
   })
 })
 

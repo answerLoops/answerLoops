@@ -1,4 +1,4 @@
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { widgetLeads } from '../schema'
 
@@ -27,10 +27,11 @@ function toLead(row: typeof widgetLeads.$inferSelect): WidgetLead {
  *   lead came from the on-failure prompt. Omit (or pass undefined) for an
  *   up-front-gate lead, collected before any question exists.
  *
- * onConflictDoNothing means a repeat submission from the same org+email never
- * updates an existing row's question — the unique index below predates this
- * field and that dedupe behaviour isn't being changed here, so the question
- * attached is whichever submission happened to land first.
+ * A repeat submission from the same org+email never creates a second row, but
+ * it does fill in a question the existing row doesn't have yet — so a visitor
+ * who left their email at the up-front gate and later submits it again through
+ * the on-failure prompt still gets their question recorded. An existing
+ * question is never overwritten.
  */
 export async function saveWidgetLead(
   orgId: number,
@@ -41,7 +42,10 @@ export async function saveWidgetLead(
   await getDb()
     .insert(widgetLeads)
     .values({ orgId, widgetToken, email, question: question ?? null })
-    .onConflictDoNothing()
+    .onConflictDoUpdate({
+      target: [widgetLeads.orgId, widgetLeads.email],
+      set: { question: sql`coalesce(${widgetLeads.question}, excluded.question)` },
+    })
 }
 
 export async function listWidgetLeads(orgId: number): Promise<WidgetLead[]> {

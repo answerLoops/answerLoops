@@ -1,10 +1,11 @@
 import { getLeadSignal } from '@/lib/widget/lead-signal-stash'
+import { mintLeadQuestionToken } from '@/lib/widget/lead-question-token'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
 import { verifyRenderToken } from '@/lib/widget/render-token'
-import { isValidWidgetToken, isValidVisitorId } from '@/lib/widget/request-validation'
+import { isValidWidgetToken, isValidVisitorId, isValidTurnId } from '@/lib/widget/request-validation'
 
 /**
  * "Did the turn I just sent fail?" — called by the widget client right after
@@ -21,7 +22,7 @@ const IP_TOKEN_WINDOW_MS = 60_000
 const TOKEN_MAX = 100
 const TOKEN_WINDOW_MS = 60_000
 
-// Body is just {widgetToken, renderToken, visitorId} — three short strings.
+// Body is just {widgetToken, renderToken, visitorId, turnId} — four short strings.
 const MAX_BODY_BYTES = 4 * 1024
 
 export async function POST(request: Request) {
@@ -33,14 +34,14 @@ export async function POST(request: Request) {
   const raw = await readBodyCapped(request, MAX_BODY_BYTES)
   if (raw === null) return new Response('Request body too large', { status: 413 })
 
-  let body: { widgetToken?: string; renderToken?: string; visitorId?: string }
+  let body: { widgetToken?: string; renderToken?: string; visitorId?: string; turnId?: string }
   try {
     body = JSON.parse(raw || '{}')
   } catch {
     return new Response('Invalid JSON', { status: 400 })
   }
 
-  const { widgetToken, renderToken, visitorId } = body
+  const { widgetToken, renderToken, visitorId, turnId } = body
   if (!isValidWidgetToken(widgetToken)) {
     return new Response('Missing widgetToken', { status: 400 })
   }
@@ -55,6 +56,9 @@ export async function POST(request: Request) {
   }
   if (!isValidVisitorId(visitorId)) {
     return new Response('Missing visitorId', { status: 400 })
+  }
+  if (!isValidTurnId(turnId)) {
+    return new Response('Missing turnId', { status: 400 })
   }
 
   const tokenLimit = await rateLimitShared(`widget-lead-signal-token:${widgetToken}`, TOKEN_MAX, TOKEN_WINDOW_MS)
@@ -71,5 +75,10 @@ export async function POST(request: Request) {
   // lib/widget/lead-signal-stash.ts), and this route does nothing with the
   // org itself — a stale/revoked token just reads back 'none', same as a
   // token with no stashed signal at all.
-  return Response.json({ signal: getLeadSignal(widgetToken, visitorId) })
+  const { signal, question } = getLeadSignal(widgetToken, visitorId, turnId)
+  // For a failed turn, also hands back a signed copy of the question the
+  // server recorded, which the widget returns with the visitor's email so the
+  // saved lead carries that exact question — see lib/widget/lead-question-token.ts.
+  const questionToken = signal === 'none' ? null : mintLeadQuestionToken(widgetToken, question)
+  return Response.json({ signal, ...(questionToken ? { questionToken } : {}) })
 }

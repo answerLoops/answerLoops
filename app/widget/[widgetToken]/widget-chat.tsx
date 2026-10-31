@@ -297,15 +297,22 @@ function WidgetChatBody({
   // (submitted or dismissed) so repeated failures don't keep re-asking.
   // Typed without 'none' so a truthy check can't accidentally let it through
   // — the string 'none' is itself truthy.
-  const [failurePrompt, setFailurePrompt] = useState<Exclude<WidgetLeadSignal, 'none'> | null>(null)
+  // questionToken is the server-signed copy of the question that failed (see
+  // lib/widget/lead-question-token.ts), handed back with the email so the lead
+  // carries what the server recorded rather than client-typed text.
+  const [failurePrompt, setFailurePrompt] = useState<{
+    signal: Exclude<WidgetLeadSignal, 'none'>
+    questionToken?: string
+  } | null>(null)
   const [leadHandled, setLeadHandled] = useState(false)
   const [failureEmail, setFailureEmail] = useState('')
   const [failureEmailPending, setFailureEmailPending] = useState(false)
   const [failureEmailError, setFailureEmailError] = useState('')
-  // The visitor's own last message, attached to the lead when they submit
-  // through the failure prompt so the team sees what they couldn't get
-  // answered. A ref, not state: nothing in the UI needs to re-render on it.
-  const lastQueryRef = useRef('')
+  // The id of the message most recently sent, generated per send. The server
+  // records each turn's result under it, and a lookup only ever applies if its
+  // turn is still the latest one — see checkLeadSignal. A ref, not state:
+  // nothing in the UI needs to re-render on it.
+  const currentTurnRef = useRef('')
 
   const { agent } = useAgent()
   const [messages, setMessages] = useState<Message[]>(agent.messages)
@@ -314,13 +321,18 @@ function WidgetChatBody({
 
   const checkLeadSignal = useCallback(async () => {
     if (leadCaptureMode !== 'on-failure' || leadHandled) return
+    // The turn this lookup is for. If the visitor sends another message while
+    // a slow lookup (or one of its retries) is still in flight, its result is
+    // about a turn that is already over and must not touch the screen.
+    const turnId = currentTurnRef.current
+    if (!turnId) return
     for (let attempt = 0; attempt < LEAD_SIGNAL_MAX_ATTEMPTS; attempt++) {
       const isLastAttempt = attempt === LEAD_SIGNAL_MAX_ATTEMPTS - 1
       try {
         const res = await fetch('/api/widget/lead-signal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ widgetToken, renderToken, visitorId }),
+          body: JSON.stringify({ widgetToken, renderToken, visitorId, turnId }),
         })
         if (res.status === 429) {
           if (isLastAttempt) return // Retries exhausted: leave existing state — see below.
@@ -330,13 +342,19 @@ function WidgetChatBody({
         if (!res.ok) return
         const data: unknown = await res.json()
         const signal = (data as { signal?: unknown })?.signal
+        const questionToken = (data as { questionToken?: unknown })?.questionToken
         if (!isWidgetLeadSignal(signal)) return
+        if (currentTurnRef.current !== turnId) return
         // A definitive 'none' clears any prompt left showing from an earlier
         // call in this same retry loop; any other signal shows its prompt.
         // Deliberately not reached on a retry-exhausted network error below
         // — an indefinite result should never overwrite a real prompt that's
         // already showing just because this one poll couldn't confirm it.
-        setFailurePrompt(signal === 'none' ? null : signal)
+        setFailurePrompt(
+          signal === 'none'
+            ? null
+            : { signal, ...(typeof questionToken === 'string' ? { questionToken } : {}) }
+        )
         return
       } catch {
         if (isLastAttempt) return // Retries exhausted: leave existing state, don't guess.
@@ -406,7 +424,8 @@ function WidgetChatBody({
       // card from an earlier turn stays on screen under this turn's answer,
       // even once that answer actually helps.
       setFailurePrompt(null)
-      lastQueryRef.current = text
+      const turnId = crypto.randomUUID()
+      currentTurnRef.current = turnId
       agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: text })
       // addMessage() only mutates the agent's local message list — our
       // `messages` state otherwise only updates from server-pushed onEvent
@@ -416,7 +435,7 @@ function WidgetChatBody({
       // agent.runAgent() called bare skips CopilotKitCore's forwardedProps merge
       // (that only happens inside copilotkit.runAgent()) — pass widgetToken and
       // visitorId explicitly or the server never sees them.
-      void agent.runAgent({ forwardedProps: { widgetToken, renderToken, visitorId, isSelfPreview } })
+      void agent.runAgent({ forwardedProps: { widgetToken, renderToken, visitorId, turnId, isSelfPreview } })
     },
     [agent, isLoading, widgetToken, renderToken, visitorId, isSelfPreview]
   )
@@ -430,23 +449,21 @@ function WidgetChatBody({
     sendMessage(input)
   }
 
-  // 'invalid' means the server rejected the address itself — the one case
-  // worth blocking on, since resubmitting with a better address can actually
-  // fix it. 'rate-limited' (HTTP 429) and 'network-error' are both outside
-  // the visitor's control in the moment, so callers below let them through
-  // rather than stranding them at a gate they can't do anything about right
-  // now — the alternative works against the product's actual goal (get the
-  // question asked).
+  // Every non-'ok' outcome is reported to the visitor and leaves them where
+  // they are, so a lead is never dropped without them seeing it. At the
+  // up-front gate that is not a dead end: Skip is always visible beside the
+  // form, so a visitor the server keeps turning away can still get into the
+  // chat.
   async function postLead(
     address: string,
-    question?: string
+    questionToken?: string
   ): Promise<'ok' | 'invalid' | 'rate-limited' | 'network-error'> {
     if (!address.trim()) return 'ok'
     try {
       const res = await fetch('/api/widget/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ widgetToken, renderToken, email: address.trim(), ...(question ? { question } : {}) }),
+        body: JSON.stringify({ widgetToken, renderToken, email: address.trim(), ...(questionToken ? { questionToken } : {}) }),
       })
       if (res.ok) return 'ok'
       return res.status === 429 ? 'rate-limited' : 'invalid'
@@ -462,15 +479,14 @@ function WidgetChatBody({
     setEmailError('')
     const result = await postLead(email)
     setEmailPending(false)
-    if (result === 'invalid') {
-      setEmailError("That didn't go through — check the address and try again.")
+    if (result !== 'ok') {
+      setEmailError(
+        result === 'invalid'
+          ? "That didn't go through — check the address and try again, or Skip."
+          : "We couldn't save that right now — try again in a moment, or Skip."
+      )
       return
     }
-    // A rate limit or a network error still let them into the chat: neither
-    // is something resubmitting the same address fixes, and stranding a
-    // visitor at the gate over either works against the product's actual
-    // goal (get the question asked). Skip is also always visible below for
-    // the same reason.
     setEmailSubmitted(true)
   }
 
@@ -478,7 +494,7 @@ function WidgetChatBody({
     e.preventDefault()
     setFailureEmailPending(true)
     setFailureEmailError('')
-    const result = await postLead(failureEmail, lastQueryRef.current || undefined)
+    const result = await postLead(failureEmail, failurePrompt?.questionToken)
     setFailureEmailPending(false)
     if (result !== 'ok') {
       setFailureEmailError(
@@ -587,7 +603,7 @@ function WidgetChatBody({
 
             {failurePrompt && (
               <div className="rounded-xl border border-brand-100 bg-brand-50 px-3 py-2.5 space-y-2" data-testid="failure-lead-prompt">
-                <p className="break-words text-xs text-gray-700">{ON_FAILURE_PROMPT_COPY[failurePrompt]}</p>
+                <p className="break-words text-xs text-gray-700">{ON_FAILURE_PROMPT_COPY[failurePrompt.signal]}</p>
                 {failureEmailError && (
                   <p className="break-words text-[0.6875rem] text-red-500">{failureEmailError}</p>
                 )}

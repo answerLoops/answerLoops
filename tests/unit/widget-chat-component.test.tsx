@@ -127,7 +127,7 @@ describe('WidgetChat: email gate', () => {
     )
   })
 
-  it('still reveals the thread when the lead request fails, non-blocking', async () => {
+  it('keeps the gate up and tells the visitor when the lead request fails, with Skip still available', async () => {
     h.fetchMock.mockRejectedValueOnce(new Error('network down'))
     await renderWidget(makeFakeAgent())
     const user = userEvent.setup()
@@ -135,7 +135,11 @@ describe('WidgetChat: email gate', () => {
     await user.type(screen.getByPlaceholderText('you@example.com'), 'visitor@example.com')
     await user.click(screen.getByRole('button', { name: 'Start chat' }))
 
-    await waitFor(() => expect(screen.getByPlaceholderText('Ask a question…')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/couldn.t save that right now/i)).toBeTruthy())
+    expect(screen.queryByPlaceholderText('Ask a question…')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+    expect(screen.getByPlaceholderText('Ask a question…')).toBeTruthy()
   })
 })
 

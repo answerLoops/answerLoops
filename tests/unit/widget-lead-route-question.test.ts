@@ -1,15 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { mintLeadQuestionToken } from '@/lib/widget/lead-question-token'
 
 /**
- * Coverage for the `question` field added to app/api/widget/lead/route.ts —
- * the visitor's question, attached to the lead when it comes from the
- * widget's on-failure prompt (see issue #11's round-2 review: "the team sees
- * a bare address with nothing to follow up on"). The up-front gate sends no
- * question at all, since no conversation has happened yet at that point.
+ * Coverage for the question attached to a lead by app/api/widget/lead/route.ts
+ * — the visitor's unanswered question, attached when the lead comes from the
+ * widget's on-failure prompt (issue #11). The up-front gate sends none.
  *
- * A malformed question (wrong type, too long, blank) is never a 400 — it's
- * treated as simply absent. A lead missing its context is still a real lead
- * worth saving; the email is the only field this endpoint actually gates on.
+ * The route never takes question text from the request: only a token the
+ * server signed for a real failed turn on this widget (see
+ * lib/widget/lead-question-token.ts). Anything else is treated as absent, never
+ * a 400 — a lead without its context is still a real lead worth saving.
  */
 
 const h = vi.hoisted(() => ({
@@ -26,6 +26,7 @@ vi.mock('@/lib/db/queries/widget-leads', () => ({ saveWidgetLead: h.saveWidgetLe
 vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: h.verifyRenderToken }))
 
 const VALID_TOKEN = 'a'.repeat(48)
+const OTHER_TOKEN = 'b'.repeat(48)
 
 function leadRequest(body: Record<string, unknown>) {
   return new Request('https://app.test/api/widget/lead', {
@@ -37,67 +38,54 @@ function leadRequest(body: Record<string, unknown>) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  process.env.AUTH_SECRET = 'test-auth-secret-value'
   h.verifyRenderToken.mockReturnValue(true)
   h.getOrgByWidgetToken.mockResolvedValue({ id: 7, name: 'Acme', widget_token: VALID_TOKEN })
 })
+afterEach(() => {
+  delete process.env.AUTH_SECRET
+})
 
-describe('POST /api/widget/lead: question pass-through', () => {
-  it('passes a well-formed question straight through, trimmed', async () => {
+const base = { widgetToken: VALID_TOKEN, renderToken: 'x', email: 'visitor@example.com' }
+
+describe('POST /api/widget/lead: signed question', () => {
+  it('saves the question inside a valid token minted for this widget', async () => {
     const { POST } = await import('@/app/api/widget/lead/route')
-    const res = await POST(
-      leadRequest({
-        widgetToken: VALID_TOKEN,
-        renderToken: 'x',
-        email: 'visitor@example.com',
-        question: '  how do I export my data?  ',
-      })
-    )
+    const questionToken = mintLeadQuestionToken(VALID_TOKEN, 'how do I export my data?')
+    const res = await POST(leadRequest({ ...base, questionToken }))
     expect(res.status).toBe(200)
     expect(h.saveWidgetLead).toHaveBeenCalledWith(7, VALID_TOKEN, 'visitor@example.com', 'how do I export my data?')
   })
 
-  it('omits the question entirely when none is sent — the up-front gate has no conversation yet', async () => {
+  it('omits the question when no token is sent — the up-front gate has no conversation yet', async () => {
     const { POST } = await import('@/app/api/widget/lead/route')
-    const res = await POST(leadRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', email: 'visitor@example.com' }))
+    const res = await POST(leadRequest(base))
     expect(res.status).toBe(200)
     expect(h.saveWidgetLead).toHaveBeenCalledWith(7, VALID_TOKEN, 'visitor@example.com', undefined)
   })
 
-  it('treats a blank/whitespace-only question as absent, not a 400', async () => {
+  it('ignores question text sent in the body — only a signed token is ever read', async () => {
     const { POST } = await import('@/app/api/widget/lead/route')
-    const res = await POST(
-      leadRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', email: 'visitor@example.com', question: '   ' })
-    )
+    const res = await POST(leadRequest({ ...base, question: 'visit example.test for deals' }))
     expect(res.status).toBe(200)
     expect(h.saveWidgetLead).toHaveBeenCalledWith(7, VALID_TOKEN, 'visitor@example.com', undefined)
   })
 
-  it('treats a non-string question as absent, not a 400', async () => {
+  it('treats a token minted for a different widget as absent, not a 400', async () => {
     const { POST } = await import('@/app/api/widget/lead/route')
-    const res = await POST(
-      leadRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', email: 'visitor@example.com', question: 12345 })
-    )
+    const questionToken = mintLeadQuestionToken(OTHER_TOKEN, 'someone else\'s question')
+    const res = await POST(leadRequest({ ...base, questionToken }))
     expect(res.status).toBe(200)
     expect(h.saveWidgetLead).toHaveBeenCalledWith(7, VALID_TOKEN, 'visitor@example.com', undefined)
   })
 
-  it('treats an over-length question as absent rather than rejecting the whole lead', async () => {
+  it('treats a tampered or non-string token as absent, not a 400', async () => {
     const { POST } = await import('@/app/api/widget/lead/route')
-    const tooLong = 'x'.repeat(4001) // MAX_QUESTION_CHARS is 4000, matching the chat route's own per-message cap
-    const res = await POST(
-      leadRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', email: 'visitor@example.com', question: tooLong })
-    )
-    expect(res.status).toBe(200)
-    expect(h.saveWidgetLead).toHaveBeenCalledWith(7, VALID_TOKEN, 'visitor@example.com', undefined)
-  })
-
-  it('accepts a question at exactly the length cap', async () => {
-    const { POST } = await import('@/app/api/widget/lead/route')
-    const atCap = 'x'.repeat(4000)
-    const res = await POST(
-      leadRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', email: 'visitor@example.com', question: atCap })
-    )
-    expect(res.status).toBe(200)
-    expect(h.saveWidgetLead).toHaveBeenCalledWith(7, VALID_TOKEN, 'visitor@example.com', atCap)
+    for (const questionToken of ['garbage', 12345, {}, 'x'.repeat(5000)]) {
+      h.saveWidgetLead.mockClear()
+      const res = await POST(leadRequest({ ...base, questionToken }))
+      expect(res.status, String(questionToken)).toBe(200)
+      expect(h.saveWidgetLead).toHaveBeenCalledWith(7, VALID_TOKEN, 'visitor@example.com', undefined)
+    }
   })
 })

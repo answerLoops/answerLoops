@@ -23,3 +23,7 @@ const VISITOR_ID_PATTERN = /^[A-Za-z0-9_-]+$/
 export function isValidVisitorId(value: unknown): value is string {
   return typeof value === 'string' && value.length <= MAX_VISITOR_ID_LEN && VISITOR_ID_PATTERN.test(value)
 }
+
+// The per-message turn id the widget generates (a UUID) has the same shape and
+// the same ':'-free guarantee as a visitor id, so it shares the check.
+export const isValidTurnId = isValidVisitorId

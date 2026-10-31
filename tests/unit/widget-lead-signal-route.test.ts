@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { verifyLeadQuestionToken } from '@/lib/widget/lead-question-token'
 
 /**
  * Coverage for app/api/widget/lead-signal/route.ts — the endpoint the widget
@@ -35,14 +36,19 @@ function leadSignalRequest(body: Record<string, unknown>) {
   return new Request('https://app.test/api/widget/lead-signal', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    body: JSON.stringify({ turnId: 'turn-1', ...body }),
   })
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+  process.env.AUTH_SECRET = 'test-auth-secret-value'
   h.verifyRenderToken.mockReturnValue(true)
-  h.getLeadSignal.mockReturnValue('none')
+  h.getLeadSignal.mockReturnValue({ signal: 'none', question: '' })
+})
+
+afterEach(() => {
+  delete process.env.AUTH_SECRET
 })
 
 describe('POST /api/widget/lead-signal: validation', () => {
@@ -69,6 +75,14 @@ describe('POST /api/widget/lead-signal: validation', () => {
     for (const visitorId of ['has space', '../x', 'x'.repeat(65)]) {
       const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId }))
       expect(res.status, visitorId).toBe(400)
+    }
+  })
+
+  it('400s on a missing or malformed turnId', async () => {
+    const { POST } = await import('@/app/api/widget/lead-signal/route')
+    for (const turnId of [undefined, 'has space', 'a:b', 'x'.repeat(65), 7]) {
+      const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'v1', turnId }))
+      expect(res.status, String(turnId)).toBe(400)
     }
   })
 
@@ -108,28 +122,43 @@ describe('POST /api/widget/lead-signal: render token enforcement', () => {
 })
 
 describe('POST /api/widget/lead-signal: success', () => {
-  it('returns whatever getLeadSignal reports, reading it straight off the widgetToken — no org lookup involved', async () => {
-    h.getLeadSignal.mockReturnValue('human-requested')
+  it('reads the stash by widgetToken, visitor and turn — no org lookup involved', async () => {
+    h.getLeadSignal.mockReturnValue({ signal: 'human-requested', question: 'talk to a human' })
     const { POST } = await import('@/app/api/widget/lead-signal/route')
-    const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-42' }))
+    const res = await POST(
+      leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-42', turnId: 'turn-9' })
+    )
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ signal: 'human-requested' })
-    expect(h.getLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-42')
+    expect((await res.json()).signal).toBe('human-requested')
+    expect(h.getLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-42', 'turn-9')
   })
 
-  it('returns "none" when no signal was ever stashed for this widgetToken+visitor', async () => {
-    h.getLeadSignal.mockReturnValue('none')
+  it('returns just "none", with no question token, when the turn did not fail', async () => {
     const { POST } = await import('@/app/api/widget/lead-signal/route')
     const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-1' }))
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ signal: 'none' })
   })
 
-  it('returns "no-kb-match" when that is what was stashed', async () => {
-    h.getLeadSignal.mockReturnValue('no-kb-match')
+  it('hands back a signed token for the question the server recorded on a failed turn', async () => {
+    h.getLeadSignal.mockReturnValue({ signal: 'no-kb-match', question: 'how do I export my data?' })
     const { POST } = await import('@/app/api/widget/lead-signal/route')
     const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-1' }))
-    expect(await res.json()).toEqual({ signal: 'no-kb-match' })
+    const body = await res.json()
+    expect(body.signal).toBe('no-kb-match')
+    // The route never echoes the question itself — only a token the lead
+    // route can verify — and the token is bound to this widget.
+    expect(JSON.stringify(body)).not.toContain('how do I export')
+    expect(verifyLeadQuestionToken(body.questionToken, VALID_TOKEN)).toBe('how do I export my data?')
+    expect(verifyLeadQuestionToken(body.questionToken, 'e'.repeat(48))).toBeNull()
+  })
+
+  it('asking twice for the same turn gives the same answer (the route itself holds no state)', async () => {
+    h.getLeadSignal.mockReturnValue({ signal: 'no-kb-match', question: 'q' })
+    const { POST } = await import('@/app/api/widget/lead-signal/route')
+    const req = () => leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-1' })
+    expect((await (await POST(req())).json()).signal).toBe('no-kb-match')
+    expect((await (await POST(req())).json()).signal).toBe('no-kb-match')
   })
 
   it('never resolves an org — a revoked or nonexistent widget token with a still-valid render token just reads back whatever (or nothing) the stash has', async () => {
