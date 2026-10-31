@@ -47,11 +47,17 @@ describe(`drizzle/${MIGRATION}`, () => {
     expect(migrationSql().trim().length).toBeGreaterThan(0)
   })
 
-  it('adds the column to orgs as NOT NULL text, defaulted to on-failure', () => {
+  it('adds the column to orgs as NOT NULL text, defaulted to up-front', () => {
     expect(migrationSql()).toMatch(
       new RegExp(`ALTER TABLE\\s+orgs\\s+ADD COLUMN IF NOT EXISTS\\s+${COLUMN}\\s+TEXT\\s+NOT\\s+NULL`, 'i')
     )
-    expect(migrationSql()).toMatch(/DEFAULT\s+'on-failure'/i)
+    // 'up-front' — the old hardcoded gate — not 'on-failure': this column's
+    // own default backfills every workspace that existed before it shipped,
+    // so it must match what they already had rather than silently switching
+    // their widget's behavior. A new workspace gets 'on-failure' explicitly
+    // at creation instead — see auth.ts and the "new org" describe block below.
+    expect(migrationSql()).toMatch(/DEFAULT\s+'up-front'/i)
+    expect(migrationSql()).not.toMatch(/DEFAULT\s+'on-failure'/i)
   })
 
   it('is idempotent via IF NOT EXISTS, since the runner replays a whole file after a partial failure', () => {
@@ -108,14 +114,28 @@ describe(`drizzle/${MIGRATION}`, () => {
 // ---------------------------------------------------------------------------
 
 describe('lib/db/schema: orgs.widgetLeadCaptureMode matches the migration', () => {
-  it('declares a NOT NULL text column defaulted to on-failure', async () => {
+  it('declares a NOT NULL text column defaulted to up-front, matching the migration', async () => {
     const { orgs } = await import('@/lib/db/schema')
     const col = getTableConfig(orgs).columns.find((c) => c.name === COLUMN)
     expect(col, `${COLUMN} missing from the Drizzle orgs table`).toBeDefined()
     expect(col!.getSQLType()).toBe('text')
     expect(col!.notNull).toBe(true)
     expect(col!.hasDefault).toBe(true)
-    expect(col!.default).toBe('on-failure')
+    expect(col!.default).toBe('up-front')
+  })
+})
+
+describe('auth.ts: a brand-new org gets the product default, not the column default', () => {
+  it('sets widgetLeadCaptureMode explicitly on the new-org insert', () => {
+    // No existing harness in this repo mocks the DB-backed OAuth sign-in flow
+    // auth.ts's new-org path runs inside, so this is a source-level check —
+    // same convention as the other source-shape assertions in this file.
+    const src = fs.readFileSync(path.join(ROOT, 'auth.ts'), 'utf-8')
+    const insertIdx = src.indexOf('.insert(orgs)')
+    expect(insertIdx, 'auth.ts no longer inserts into orgs the way this test expects').toBeGreaterThan(-1)
+    const valuesBlock = src.slice(insertIdx, insertIdx + 400)
+    expect(valuesBlock).toContain('widgetLeadCaptureMode: DEFAULT_WIDGET_LEAD_CAPTURE_MODE')
+    expect(src).toMatch(/import \{ DEFAULT_WIDGET_LEAD_CAPTURE_MODE \} from '@\/lib\/widget\/lead-capture'/)
   })
 
   it('is reachable under the camelCase name the query layer uses', async () => {
@@ -147,6 +167,7 @@ import {
   isWidgetLeadCaptureMode,
   isWidgetLeadSignal,
   requestsHuman,
+  isGreetingOrAck,
 } from '@/lib/widget/lead-capture'
 
 describe('lib/widget/lead-capture: isWidgetLeadCaptureMode', () => {
@@ -227,6 +248,22 @@ describe('lib/widget/lead-capture: requestsHuman', () => {
   })
 })
 
+describe('lib/widget/lead-capture: isGreetingOrAck', () => {
+  it('matches bare greetings and acknowledgements, with or without punctuation', () => {
+    const positives = ['hi', 'Hello!', 'hey', 'thanks', 'thank you', 'thx', 'ty', 'ok', 'okay', 'k', 'cool', 'great', 'nice', 'good', 'got it', 'sounds good', 'perfect', 'awesome', 'bye', 'cheers', '  hi  ', 'Thanks!!']
+    for (const q of positives) {
+      expect(isGreetingOrAck(q), q).toBe(true)
+    }
+  })
+
+  it('does not match a real question, even a short one', () => {
+    const negatives = ['pricing?', 'how do I reset my password', 'hi, how do I reset my password', 'thanks for the help, but I still have an issue', '']
+    for (const q of negatives) {
+      expect(isGreetingOrAck(q), q).toBe(false)
+    }
+  })
+})
+
 // ---------------------------------------------------------------------------
 // lib/widget/lead-signal-stash.ts — process-local Map, no mocking needed
 // ---------------------------------------------------------------------------
@@ -271,11 +308,49 @@ describe('lib/widget/lead-signal-stash', () => {
     // trigger an unrelated background sweep mid-test; getLeadSignal's own
     // expiry check (`entry.expiresAt < Date.now()`) is what this test
     // exercises, independent of the sweep.
+    //
+    // Only one get() call here, deliberately: getLeadSignal deletes what it
+    // reads (see the next test), so reading once before expiry to confirm
+    // the value and again after would make the second read's "none" come
+    // from the first read's deletion, not from the TTL check this test is
+    // actually about.
     vi.useFakeTimers()
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
     setLeadSignal(1, 'visitor-a', 'human-requested')
-    expect(getLeadSignal(1, 'visitor-a')).toBe('human-requested')
     vi.advanceTimersByTime(31_000) // TTL is 30_000ms
+    expect(getLeadSignal(1, 'visitor-a')).toBe('none')
+  })
+
+  it('getLeadSignal deletes the entry it reads, so a second poll does not see the same result twice', async () => {
+    const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    setLeadSignal(1, 'visitor-a', 'no-kb-match')
+    expect(getLeadSignal(1, 'visitor-a')).toBe('no-kb-match')
+    expect(getLeadSignal(1, 'visitor-a')).toBe('none')
+  })
+
+  it('clearLeadSignal removes a pending entry outright', async () => {
+    const { setLeadSignal, getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    setLeadSignal(1, 'visitor-a', 'no-kb-match')
+    clearLeadSignal(1, 'visitor-a')
+    expect(getLeadSignal(1, 'visitor-a')).toBe('none')
+  })
+
+  it('clearLeadSignal is a no-op for a key with nothing stored', async () => {
+    const { getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    expect(() => clearLeadSignal(1, 'visitor-never-set')).not.toThrow()
+    expect(getLeadSignal(1, 'visitor-never-set')).toBe('none')
+  })
+
+  it('models the real failure-after-success scenario: a cleared signal from a prior turn never leaks into a later, failed one', async () => {
+    // app/api/widget/chat/route.ts calls clearLeadSignal as soon as a new run
+    // is accepted, before that run can fail without ever reaching the point
+    // where it would set its own signal. This proves the stash-level half of
+    // that guarantee: once cleared, nothing is left for the next poll to find.
+    const { setLeadSignal, getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    setLeadSignal(1, 'visitor-a', 'no-kb-match') // turn 1: a real miss
+    clearLeadSignal(1, 'visitor-a') // turn 2 accepted, clears turn 1's result
+    // turn 2 then fails before reaching its own onFinish — no setLeadSignal
+    // call follows. The client's poll must not see turn 1's stale result.
     expect(getLeadSignal(1, 'visitor-a')).toBe('none')
   })
 })
@@ -394,5 +469,17 @@ describe('lib/db/queries/widgets: getOrgByWidgetToken defensive fallback', () =>
     })
     const org = await getOrgByWidgetToken('tok-abc')
     expect(org!.widget_lead_capture_mode).toBe('up-front')
+  })
+})
+
+describe('app/widget/[widgetToken]/page.tsx: passes the org\'s mode through to WidgetChat', () => {
+  it('threads org.widget_lead_capture_mode into the leadCaptureMode prop', () => {
+    // No existing test in this repo live-invokes this async server component
+    // (mocking next/headers, next/navigation's notFound, etc. for it) —
+    // widget-surface-hardening.test.ts's own coverage of this file is
+    // source-level too. Matching that convention rather than inventing a new
+    // harness for one prop.
+    const src = fs.readFileSync(path.join(ROOT, 'app/widget/[widgetToken]/page.tsx'), 'utf-8')
+    expect(src).toMatch(/leadCaptureMode=\{org\.widget_lead_capture_mode\}/)
   })
 })

@@ -1,4 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import fs from 'node:fs'
+import path from 'node:path'
 import { widgetChatRequest, drain, userMsg } from './support/widget-chat-envelope'
 
 /**
@@ -31,6 +33,7 @@ const h = vi.hoisted(() => ({
   getOrgByWidgetToken: vi.fn(async () => ({ id: 7, name: 'Acme', widget_token: VALID_TOKEN })),
   getKBContext: vi.fn(async () => [] as { summary: string; answer: string; articleId?: number }[]),
   setLeadSignal: vi.fn(),
+  clearLeadSignal: vi.fn(),
 }))
 
 vi.mock('@/lib/billing/usage', () => ({
@@ -54,7 +57,10 @@ vi.mock('@/lib/ai/embed', () => ({
 vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => 'test-embed-model' }))
 vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
-vi.mock('@/lib/widget/lead-signal-stash', () => ({ setLeadSignal: h.setLeadSignal }))
+vi.mock('@/lib/widget/lead-signal-stash', () => ({
+  setLeadSignal: h.setLeadSignal,
+  clearLeadSignal: h.clearLeadSignal,
+}))
 vi.mock('@mastra/core/agent', () => ({
   Agent: class {
     async stream(_query: string, options?: { onFinish?: (event?: { text?: string }) => void | Promise<void> }) {
@@ -115,5 +121,56 @@ describe('widget chat route onFinish: lead signal', () => {
     h.getKBContext.mockResolvedValue([])
     await ask('any question', 'visitor-xyz')
     expect(h.setLeadSignal).toHaveBeenCalledWith(42, 'visitor-xyz', 'no-kb-match')
+  })
+
+  it('does not stash "no-kb-match" for a bare greeting or acknowledgement with no KB match', async () => {
+    h.getKBContext.mockResolvedValue([])
+    for (const greeting of ['hi', 'Hello!', 'thanks', 'ok cool']) {
+      h.setLeadSignal.mockClear()
+      await ask(greeting, 'visitor-greet')
+      expect(h.setLeadSignal, greeting).toHaveBeenCalledWith(7, 'visitor-greet', 'none')
+    }
+  })
+
+  it('still stashes "no-kb-match" for a real short question that happens to find nothing', async () => {
+    // Confirms the greeting check is anchored to the whole message, not a
+    // blanket "short messages don't count" rule — a real miss should still
+    // surface the prompt regardless of length.
+    h.getKBContext.mockResolvedValue([])
+    await ask('pricing?', 'visitor-short-q')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-short-q', 'no-kb-match')
+  })
+})
+
+describe('widget chat route: clears the previous turn\'s signal before this run can fail', () => {
+  it('calls clearLeadSignal for this org+visitor once the org is resolved, before the run can produce its own result', async () => {
+    h.getKBContext.mockResolvedValue([])
+    await ask('how do I reset my password?', 'visitor-9')
+    expect(h.clearLeadSignal).toHaveBeenCalledWith(7, 'visitor-9')
+    // Must happen before setLeadSignal (onFinish), not after — the whole
+    // point is to clear stale state ahead of this run's own outcome, not
+    // wipe out the result this same run just wrote.
+    const clearOrder = h.clearLeadSignal.mock.invocationCallOrder[0]
+    const setOrder = h.setLeadSignal.mock.invocationCallOrder[0]
+    expect(clearOrder).toBeLessThan(setOrder)
+  })
+})
+
+describe('widget chat route: the signal is written before the slower onFinish work', () => {
+  it('calls setLeadSignal before commitDeflection, so a slow or failing downstream step cannot delay or skip it', () => {
+    // Behavioral proof lives in the tests above (setLeadSignal always lands,
+    // even against a mocked commitDeflection/countArticleUsage/etc. that just
+    // resolve normally in this harness); this is the source-order guarantee
+    // those behavioral tests can't see on their own. Ordering by text index
+    // rather than a fixed-size slice — see the fix to the similar brittle
+    // check in tests/unit/deflection-quota-gaps.test.ts.
+    const src = fs.readFileSync(path.join(process.cwd(), 'app/api/widget/chat/route.ts'), 'utf-8')
+    const onFinishIdx = src.indexOf('onFinish: async (event) => {')
+    const setSignalIdx = src.indexOf('setLeadSignal(', onFinishIdx)
+    const commitIdx = src.indexOf('commitDeflection(org.id, reservationId)', onFinishIdx)
+    expect(onFinishIdx).toBeGreaterThan(-1)
+    expect(setSignalIdx).toBeGreaterThan(onFinishIdx)
+    expect(commitIdx).toBeGreaterThan(onFinishIdx)
+    expect(setSignalIdx).toBeLessThan(commitIdx)
   })
 })

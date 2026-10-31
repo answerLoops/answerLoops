@@ -221,4 +221,91 @@ describe('WidgetChat: on-failure lead prompt', () => {
     expect(screen.queryByTestId('failure-lead-prompt')).toBeNull()
     expect(leadSignalCalls().length).toBe(0)
   })
+
+  it('does not show the prompt, and does not crash, when the lead-signal check itself fails (network error)', async () => {
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
+        throw new Error('network down')
+      }
+      return new Response(null, { status: 200 })
+    })
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+
+    await fake.emit.runFinalized()
+
+    expect(screen.queryByTestId('failure-lead-prompt')).toBeNull()
+    // The chat itself is still usable — a failed check doesn't break anything
+    // else on the page.
+    expect(screen.getByPlaceholderText('Ask a question…')).toBeTruthy()
+  })
+
+  it('does not show the prompt when the lead-signal endpoint responds with an error status', async () => {
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
+        return new Response('Too many requests', { status: 429 })
+      }
+      return new Response(null, { status: 200 })
+    })
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+
+    await fake.emit.runFinalized()
+
+    expect(screen.queryByTestId('failure-lead-prompt')).toBeNull()
+  })
+})
+
+describe('WidgetChat: on-failure prompt submission failure', () => {
+  it('keeps the prompt open with an error when the lead endpoint rejects the address', async () => {
+    mockLeadSignalResponse('no-kb-match')
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+    await fake.emit.runFinalized()
+    const prompt = await screen.findByTestId('failure-lead-prompt')
+
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
+        return new Response(JSON.stringify({ signal: 'no-kb-match' }), { status: 200 })
+      }
+      if (typeof url === 'string' && url.includes('/api/widget/lead')) {
+        return new Response('Invalid email', { status: 400 })
+      }
+      return new Response(null, { status: 200 })
+    })
+
+    const user = userEvent.setup()
+    await user.type(within(prompt).getByPlaceholderText('you@example.com'), 'visitor@example.com')
+    await user.click(within(prompt).getByRole('button', { name: 'Send' }))
+
+    // The prompt stays visible with an error — the lead never saved and the
+    // visitor can see that and retry.
+    await waitFor(() => expect(screen.getByTestId('failure-lead-prompt')).toBeTruthy())
+    expect(within(screen.getByTestId('failure-lead-prompt')).getByText(/didn.t go through/i)).toBeTruthy()
+  })
+
+  it('keeps the prompt open with an error when the lead request never reaches the server', async () => {
+    mockLeadSignalResponse('no-kb-match')
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+    await fake.emit.runFinalized()
+    const prompt = await screen.findByTestId('failure-lead-prompt')
+
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
+        return new Response(JSON.stringify({ signal: 'no-kb-match' }), { status: 200 })
+      }
+      if (typeof url === 'string' && url.includes('/api/widget/lead')) {
+        throw new Error('network down')
+      }
+      return new Response(null, { status: 200 })
+    })
+
+    const user = userEvent.setup()
+    await user.type(within(prompt).getByPlaceholderText('you@example.com'), 'visitor@example.com')
+    await user.click(within(prompt).getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => expect(screen.getByTestId('failure-lead-prompt')).toBeTruthy())
+    expect(within(screen.getByTestId('failure-lead-prompt')).getByText(/didn.t go through/i)).toBeTruthy()
+  })
 })
