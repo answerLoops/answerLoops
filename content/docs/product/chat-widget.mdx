@@ -32,7 +32,7 @@ The answerLoops chat widget adds a support chatbot to any website or documentati
   ]}
   outcomes={[
     { tone: 'post', title: 'Answer in the chat', text: 'The visitor reads the reply as it is written, with steps, quick replies, a callout, a link card, or contact options when they help.' },
-    { tone: 'info', title: 'Lead captured', text: 'Before the first message the panel asks for an email address, which the visitor can skip. Addresses appear on the Leads page.' },
+    { tone: 'info', title: 'Lead captured', text: 'When an answer misses, the panel asks for an email address, which the visitor can skip. Addresses appear on the Leads page. See Lead capture below for the other timing options.' },
     { tone: 'review', title: 'Gap queued for review', text: 'When no article matched, Pro and above add the question, without any record of the visitor, to the Review queue so you can turn it into an article.' },
   ]}
   replyLabel="The answer streams back into the same chat panel"
@@ -185,6 +185,7 @@ Where you paste the snippet depends on how your site is built. Find your platfor
 | Branding | **Settings → Widget** | Standard shows the answerLoops logo and a "Powered by answerLoops" line. Pro and Enterprise can remove the answerLoops branding; **Settings → Widget** shows an upgrade option when your plan does not include it. Self-hosted installs have it unlocked. |
 | Allowed domains | **Settings → Widget** | The domains the widget may load on. Subdomains are included. |
 | Embed token | **Settings → Widget** | Issued per workspace and expires after 90 days; **Regenerate token** issues a new one. |
+| Ask for an email | **Settings → Widget** | When the widget collects a visitor's email address: only after an unanswered question (default), before the conversation starts, or never. |
 | What it knows | **Knowledge Base** | Publish or unpublish articles and sources. The widget only answers from published articles. |
 | Contact and link cards | Your articles | Cards show links and contact details only when they are written in your articles. There is nothing to configure. |
 
@@ -218,6 +219,18 @@ This is usually the highest-value place to put it: docs visitors are anonymous a
 <Note>
   On platforms with no build step, the embed token ends up committed to whatever repository holds your docs. The token is a public identifier rather than a secret, but rotating it then requires a commit.
 </Note>
+
+## Lead capture
+
+**Settings → Widget → Ask for an email** controls whether, and when, the widget asks a visitor for their email address.
+
+- **Only if it can't help** (default) — the visitor goes straight into the conversation. The widget only asks for an email after a turn it couldn't really answer: no knowledge-base article matched the question, or the visitor explicitly asked to talk to a person. The ask appears inline, right under that answer, with a short line explaining why ("I couldn't find anything on that — leave your email and someone will follow up"), and a **No thanks** option that lets the visitor keep chatting without it. It only appears once per conversation.
+- **Before the conversation starts** — the visitor sees an email field before they can ask anything, with a **Skip** link to bypass it.
+- **Never** — the widget never asks.
+
+<Callout type="info" title="Why the default changed">
+  Asking up front, before the widget has done anything to earn the visitor's trust, was costing more conversations than the leads it produced — a visitor arrives with a question, not an intent to hand over an email, and bounces rather than answer a stranger-bot. Asking after a real miss gives the visitor context for why they're being asked, and the resulting address is attached to an actual unresolved question rather than a cold form fill.
+</Callout>
 
 ## Rotating the token
 
@@ -254,7 +267,9 @@ The widget chat endpoint is public (no login required), so it enforces limits to
 
 The lead-capture endpoint, used when a visitor leaves an email address, is limited separately at **30/minute per token** and **5/minute per visitor**, with a 64KB body cap and a validated address.
 
-Requests over these limits return `429 Too Many Requests`. Limits are enforced across every running instance rather than per process, so the numbers above are the real ceiling. They are not currently configurable.
+The on-failure check — a small lookup the widget makes right after a turn finishes, to decide whether to show the lead-capture prompt — is limited at **100/minute per token** and **20/minute per visitor**, the same shape as the chat endpoint next to it.
+
+Requests over these limits return `429 Too Many Requests`. The chat and lead-capture limits are enforced across every running instance rather than per process, so those numbers are the real ceiling. The on-failure check's result, by contrast, is held in the memory of whichever instance answered the chat request — see Lead capture above — so on a multi-instance deployment a visitor's next poll can land on a different instance and simply see no prompt for that turn; nothing breaks, the prompt just doesn't appear. None of these limits are currently configurable.
 
 Separately from rate limits, every widget answer counts toward your plan's monthly deflection allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
 

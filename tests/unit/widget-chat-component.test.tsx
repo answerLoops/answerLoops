@@ -83,7 +83,7 @@ async function renderWidget(fake: ReturnType<typeof makeFakeAgent>) {
   h2.current = fake
   const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
   return render(
-    <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} />
+    <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} leadCaptureMode="up-front" />
   )
 }
 
@@ -239,7 +239,7 @@ describe('WidgetChat: branding', () => {
     h2.current = makeFakeAgent()
     const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
     render(
-      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} />
+      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} leadCaptureMode="up-front" />
     )
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Skip' }))
@@ -251,7 +251,7 @@ describe('WidgetChat: branding', () => {
     h2.current = makeFakeAgent()
     const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
     render(
-      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding={false} isSelfPreview={false} />
+      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding={false} isSelfPreview={false} leadCaptureMode="up-front" />
     )
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Skip' }))

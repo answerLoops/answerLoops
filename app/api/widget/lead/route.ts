@@ -7,6 +7,7 @@ import { verifyOriginProxy } from '@/lib/http/origin-guard'
 import { verifyRenderToken } from '@/lib/widget/render-token'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
+import { isValidWidgetToken } from '@/lib/widget/request-validation'
 
 const MOD = 'api/widget/lead'
 
@@ -31,10 +32,6 @@ const MAX_EMAIL_CHARS = 254
 // to prove deliverability.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/
 
-// Same shape check as the chat route — see the note there. This route feeds the
-// token straight into rate-limit bucket keys too, so it needs the same guard.
-const WIDGET_TOKEN_PATTERN = /^[0-9a-f]{48}$/
-
 export async function POST(request: Request) {
   // Must precede clientIp(), which trusts the proxy-supplied client-IP header —
   // see lib/http/origin-guard.ts. The chat route next door already did this;
@@ -56,7 +53,7 @@ export async function POST(request: Request) {
   }
 
   const { widgetToken, renderToken, email } = body
-  if (!widgetToken || typeof widgetToken !== 'string' || !WIDGET_TOKEN_PATTERN.test(widgetToken)) {
+  if (!isValidWidgetToken(widgetToken)) {
     return new Response('Missing widgetToken', { status: 400 })
   }
   // See app/api/widget/chat/route.ts and lib/widget/render-token.ts — same

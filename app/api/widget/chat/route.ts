@@ -23,6 +23,9 @@ import { verifyRenderToken } from '@/lib/widget/render-token'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { reserveGeneration, commitDeflection, releaseGeneration } from '@/lib/billing/usage'
 import { logger } from '@/lib/logger'
+import { requestsHuman, isGreetingOrAck } from '@/lib/widget/lead-capture'
+import { isValidWidgetToken, isValidVisitorId } from '@/lib/widget/request-validation'
+import { setLeadSignal, clearLeadSignal } from '@/lib/widget/lead-signal-stash'
 
 const MOD = 'api/widget/chat'
 
@@ -49,13 +52,6 @@ const GLOBAL_IP_WINDOW_MS = 60_000
 const MAX_MESSAGE_CHARS = 4_000
 const MAX_MESSAGES = 50
 
-// The widget generates a UUID (36 chars) per browser. Accepted shape is
-// letters, digits, hyphen and underscore up to 64 chars: wide enough for any
-// UUID form, and it excludes the `:` that delimits the memory key built from
-// this value (`widget:<orgId>:<visitorId>`).
-const MAX_VISITOR_ID_LEN = 64
-const VISITOR_ID_PATTERN = /^[A-Za-z0-9_-]+$/
-
 // Envelope methods this widget's client uses. The runtime serves many more
 // (thread, memory, inspector, transcribe, ...), none of which belong on a
 // public visitor endpoint, so anything else is a 404. `agent/connect` is not
@@ -78,12 +74,6 @@ const MAX_BODY_BYTES = 512 * 1024
 
 // How many knowledge-base articles are put in front of the model per answer.
 const MAX_CONTEXT_ARTICLES = 5
-
-// Widget tokens are crypto.randomBytes(24).toString('hex') — see
-// lib/db/queries/widgets.ts. Validated before the token is used as rate-limit
-// bucket key material, since the limiter persists that key and cannot bound
-// what it is given.
-const WIDGET_TOKEN_PATTERN = /^[0-9a-f]{48}$/
 
 // The per-part cap alone bounds nothing in principle — concatenated parts
 // could multiply straight through it — but AG-UI messages carry a single
@@ -243,7 +233,7 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   const visitorId = body?.forwardedProps?.visitorId
   const messages = body?.messages
 
-  if (!widgetToken || typeof widgetToken !== 'string' || !WIDGET_TOKEN_PATTERN.test(widgetToken)) {
+  if (!isValidWidgetToken(widgetToken)) {
     return new Response('Missing widgetToken', { status: 400 })
   }
   // Proves this call followed a page render that passed the origin allowlist
@@ -253,12 +243,7 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   if (!verifyRenderToken(body?.forwardedProps?.renderToken, widgetToken, ip)) {
     return new Response('Forbidden', { status: 403 })
   }
-  if (
-    !visitorId ||
-    typeof visitorId !== 'string' ||
-    visitorId.length > MAX_VISITOR_ID_LEN ||
-    !VISITOR_ID_PATTERN.test(visitorId)
-  ) {
+  if (!isValidVisitorId(visitorId)) {
     return new Response('Missing visitorId', { status: 400 })
   }
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -299,6 +284,14 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   if (!org) {
     return new Response('Invalid widget token', { status: 404 })
   }
+
+  // Clears any lead-capture signal left over from this visitor's previous
+  // turn, before this run can fail without ever reaching the point where it
+  // would set its own — see clearLeadSignal's doc comment. Every return
+  // below this line is a genuine outcome of *this* run (a rate limit, a
+  // missing AI provider, or a real answer), so nothing after this is the
+  // stale-leftover case the clear exists to prevent.
+  clearLeadSignal(org.id, visitorId)
 
   const [orgHourly, orgDaily] = await Promise.all([
     rateLimitShared(`widget-org-hour:${org.id}`, ORG_HOURLY_MAX, ORG_HOURLY_WINDOW_MS),
@@ -463,6 +456,25 @@ If no article below covers the question, answer from general knowledge and don't
     // no confidence-assessment step like the MCP/ticket pipelines do, so a
     // delivered answer is the bar for what counts as a deflection here.
     onFinish: async (event) => {
+      // Written first and synchronously, before any of the awaited work below
+      // — none of which this signal should depend on reaching, or be delayed
+      // by. Read by app/api/widget/lead-signal/route.ts, which the client
+      // polls right after this turn finishes to decide whether to show the
+      // on-failure lead-capture prompt (see lib/widget/lead-capture.ts and
+      // issue #11). An explicit ask for a human is the strongest signal
+      // regardless of whether the KB happened to return something; a bare
+      // greeting or acknowledgement ("hi", "thanks") finding no KB match
+      // isn't really a failed answer, so it doesn't count as one either.
+      setLeadSignal(
+        org.id,
+        visitorId,
+        requestsHuman(query)
+          ? 'human-requested'
+          : allContext.length === 0 && !isGreetingOrAck(query)
+            ? 'no-kb-match'
+            : 'none'
+      )
+
       await commitDeflection(org.id, reservationId).catch((e) => {
         logger.error('widget chat commitDeflection failed', { module: MOD, orgId: org.id, error: e })
       })

@@ -108,7 +108,7 @@ async function openThread(fake: ReturnType<typeof makeFakeAgent>) {
   h.current = fake
   ;({ ChoicesCard } = await import('@/app/widget/[widgetToken]/genui-cards'))
   const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
-  render(<WidgetChat widgetToken={TOKEN} renderToken="render-tok" orgName="Acme" showBranding isSelfPreview={false} />)
+  render(<WidgetChat widgetToken={TOKEN} renderToken="render-tok" orgName="Acme" showBranding isSelfPreview={false} leadCaptureMode="up-front" />)
   await userEvent.setup().click(screen.getByRole('button', { name: 'Skip' }))
 }
 

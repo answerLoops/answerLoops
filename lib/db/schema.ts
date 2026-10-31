@@ -32,6 +32,21 @@ export const orgs = pgTable('orgs', {
   // means unrestricted, which is the pre-existing behaviour and stays the
   // default so adding this column cannot break a live embed.
   widgetAllowedOrigins: text('widget_allowed_origins'),
+  // When the widget asks a visitor for an email: 'off' never asks, 'up-front'
+  // gates the whole conversation behind it (the old, hardcoded behaviour),
+  // 'on-failure' answers first and only asks once an answer actually fails.
+  // Validated against WIDGET_LEAD_CAPTURE_MODES in lib/widget/lead-capture.ts
+  // at every write — there is no DB-level CHECK constraint for this in this
+  // schema (see the other text-enum columns here), so the app layer is the
+  // only thing keeping this column honest. See GitHub issue #11.
+  //
+  // Defaults to 'up-front' here deliberately — not 'on-failure', the product
+  // default for a brand-new workspace (DEFAULT_WIDGET_LEAD_CAPTURE_MODE in
+  // lib/widget/lead-capture.ts, set explicitly at org creation in auth.ts).
+  // Every workspace that existed before this column shipped gets this DB
+  // default, so it must match what they already had (the old hardcoded gate)
+  // rather than silently switching their widget's behaviour.
+  widgetLeadCaptureMode: text('widget_lead_capture_mode').notNull().default('up-front'),
   roiMinutesPerTicket: integer('roi_minutes_per_ticket'),
   roiStaffHourlyRate: integer('roi_staff_hourly_rate'),
   // Set the moment an owner confirms account deletion. NULL means active.

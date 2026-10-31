@@ -24,6 +24,11 @@ import {
   StepsCard,
   WidgetActionsProvider,
 } from './genui-cards'
+import {
+  isWidgetLeadSignal,
+  type WidgetLeadCaptureMode,
+  type WidgetLeadSignal,
+} from '@/lib/widget/lead-capture'
 
 interface WidgetChatProps {
   widgetToken: string
@@ -31,6 +36,7 @@ interface WidgetChatProps {
   orgName: string
   showBranding: boolean
   isSelfPreview: boolean
+  leadCaptureMode: WidgetLeadCaptureMode
 }
 
 const VISITOR_ID_STORAGE_KEY = 'al_visitor_id'
@@ -126,6 +132,14 @@ function useGenuiRenderers() {
   useRenderTool({ name: '*', render: () => null }, [])
 }
 
+// Copy for the inline, non-blocking prompt shown in 'on-failure' mode. Kept
+// separate from the up-front gate's copy below — this one has context (the
+// conversation already happened) that the up-front ask never has.
+const ON_FAILURE_PROMPT_COPY: Record<Exclude<WidgetLeadSignal, 'none'>, string> = {
+  'no-kb-match': "I couldn't find anything on that in our knowledge base. Leave your email and someone will follow up.",
+  'human-requested': "I'll have someone follow up with you directly. Leave your email and we'll be in touch.",
+}
+
 const EMPTY_RESULTS: Record<string, string> = {}
 
 type ToolCallLike = NonNullable<Extract<Message, { role: 'assistant' }>['toolCalls']>[number]
@@ -208,7 +222,14 @@ const MessageRow = memo(
   }
 )
 
-export function WidgetChat({ widgetToken, renderToken, orgName, showBranding, isSelfPreview }: WidgetChatProps) {
+export function WidgetChat({
+  widgetToken,
+  renderToken,
+  orgName,
+  showBranding,
+  isSelfPreview,
+  leadCaptureMode,
+}: WidgetChatProps) {
   const visitorId = useMemo(() => getOrCreateVisitorId(), [])
 
   return (
@@ -225,6 +246,7 @@ export function WidgetChat({ widgetToken, renderToken, orgName, showBranding, is
         showBranding={showBranding}
         visitorId={visitorId}
         isSelfPreview={isSelfPreview}
+        leadCaptureMode={leadCaptureMode}
       />
     </CopilotKitProvider>
   )
@@ -237,6 +259,7 @@ function WidgetChatBody({
   showBranding,
   visitorId,
   isSelfPreview,
+  leadCaptureMode,
 }: {
   widgetToken: string
   renderToken: string
@@ -244,18 +267,51 @@ function WidgetChatBody({
   showBranding: boolean
   visitorId: string
   isSelfPreview: boolean
+  leadCaptureMode: WidgetLeadCaptureMode
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const [input, setInput] = useState('')
   const [email, setEmail] = useState('')
-  const [emailSubmitted, setEmailSubmitted] = useState(false)
+  // 'up-front' starts gated (the original hardcoded behaviour); 'off' and
+  // 'on-failure' both let the visitor straight into the conversation — they
+  // differ only in whether a prompt can appear later. leadCaptureMode is a
+  // prop from the server and does not change during the widget's life.
+  const [emailSubmitted, setEmailSubmitted] = useState(leadCaptureMode !== 'up-front')
   const [emailPending, setEmailPending] = useState(false)
   const [emailError, setEmailError] = useState('')
+
+  // The on-failure prompt: which signal triggered it (null = not showing),
+  // and whether the visitor has already acted on one this conversation
+  // (submitted or dismissed) so repeated failures don't keep re-asking.
+  // Typed without 'none' so a truthy check can't accidentally let it through
+  // — the string 'none' is itself truthy.
+  const [failurePrompt, setFailurePrompt] = useState<Exclude<WidgetLeadSignal, 'none'> | null>(null)
+  const [leadHandled, setLeadHandled] = useState(false)
+  const [failureEmail, setFailureEmail] = useState('')
+  const [failureEmailPending, setFailureEmailPending] = useState(false)
+  const [failureEmailError, setFailureEmailError] = useState('')
 
   const { agent } = useAgent()
   const [messages, setMessages] = useState<Message[]>(agent.messages)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const checkLeadSignal = useCallback(async () => {
+    if (leadCaptureMode !== 'on-failure' || leadHandled) return
+    try {
+      const res = await fetch('/api/widget/lead-signal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ widgetToken, renderToken, visitorId }),
+      })
+      if (!res.ok) return
+      const data: unknown = await res.json()
+      const signal = (data as { signal?: unknown })?.signal
+      if (isWidgetLeadSignal(signal) && signal !== 'none') setFailurePrompt(signal)
+    } catch {
+      // Non-critical: the visitor just doesn't see the prompt for this turn.
+    }
+  }, [leadCaptureMode, leadHandled, widgetToken, renderToken, visitorId])
 
   useEffect(() => {
     // `messages` starts as agent.messages (see the useState above) and every
@@ -267,7 +323,13 @@ function WidgetChatBody({
         setError(null)
         setIsLoading(true)
       },
-      onRunFinalized: () => setIsLoading(false),
+      onRunFinalized: () => {
+        setIsLoading(false)
+        // A failed run never reaches the chat route's onFinish, so the stash
+        // this reads has nothing for it — the fetch above just resolves to
+        // 'none' and the prompt stays hidden. Safe to call unconditionally.
+        void checkLeadSignal()
+      },
       // The server only puts a specific message in error.message when
       // isSelfPreview asked for one — see app/api/widget/chat/route.ts.
       // Real customer-site visitors get the generic fallback below.
@@ -280,13 +342,13 @@ function WidgetChatBody({
       },
     })
     return unsubscribe
-  }, [agent])
+  }, [agent, checkLeadSignal])
 
   useEffect(() => {
     // Smooth scrolling restarts its animation on every streamed token and
     // visibly lags behind the text; jump while a reply is arriving.
     bottomRef.current?.scrollIntoView({ behavior: isLoading ? 'auto' : 'smooth' })
-  }, [messages, isLoading])
+  }, [messages, isLoading, failurePrompt])
 
   useGenuiRenderers()
 
@@ -330,22 +392,61 @@ function WidgetChatBody({
     sendMessage(input)
   }
 
+  // 'rejected' means a response came back but wasn't ok (an invalid address,
+  // a rate limit) — a real outcome the visitor should see, not silence.
+  // 'network-error' means the request never reached the server at all.
+  // Callers below treat the two differently: a rejection is worth surfacing
+  // and retrying everywhere; a network error only blocks the up-front gate
+  // (not the inline on-failure prompt, which has no "let them into the chat"
+  // consequence riding on it).
+  async function postLead(address: string): Promise<'ok' | 'rejected' | 'network-error'> {
+    if (!address.trim()) return 'ok'
+    try {
+      const res = await fetch('/api/widget/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ widgetToken, renderToken, email: address.trim() }),
+      })
+      return res.ok ? 'ok' : 'rejected'
+    } catch {
+      return 'network-error'
+    }
+  }
+
   async function handleEmailSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email.trim()) { setEmailSubmitted(true); return }
     setEmailPending(true)
     setEmailError('')
-    try {
-      await fetch('/api/widget/lead', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ widgetToken, renderToken, email: email.trim() }),
-      })
-    } catch {
-      // non-blocking — still let them in
-    }
+    const result = await postLead(email)
     setEmailPending(false)
+    if (result === 'rejected') {
+      setEmailError("That didn't go through — check the address and try again.")
+      return
+    }
+    // A network error still lets them into the chat: gating the whole
+    // conversation on a lead write that could not even reach the server
+    // would work against the product's actual goal (get the question asked).
     setEmailSubmitted(true)
+  }
+
+  async function handleFailurePromptSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setFailureEmailPending(true)
+    setFailureEmailError('')
+    const result = await postLead(failureEmail)
+    setFailureEmailPending(false)
+    if (result !== 'ok') {
+      setFailureEmailError("That didn't go through — try again, or No thanks to skip.")
+      return
+    }
+    setFailurePrompt(null)
+    setLeadHandled(true)
+  }
+
+  function dismissFailurePrompt() {
+    setFailurePrompt(null)
+    setLeadHandled(true)
   }
 
   const lastMessage = messages[messages.length - 1]
@@ -434,6 +535,40 @@ function WidgetChatBody({
 
             {error && (
               <p className="break-words text-center text-xs text-red-400">{error}</p>
+            )}
+
+            {failurePrompt && (
+              <div className="rounded-xl border border-brand-100 bg-brand-50 px-3 py-2.5 space-y-2" data-testid="failure-lead-prompt">
+                <p className="break-words text-xs text-gray-700">{ON_FAILURE_PROMPT_COPY[failurePrompt]}</p>
+                {failureEmailError && (
+                  <p className="break-words text-[0.6875rem] text-red-500">{failureEmailError}</p>
+                )}
+                <form onSubmit={handleFailurePromptSubmit} className="flex flex-col gap-1.5">
+                  <input
+                    type="email"
+                    value={failureEmail}
+                    onChange={(e) => setFailureEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="submit"
+                      disabled={failureEmailPending || !failureEmail.trim()}
+                      className="min-w-[4.5rem] shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-center text-[0.6875rem] font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                    >
+                      {failureEmailPending ? 'Sending…' : 'Send'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={dismissFailurePrompt}
+                      className="shrink-0 text-[0.6875rem] text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      No thanks
+                    </button>
+                  </div>
+                </form>
+              </div>
             )}
 
             <div ref={bottomRef} />
