@@ -18,15 +18,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  */
 
 const h = vi.hoisted(() => ({
-  getOrgByWidgetToken: vi.fn(),
-  getLeadSignal: vi.fn(),
+    getLeadSignal: vi.fn(),
   verifyRenderToken: vi.fn(),
 }))
 
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: vi.fn(async () => ({ ok: true })) }))
-vi.mock('@/lib/db/queries/widgets', () => ({ getOrgByWidgetToken: h.getOrgByWidgetToken }))
 vi.mock('@/lib/widget/lead-signal-stash', () => ({ getLeadSignal: h.getLeadSignal }))
 vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: h.verifyRenderToken }))
 
@@ -43,7 +41,6 @@ function leadSignalRequest(body: Record<string, unknown>) {
 beforeEach(() => {
   vi.clearAllMocks()
   h.verifyRenderToken.mockReturnValue(true)
-  h.getOrgByWidgetToken.mockResolvedValue({ id: 7, name: 'Acme', widget_token: VALID_TOKEN })
   h.getLeadSignal.mockReturnValue('none')
 })
 
@@ -99,7 +96,6 @@ describe('POST /api/widget/lead-signal: render token enforcement', () => {
     const { POST } = await import('@/app/api/widget/lead-signal/route')
     const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'stale', visitorId: 'v1' }))
     expect(res.status).toBe(403)
-    expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
     expect(h.getLeadSignal).not.toHaveBeenCalled()
   })
 
@@ -110,25 +106,24 @@ describe('POST /api/widget/lead-signal: render token enforcement', () => {
   })
 })
 
-describe('POST /api/widget/lead-signal: org resolution', () => {
-  it('404s on an unresolvable widgetToken', async () => {
-    h.getOrgByWidgetToken.mockResolvedValue(null)
-    const { POST } = await import('@/app/api/widget/lead-signal/route')
-    const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'v1' }))
-    expect(res.status).toBe(404)
-    expect(h.getLeadSignal).not.toHaveBeenCalled()
-  })
-})
-
 describe('POST /api/widget/lead-signal: success', () => {
-  it('returns whatever getLeadSignal reports, scoped to the resolved org and the request visitorId', async () => {
-    h.getOrgByWidgetToken.mockResolvedValue({ id: 99, name: 'Acme', widget_token: VALID_TOKEN })
+  it('returns whatever getLeadSignal reports, scoped to the widget token, visitor and tab in the request', async () => {
     h.getLeadSignal.mockReturnValue('human-requested')
     const { POST } = await import('@/app/api/widget/lead-signal/route')
-    const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-42' }))
+    const res = await POST(
+      leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-42', sessionId: 'tab-9' })
+    )
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ signal: 'human-requested' })
-    expect(h.getLeadSignal).toHaveBeenCalledWith(99, 'visitor-42')
+    expect(h.getLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-42', 'tab-9')
+  })
+
+  it('reads the shared "legacy" scope when the page sent no valid session id', async () => {
+    const { POST } = await import('@/app/api/widget/lead-signal/route')
+    await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'v1' }))
+    await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'v1', sessionId: 'a:b' }))
+    expect(h.getLeadSignal).toHaveBeenNthCalledWith(1, VALID_TOKEN, 'v1', 'legacy')
+    expect(h.getLeadSignal).toHaveBeenNthCalledWith(2, VALID_TOKEN, 'v1', 'legacy')
   })
 
   it('returns "none" when no signal was ever stashed for this org+visitor', async () => {

@@ -30,7 +30,12 @@ const VALID_TOKEN = 'e'.repeat(48)
 
 const h = vi.hoisted(() => ({
   reserveGeneration: vi.fn(async () => ({ granted: true, generationId: 1 })),
-  getOrgByWidgetToken: vi.fn(async () => ({ id: 7, name: 'Acme', widget_token: VALID_TOKEN })),
+  getOrgByWidgetToken: vi.fn(async () => ({
+    id: 7,
+    name: 'Acme',
+    widget_token: VALID_TOKEN,
+    widget_lead_capture_mode: 'on-failure',
+  })),
   getKBContext: vi.fn(async () => [] as { summary: string; answer: string; articleId?: number }[]),
   setLeadSignal: vi.fn(),
   clearLeadSignal: vi.fn(),
@@ -70,10 +75,10 @@ vi.mock('@mastra/core/agent', () => ({
   },
 }))
 
-async function ask(question: string, visitorId = 'v1') {
+async function ask(question: string, visitorId = 'v1', sessionId: unknown = 'tab-1') {
   const { POST } = await import('@/app/api/widget/chat/route')
   const res = await POST(
-    widgetChatRequest({ widgetToken: VALID_TOKEN, visitorId, messages: [userMsg(question)] })
+    widgetChatRequest({ widgetToken: VALID_TOKEN, visitorId, sessionId, messages: [userMsg(question)] })
   )
   await drain(res)
   return res
@@ -82,7 +87,12 @@ async function ask(question: string, visitorId = 'v1') {
 beforeEach(() => {
   vi.clearAllMocks()
   h.reserveGeneration.mockResolvedValue({ granted: true, generationId: 1 })
-  h.getOrgByWidgetToken.mockResolvedValue({ id: 7, name: 'Acme', widget_token: VALID_TOKEN })
+  h.getOrgByWidgetToken.mockResolvedValue({
+    id: 7,
+    name: 'Acme',
+    widget_token: VALID_TOKEN,
+    widget_lead_capture_mode: 'on-failure',
+  })
   h.getKBContext.mockResolvedValue([])
 })
 
@@ -92,35 +102,57 @@ describe('widget chat route onFinish: lead signal', () => {
     const res = await ask('how do I reset my password?', 'visitor-1')
     expect(res.status).toBe(200)
     expect(h.setLeadSignal).toHaveBeenCalledTimes(1)
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-1', 'no-kb-match')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-1', 'tab-1', 'no-kb-match')
   })
 
   it('stashes "none" when KB context was found and no human was requested', async () => {
     h.getKBContext.mockResolvedValue([{ summary: 'Install', answer: 'Run npm i' }])
     const res = await ask('how do I install this?', 'visitor-2')
     expect(res.status).toBe(200)
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-2', 'none')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-2', 'tab-1', 'none')
   })
 
   it('stashes "human-requested" even when KB context was found, taking priority over a clean answer', async () => {
     h.getKBContext.mockResolvedValue([{ summary: 'Install', answer: 'Run npm i' }])
     const res = await ask('can you connect me with a representative', 'visitor-3')
     expect(res.status).toBe(200)
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-3', 'human-requested')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-3', 'tab-1', 'human-requested')
   })
 
   it('stashes "human-requested" when KB context was empty too, taking priority over "no-kb-match"', async () => {
     h.getKBContext.mockResolvedValue([])
     const res = await ask('please transfer me to a representative', 'visitor-4')
     expect(res.status).toBe(200)
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-4', 'human-requested')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-4', 'tab-1', 'human-requested')
   })
 
-  it('scopes the stashed signal to the org and visitor from this request', async () => {
-    h.getOrgByWidgetToken.mockResolvedValue({ id: 42, name: 'Other Org', widget_token: VALID_TOKEN })
+  it('scopes the stashed signal to the widget token, visitor and tab from this request', async () => {
     h.getKBContext.mockResolvedValue([])
-    await ask('any question', 'visitor-xyz')
-    expect(h.setLeadSignal).toHaveBeenCalledWith(42, 'visitor-xyz', 'no-kb-match')
+    await ask('any question', 'visitor-xyz', 'tab-77')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-xyz', 'tab-77', 'no-kb-match')
+  })
+
+  it('falls into a shared "legacy" scope when the page sent no valid session id', async () => {
+    h.getKBContext.mockResolvedValue([])
+    await ask('any question', 'visitor-old', null)
+    await ask('any question', 'visitor-bad', 'has:colon')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-old', 'legacy', 'no-kb-match')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-bad', 'legacy', 'no-kb-match')
+  })
+
+  it('stashes nothing for a workspace that is not in on-failure mode', async () => {
+    h.getKBContext.mockResolvedValue([])
+    for (const mode of ['off', 'up-front']) {
+      h.getOrgByWidgetToken.mockResolvedValue({
+        id: 7,
+        name: 'Acme',
+        widget_token: VALID_TOKEN,
+        widget_lead_capture_mode: mode,
+      })
+      const res = await ask('how do I reset my password?', 'visitor-mode')
+      expect(res.status, mode).toBe(200)
+      expect(h.setLeadSignal, mode).not.toHaveBeenCalled()
+    }
   })
 
   it('does not stash "no-kb-match" for a bare greeting or acknowledgement with no KB match', async () => {
@@ -128,7 +160,7 @@ describe('widget chat route onFinish: lead signal', () => {
     for (const greeting of ['hi', 'Hello!', 'thanks', 'ok cool']) {
       h.setLeadSignal.mockClear()
       await ask(greeting, 'visitor-greet')
-      expect(h.setLeadSignal, greeting).toHaveBeenCalledWith(7, 'visitor-greet', 'none')
+      expect(h.setLeadSignal, greeting).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-greet', 'tab-1', 'none')
     }
   })
 
@@ -138,21 +170,37 @@ describe('widget chat route onFinish: lead signal', () => {
     // surface the prompt regardless of length.
     h.getKBContext.mockResolvedValue([])
     await ask('pricing?', 'visitor-short-q')
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-short-q', 'no-kb-match')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-short-q', 'tab-1', 'no-kb-match')
   })
 })
 
 describe('widget chat route: clears the previous turn\'s signal before this run can fail', () => {
-  it('calls clearLeadSignal for this org+visitor once the org is resolved, before the run can produce its own result', async () => {
+  it('calls clearLeadSignal for this token+visitor+tab, before the run can produce its own result', async () => {
     h.getKBContext.mockResolvedValue([])
-    await ask('how do I reset my password?', 'visitor-9')
-    expect(h.clearLeadSignal).toHaveBeenCalledWith(7, 'visitor-9')
+    await ask('how do I reset my password?', 'visitor-9', 'tab-3')
+    expect(h.clearLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-9', 'tab-3')
     // Must happen before setLeadSignal (onFinish), not after — the whole
     // point is to clear stale state ahead of this run's own outcome, not
     // wipe out the result this same run just wrote.
     const clearOrder = h.clearLeadSignal.mock.invocationCallOrder[0]
     const setOrder = h.setLeadSignal.mock.invocationCallOrder[0]
     expect(clearOrder).toBeLessThan(setOrder)
+  })
+
+  it('still clears when the run is then turned away before the workspace is even looked up', async () => {
+    // An org-level 404 and a quota refusal both return before any answer is
+    // produced; the previous turn's result must already be gone by then.
+    h.getOrgByWidgetToken.mockResolvedValue(null as never)
+    const res = await ask('anything', 'visitor-rejected', 'tab-5')
+    expect(res.status).toBe(404)
+    expect(h.clearLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-rejected', 'tab-5')
+    expect(h.setLeadSignal).not.toHaveBeenCalled()
+  })
+
+  it('does not clear anything for a request whose visitor id is invalid', async () => {
+    const res = await ask('anything', 'has space', 'tab-5')
+    expect(res.status).toBe(400)
+    expect(h.clearLeadSignal).not.toHaveBeenCalled()
   })
 })
 

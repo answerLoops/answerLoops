@@ -18,6 +18,15 @@ export type WidgetLeadCaptureMode = (typeof WIDGET_LEAD_CAPTURE_MODES)[number]
 // stays available for teams that deliberately want it.
 export const DEFAULT_WIDGET_LEAD_CAPTURE_MODE: WidgetLeadCaptureMode = 'on-failure'
 
+/**
+ * What an unrecognised stored value is read as. Matches the column's own
+ * default (see widgetLeadCaptureMode in lib/db/schema.ts) rather than the
+ * new-workspace default above, so a bad row keeps behaving like an existing
+ * workspace did before the setting existed instead of silently dropping the
+ * up-front email gate.
+ */
+export const FALLBACK_WIDGET_LEAD_CAPTURE_MODE: WidgetLeadCaptureMode = 'up-front'
+
 export function isWidgetLeadCaptureMode(value: unknown): value is WidgetLeadCaptureMode {
   return (
     typeof value === 'string' &&

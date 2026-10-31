@@ -23,3 +23,7 @@ const VISITOR_ID_PATTERN = /^[A-Za-z0-9_-]+$/
 export function isValidVisitorId(value: unknown): value is string {
   return typeof value === 'string' && value.length <= MAX_VISITOR_ID_LEN && VISITOR_ID_PATTERN.test(value)
 }
+
+// The per-tab session id has the same shape as a visitor id (a client-generated
+// UUID) and the same ':'-free guarantee, so it shares the check.
+export const isValidSessionId = isValidVisitorId

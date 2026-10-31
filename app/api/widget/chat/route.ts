@@ -23,8 +23,8 @@ import { verifyRenderToken } from '@/lib/widget/render-token'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { reserveGeneration, commitDeflection, releaseGeneration } from '@/lib/billing/usage'
 import { logger } from '@/lib/logger'
-import { requestsHuman, isGreetingOrAck } from '@/lib/widget/lead-capture'
-import { isValidWidgetToken, isValidVisitorId } from '@/lib/widget/request-validation'
+import { requestsHuman, isGreetingOrAck, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
+import { isValidWidgetToken, isValidVisitorId, isValidSessionId } from '@/lib/widget/request-validation'
 import { setLeadSignal, clearLeadSignal } from '@/lib/widget/lead-signal-stash'
 
 const MOD = 'api/widget/chat'
@@ -84,7 +84,11 @@ const MAX_QUERY_CHARS = MAX_MESSAGE_CHARS
 type KBContext = { summary: string; answer: string; articleId?: number }[]
 
 export interface PendingRun {
-  org: { id: number; name: string }
+  org: { id: number; name: string; widget_lead_capture_mode: WidgetLeadCaptureMode }
+  // Carried through so the factory can scope the lead-capture signal it
+  // stashes to the same token, visitor and tab the request was validated for.
+  widgetToken: string
+  sessionId: string
   model: Awaited<ReturnType<typeof chatModel>>
   query: string
   visitorId: string
@@ -160,6 +164,7 @@ interface RunAgentInputLike {
     widgetToken?: string
     renderToken?: string
     visitorId?: string
+    sessionId?: string
     requestId?: string
     isSelfPreview?: boolean
   }
@@ -246,6 +251,17 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   if (!isValidVisitorId(visitorId)) {
     return new Response('Missing visitorId', { status: 400 })
   }
+  // Scopes the lead-capture signal to this browser tab (see
+  // lib/widget/lead-signal-stash.ts). A page opened before this field existed
+  // has none; those fall into one shared 'legacy' scope, which only affects
+  // which stash entry they read, never what they are allowed to do.
+  const sessionId = isValidSessionId(body?.forwardedProps?.sessionId) ? body.forwardedProps.sessionId : 'legacy'
+  // Cleared the moment the request is known to come from a real widget render
+  // (token and visitor validated above), before any check below that can
+  // reject it. Otherwise a turn turned away by a rate limit, a size check or a
+  // missing org would leave the previous turn's result in place for the next
+  // poll to show as if it described this one. See clearLeadSignal's doc.
+  clearLeadSignal(widgetToken, visitorId, sessionId)
   if (!Array.isArray(messages) || messages.length === 0) {
     return new Response('Missing messages', { status: 400 })
   }
@@ -284,14 +300,6 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   if (!org) {
     return new Response('Invalid widget token', { status: 404 })
   }
-
-  // Clears any lead-capture signal left over from this visitor's previous
-  // turn, before this run can fail without ever reaching the point where it
-  // would set its own — see clearLeadSignal's doc comment. Every return
-  // below this line is a genuine outcome of *this* run (a rate limit, a
-  // missing AI provider, or a real answer), so nothing after this is the
-  // stale-leftover case the clear exists to prevent.
-  clearLeadSignal(org.id, visitorId)
 
   const [orgHourly, orgDaily] = await Promise.all([
     rateLimitShared(`widget-org-hour:${org.id}`, ORG_HOURLY_MAX, ORG_HOURLY_WINDOW_MS),
@@ -367,6 +375,8 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
 
   const requestId = stashPendingRun({
     org,
+    widgetToken,
+    sessionId,
     model,
     query,
     visitorId,
@@ -402,7 +412,7 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   if (!run) {
     throw new Error('widget chat: run context expired or missing — retry the request')
   }
-  const { org, model, query, visitorId, reservationId } = run
+  const { org, widgetToken, sessionId, model, query, visitorId, reservationId } = run
 
   const allContext = await (run.context ?? retrieveContext(query, org.id))
   const contextBlock = allContext.length
@@ -465,15 +475,20 @@ If no article below covers the question, answer from general knowledge and don't
       // regardless of whether the KB happened to return something; a bare
       // greeting or acknowledgement ("hi", "thanks") finding no KB match
       // isn't really a failed answer, so it doesn't count as one either.
-      setLeadSignal(
-        org.id,
-        visitorId,
-        requestsHuman(query)
-          ? 'human-requested'
-          : allContext.length === 0 && !isGreetingOrAck(query)
-            ? 'no-kb-match'
-            : 'none'
-      )
+      // Only stashed for workspaces that actually use the on-failure prompt;
+      // the other modes never poll for it, so there is nothing to hold.
+      if (org.widget_lead_capture_mode === 'on-failure') {
+        setLeadSignal(
+          widgetToken,
+          visitorId,
+          sessionId,
+          requestsHuman(query)
+            ? 'human-requested'
+            : allContext.length === 0 && !isGreetingOrAck(query)
+              ? 'no-kb-match'
+              : 'none'
+        )
+      }
 
       await commitDeflection(org.id, reservationId).catch((e) => {
         logger.error('widget chat commitDeflection failed', { module: MOD, orgId: org.id, error: e })

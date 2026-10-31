@@ -1,11 +1,10 @@
-import { getOrgByWidgetToken } from '@/lib/db/queries/widgets'
 import { getLeadSignal } from '@/lib/widget/lead-signal-stash'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
 import { verifyRenderToken } from '@/lib/widget/render-token'
-import { isValidWidgetToken, isValidVisitorId } from '@/lib/widget/request-validation'
+import { isValidWidgetToken, isValidVisitorId, isValidSessionId } from '@/lib/widget/request-validation'
 
 /**
  * "Did the turn I just sent fail?" — called by the widget client right after
@@ -22,7 +21,7 @@ const IP_TOKEN_WINDOW_MS = 60_000
 const TOKEN_MAX = 100
 const TOKEN_WINDOW_MS = 60_000
 
-// Body is just {widgetToken, renderToken, visitorId} — three short strings.
+// Body is just {widgetToken, renderToken, visitorId, sessionId} — four short strings.
 const MAX_BODY_BYTES = 4 * 1024
 
 export async function POST(request: Request) {
@@ -34,14 +33,14 @@ export async function POST(request: Request) {
   const raw = await readBodyCapped(request, MAX_BODY_BYTES)
   if (raw === null) return new Response('Request body too large', { status: 413 })
 
-  let body: { widgetToken?: string; renderToken?: string; visitorId?: string }
+  let body: { widgetToken?: string; renderToken?: string; visitorId?: string; sessionId?: string }
   try {
     body = JSON.parse(raw || '{}')
   } catch {
     return new Response('Invalid JSON', { status: 400 })
   }
 
-  const { widgetToken, renderToken, visitorId } = body
+  const { widgetToken, renderToken, visitorId, sessionId: rawSessionId } = body
   if (!isValidWidgetToken(widgetToken)) {
     return new Response('Missing widgetToken', { status: 400 })
   }
@@ -58,6 +57,8 @@ export async function POST(request: Request) {
     return new Response('Missing visitorId', { status: 400 })
   }
 
+  const sessionId = isValidSessionId(rawSessionId) ? rawSessionId : 'legacy'
+
   const tokenLimit = await rateLimitShared(`widget-lead-signal-token:${widgetToken}`, TOKEN_MAX, TOKEN_WINDOW_MS)
   if (!tokenLimit.ok) return new Response('Too many requests', { status: 429 })
 
@@ -68,8 +69,9 @@ export async function POST(request: Request) {
   )
   if (!ipLimit.ok) return new Response('Too many requests', { status: 429 })
 
-  const org = await getOrgByWidgetToken(widgetToken)
-  if (!org) return new Response('Invalid widget token', { status: 404 })
-
-  return Response.json({ signal: getLeadSignal(org.id, visitorId) })
+  // No workspace lookup: the stash is keyed by the widget token itself, and a
+  // token that matches no workspace simply has no entry. Workspaces not in
+  // on-failure mode never get an entry written (see the chat route), so this
+  // is a plain in-memory read for everyone.
+  return Response.json({ signal: getLeadSignal(widgetToken, visitorId, sessionId) })
 }

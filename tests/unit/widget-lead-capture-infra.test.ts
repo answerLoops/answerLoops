@@ -164,6 +164,7 @@ import {
   WIDGET_LEAD_CAPTURE_MODES,
   WIDGET_LEAD_SIGNALS,
   DEFAULT_WIDGET_LEAD_CAPTURE_MODE,
+  FALLBACK_WIDGET_LEAD_CAPTURE_MODE,
   isWidgetLeadCaptureMode,
   isWidgetLeadSignal,
   requestsHuman,
@@ -186,6 +187,11 @@ describe('lib/widget/lead-capture: isWidgetLeadCaptureMode', () => {
   it('the default mode is itself a valid mode', () => {
     expect(isWidgetLeadCaptureMode(DEFAULT_WIDGET_LEAD_CAPTURE_MODE)).toBe(true)
     expect(DEFAULT_WIDGET_LEAD_CAPTURE_MODE).toBe('on-failure')
+    // The read-time fallback must match the column's own default, not the
+    // new-workspace default, so an unrecognised value never silently drops
+    // an existing workspace's up-front gate.
+    expect(FALLBACK_WIDGET_LEAD_CAPTURE_MODE).toBe('up-front')
+    expect(migrationSql()).toMatch(/DEFAULT\s+'up-front'/i)
   })
 })
 
@@ -269,6 +275,9 @@ describe('lib/widget/lead-capture: isGreetingOrAck', () => {
 // ---------------------------------------------------------------------------
 
 describe('lib/widget/lead-signal-stash', () => {
+  const TOKEN_A = 'a'.repeat(48)
+  const TOKEN_B = 'b'.repeat(48)
+
   beforeEach(() => {
     vi.resetModules()
   })
@@ -277,81 +286,91 @@ describe('lib/widget/lead-signal-stash', () => {
     vi.useRealTimers()
   })
 
-  it('round-trips a signal for a given (orgId, visitorId) key', async () => {
+  it('round-trips a signal for a given (widgetToken, visitorId, sessionId) key', async () => {
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal(1, 'visitor-a', 'no-kb-match')
-    expect(getLeadSignal(1, 'visitor-a')).toBe('no-kb-match')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-1', 'no-kb-match')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-1')).toBe('no-kb-match')
   })
 
-  it('a different visitorId under the same org does not see another visitor\'s signal', async () => {
+  it('a different visitorId under the same widget does not see another visitor\'s signal', async () => {
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal(1, 'visitor-a', 'human-requested')
-    expect(getLeadSignal(1, 'visitor-b')).toBe('none')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-1', 'human-requested')
+    expect(getLeadSignal(TOKEN_A, 'visitor-b', 'tab-1')).toBe('none')
   })
 
-  it('the same visitorId under a different org does not see another org\'s signal', async () => {
+  it('the same visitorId under a different widget does not see another widget\'s signal', async () => {
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal(1, 'visitor-a', 'human-requested')
-    expect(getLeadSignal(2, 'visitor-a')).toBe('none')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-1', 'human-requested')
+    expect(getLeadSignal(TOKEN_B, 'visitor-a', 'tab-1')).toBe('none')
+  })
+
+  it('two tabs open as the same visitor keep separate signals', async () => {
+    const { setLeadSignal, getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-1', 'no-kb-match')
+    // Tab 2 starting a run clears *its own* entry only; tab 1's result stays.
+    clearLeadSignal(TOKEN_A, 'visitor-a', 'tab-2')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-2')).toBe('none')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-1')).toBe('no-kb-match')
   })
 
   it('returns "none" for a key that was never set', async () => {
     const { getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    expect(getLeadSignal(999, 'never-seen')).toBe('none')
+    expect(getLeadSignal(TOKEN_A, 'never-seen', 'tab-1')).toBe('none')
   })
 
   it('an expired entry reads back as "none"', async () => {
     // Fake timers so Date.now() can be advanced past the module's 30s TTL
-    // without a real wait. The module's own sweep runs on a 60s interval
-    // gated by its own Date.now() check (not setInterval), so advancing
-    // Date.now() alone — without also running any queued timers — cannot
-    // trigger an unrelated background sweep mid-test; getLeadSignal's own
-    // expiry check (`entry.expiresAt < Date.now()`) is what this test
-    // exercises, independent of the sweep.
-    //
-    // Only one get() call here, deliberately: getLeadSignal deletes what it
-    // reads (see the next test), so reading once before expiry to confirm
-    // the value and again after would make the second read's "none" come
-    // from the first read's deletion, not from the TTL check this test is
-    // actually about.
+    // without a real wait. Only one get() call here, deliberately:
+    // getLeadSignal deletes what it reads (see the next test), so a read
+    // before expiry would make the later "none" come from that deletion, not
+    // from the TTL check this test is about.
     vi.useFakeTimers()
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal(1, 'visitor-a', 'human-requested')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-1', 'human-requested')
     vi.advanceTimersByTime(31_000) // TTL is 30_000ms
-    expect(getLeadSignal(1, 'visitor-a')).toBe('none')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-1')).toBe('none')
   })
 
   it('getLeadSignal deletes the entry it reads, so a second poll does not see the same result twice', async () => {
     const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal(1, 'visitor-a', 'no-kb-match')
-    expect(getLeadSignal(1, 'visitor-a')).toBe('no-kb-match')
-    expect(getLeadSignal(1, 'visitor-a')).toBe('none')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-1', 'no-kb-match')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-1')).toBe('no-kb-match')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-1')).toBe('none')
+  })
+
+  it('getLeadSignal also sweeps other expired entries, so a quiet widget does not hold them forever', async () => {
+    vi.useFakeTimers()
+    const { setLeadSignal, getLeadSignal } = await import('@/lib/widget/lead-signal-stash')
+    setLeadSignal(TOKEN_A, 'visitor-old', 'tab-1', 'no-kb-match')
+    vi.advanceTimersByTime(61_000) // past both the 30s TTL and the 60s sweep interval
+    // A read for an unrelated key is what triggers the sweep here; no
+    // setLeadSignal call follows it.
+    expect(getLeadSignal(TOKEN_B, 'visitor-x', 'tab-1')).toBe('none')
+    expect(getLeadSignal(TOKEN_A, 'visitor-old', 'tab-1')).toBe('none')
   })
 
   it('clearLeadSignal removes a pending entry outright', async () => {
     const { setLeadSignal, getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal(1, 'visitor-a', 'no-kb-match')
-    clearLeadSignal(1, 'visitor-a')
-    expect(getLeadSignal(1, 'visitor-a')).toBe('none')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-1', 'no-kb-match')
+    clearLeadSignal(TOKEN_A, 'visitor-a', 'tab-1')
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-1')).toBe('none')
   })
 
   it('clearLeadSignal is a no-op for a key with nothing stored', async () => {
     const { getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    expect(() => clearLeadSignal(1, 'visitor-never-set')).not.toThrow()
-    expect(getLeadSignal(1, 'visitor-never-set')).toBe('none')
+    expect(() => clearLeadSignal(TOKEN_A, 'visitor-never-set', 'tab-1')).not.toThrow()
+    expect(getLeadSignal(TOKEN_A, 'visitor-never-set', 'tab-1')).toBe('none')
   })
 
-  it('models the real failure-after-success scenario: a cleared signal from a prior turn never leaks into a later, failed one', async () => {
-    // app/api/widget/chat/route.ts calls clearLeadSignal as soon as a new run
-    // is accepted, before that run can fail without ever reaching the point
-    // where it would set its own signal. This proves the stash-level half of
-    // that guarantee: once cleared, nothing is left for the next poll to find.
+  it('models the failure-after-success scenario: a cleared signal from a prior turn never leaks into a later, failed one', async () => {
+    // app/api/widget/chat/route.ts calls clearLeadSignal as soon as the
+    // request's token, visitor and session are validated, before any check
+    // that can reject the run. This proves the stash-level half of that
+    // guarantee: once cleared, nothing is left for the next poll to find.
     const { setLeadSignal, getLeadSignal, clearLeadSignal } = await import('@/lib/widget/lead-signal-stash')
-    setLeadSignal(1, 'visitor-a', 'no-kb-match') // turn 1: a real miss
-    clearLeadSignal(1, 'visitor-a') // turn 2 accepted, clears turn 1's result
-    // turn 2 then fails before reaching its own onFinish — no setLeadSignal
-    // call follows. The client's poll must not see turn 1's stale result.
-    expect(getLeadSignal(1, 'visitor-a')).toBe('none')
+    setLeadSignal(TOKEN_A, 'visitor-a', 'tab-1', 'no-kb-match') // turn 1: a real miss
+    clearLeadSignal(TOKEN_A, 'visitor-a', 'tab-1') // turn 2 accepted, clears turn 1's result
+    expect(getLeadSignal(TOKEN_A, 'visitor-a', 'tab-1')).toBe('none')
   })
 })
 
@@ -421,15 +440,15 @@ describe('lib/db/queries/widgets: getWidgetLeadCaptureMode', () => {
     expect(await getWidgetLeadCaptureMode(42)).toBe('up-front')
   })
 
-  it('falls back to the default when the stored value is not a valid mode', async () => {
+  it('falls back to the column default (up-front) when the stored value is not a valid mode', async () => {
     const { getWidgetLeadCaptureMode } = await queries()
     rowsFor.push({ match: 'select', rows: [['something-bogus']] })
-    expect(await getWidgetLeadCaptureMode(42)).toBe(DEFAULT_WIDGET_LEAD_CAPTURE_MODE)
+    expect(await getWidgetLeadCaptureMode(42)).toBe(FALLBACK_WIDGET_LEAD_CAPTURE_MODE)
   })
 
-  it('falls back to the default when the org has no row', async () => {
+  it('falls back to the column default (up-front) when the org has no row', async () => {
     const { getWidgetLeadCaptureMode } = await queries()
-    expect(await getWidgetLeadCaptureMode(999)).toBe(DEFAULT_WIDGET_LEAD_CAPTURE_MODE)
+    expect(await getWidgetLeadCaptureMode(999)).toBe(FALLBACK_WIDGET_LEAD_CAPTURE_MODE)
   })
 })
 
@@ -439,7 +458,7 @@ describe('lib/db/queries/widgets: getOrgByWidgetToken defensive fallback', () =>
     rowsFor.length = 0
   })
 
-  it('falls back to on-failure when the stored column value is not one of the three valid strings', async () => {
+  it('falls back to up-front when the stored column value is not one of the three valid strings', async () => {
     const { getOrgByWidgetToken } = await queries()
     // Positional row, in select order: id, name, widget_token,
     // widget_token_expires_at, widget_allowed_origins, widget_lead_capture_mode, plan_id.
@@ -448,17 +467,17 @@ describe('lib/db/queries/widgets: getOrgByWidgetToken defensive fallback', () =>
       rows: [[7, 'Acme', 'tok-abc', null, null, 'legacy-garbage-value', 'pro']],
     })
     const org = await getOrgByWidgetToken('tok-abc')
-    expect(org!.widget_lead_capture_mode).toBe(DEFAULT_WIDGET_LEAD_CAPTURE_MODE)
+    expect(org!.widget_lead_capture_mode).toBe(FALLBACK_WIDGET_LEAD_CAPTURE_MODE)
   })
 
-  it('falls back to on-failure when the stored column value is NULL (a row written before the column existed, backfilled without a default)', async () => {
+  it('falls back to up-front when the stored column value is NULL (a row written before the column existed, backfilled without a default)', async () => {
     const { getOrgByWidgetToken } = await queries()
     rowsFor.push({
       match: 'select',
       rows: [[7, 'Acme', 'tok-abc', null, null, null, 'pro']],
     })
     const org = await getOrgByWidgetToken('tok-abc')
-    expect(org!.widget_lead_capture_mode).toBe('on-failure')
+    expect(org!.widget_lead_capture_mode).toBe('up-front')
   })
 
   it('passes a valid stored mode straight through, unchanged', async () => {

@@ -158,7 +158,9 @@ describe('WidgetChat: on-failure lead prompt', () => {
       widgetToken: TOKEN,
       renderToken: 'test-render-token',
       visitorId: expect.any(String),
+      sessionId: expect.any(String),
     })
+    expect(body.sessionId.length).toBeGreaterThan(0)
   })
 
   it('does not show the failure-lead-prompt when the signal is none', async () => {

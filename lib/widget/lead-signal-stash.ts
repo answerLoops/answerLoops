@@ -27,14 +27,23 @@ function sweepExpired(now: number): void {
   }
 }
 
-function keyFor(orgId: number, visitorId: string): string {
-  return `${orgId}:${visitorId}`
+// Scoped by widget token, visitor and the per-tab session id, so two tabs open
+// as the same visitor each get their own entry and can't clear or consume one
+// another's result. None of the three can contain ':' (see
+// lib/widget/request-validation.ts), so the joined key is unambiguous.
+function keyFor(widgetToken: string, visitorId: string, sessionId: string): string {
+  return `${widgetToken}:${visitorId}:${sessionId}`
 }
 
-export function setLeadSignal(orgId: number, visitorId: string, signal: WidgetLeadSignal): void {
+export function setLeadSignal(
+  widgetToken: string,
+  visitorId: string,
+  sessionId: string,
+  signal: WidgetLeadSignal
+): void {
   const now = Date.now()
   sweepExpired(now)
-  signals.set(keyFor(orgId, visitorId), { signal, expiresAt: now + SIGNAL_TTL_MS })
+  signals.set(keyFor(widgetToken, visitorId, sessionId), { signal, expiresAt: now + SIGNAL_TTL_MS })
 }
 
 /**
@@ -44,22 +53,25 @@ export function setLeadSignal(orgId: number, visitorId: string, signal: WidgetLe
  * left over from an earlier turn. Call clearLeadSignal at the start of a run
  * for that same reason: see its doc comment.
  */
-export function getLeadSignal(orgId: number, visitorId: string): WidgetLeadSignal {
-  const key = keyFor(orgId, visitorId)
+export function getLeadSignal(widgetToken: string, visitorId: string, sessionId: string): WidgetLeadSignal {
+  const now = Date.now()
+  sweepExpired(now)
+  const key = keyFor(widgetToken, visitorId, sessionId)
   const entry = signals.get(key)
-  if (!entry || entry.expiresAt < Date.now()) return 'none'
+  if (!entry || entry.expiresAt < now) return 'none'
   signals.delete(key)
   return entry.signal
 }
 
 /**
- * Clears any leftover signal from an earlier turn. Call this once a new run
- * is accepted and before it can fail or produce its own result — without it,
+ * Clears any leftover signal from an earlier turn. Call this as soon as the
+ * request's token, visitor and session have been validated — before any
+ * check that can reject the run — and before it can fail or produce its own result — without it,
  * a run that errors out before reaching the point where it would set its own
  * signal (quota exceeded, no AI provider configured, a thrown error) leaves
  * the previous turn's entry in place, and the client's next poll would show
  * an on-failure prompt that describes a turn that never actually happened.
  */
-export function clearLeadSignal(orgId: number, visitorId: string): void {
-  signals.delete(keyFor(orgId, visitorId))
+export function clearLeadSignal(widgetToken: string, visitorId: string, sessionId: string): void {
+  signals.delete(keyFor(widgetToken, visitorId, sessionId))
 }

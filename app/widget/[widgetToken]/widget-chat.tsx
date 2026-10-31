@@ -291,6 +291,10 @@ function WidgetChatBody({
   const [failureEmailPending, setFailureEmailPending] = useState(false)
   const [failureEmailError, setFailureEmailError] = useState('')
 
+  // One per mounted widget (per browser tab), so a second tab open as the same
+  // visitor can't clear or read this tab's lead-capture signal.
+  const sessionId = useMemo(() => crypto.randomUUID(), [])
+
   const { agent } = useAgent()
   const [messages, setMessages] = useState<Message[]>(agent.messages)
   const [isLoading, setIsLoading] = useState(false)
@@ -302,7 +306,7 @@ function WidgetChatBody({
       const res = await fetch('/api/widget/lead-signal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ widgetToken, renderToken, visitorId }),
+        body: JSON.stringify({ widgetToken, renderToken, visitorId, sessionId }),
       })
       if (!res.ok) return
       const data: unknown = await res.json()
@@ -311,7 +315,7 @@ function WidgetChatBody({
     } catch {
       // Non-critical: the visitor just doesn't see the prompt for this turn.
     }
-  }, [leadCaptureMode, leadHandled, widgetToken, renderToken, visitorId])
+  }, [leadCaptureMode, leadHandled, widgetToken, renderToken, visitorId, sessionId])
 
   useEffect(() => {
     // `messages` starts as agent.messages (see the useState above) and every
@@ -378,9 +382,9 @@ function WidgetChatBody({
       // agent.runAgent() called bare skips CopilotKitCore's forwardedProps merge
       // (that only happens inside copilotkit.runAgent()) — pass widgetToken and
       // visitorId explicitly or the server never sees them.
-      void agent.runAgent({ forwardedProps: { widgetToken, renderToken, visitorId, isSelfPreview } })
+      void agent.runAgent({ forwardedProps: { widgetToken, renderToken, visitorId, sessionId, isSelfPreview } })
     },
-    [agent, isLoading, widgetToken, renderToken, visitorId, isSelfPreview]
+    [agent, isLoading, widgetToken, renderToken, visitorId, sessionId, isSelfPreview]
   )
 
   const actions = useMemo(() => ({ send: sendMessage, canReply: !isLoading }), [sendMessage, isLoading])
