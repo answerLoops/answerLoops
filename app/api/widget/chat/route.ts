@@ -85,6 +85,7 @@ type KBContext = { summary: string; answer: string; articleId?: number }[]
 
 export interface PendingRun {
   org: { id: number; name: string }
+  widgetToken: string
   model: Awaited<ReturnType<typeof chatModel>>
   query: string
   visitorId: string
@@ -236,15 +237,27 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   if (!isValidWidgetToken(widgetToken)) {
     return new Response('Missing widgetToken', { status: 400 })
   }
+  if (!isValidVisitorId(visitorId)) {
+    return new Response('Missing visitorId', { status: 400 })
+  }
+
+  // Clears any lead-capture signal left over from this visitor's previous
+  // turn, as early as the two values it's keyed by are known well-formed —
+  // see clearLeadSignal's doc comment. Deliberately before the render-token
+  // check and the rate limits below: those can reject a legitimate retry
+  // (an expired render token on a page left open past its 5-minute TTL, or a
+  // burst of quick turns), and a rejection is still a real outcome of this
+  // visitor's attempt, not the stale-leftover case the clear is meant to
+  // guard against. widgetToken is public and visitorId is an unguessable
+  // random id, so clearing here has no effect without a real pair of both.
+  clearLeadSignal(widgetToken, visitorId)
+
   // Proves this call followed a page render that passed the origin allowlist
   // (lib/widget/origin.ts) — the token itself is public in page source, so
   // without this any caller who extracts it can spend against the org's
   // quota from anywhere, bypassing the allowlist entirely. See Known Issue 114.
   if (!verifyRenderToken(body?.forwardedProps?.renderToken, widgetToken, ip)) {
     return new Response('Forbidden', { status: 403 })
-  }
-  if (!isValidVisitorId(visitorId)) {
-    return new Response('Missing visitorId', { status: 400 })
   }
   if (!Array.isArray(messages) || messages.length === 0) {
     return new Response('Missing messages', { status: 400 })
@@ -284,14 +297,6 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   if (!org) {
     return new Response('Invalid widget token', { status: 404 })
   }
-
-  // Clears any lead-capture signal left over from this visitor's previous
-  // turn, before this run can fail without ever reaching the point where it
-  // would set its own — see clearLeadSignal's doc comment. Every return
-  // below this line is a genuine outcome of *this* run (a rate limit, a
-  // missing AI provider, or a real answer), so nothing after this is the
-  // stale-leftover case the clear exists to prevent.
-  clearLeadSignal(org.id, visitorId)
 
   const [orgHourly, orgDaily] = await Promise.all([
     rateLimitShared(`widget-org-hour:${org.id}`, ORG_HOURLY_MAX, ORG_HOURLY_WINDOW_MS),
@@ -367,6 +372,7 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
 
   const requestId = stashPendingRun({
     org,
+    widgetToken,
     model,
     query,
     visitorId,
@@ -402,7 +408,7 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   if (!run) {
     throw new Error('widget chat: run context expired or missing — retry the request')
   }
-  const { org, model, query, visitorId, reservationId } = run
+  const { org, widgetToken, model, query, visitorId, reservationId } = run
 
   const allContext = await (run.context ?? retrieveContext(query, org.id))
   const contextBlock = allContext.length
@@ -466,7 +472,7 @@ If no article below covers the question, answer from general knowledge and don't
       // greeting or acknowledgement ("hi", "thanks") finding no KB match
       // isn't really a failed answer, so it doesn't count as one either.
       setLeadSignal(
-        org.id,
+        widgetToken,
         visitorId,
         requestsHuman(query)
           ? 'human-requested'

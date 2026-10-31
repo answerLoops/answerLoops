@@ -1031,6 +1031,11 @@ export const widgetLeads = pgTable(
     orgId: integer('org_id').notNull().references(() => orgs.id),
     widgetToken: text('widget_token').notNull(),
     email: text('email').notNull(),
+    // The question the visitor couldn't get an answer to, when the lead came
+    // from the on-failure prompt — NULL for an up-front-gate lead, which has
+    // no question yet when it's collected. Without this the team sees a bare
+    // address with nothing to follow up on.
+    question: text('question'),
     createdAt: text('created_at').notNull().default(now),
   },
   (t) => [

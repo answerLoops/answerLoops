@@ -926,18 +926,27 @@ export function WidgetSection() {
 
   useEffect(() => {
     let cancelled = false
-    getWidgetTokenAction().then((result) => {
-      if (cancelled) return
-      if (result.token) {
-        setToken(result.token)
-        setExpiresAt(result.expiresAt ?? null)
-        setCanManage(result.canManage === true)
-        setOrigins(result.allowedOrigins ?? '')
-        setSavedOrigins(result.allowedOrigins ?? '')
-        if (result.leadCaptureMode) setLeadCaptureMode(result.leadCaptureMode)
-      }
-      setLoading(false)
-    })
+    getWidgetTokenAction()
+      .then((result) => {
+        if (cancelled) return
+        if (result.token) {
+          setToken(result.token)
+          setExpiresAt(result.expiresAt ?? null)
+          setCanManage(result.canManage === true)
+          setOrigins(result.allowedOrigins ?? '')
+          setSavedOrigins(result.allowedOrigins ?? '')
+          if (result.leadCaptureMode) setLeadCaptureMode(result.leadCaptureMode)
+        }
+        setLoading(false)
+      })
+      .catch(() => {
+        // Leaves token null, which the render below already treats as
+        // "failed to load" — without this, a rejected promise (rather than
+        // a resolved-but-empty result) left `loading` true forever: a
+        // permanently stuck spinner, never the controls below it with a
+        // default an admin could mistake for the saved value.
+        if (!cancelled) setLoading(false)
+      })
     return () => { cancelled = true }
   }, [])
 

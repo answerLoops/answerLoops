@@ -1,4 +1,3 @@
-import { getOrgByWidgetToken } from '@/lib/db/queries/widgets'
 import { getLeadSignal } from '@/lib/widget/lead-signal-stash'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
@@ -68,8 +67,9 @@ export async function POST(request: Request) {
   )
   if (!ipLimit.ok) return new Response('Too many requests', { status: 429 })
 
-  const org = await getOrgByWidgetToken(widgetToken)
-  if (!org) return new Response('Invalid widget token', { status: 404 })
-
-  return Response.json({ signal: getLeadSignal(org.id, visitorId) })
+  // No org lookup: the stash is keyed by widgetToken (see
+  // lib/widget/lead-signal-stash.ts), and this route does nothing with the
+  // org itself — a stale/revoked token just reads back 'none', same as a
+  // token with no stashed signal at all.
+  return Response.json({ signal: getLeadSignal(widgetToken, visitorId) })
 }

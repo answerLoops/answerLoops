@@ -27,14 +27,20 @@ function sweepExpired(now: number): void {
   }
 }
 
-function keyFor(orgId: number, visitorId: string): string {
-  return `${orgId}:${visitorId}`
+// Keyed by widgetToken rather than orgId: the lead-signal route only ever has
+// the token off the wire (resolving it to an org means a DB lookup it has no
+// other reason to make — see app/api/widget/lead-signal/route.ts), and the
+// chat route's clearLeadSignal call needs to run before org resolution too
+// (see clearLeadSignal's doc comment below). A token is specific to one org,
+// so this loses no isolation versus keying by orgId.
+function keyFor(widgetToken: string, visitorId: string): string {
+  return `${widgetToken}:${visitorId}`
 }
 
-export function setLeadSignal(orgId: number, visitorId: string, signal: WidgetLeadSignal): void {
+export function setLeadSignal(widgetToken: string, visitorId: string, signal: WidgetLeadSignal): void {
   const now = Date.now()
   sweepExpired(now)
-  signals.set(keyFor(orgId, visitorId), { signal, expiresAt: now + SIGNAL_TTL_MS })
+  signals.set(keyFor(widgetToken, visitorId), { signal, expiresAt: now + SIGNAL_TTL_MS })
 }
 
 /**
@@ -44,8 +50,8 @@ export function setLeadSignal(orgId: number, visitorId: string, signal: WidgetLe
  * left over from an earlier turn. Call clearLeadSignal at the start of a run
  * for that same reason: see its doc comment.
  */
-export function getLeadSignal(orgId: number, visitorId: string): WidgetLeadSignal {
-  const key = keyFor(orgId, visitorId)
+export function getLeadSignal(widgetToken: string, visitorId: string): WidgetLeadSignal {
+  const key = keyFor(widgetToken, visitorId)
   const entry = signals.get(key)
   if (!entry || entry.expiresAt < Date.now()) return 'none'
   signals.delete(key)
@@ -53,13 +59,14 @@ export function getLeadSignal(orgId: number, visitorId: string): WidgetLeadSigna
 }
 
 /**
- * Clears any leftover signal from an earlier turn. Call this once a new run
- * is accepted and before it can fail or produce its own result — without it,
- * a run that errors out before reaching the point where it would set its own
- * signal (quota exceeded, no AI provider configured, a thrown error) leaves
- * the previous turn's entry in place, and the client's next poll would show
- * an on-failure prompt that describes a turn that never actually happened.
+ * Clears any leftover signal from an earlier turn. Call this as soon as the
+ * widgetToken is known to be well-formed — before render-token verification,
+ * rate limiting, or org resolution, all of which can reject or throw before
+ * the run ever reaches the point where it would set its own signal (quota
+ * exceeded, no AI provider configured, a thrown error). Without clearing
+ * this early, the client's next poll would show an on-failure prompt that
+ * describes a turn that never actually happened.
  */
-export function clearLeadSignal(orgId: number, visitorId: string): void {
-  signals.delete(keyFor(orgId, visitorId))
+export function clearLeadSignal(widgetToken: string, visitorId: string): void {
+  signals.delete(keyFor(widgetToken, visitorId))
 }

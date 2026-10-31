@@ -3,7 +3,7 @@ import { and, eq, isNull } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { orgs, subscriptions } from '../schema'
 import {
-  DEFAULT_WIDGET_LEAD_CAPTURE_MODE,
+  SAFE_WIDGET_LEAD_CAPTURE_MODE_FALLBACK,
   isWidgetLeadCaptureMode,
   type WidgetLeadCaptureMode,
 } from '@/lib/widget/lead-capture'
@@ -64,10 +64,12 @@ export async function getOrgByWidgetToken(token: string): Promise<WidgetOrg | nu
     widget_allowed_origins: row.widget_allowed_origins,
     // Defensive fallback for a row written before validation existed, or
     // touched directly outside setWidgetLeadCaptureMode — never trust a text
-    // column at read time just because the write path validates it.
+    // column at read time just because the write path validates it. Falls
+    // back to the pre-existing behaviour (SAFE_..._FALLBACK), not the
+    // new-org default — see its doc comment in lib/widget/lead-capture.ts.
     widget_lead_capture_mode: isWidgetLeadCaptureMode(row.widget_lead_capture_mode)
       ? row.widget_lead_capture_mode
-      : DEFAULT_WIDGET_LEAD_CAPTURE_MODE,
+      : SAFE_WIDGET_LEAD_CAPTURE_MODE_FALLBACK,
   }
 }
 
@@ -120,7 +122,7 @@ export async function getWidgetLeadCaptureMode(orgId: number): Promise<WidgetLea
     .from(orgs)
     .where(eq(orgs.id, orgId))
     .limit(1)
-  return isWidgetLeadCaptureMode(row?.mode) ? row.mode : DEFAULT_WIDGET_LEAD_CAPTURE_MODE
+  return isWidgetLeadCaptureMode(row?.mode) ? row.mode : SAFE_WIDGET_LEAD_CAPTURE_MODE_FALLBACK
 }
 
 /**

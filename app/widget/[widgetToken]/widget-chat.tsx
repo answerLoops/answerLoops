@@ -142,6 +142,18 @@ const ON_FAILURE_PROMPT_COPY: Record<Exclude<WidgetLeadSignal, 'none'>, string> 
 
 const EMPTY_RESULTS: Record<string, string> = {}
 
+// checkLeadSignal's retry budget: the client's one post-turn poll can race a
+// transient blip (a dropped connection, a shared rate-limit bucket that's
+// momentarily full) that has nothing to do with whether the turn actually
+// failed. Three tries with a short, linearly-increasing delay absorbs that
+// without turning a real outage into a long user-visible stall.
+const LEAD_SIGNAL_MAX_ATTEMPTS = 3
+const LEAD_SIGNAL_RETRY_DELAY_MS = 400
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 type ToolCallLike = NonNullable<Extract<Message, { role: 'assistant' }>['toolCalls']>[number]
 
 const BotIcon = ({ size = 14 }: { size?: number }) => (
@@ -290,6 +302,10 @@ function WidgetChatBody({
   const [failureEmail, setFailureEmail] = useState('')
   const [failureEmailPending, setFailureEmailPending] = useState(false)
   const [failureEmailError, setFailureEmailError] = useState('')
+  // The visitor's own last message, attached to the lead when they submit
+  // through the failure prompt so the team sees what they couldn't get
+  // answered. A ref, not state: nothing in the UI needs to re-render on it.
+  const lastQueryRef = useRef('')
 
   const { agent } = useAgent()
   const [messages, setMessages] = useState<Message[]>(agent.messages)
@@ -298,18 +314,34 @@ function WidgetChatBody({
 
   const checkLeadSignal = useCallback(async () => {
     if (leadCaptureMode !== 'on-failure' || leadHandled) return
-    try {
-      const res = await fetch('/api/widget/lead-signal', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ widgetToken, renderToken, visitorId }),
-      })
-      if (!res.ok) return
-      const data: unknown = await res.json()
-      const signal = (data as { signal?: unknown })?.signal
-      if (isWidgetLeadSignal(signal) && signal !== 'none') setFailurePrompt(signal)
-    } catch {
-      // Non-critical: the visitor just doesn't see the prompt for this turn.
+    for (let attempt = 0; attempt < LEAD_SIGNAL_MAX_ATTEMPTS; attempt++) {
+      const isLastAttempt = attempt === LEAD_SIGNAL_MAX_ATTEMPTS - 1
+      try {
+        const res = await fetch('/api/widget/lead-signal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ widgetToken, renderToken, visitorId }),
+        })
+        if (res.status === 429) {
+          if (isLastAttempt) return // Retries exhausted: leave existing state — see below.
+          await sleep(LEAD_SIGNAL_RETRY_DELAY_MS * (attempt + 1))
+          continue
+        }
+        if (!res.ok) return
+        const data: unknown = await res.json()
+        const signal = (data as { signal?: unknown })?.signal
+        if (!isWidgetLeadSignal(signal)) return
+        // A definitive 'none' clears any prompt left showing from an earlier
+        // call in this same retry loop; any other signal shows its prompt.
+        // Deliberately not reached on a retry-exhausted network error below
+        // — an indefinite result should never overwrite a real prompt that's
+        // already showing just because this one poll couldn't confirm it.
+        setFailurePrompt(signal === 'none' ? null : signal)
+        return
+      } catch {
+        if (isLastAttempt) return // Retries exhausted: leave existing state, don't guess.
+        await sleep(LEAD_SIGNAL_RETRY_DELAY_MS * (attempt + 1))
+      }
     }
   }, [leadCaptureMode, leadHandled, widgetToken, renderToken, visitorId])
 
@@ -369,6 +401,12 @@ function WidgetChatBody({
     (raw: string) => {
       const text = raw.trim()
       if (!text || isLoading) return
+      // Visual only — leadHandled is untouched, so a later real failure can
+      // still show a fresh prompt. Without this, a stale "couldn't help"
+      // card from an earlier turn stays on screen under this turn's answer,
+      // even once that answer actually helps.
+      setFailurePrompt(null)
+      lastQueryRef.current = text
       agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: text })
       // addMessage() only mutates the agent's local message list — our
       // `messages` state otherwise only updates from server-pushed onEvent
@@ -392,22 +430,26 @@ function WidgetChatBody({
     sendMessage(input)
   }
 
-  // 'rejected' means a response came back but wasn't ok (an invalid address,
-  // a rate limit) — a real outcome the visitor should see, not silence.
-  // 'network-error' means the request never reached the server at all.
-  // Callers below treat the two differently: a rejection is worth surfacing
-  // and retrying everywhere; a network error only blocks the up-front gate
-  // (not the inline on-failure prompt, which has no "let them into the chat"
-  // consequence riding on it).
-  async function postLead(address: string): Promise<'ok' | 'rejected' | 'network-error'> {
+  // 'invalid' means the server rejected the address itself — the one case
+  // worth blocking on, since resubmitting with a better address can actually
+  // fix it. 'rate-limited' (HTTP 429) and 'network-error' are both outside
+  // the visitor's control in the moment, so callers below let them through
+  // rather than stranding them at a gate they can't do anything about right
+  // now — the alternative works against the product's actual goal (get the
+  // question asked).
+  async function postLead(
+    address: string,
+    question?: string
+  ): Promise<'ok' | 'invalid' | 'rate-limited' | 'network-error'> {
     if (!address.trim()) return 'ok'
     try {
       const res = await fetch('/api/widget/lead', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ widgetToken, renderToken, email: address.trim() }),
+        body: JSON.stringify({ widgetToken, renderToken, email: address.trim(), ...(question ? { question } : {}) }),
       })
-      return res.ok ? 'ok' : 'rejected'
+      if (res.ok) return 'ok'
+      return res.status === 429 ? 'rate-limited' : 'invalid'
     } catch {
       return 'network-error'
     }
@@ -420,13 +462,15 @@ function WidgetChatBody({
     setEmailError('')
     const result = await postLead(email)
     setEmailPending(false)
-    if (result === 'rejected') {
+    if (result === 'invalid') {
       setEmailError("That didn't go through — check the address and try again.")
       return
     }
-    // A network error still lets them into the chat: gating the whole
-    // conversation on a lead write that could not even reach the server
-    // would work against the product's actual goal (get the question asked).
+    // A rate limit or a network error still let them into the chat: neither
+    // is something resubmitting the same address fixes, and stranding a
+    // visitor at the gate over either works against the product's actual
+    // goal (get the question asked). Skip is also always visible below for
+    // the same reason.
     setEmailSubmitted(true)
   }
 
@@ -434,10 +478,14 @@ function WidgetChatBody({
     e.preventDefault()
     setFailureEmailPending(true)
     setFailureEmailError('')
-    const result = await postLead(failureEmail)
+    const result = await postLead(failureEmail, lastQueryRef.current || undefined)
     setFailureEmailPending(false)
     if (result !== 'ok') {
-      setFailureEmailError("That didn't go through — try again, or No thanks to skip.")
+      setFailureEmailError(
+        result === 'rate-limited'
+          ? "That's one too many tries — wait a moment and try again, or No thanks to skip."
+          : "That didn't go through — try again, or No thanks to skip."
+      )
       return
     }
     setFailurePrompt(null)
