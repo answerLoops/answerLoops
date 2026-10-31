@@ -30,7 +30,11 @@ const VALID_TOKEN = 'e'.repeat(48)
 
 const h = vi.hoisted(() => ({
   reserveGeneration: vi.fn(async () => ({ granted: true, generationId: 1 })),
-  getOrgByWidgetToken: vi.fn(async () => ({ id: 7, name: 'Acme', widget_token: VALID_TOKEN })),
+  getOrgByWidgetToken: vi.fn(async (): Promise<{ id: number; name: string; widget_token: string } | null> => ({
+    id: 7,
+    name: 'Acme',
+    widget_token: VALID_TOKEN,
+  })),
   getKBContext: vi.fn(async () => [] as { summary: string; answer: string; articleId?: number }[]),
   setLeadSignal: vi.fn(),
   clearLeadSignal: vi.fn(),
@@ -92,43 +96,53 @@ describe('widget chat route onFinish: lead signal', () => {
     const res = await ask('how do I reset my password?', 'visitor-1')
     expect(res.status).toBe(200)
     expect(h.setLeadSignal).toHaveBeenCalledTimes(1)
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-1', 'no-kb-match')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-1', 'no-kb-match')
   })
 
   it('stashes "none" when KB context was found and no human was requested', async () => {
     h.getKBContext.mockResolvedValue([{ summary: 'Install', answer: 'Run npm i' }])
     const res = await ask('how do I install this?', 'visitor-2')
     expect(res.status).toBe(200)
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-2', 'none')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-2', 'none')
   })
 
   it('stashes "human-requested" even when KB context was found, taking priority over a clean answer', async () => {
     h.getKBContext.mockResolvedValue([{ summary: 'Install', answer: 'Run npm i' }])
     const res = await ask('can you connect me with a representative', 'visitor-3')
     expect(res.status).toBe(200)
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-3', 'human-requested')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-3', 'human-requested')
   })
 
   it('stashes "human-requested" when KB context was empty too, taking priority over "no-kb-match"', async () => {
     h.getKBContext.mockResolvedValue([])
     const res = await ask('please transfer me to a representative', 'visitor-4')
     expect(res.status).toBe(200)
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-4', 'human-requested')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-4', 'human-requested')
   })
 
-  it('scopes the stashed signal to the org and visitor from this request', async () => {
+  it('does not match "connect to an agent" API-style phrasing as a request for a human (round-2 regex narrowing)', async () => {
+    h.getKBContext.mockResolvedValue([{ summary: 'API', answer: 'Use the REST API' }])
+    const res = await ask('how do I connect to an agent through the API', 'visitor-api')
+    expect(res.status).toBe(200)
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-api', 'none')
+  })
+
+  it('scopes the stashed signal to the widgetToken from this request, independent of which org that token currently resolves to', async () => {
+    // The stash is keyed by widgetToken (see lib/widget/lead-signal-stash.ts),
+    // not by org id — a change in which org a token resolves to must not
+    // change what key the signal is stashed under.
     h.getOrgByWidgetToken.mockResolvedValue({ id: 42, name: 'Other Org', widget_token: VALID_TOKEN })
     h.getKBContext.mockResolvedValue([])
     await ask('any question', 'visitor-xyz')
-    expect(h.setLeadSignal).toHaveBeenCalledWith(42, 'visitor-xyz', 'no-kb-match')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-xyz', 'no-kb-match')
   })
 
   it('does not stash "no-kb-match" for a bare greeting or acknowledgement with no KB match', async () => {
     h.getKBContext.mockResolvedValue([])
-    for (const greeting of ['hi', 'Hello!', 'thanks', 'ok cool']) {
+    for (const greeting of ['hi', 'Hello!', 'thanks', 'ok cool', 'good morning', 'no thanks', 'thank you so much']) {
       h.setLeadSignal.mockClear()
       await ask(greeting, 'visitor-greet')
-      expect(h.setLeadSignal, greeting).toHaveBeenCalledWith(7, 'visitor-greet', 'none')
+      expect(h.setLeadSignal, greeting).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-greet', 'none')
     }
   })
 
@@ -138,21 +152,33 @@ describe('widget chat route onFinish: lead signal', () => {
     // surface the prompt regardless of length.
     h.getKBContext.mockResolvedValue([])
     await ask('pricing?', 'visitor-short-q')
-    expect(h.setLeadSignal).toHaveBeenCalledWith(7, 'visitor-short-q', 'no-kb-match')
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-short-q', 'no-kb-match')
   })
 })
 
 describe('widget chat route: clears the previous turn\'s signal before this run can fail', () => {
-  it('calls clearLeadSignal for this org+visitor once the org is resolved, before the run can produce its own result', async () => {
+  it('calls clearLeadSignal for this widgetToken+visitor as soon as both are known well-formed, before the run can produce its own result', async () => {
     h.getKBContext.mockResolvedValue([])
     await ask('how do I reset my password?', 'visitor-9')
-    expect(h.clearLeadSignal).toHaveBeenCalledWith(7, 'visitor-9')
+    expect(h.clearLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-9')
     // Must happen before setLeadSignal (onFinish), not after — the whole
     // point is to clear stale state ahead of this run's own outcome, not
     // wipe out the result this same run just wrote.
     const clearOrder = h.clearLeadSignal.mock.invocationCallOrder[0]
     const setOrder = h.setLeadSignal.mock.invocationCallOrder[0]
     expect(clearOrder).toBeLessThan(setOrder)
+  })
+
+  it('still clears the signal even when org resolution later fails (a 404) — clearing no longer depends on reaching the org lookup', async () => {
+    h.getOrgByWidgetToken.mockResolvedValue(null)
+    const { POST } = await import('@/app/api/widget/chat/route')
+    const res = await POST(
+      widgetChatRequest({ widgetToken: VALID_TOKEN, visitorId: 'visitor-404', messages: [userMsg('anything')] })
+    )
+    await drain(res)
+    expect(res.status).toBe(404)
+    expect(h.clearLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-404')
+    expect(h.setLeadSignal).not.toHaveBeenCalled()
   })
 })
 

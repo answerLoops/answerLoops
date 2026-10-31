@@ -122,3 +122,17 @@ describe('WidgetSection: Ask for an email', () => {
     expect(screen.getByText(/never asked/i)).toBeTruthy()
   })
 })
+
+describe('WidgetSection: widget token load failure', () => {
+  it('shows "Failed to load widget token." instead of being stuck on "Loading…" when getWidgetTokenAction rejects', async () => {
+    h.getWidgetTokenAction.mockRejectedValue(new Error('network down'))
+
+    render(<WidgetSection />)
+
+    // Without the .catch() on the action's promise chain, a rejection (as
+    // opposed to a resolved-but-empty result) would leave `loading` true
+    // forever and the component stuck on "Loading…".
+    await waitFor(() => expect(screen.getByText('Failed to load widget token.')).toBeTruthy())
+    expect(screen.queryByText('Loading…')).toBeNull()
+  })
+})

@@ -95,4 +95,16 @@ describe('widget_leads can actually dedupe', () => {
     await saveWidgetLead(1, 'a'.repeat(48), 'lead@example.com')
     expect(calls[0].sql.toLowerCase()).toContain('on conflict do nothing')
   })
+
+  it('stores the optional question when provided, attaching the context the on-failure prompt collected', async () => {
+    const { saveWidgetLead } = await import('@/lib/db/queries/widget-leads')
+    await saveWidgetLead(1, 'a'.repeat(48), 'lead@example.com', 'how do I export my data?')
+    expect(calls[0].params).toContain('how do I export my data?')
+  })
+
+  it('stores NULL for the question when omitted — an up-front-gate lead has none yet', async () => {
+    const { saveWidgetLead } = await import('@/lib/db/queries/widget-leads')
+    await saveWidgetLead(1, 'a'.repeat(48), 'lead@example.com')
+    expect(calls[0].params).toContain(null)
+  })
 })

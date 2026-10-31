@@ -233,6 +233,12 @@ describe('WidgetChat: on-failure lead prompt', () => {
     await renderWidget(fake, 'on-failure')
 
     await fake.emit.runFinalized()
+    // A network error is retried (see the "checkLeadSignal retry logic" suite
+    // below) — drain the full retry budget here so no pending retry timer
+    // fires into a later test once this one has already returned.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    })
 
     expect(screen.queryByTestId('failure-lead-prompt')).toBeNull()
     // The chat itself is still usable — a failed check doesn't break anything
@@ -251,6 +257,12 @@ describe('WidgetChat: on-failure lead prompt', () => {
     await renderWidget(fake, 'on-failure')
 
     await fake.emit.runFinalized()
+    // A 429 is retried (see the "checkLeadSignal retry logic" suite below) —
+    // drain the full retry budget here so no pending retry timer fires into
+    // a later test once this one has already returned.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    })
 
     expect(screen.queryByTestId('failure-lead-prompt')).toBeNull()
   })
@@ -307,5 +319,215 @@ describe('WidgetChat: on-failure prompt submission failure', () => {
 
     await waitFor(() => expect(screen.getByTestId('failure-lead-prompt')).toBeTruthy())
     expect(within(screen.getByTestId('failure-lead-prompt')).getByText(/didn.t go through/i)).toBeTruthy()
+  })
+
+  it('keeps the prompt open with a rate-limit-specific message when the lead endpoint responds 429', async () => {
+    mockLeadSignalResponse('no-kb-match')
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+    await fake.emit.runFinalized()
+    const prompt = await screen.findByTestId('failure-lead-prompt')
+
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
+        return new Response(JSON.stringify({ signal: 'no-kb-match' }), { status: 200 })
+      }
+      if (typeof url === 'string' && url.includes('/api/widget/lead')) {
+        return new Response('Too many requests', { status: 429 })
+      }
+      return new Response(null, { status: 200 })
+    })
+
+    const user = userEvent.setup()
+    await user.type(within(prompt).getByPlaceholderText('you@example.com'), 'visitor@example.com')
+    await user.click(within(prompt).getByRole('button', { name: 'Send' }))
+
+    // Distinct copy from the generic failure above — a rate limit is
+    // something waiting fixes, unlike a bad address, and the visitor should
+    // see that rather than the generic "didn't go through" message.
+    await waitFor(() => expect(screen.getByTestId('failure-lead-prompt')).toBeTruthy())
+    expect(within(screen.getByTestId('failure-lead-prompt')).getByText(/one too many tries/i)).toBeTruthy()
+  })
+})
+
+describe('WidgetChat: sendMessage clears a stale failure prompt', () => {
+  it('hides the failure prompt the instant a new message is sent, without marking the lead as handled', async () => {
+    mockLeadSignalResponse('no-kb-match')
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+
+    await fake.emit.runFinalized()
+    await screen.findByTestId('failure-lead-prompt')
+
+    const user = userEvent.setup()
+    await user.type(screen.getByPlaceholderText('Ask a question…'), 'another question{Enter}')
+
+    // Cleared the moment the new message is sent — before any response for
+    // this new turn could possibly have arrived.
+    expect(screen.queryByTestId('failure-lead-prompt')).toBeNull()
+
+    // leadHandled must still be false: if clearing the stale prompt had also
+    // marked the lead as handled, checkLeadSignal would bail out early and a
+    // genuine failure on this new turn could never show a fresh prompt.
+    await fake.emit.runFinalized()
+    expect(await screen.findByTestId('failure-lead-prompt')).toBeTruthy()
+  })
+})
+
+describe('WidgetChat: checkLeadSignal retry logic', () => {
+  it('clears an existing failure prompt when a later check resolves to a definitive none', async () => {
+    mockLeadSignalResponse('no-kb-match')
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+    await fake.emit.runFinalized()
+    await screen.findByTestId('failure-lead-prompt')
+
+    mockLeadSignalResponse('none')
+    await fake.emit.runFinalized()
+
+    expect(screen.queryByTestId('failure-lead-prompt')).toBeNull()
+  })
+
+  it('recovers from a network error on the first attempt and shows the prompt once the retry succeeds', async () => {
+    let call = 0
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
+        call++
+        if (call === 1) throw new Error('network down')
+        return new Response(JSON.stringify({ signal: 'no-kb-match' }), { status: 200 })
+      }
+      return new Response(null, { status: 200 })
+    })
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+
+    await fake.emit.runFinalized()
+    // The retry waits LEAD_SIGNAL_RETRY_DELAY_MS (400ms) before the second
+    // attempt; give it real time to land, wrapped in act() since it resolves
+    // and updates state well after runFinalized's own tiny flush returns.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 700))
+    })
+
+    expect(leadSignalCalls().length).toBe(2)
+    expect(screen.getByTestId('failure-lead-prompt')).toBeTruthy()
+  })
+
+  it('retries 3 times then gives up quietly, showing nothing, when every attempt network-errors', async () => {
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
+        throw new Error('network down')
+      }
+      return new Response(null, { status: 200 })
+    })
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+
+    await fake.emit.runFinalized()
+    // 3 attempts with 400ms then 800ms delays between them: give it real
+    // time to exhaust the retry budget, wrapped in act().
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    })
+
+    expect(leadSignalCalls().length).toBe(3)
+    expect(screen.queryByTestId('failure-lead-prompt')).toBeNull()
+  })
+
+  it('leaves an existing failure prompt showing when every retry attempt comes back rate-limited', async () => {
+    mockLeadSignalResponse('no-kb-match')
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+    await fake.emit.runFinalized()
+    await screen.findByTestId('failure-lead-prompt')
+
+    h.fetchMock.mockClear()
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead-signal')) {
+        return new Response('Too many requests', { status: 429 })
+      }
+      return new Response(null, { status: 200 })
+    })
+
+    await fake.emit.runFinalized()
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+    })
+
+    // An indefinite result (retries exhausted) must never overwrite a prompt
+    // that's already showing from an earlier, real signal.
+    expect(leadSignalCalls().length).toBe(3)
+    expect(screen.getByTestId('failure-lead-prompt')).toBeTruthy()
+  })
+})
+
+describe('WidgetChat: postLead outcomes at the up-front gate', () => {
+  it('stays gated and shows the address error when the lead endpoint rejects with a non-429 error', async () => {
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead')) {
+        return new Response('Invalid email', { status: 400 })
+      }
+      return new Response(null, { status: 200 })
+    })
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'up-front')
+
+    const user = userEvent.setup()
+    await user.type(screen.getByPlaceholderText('you@example.com'), 'visitor@example.com')
+    await user.click(screen.getByRole('button', { name: 'Start chat' }))
+
+    await waitFor(() => expect(screen.getByText(/check the address and try again/i)).toBeTruthy())
+    expect(screen.queryByPlaceholderText('Ask a question…')).toBeNull()
+  })
+
+  it('lets the visitor into the chat when the lead endpoint rate-limits the up-front submission', async () => {
+    h.fetchMock.mockImplementation(async (url: unknown) => {
+      if (typeof url === 'string' && url.includes('/api/widget/lead')) {
+        return new Response('Too many requests', { status: 429 })
+      }
+      return new Response(null, { status: 200 })
+    })
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'up-front')
+
+    const user = userEvent.setup()
+    await user.type(screen.getByPlaceholderText('you@example.com'), 'visitor@example.com')
+    await user.click(screen.getByRole('button', { name: 'Start chat' }))
+
+    await waitFor(() => expect(screen.getByPlaceholderText('Ask a question…')).toBeTruthy())
+  })
+
+  it('sends the up-front gate email with no question field, since no conversation has happened yet', async () => {
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'up-front')
+
+    const user = userEvent.setup()
+    await user.type(screen.getByPlaceholderText('you@example.com'), 'visitor@example.com')
+    await user.click(screen.getByRole('button', { name: 'Start chat' }))
+
+    await waitFor(() => expect(leadCalls().length).toBe(1))
+    const body = JSON.parse((leadCalls()[0][1] as RequestInit).body as string)
+    expect(body).not.toHaveProperty('question')
+  })
+})
+
+describe('WidgetChat: failure prompt sends the visitor\'s last question', () => {
+  it('includes the question field in the lead POST body, matching the last message the visitor typed', async () => {
+    mockLeadSignalResponse('no-kb-match')
+    const fake = makeFakeAgent()
+    await renderWidget(fake, 'on-failure')
+
+    const user = userEvent.setup()
+    await user.type(screen.getByPlaceholderText('Ask a question…'), 'how do I reset my password?{Enter}')
+
+    await fake.emit.runFinalized()
+    const prompt = await screen.findByTestId('failure-lead-prompt')
+
+    await user.type(within(prompt).getByPlaceholderText('you@example.com'), 'visitor@example.com')
+    await user.click(within(prompt).getByRole('button', { name: 'Send' }))
+
+    await waitFor(() => expect(leadCalls().length).toBe(1))
+    const body = JSON.parse((leadCalls()[0][1] as RequestInit).body as string)
+    expect(body.question).toBe('how do I reset my password?')
   })
 })

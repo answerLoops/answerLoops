@@ -4,13 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  * Coverage for app/api/widget/lead-signal/route.ts — the endpoint the widget
  * client polls right after a chat turn finishes to decide whether to show the
  * on-failure lead-capture prompt (see lib/widget/lead-capture.ts, issue #11).
- * It does no model or KB work: it only validates the request, enforces the
- * render-token binding (same as the chat route — see Known Issue 114), rate
- * limits, resolves the org, and reads back whatever
- * lib/widget/lead-signal-stash.ts has for that org+visitor.
+ * It does no model or KB work and no org lookup: it only validates the
+ * request, enforces the render-token binding (same as the chat route — see
+ * Known Issue 114), rate limits, and reads back whatever
+ * lib/widget/lead-signal-stash.ts has for that widgetToken+visitor. The stash
+ * is keyed by widgetToken directly — see lib/widget/lead-signal-stash.ts — so
+ * this route has no reason to resolve an org at all.
  *
- * Both the query layer and the stash are mocked wholesale so each side is
- * controlled independently of the other, same spirit as
+ * The stash is mocked wholesale, same spirit as
  * widget-render-token-enforcement.test.ts but with verifyRenderToken itself
  * mocked (rather than minted for real) since this suite is about the route's
  * own branching, not Known Issue 114's token mechanics — those are covered by
@@ -18,7 +19,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
  */
 
 const h = vi.hoisted(() => ({
-  getOrgByWidgetToken: vi.fn(),
   getLeadSignal: vi.fn(),
   verifyRenderToken: vi.fn(),
 }))
@@ -26,7 +26,6 @@ const h = vi.hoisted(() => ({
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: vi.fn(async () => ({ ok: true })) }))
-vi.mock('@/lib/db/queries/widgets', () => ({ getOrgByWidgetToken: h.getOrgByWidgetToken }))
 vi.mock('@/lib/widget/lead-signal-stash', () => ({ getLeadSignal: h.getLeadSignal }))
 vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: h.verifyRenderToken }))
 
@@ -43,7 +42,6 @@ function leadSignalRequest(body: Record<string, unknown>) {
 beforeEach(() => {
   vi.clearAllMocks()
   h.verifyRenderToken.mockReturnValue(true)
-  h.getOrgByWidgetToken.mockResolvedValue({ id: 7, name: 'Acme', widget_token: VALID_TOKEN })
   h.getLeadSignal.mockReturnValue('none')
 })
 
@@ -99,7 +97,6 @@ describe('POST /api/widget/lead-signal: render token enforcement', () => {
     const { POST } = await import('@/app/api/widget/lead-signal/route')
     const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'stale', visitorId: 'v1' }))
     expect(res.status).toBe(403)
-    expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
     expect(h.getLeadSignal).not.toHaveBeenCalled()
   })
 
@@ -110,28 +107,17 @@ describe('POST /api/widget/lead-signal: render token enforcement', () => {
   })
 })
 
-describe('POST /api/widget/lead-signal: org resolution', () => {
-  it('404s on an unresolvable widgetToken', async () => {
-    h.getOrgByWidgetToken.mockResolvedValue(null)
-    const { POST } = await import('@/app/api/widget/lead-signal/route')
-    const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'v1' }))
-    expect(res.status).toBe(404)
-    expect(h.getLeadSignal).not.toHaveBeenCalled()
-  })
-})
-
 describe('POST /api/widget/lead-signal: success', () => {
-  it('returns whatever getLeadSignal reports, scoped to the resolved org and the request visitorId', async () => {
-    h.getOrgByWidgetToken.mockResolvedValue({ id: 99, name: 'Acme', widget_token: VALID_TOKEN })
+  it('returns whatever getLeadSignal reports, reading it straight off the widgetToken — no org lookup involved', async () => {
     h.getLeadSignal.mockReturnValue('human-requested')
     const { POST } = await import('@/app/api/widget/lead-signal/route')
     const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-42' }))
     expect(res.status).toBe(200)
     expect(await res.json()).toEqual({ signal: 'human-requested' })
-    expect(h.getLeadSignal).toHaveBeenCalledWith(99, 'visitor-42')
+    expect(h.getLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-42')
   })
 
-  it('returns "none" when no signal was ever stashed for this org+visitor', async () => {
+  it('returns "none" when no signal was ever stashed for this widgetToken+visitor', async () => {
     h.getLeadSignal.mockReturnValue('none')
     const { POST } = await import('@/app/api/widget/lead-signal/route')
     const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-1' }))
@@ -144,6 +130,16 @@ describe('POST /api/widget/lead-signal: success', () => {
     const { POST } = await import('@/app/api/widget/lead-signal/route')
     const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-1' }))
     expect(await res.json()).toEqual({ signal: 'no-kb-match' })
+  })
+
+  it('never resolves an org — a revoked or nonexistent widget token with a still-valid render token just reads back whatever (or nothing) the stash has', async () => {
+    // There is no getOrgByWidgetToken mock registered in this file at all;
+    // if the route still imported and called it, this suite's module mocks
+    // would leave it unmocked and the real query module would attempt a real
+    // DB connection, failing the test. Passing proves the import was dropped.
+    const { POST } = await import('@/app/api/widget/lead-signal/route')
+    const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-1' }))
+    expect(res.status).toBe(200)
   })
 })
 
