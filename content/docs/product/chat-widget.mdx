@@ -232,6 +232,10 @@ This is usually the highest-value place to put it: docs visitors are anonymous a
   Asking up front, before the widget has done anything to earn the visitor's trust, was costing more conversations than the leads it produced — a visitor arrives with a question, not an intent to hand over an email, and bounces rather than answer a stranger-bot. Asking after a real miss gives the visitor context for why they're being asked, and the resulting address is attached to an actual unresolved question rather than a cold form fill.
 </Callout>
 
+<Callout type="warn" title="Architecture: the on-failure check is single-instance only">
+  "Only if it can't help" works by having the widget poll a small lookup right after a turn finishes, asking whether that turn just failed. The answer to that lookup is held in the memory of whichever application server process handled the chat request — it is never written to the database or to shared cache. If your deployment runs more than one application instance behind a load balancer (self-hosters scaling horizontally; this does not apply to the standard answerLoops Cloud deployment), the visitor's follow-up poll can land on a *different* instance than the one that just answered. That instance has nothing in its memory for this turn, so the lookup simply returns "no prompt needed" — the on-failure email ask silently never appears for that turn. Nothing errors, no data is lost, and the conversation itself is unaffected; the visitor is just never asked for an email on that particular miss. A single-instance deployment never hits this. If you run multiple instances and need the prompt to appear reliably, use **"Before the conversation starts"** or **"Never"** instead, both of which have no cross-instance dependency.
+</Callout>
+
 ## Rotating the token
 
 Tokens expire after **90 days**. Settings warns you as the date approaches, and **Regenerate token** issues a new one.
@@ -269,7 +273,7 @@ The lead-capture endpoint, used when a visitor leaves an email address, is limit
 
 The on-failure check — a small lookup the widget makes right after a turn finishes, to decide whether to show the lead-capture prompt — is limited at **100/minute per token** and **20/minute per visitor**, the same shape as the chat endpoint next to it.
 
-Requests over these limits return `429 Too Many Requests`. The chat and lead-capture limits are enforced across every running instance rather than per process, so those numbers are the real ceiling. The on-failure check's result, by contrast, is held in the memory of whichever instance answered the chat request — see Lead capture above — so on a multi-instance deployment a visitor's next poll can land on a different instance and simply see no prompt for that turn; nothing breaks, the prompt just doesn't appear. None of these limits are currently configurable.
+Requests over these limits return `429 Too Many Requests`. The chat and lead-capture limits are enforced across every running instance rather than per process, so those numbers are the real ceiling. The on-failure check is the one exception — see the single-instance callout under Lead capture above. None of these limits are currently configurable.
 
 Separately from rate limits, every widget answer counts toward your plan's monthly deflection allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
 
