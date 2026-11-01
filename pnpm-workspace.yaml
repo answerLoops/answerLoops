@@ -49,6 +49,9 @@ minimumReleaseAgeExclude:
   - 'body-parser@2.4.0'
   - 'fast-uri@3.1.9'
   - 'happy-dom@21.0.4'
+  # Patched release of a transitive package, published inside the 7-day aging
+  # window; the audit and Trivy gate CI on it, so excluded rather than waiting it out.
+  - 'follow-redirects@1.16.2'
 overrides:
   ws: '>=8.21.0'
   shell-quote: '>=1.11.0'   # keep on a patched release
@@ -75,7 +78,7 @@ overrides:
   dompurify: '>=3.4.16 <4.0.0'   # disclosure-ok  two DOMPurify advisories (detached-subtree XSS via IN_PLACE's afterSanitize hook; forced HTML reparse via a force-removed rawtext root), both fixed in 3.4.16 — reached via mermaid, which declares ^3.3.3 (satisfied). Capped below 4.x per the open-range lesson above
   katex: '>=0.18.2 <0.19.0'   # disclosure-ok  prototype pollution bypassing trust restrictions, fixed in 0.18.2 — reached via CopilotKit/streamdown/remark-math/rehype-katex, all of which declare ^0.16.x. No patched 0.16.x release exists, so this forces every consumer past its declared range (0.x treats the middle number as breaking) — same risk as the graphql-tools entry above, no in-range fix available
   ip-address: '>=10.7.1 <11.0.0'   # disclosure-ok  four advisories (two SSRF/trust-boundary bypasses via incomplete link-local/NAT64 range classification, a cross-family address-comparison bypass, and an unbounded parse-diagnostic DoS), fixed across 10.5.1/10.7.1 — reached via express-rate-limit, which declares ^10.2.0 (satisfied). Capped below 11.x per the open-range lesson above
-  follow-redirects: '>=1.16.1 <2.0.0'   # keep on a patched release — reached via axios; capped below 2.x per the open-range lesson above
+  follow-redirects: '>=1.16.2 <2.0.0'   # keep on a patched release — reached via axios; capped below 2.x per the open-range lesson above
   vite: '^8.3.4'   # keep on a patched release — reached via vitest; capped below 9.x per the open-range lesson above
   '@vitest/mocker': '>=4.1.12 <5.0.0'   # keep on a patched release — reached via the vitest toolchain; capped below 5.x per the open-range lesson above
   'body-parser@>=2.0.0 <2.4.0': '2.4.0'   # keep on a patched release — reached via express 5; scoped to the 2.x line so it never touches the 1.x resolutions
