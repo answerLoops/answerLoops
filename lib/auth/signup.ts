@@ -1,5 +1,5 @@
 import { startTrial } from '@/lib/billing/trial'
-import { sendWelcomeEmail } from '@/lib/email/send'
+import { sendSignupAlertEmail, sendWelcomeEmail } from '@/lib/email/send'
 import { logger } from '@/lib/logger'
 
 /**
@@ -23,8 +23,12 @@ export async function beginTrial(input: {
   const { userId, orgId, email, name, providerAccountId } = input
   try {
     const outcome = await startTrial({ orgId, userId, email, providerSubject: providerAccountId })
-    if (outcome.status !== 'started') return
+    if (outcome.status !== 'started') {
+      logger.info('No welcome email: trial did not start', { module: 'auth/signup', orgId, status: outcome.status })
+      return
+    }
     try {
+      await sendSignupAlertEmail({ email, name, orgId })
       await sendWelcomeEmail(email, name)
     } catch (err) {
       logger.error('Welcome email failed after trial start', { module: 'auth/signup', orgId, error: err })

@@ -4,6 +4,7 @@ import { MOCK_EXTERNALS } from '@/lib/mock-mode'
 import type { Ticket } from '@/types'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 import { appOrigin } from '@/lib/site'
+import { logger } from '@/lib/logger'
 
 function client() {
   return new Resend(process.env.RESEND_API_KEY)
@@ -170,14 +171,21 @@ export async function sendNewsletterConfirmation(
 }
 
 export async function sendWelcomeEmail(email: string, name: string | null): Promise<void> {
-  if (MOCK_EXTERNALS || !process.env.RESEND_API_KEY) return
+  if (MOCK_EXTERNALS) return
+  if (!process.env.RESEND_API_KEY) {
+    logger.warn('Welcome email skipped: RESEND_API_KEY is not set', { module: 'email' })
+    return
+  }
 
   const fromAddress = process.env.RESEND_FROM ?? 'hello@answerloops.com'
   const greeting = name?.trim() ? `Welcome, ${name.trim().split(/\s+/)[0]}.` : 'Welcome.'
   const dashboard = appOrigin() ?? 'https://app.answerloops.com'
 
   try {
-    await client().emails.send({
+    // The Resend SDK reports API failures (unverified sender, bad `from`, rate
+    // limit) as `{ error }` on the result rather than throwing, so the catch
+    // below never sees them. Read it explicitly or a rejected send is silent.
+    const { error } = await client().emails.send({
       from: fromAddress,
       to: [email],
       replyTo: SUPPORT_EMAIL,
@@ -214,12 +222,54 @@ export async function sendWelcomeEmail(email: string, name: string | null): Prom
         </div>
       `,
     })
+    if (error) {
+      logger.error('Welcome email rejected by Resend', {
+        module: 'email',
+        from: fromAddress,
+        resendError: error.name,
+        resendMessage: error.message,
+      })
+    }
   } catch (err) {
     // Swallowed on purpose — see the note above. Logged so a provider outage is
     // visible rather than silent.
-    console.error('[email] welcome email failed', {
-      error: err instanceof Error ? err.message : String(err),
+    logger.error('Welcome email failed', { module: 'email', error: err })
+  }
+}
+
+/**
+ * Tells the operator someone just created a cloud workspace. Off until
+ * SIGNUP_ALERT_EMAIL is set. Never throws, for the same reason as the welcome
+ * email: a notification must not be able to fail somebody's signup.
+ */
+export async function sendSignupAlertEmail(input: {
+  email: string
+  name: string | null
+  orgId: number
+}): Promise<void> {
+  const to = process.env.SIGNUP_ALERT_EMAIL?.trim()
+  if (MOCK_EXTERNALS || !to) return
+  if (!process.env.RESEND_API_KEY) {
+    logger.warn('Signup alert skipped: RESEND_API_KEY is not set', { module: 'email' })
+    return
+  }
+
+  try {
+    const { error } = await client().emails.send({
+      from: process.env.RESEND_FROM ?? 'hello@answerloops.com',
+      to: [to],
+      subject: `New signup: ${input.email}`,
+      text: `${input.name?.trim() || 'No name'} <${input.email}> created workspace #${input.orgId}.`,
     })
+    if (error) {
+      logger.error('Signup alert rejected by Resend', {
+        module: 'email',
+        resendError: error.name,
+        resendMessage: error.message,
+      })
+    }
+  } catch (err) {
+    logger.error('Signup alert failed', { module: 'email', error: err })
   }
 }
 
