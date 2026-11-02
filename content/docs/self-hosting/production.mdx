@@ -146,10 +146,12 @@ The endpoint runs a trivial query against the database, so a failure can mean th
 
 ## Alternative: Railway or another platform
 
-If you would rather not manage a server, reverse proxy, and certificates, deploy to Railway or a similar platform. Both services build from the repository's `Dockerfile`. The repository includes `.railway/railway.ts` for the app and `railway.bot.toml` for the bot:
+If you would rather not manage a server, reverse proxy, and certificates, deploy to Railway or a similar platform. Both services build from the repository's `Dockerfile`. The repository includes `.railway/railway.ts`, which describes both services in Railway's Infrastructure as Code format. It is the file the project's own hosted deployment uses, so treat it as a reference and adjust the repository, domains and region for your own project:
 
-- **App:** starts with `pnpm start` (the Dockerfile default) and uses `/api/health` as its deploy health check. Preview any change to its settings with `railway config plan` before you apply it.
-- **Bot:** starts with `pnpm bot:start`.
+- **App:** starts with `pnpm start` (the Dockerfile default) and uses `/api/health` as its deploy health check.
+- **Bot:** starts with `pnpm bot:start`, the same image started as the bot. It has no web port, so it has no health check.
+
+Railway does not read this file when it deploys. Settings reach Railway only when you run `railway config apply` (Railway CLI 5.42.1 or newer, logged in and linked to your project), so preview any change with `railway config plan` first. Environment variables stay in Railway and are never written to the file. If a service still has a "Config file path" set in the Railway dashboard, clear it before you apply, because a service cannot be managed by both systems.
 
 The platform provides HTTPS, so you skip the proxy section above. You still set the same environment variables, and you need a managed Postgres with `pgvector`. Set `BOT_TARGET_URL` on the bot to the app's public address, since the two run as separate services.
 

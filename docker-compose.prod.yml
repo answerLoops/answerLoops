@@ -7,7 +7,7 @@ name: answerloops
 #
 # This compose file is the self-hosted Docker path. Railway does not use it —
 # it builds each service from the Dockerfile, with settings from
-# .railway/railway.ts (app) and railway.bot.toml (bot).
+# .railway/railway.ts (app and bot).
 # BOT_TARGET_URL must be set to the app service's public URL when services are
 # deployed separately (e.g. https://your-app.up.railway.app).
 services:
