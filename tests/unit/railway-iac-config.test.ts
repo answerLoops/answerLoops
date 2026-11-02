@@ -81,9 +81,12 @@ describe('Railway IaC: what the file declares', () => {
     }
   })
 
-  it('restarts both services on failure only', () => {
+  // Railway's default is already "restart on failure" and it reads that back as
+  // unset, so declaring ON_FAILURE would leave a permanent diff in every plan.
+  // Only a non-default policy belongs in this file.
+  it('leaves the restart policy at the platform default, or sets a non-default one', () => {
     for (const name of ['app', 'bot']) {
-      expect(service(name).deploy?.restartPolicyType, name).toBe('ON_FAILURE')
+      expect(service(name).deploy?.restartPolicyType, name).not.toBe('ON_FAILURE')
     }
   })
 })
