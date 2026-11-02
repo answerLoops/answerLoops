@@ -146,9 +146,9 @@ The endpoint runs a trivial query against the database, so a failure can mean th
 
 ## Alternative: Railway or another platform
 
-If you would rather not manage a server, reverse proxy, and certificates, deploy to Railway or a similar platform. The repository includes `railway.toml` for the app and `railway.bot.toml` for the bot. Each is built with Nixpacks:
+If you would rather not manage a server, reverse proxy, and certificates, deploy to Railway or a similar platform. Both services build from the repository's `Dockerfile`. The repository includes `.railway/railway.ts` for the app and `railway.bot.toml` for the bot:
 
-- **App:** starts with `pnpm start` and uses `/api/health` as its deploy health check.
+- **App:** starts with `pnpm start` (the Dockerfile default) and uses `/api/health` as its deploy health check. Preview any change to its settings with `railway config plan` before you apply it.
 - **Bot:** starts with `pnpm bot:start`.
 
 The platform provides HTTPS, so you skip the proxy section above. You still set the same environment variables, and you need a managed Postgres with `pgvector`. Set `BOT_TARGET_URL` on the bot to the app's public address, since the two run as separate services.
