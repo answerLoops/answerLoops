@@ -9,6 +9,10 @@ import { defineRailway, github, project, service } from "railway/iac";
 // applies it. Needs Railway CLI 5.42.1 or newer.
 //
 // What is deliberately NOT here:
+//  - the restart policy: Railway's default is already "restart on failure", and
+//    it stores the default as unset. Declaring it explicitly would show up as a
+//    pending change in every `railway config plan`, so a plan would never come
+//    back clean. Declare it only if a service needs a non-default policy.
 //  - environment variables and secrets: they stay in Railway and never enter
 //    this public repository. `variables: { managed: false }` below is what
 //    tells the CLI to leave them alone; without it `railway config plan`
@@ -46,7 +50,6 @@ export default defineRailway(() => {
     deploy: {
       healthcheckPath: "/api/health",
       healthcheckTimeout: 30,
-      restartPolicyType: "ON_FAILURE",
     },
     replicas: { "us-east4-eqdc4a": 1 },
     domains: [
@@ -63,7 +66,6 @@ export default defineRailway(() => {
     build: dockerfile,
     deploy: {
       startCommand: "pnpm bot:start",
-      restartPolicyType: "ON_FAILURE",
     },
     replicas: { "us-east4-eqdc4a": 1 },
   });
