@@ -69,26 +69,3 @@ describe('Discord OAuth state encoding', () => {
     expect(src).toContain('upsertIntegration')
   })
 })
-
-describe('railway.toml: deployment config', () => {
-  const TOML_PATH = path.join(ROOT, 'railway.toml')
-
-  it('railway.toml exists', () => {
-    expect(fs.existsSync(TOML_PATH)).toBe(true)
-  })
-
-  it('railway.toml specifies startCommand', () => {
-    const content = fs.readFileSync(TOML_PATH, 'utf-8')
-    expect(content).toContain('startCommand')
-  })
-
-  it('railway.toml uses nixpacks builder', () => {
-    const content = fs.readFileSync(TOML_PATH, 'utf-8')
-    expect(content).toContain('nixpacks')
-  })
-
-  it('railway.toml has on_failure restart policy', () => {
-    const content = fs.readFileSync(TOML_PATH, 'utf-8')
-    expect(content).toContain('on_failure')
-  })
-})
