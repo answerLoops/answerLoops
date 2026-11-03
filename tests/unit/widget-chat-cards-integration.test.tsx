@@ -108,7 +108,7 @@ async function openThread(fake: ReturnType<typeof makeFakeAgent>) {
   h.current = fake
   ;({ ChoicesCard } = await import('@/app/widget/[widgetToken]/genui-cards'))
   const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
-  render(<WidgetChat widgetToken={TOKEN} renderToken="render-tok" orgName="Acme" showBranding isSelfPreview={false} />)
+  render(<WidgetChat widgetToken={TOKEN} renderToken="render-tok" orgName="Acme" showBranding isSelfPreview={false} leadCaptureMode="up-front" />)
   await userEvent.setup().click(screen.getByRole('button', { name: 'Skip' }))
 }
 
@@ -148,6 +148,7 @@ describe('WidgetChat + ChoicesCard: replying through a card', () => {
       widgetToken: TOKEN,
       renderToken: 'render-tok',
       visitorId: expect.any(String),
+      turnId: expect.any(String),
       isSelfPreview: false,
     })
     expect((runArg.forwardedProps.visitorId as string).length).toBeGreaterThan(0)

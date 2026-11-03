@@ -5,7 +5,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { updateSLAAction } from '@/lib/actions/sla'
 import { sendInviteAction, revokeInviteAction, removeMemberAction, transferOwnershipAction } from '@/lib/actions/invitations'
-import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction } from '@/lib/actions/widget'
+import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction, saveWidgetLeadCaptureModeAction } from '@/lib/actions/widget'
+import type { WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import { saveAIConfigAction, clearAIConfigAction, testAIConfigAction, listModelsAction, includedEmbeddingsAvailableAction } from '@/lib/actions/ai-config'
 import type { AIConnectionResult } from '@/lib/ai/test-connection'
 import type { BudgetStatus } from '@/lib/billing/platform-ai-budget'
@@ -866,7 +867,7 @@ export function AIModelSection() {
   )
 }
 
-function WidgetSection() {
+export function WidgetSection() {
   const [token, setToken] = useState<string | null>(null)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -881,6 +882,26 @@ function WidgetSection() {
   const [savedOrigins, setSavedOrigins] = useState('')
   const [savingOrigins, setSavingOrigins] = useState(false)
   const [originsMsg, setOriginsMsg] = useState<string | null>(null)
+  const [leadCaptureMode, setLeadCaptureMode] = useState<WidgetLeadCaptureMode>('on-failure')
+  const [savingLeadCaptureMode, setSavingLeadCaptureMode] = useState(false)
+  const [leadCaptureMsg, setLeadCaptureMsg] = useState<string | null>(null)
+
+  async function changeLeadCaptureMode(mode: WidgetLeadCaptureMode) {
+    const previous = leadCaptureMode
+    setLeadCaptureMode(mode)
+    setSavingLeadCaptureMode(true)
+    setLeadCaptureMsg(null)
+    const fd = new FormData()
+    fd.set('mode', mode)
+    const result = await saveWidgetLeadCaptureModeAction(null, fd)
+    if (result.error) {
+      setLeadCaptureMode(previous)
+      setLeadCaptureMsg(result.error)
+    } else {
+      setLeadCaptureMsg('Saved.')
+    }
+    setSavingLeadCaptureMode(false)
+  }
 
   async function saveOrigins() {
     setSavingOrigins(true)
@@ -905,17 +926,27 @@ function WidgetSection() {
 
   useEffect(() => {
     let cancelled = false
-    getWidgetTokenAction().then((result) => {
-      if (cancelled) return
-      if (result.token) {
-        setToken(result.token)
-        setExpiresAt(result.expiresAt ?? null)
-        setCanManage(result.canManage === true)
-        setOrigins(result.allowedOrigins ?? '')
-        setSavedOrigins(result.allowedOrigins ?? '')
-      }
-      setLoading(false)
-    })
+    getWidgetTokenAction()
+      .then((result) => {
+        if (cancelled) return
+        if (result.token) {
+          setToken(result.token)
+          setExpiresAt(result.expiresAt ?? null)
+          setCanManage(result.canManage === true)
+          setOrigins(result.allowedOrigins ?? '')
+          setSavedOrigins(result.allowedOrigins ?? '')
+          if (result.leadCaptureMode) setLeadCaptureMode(result.leadCaptureMode)
+        }
+        setLoading(false)
+      })
+      .catch(() => {
+        // Leaves token null, which the render below already treats as
+        // "failed to load" — without this, a rejected promise (rather than
+        // a resolved-but-empty result) left `loading` true forever: a
+        // permanently stuck spinner, never the controls below it with a
+        // default an admin could mistake for the saved value.
+        if (!cancelled) setLoading(false)
+      })
     return () => { cancelled = true }
   }, [])
 
@@ -1056,6 +1087,39 @@ function WidgetSection() {
                 {savedOrigins
                   ? `Allowed on: ${savedOrigins.split('\n').join(', ')}`
                   : 'No domains listed — the widget will not load on any site yet.'}
+                {' '}Only owners and admins can change this.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2 border-t border-gray-100 pt-3">
+            <div>
+              <p className="text-xs font-medium text-gray-900">Ask for an email</p>
+              <p className="text-[0.6875rem] text-gray-500">
+                When the widget collects a visitor&apos;s email address.
+              </p>
+            </div>
+            {canManage ? (
+              <>
+                <select
+                  value={leadCaptureMode}
+                  onChange={(e) => changeLeadCaptureMode(e.target.value as WidgetLeadCaptureMode)}
+                  disabled={savingLeadCaptureMode}
+                  className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs text-gray-700 bg-white sm:w-auto"
+                >
+                  <option value="on-failure">Only if it can&apos;t help — after an unanswered question</option>
+                  <option value="up-front">Before the conversation starts</option>
+                  <option value="off">Never</option>
+                </select>
+                {leadCaptureMsg && <p className="text-[0.6875rem] text-gray-600">{leadCaptureMsg}</p>}
+              </>
+            ) : (
+              <p className="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-[0.6875rem] text-gray-600">
+                {leadCaptureMode === 'on-failure'
+                  ? 'Only asked after an unanswered question.'
+                  : leadCaptureMode === 'up-front'
+                    ? 'Asked before the conversation starts.'
+                    : 'Never asked.'}
                 {' '}Only owners and admins can change this.
               </p>
             )}
