@@ -20,6 +20,30 @@ function returnState() {
   return document.querySelector<HTMLElement>('.loop-return')?.dataset.state
 }
 
+function examplesShown() {
+  return [...document.querySelectorAll<HTMLElement>('.loop-example')].map(
+    (example) => example.dataset.shown,
+  )
+}
+
+function pressedRun() {
+  return screen
+    .getAllByRole('button', { pressed: true })
+    .map((button) => button.textContent)
+}
+
+// The next timer is only scheduled after React re-renders, so advance one
+// step at a time.
+function steps(count: number) {
+  for (let index = 0; index < count; index += 1) advance(2000)
+}
+
+// One full pass: four steps, then the loop stage.
+function finishRun() {
+  steps(4)
+  advance(2600)
+}
+
 function setReducedMotion(matches: boolean) {
   Object.defineProperty(preference, 'matches', {
     value: matches,
@@ -75,14 +99,14 @@ describe('answer loop overview', () => {
     expect(stepStates()).toEqual(['active', 'idle', 'idle', 'idle'])
     expect(returnState()).toBe('idle')
 
-    advance(1800)
+    advance(2000)
     expect(stepStates()).toEqual(['done', 'active', 'idle', 'idle'])
-    advance(1800)
+    advance(2000)
     expect(stepStates()).toEqual(['done', 'done', 'active', 'idle'])
-    advance(1800)
+    advance(2000)
     expect(stepStates()).toEqual(['done', 'done', 'done', 'active'])
 
-    advance(1800)
+    advance(2000)
     expect(returnState()).toBe('active')
     // Saved knowledge feeds the next draft, so the docs step lights up again.
     expect(stepStates()).toEqual(['done', 'active', 'done', 'done'])
@@ -92,6 +116,68 @@ describe('answer loop overview', () => {
     expect(returnState()).toBe('idle')
   })
 
+  it('reveals the worked example one step at a time', () => {
+    render(<AnswerLoopOverview />)
+
+    expect(examplesShown()).toEqual(['true', 'false', 'false', 'false'])
+    expect(
+      screen.getByText('Webhook retries made duplicate orders. How do we stop it?'),
+    ).toBeVisible()
+    const hidden = document.querySelectorAll('.loop-example')[1]
+    expect(hidden).toHaveAttribute('aria-hidden', 'true')
+
+    advance(2000)
+    expect(examplesShown()).toEqual(['true', 'true', 'false', 'false'])
+    expect(hidden).not.toHaveAttribute('aria-hidden')
+    expect(screen.getByRole('list', { name: 'Sources used' })).toHaveTextContent(
+      '[1] Webhook delivery[2] Idempotency guide',
+    )
+
+    steps(2)
+    expect(examplesShown()).toEqual(['true', 'true', 'true', 'true'])
+    expect(screen.getByText('Posted with 2 cited sources')).toBeVisible()
+  })
+
+  it('alternates to the held-back example after each full pass', () => {
+    render(<AnswerLoopOverview />)
+    expect(pressedRun()).toEqual(['Answered from docs'])
+
+    finishRun()
+    expect(pressedRun()).toEqual(['Docs don’t cover it'])
+    expect(stepStates()).toEqual(['active', 'idle', 'idle', 'idle'])
+    expect(
+      screen.getByText('Can we rotate our API key with no downtime?'),
+    ).toBeVisible()
+
+    steps(3)
+    const final = document.querySelectorAll<HTMLElement>('.loop-example')[3]
+    expect(final.dataset.tone).toBe('warn')
+    expect(final).toHaveTextContent('Held back and sent to your team')
+
+    finishRun()
+    expect(pressedRun()).toEqual(['Answered from docs'])
+  })
+
+  it('switches examples and restarts from the first step when a run is picked', () => {
+    render(<AnswerLoopOverview />)
+    steps(2)
+    expect(stepStates()).toEqual(['done', 'done', 'active', 'idle'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Docs don’t cover it' }))
+    expect(pressedRun()).toEqual(['Docs don’t cover it'])
+    expect(stepStates()).toEqual(['active', 'idle', 'idle', 'idle'])
+    expect(examplesShown()).toEqual(['true', 'false', 'false', 'false'])
+    expect(
+      screen.queryByText('Webhook retries made duplicate orders. How do we stop it?'),
+    ).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Answered from docs' }))
+    expect(pressedRun()).toEqual(['Answered from docs'])
+    expect(
+      screen.getByText('Webhook retries made duplicate orders. How do we stop it?'),
+    ).toBeVisible()
+  })
+
   it('stops advancing while paused and resumes on play', () => {
     render(<AnswerLoopOverview />)
     fireEvent.click(screen.getByRole('button', { name: 'Pause diagram animation' }))
@@ -99,7 +185,7 @@ describe('answer loop overview', () => {
     expect(stepStates()).toEqual(['active', 'idle', 'idle', 'idle'])
 
     fireEvent.click(screen.getByRole('button', { name: 'Play diagram animation' }))
-    advance(1800)
+    advance(2000)
     expect(stepStates()).toEqual(['done', 'active', 'idle', 'idle'])
   })
 
@@ -116,16 +202,23 @@ describe('answer loop overview', () => {
 
     expect(stepStates()).toEqual(['static', 'static', 'static', 'static'])
     expect(returnState()).toBe('static')
+    expect(examplesShown()).toEqual(['true', 'true', 'true', 'true'])
     expect(
       screen.queryByRole('button', { name: /diagram animation/ }),
     ).not.toBeInTheDocument()
     advance(20000)
     expect(stepStates()).toEqual(['static', 'static', 'static', 'static'])
+    expect(pressedRun()).toEqual(['Answered from docs'])
+
+    // The picker still works without motion, showing the whole example at once.
+    fireEvent.click(screen.getByRole('button', { name: 'Docs don’t cover it' }))
+    expect(examplesShown()).toEqual(['true', 'true', 'true', 'true'])
+    expect(screen.getByText('Held back and sent to your team')).toBeVisible()
   })
   it('pauses when the tab is hidden and resumes when it becomes visible again', () => {
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)
     render(<AnswerLoopOverview />)
-    advance(1800)
+    advance(2000)
     expect(stepStates()).toEqual(['done', 'active', 'idle', 'idle'])
 
     hidden.mockReturnValue(true)
@@ -135,7 +228,7 @@ describe('answer loop overview', () => {
 
     hidden.mockReturnValue(false)
     act(() => document.dispatchEvent(new Event('visibilitychange')))
-    advance(1800)
+    advance(2000)
     expect(stepStates()).toEqual(['done', 'done', 'active', 'idle'])
   })
 
@@ -150,7 +243,7 @@ describe('answer loop overview', () => {
     expect(
       screen.getByRole('button', { name: 'Pause diagram animation' }),
     ).toBeVisible()
-    advance(1800)
+    advance(2000)
     expect(stepStates()).toEqual(['done', 'active', 'idle', 'idle'])
   })
 
