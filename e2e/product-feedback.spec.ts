@@ -23,9 +23,10 @@ test.afterAll(async () => {
 
 test.beforeEach(async () => {
   await sql`DELETE FROM product_feedback_votes`
-  // Vote calls are rate-limited per person per hour and the counters live in
-  // the database, so repeated local runs would otherwise trip the cap.
-  await sql`DELETE FROM rate_limit_buckets WHERE key LIKE 'product-feedback-vote:%'`
+  // Submissions and votes are rate-limited per person per hour and the
+  // counters live in the database, so repeated local runs would otherwise
+  // trip a cap (5 submissions, 60 votes) for reasons unrelated to the test.
+  await sql`DELETE FROM rate_limit_buckets WHERE key LIKE 'product-feedback%'`
   await sql`DELETE FROM product_feedback`
   await sql`DELETE FROM product_updates`
 })
@@ -275,7 +276,7 @@ test.describe('up-votes', () => {
       WHERE NOT EXISTS (SELECT 1 FROM memberships WHERE user_id = ${userId} AND org_id = ${orgId})`
   }
 
-  async function entry(body: string, opts: { author?: { userId: number; orgId: number }; status?: 'approved' | 'pending' } = {}) {
+  async function entry(body: string, opts: { author?: { userId: number; orgId: number }; status?: 'approved' | 'pending' | 'rejected' } = {}) {
     const status = opts.status ?? 'approved'
     const approvedAt = status === 'approved' ? new Date().toISOString() : null
     const [row] = opts.author
@@ -376,8 +377,17 @@ test.describe('up-votes', () => {
   })
 
   test('no control on your own or a pending entry, and forging the call writes nothing', async ({ page }) => {
+    await seedMember(2, 1)
     const own = await entry('My own approved entry, which I must not be able to vote on.', { author: { userId: 1, orgId: 1 } })
     const pending = await entry('My pending entry, not votable by anyone yet.', { author: { userId: 1, orgId: 1 }, status: 'pending' })
+    // Someone else's unapproved entries: the only thing refusing a vote on
+    // these is the status rule itself, so the self-vote rule cannot mask a
+    // missing status check (the viewer never sees them, so only a forged call
+    // can reach them).
+    const theirsPending = await entry('Another member pending entry.', { author: { userId: 2, orgId: 1 }, status: 'pending' })
+    const theirsRejected = await entry('Another member rejected entry.', { author: { userId: 2, orgId: 1 }, status: 'rejected' })
+    // And someone else's approved entry — the ordinary case, with a real author.
+    const theirsApproved = await entry('Another member approved entry, votable by me.', { author: { userId: 2, orgId: 1 } })
     const control = await entry('A control entry, voted through the real button.')
     const probe = await entry('A probe entry, voted through a forged call.')
     const dialog = await openBoard(page)
@@ -399,18 +409,27 @@ test.describe('up-votes', () => {
     await forged(page, action, { feedbackId: probe, voted: true })
     await expect.poll(async () => (await votesFor(probe)).length).toBe(1)
 
-    // Now the hostile payloads: own entry, pending entry, forged identity, wrong types.
+    // A colleague's approved entry takes a vote through the real button.
+    await upvote(card(dialog, 'Another member approved entry')).click()
+    await expect.poll(async () => (await votesFor(theirsApproved)).length).toBe(1)
+    expect((await votesFor(theirsApproved))[0]).toMatchObject({ user_id: 1, org_id: 1 })
+
+    // Now the hostile payloads: own entry, pending entries (mine and theirs),
+    // a rejected entry, forged identity, wrong types.
     await forged(page, action, { feedbackId: own, voted: true })
     await forged(page, action, { feedbackId: pending, voted: true })
+    await forged(page, action, { feedbackId: theirsPending, voted: true })
+    await forged(page, action, { feedbackId: theirsRejected, voted: true })
     await forged(page, action, { feedbackId: String(control), voted: false })
     await forged(page, action, { feedbackId: control, voted: 'no' })
     await page.waitForTimeout(500)
     expect(await votesFor(own)).toHaveLength(0)
     expect(await votesFor(pending)).toHaveLength(0)
+    expect(await votesFor(theirsPending)).toHaveLength(0)
+    expect(await votesFor(theirsRejected)).toHaveLength(0)
     expect(await votesFor(control)).toHaveLength(1)
 
     // A forged voter identity is ignored: the row belongs to the session, not the payload.
-    await seedMember(2, 1)
     await forged(page, action, { feedbackId: probe, voted: false })
     await expect.poll(async () => (await votesFor(probe)).length).toBe(0)
     await forged(page, action, { feedbackId: probe, voted: true, userId: 2, orgId: 2 })
