@@ -10,7 +10,7 @@ vi.mock('@/lib/live-events', () => ({
     return live.unsubscribe
   },
 }))
-vi.mock('@/lib/actions/product-feedback', () => ({ submitProductFeedbackAction: vi.fn() }))
+vi.mock('@/lib/actions/product-feedback', () => ({ submitProductFeedbackAction: vi.fn(), toggleProductFeedbackVoteAction: vi.fn() }))
 
 import { FeedbackWidget } from '@/components/feedback/feedback-widget'
 
@@ -278,5 +278,66 @@ describe('tab ARIA wiring', () => {
     // Tab state persists in the component; assert whichever is selected has a matching panel.
     const selected = screen.getAllByRole('tab').find((t) => t.getAttribute('aria-selected') === 'true')!
     expect(screen.getByRole('tabpanel').id).toBe(selected.getAttribute('aria-controls'))
+  })
+})
+
+describe('sort', () => {
+  // Server order is newest-first: 30 (newest), 20, 10. Votes: 20 has most, 10
+  // and 30 tie, so Most voted must be 20 then 30 then 10 (tie keeps newest first).
+  function threeEntries(): BoardSnapshot {
+    const base = snap(3).feedback[0]
+    return {
+      approvedCount: 3,
+      updates: [],
+      feedback: [
+        { ...base, id: 30, body: 'Newest entry', createdAt: '2026-10-07T10:00:00.000Z', voteCount: 1 },
+        { ...base, id: 20, body: 'Middle entry', createdAt: '2026-10-06T10:00:00.000Z', voteCount: 5 },
+        { ...base, id: 10, body: 'Oldest entry', createdAt: '2026-10-05T10:00:00.000Z', voteCount: 1 },
+      ],
+    }
+  }
+  const bodies = () => screen.getAllByRole('listitem').map((li) => li.textContent?.match(/(Newest|Middle|Oldest) entry/)?.[0])
+
+  async function openWithThree() {
+    fetchMock.mockImplementation(async () => ok(threeEntries()))
+    render(<FeedbackWidget />)
+    await waitFor(() => expect(screen.getByRole('button', { name: /3 entries/i })).toBeTruthy())
+    fireEvent.click(pill())
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(3))
+  }
+
+  it('defaults to Newest, in the server order', async () => {
+    await openWithThree()
+    expect(screen.getByRole('button', { name: 'Newest' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('false')
+    expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry'])
+  })
+
+  it('Most voted orders by count, ties staying newest-first, and Newest restores', async () => {
+    await openWithThree()
+    fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
+    expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
+    expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('true')
+    fireEvent.click(screen.getByRole('button', { name: 'Newest' }))
+    expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry'])
+  })
+
+  it('keeps the chosen sort across a live refetch, without a second request shape', async () => {
+    await openWithThree()
+    fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
+    await act(async () => {
+      live.handler?.('resync')
+    })
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
+    for (const call of fetchMock.mock.calls) expect(call[0]).toBe('/api/product-feedback')
+  })
+
+  it('shows no sort control on an empty board', async () => {
+    fetchMock.mockImplementation(async () => ok({ approvedCount: 0, feedback: [], updates: [] }))
+    render(<FeedbackWidget />)
+    await waitFor(() => expect(screen.getByRole('button', { name: /0 entries/i })).toBeTruthy())
+    fireEvent.click(pill())
+    expect(screen.queryByRole('button', { name: 'Most voted' })).toBeNull()
   })
 })

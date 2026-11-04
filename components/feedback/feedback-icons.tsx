@@ -38,3 +38,14 @@ export function ThumbIcon({ className }: { className?: string }) {
     </svg>
   )
 }
+
+// The up-vote arrow. There is deliberately no ArrowDownIcon: the board has no
+// down-vote, and not shipping the glyph keeps it that way.
+export function ArrowUpIcon({ className }: { className?: string }) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 19V5" />
+      <path d="m5 12 7-7 7 7" />
+    </svg>
+  )
+}

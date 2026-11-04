@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { subscribeLiveEvents } from '@/lib/live-events'
 import type { BoardSnapshot } from '@/lib/product-feedback/validation'
 import { LogoMark } from '@/components/logo'
@@ -67,6 +67,13 @@ async function fetchSnapshot(signal?: AbortSignal): Promise<BoardSnapshot | null
 }
 
 type Tab = 'feedback' | 'updates'
+// Newest is the server's order. Most voted is sorted here, over the same
+// snapshot: the list is capped at 200 rows either way, so no second request.
+type Sort = 'newest' | 'votes'
+const SORTS: readonly [Sort, string][] = [
+  ['newest', 'Newest'],
+  ['votes', 'Most voted'],
+]
 
 /**
  * Floating product-feedback board, mounted once in the dashboard layout so it
@@ -84,6 +91,7 @@ export function FeedbackWidget() {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('feedback')
   const [snapshot, setSnapshot] = useState<BoardSnapshot | null>(null)
+  const [sort, setSort] = useState<Sort>('newest')
   const pillRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const wasOpen = useRef(false)
@@ -154,6 +162,12 @@ export function FeedbackWidget() {
 
   const count = snapshot?.approvedCount ?? 0
   const updatesCount = snapshot?.updates.length ?? 0
+  // Array.prototype.sort is stable, so entries with equal counts keep the
+  // server's newest-first order — the tie-break the spec asks for, for free.
+  const feedback = useMemo(() => {
+    const items = snapshot?.feedback ?? []
+    return sort === 'votes' ? [...items].sort((a, b) => b.voteCount - a.voteCount) : items
+  }, [snapshot, sort])
 
   if (!open) {
     return (
@@ -267,11 +281,34 @@ export function FeedbackWidget() {
                 No feedback yet. Be the first to tell us what you think.
               </p>
             ) : (
-              <ul className="space-y-3">
-                {snapshot.feedback.map((item) => (
-                  <FeedbackCard key={item.id} item={item} />
-                ))}
-              </ul>
+              <>
+                <fieldset className="mb-3 flex items-center justify-end gap-2">
+                  <legend className="sr-only">Sort feedback</legend>
+                  <span aria-hidden className="text-xs font-medium text-slate-500">
+                    Sort
+                  </span>
+                  <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">
+                    {SORTS.map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={sort === id}
+                        onClick={() => setSort(id)}
+                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                          sort === id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <ul className="space-y-3">
+                  {feedback.map((item) => (
+                    <FeedbackCard key={item.id} item={item} />
+                  ))}
+                </ul>
+              </>
             )}
           </div>
           <FeedbackComposer />

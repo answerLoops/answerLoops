@@ -1,10 +1,18 @@
 // @vitest-environment happy-dom
-import { describe, it, expect, afterEach } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
-import { FeedbackCard } from '@/components/feedback/feedback-card'
+import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import type { BoardFeedback } from '@/lib/product-feedback/validation'
 
+const actions = vi.hoisted(() => ({ toggleProductFeedbackVoteAction: vi.fn() }))
+vi.mock('@/lib/actions/product-feedback', () => actions)
+
+import { FeedbackCard } from '@/components/feedback/feedback-card'
+
 afterEach(cleanup)
+beforeEach(() => {
+  vi.clearAllMocks()
+  actions.toggleProductFeedbackVoteAction.mockResolvedValue({ ok: true, state: 'added' })
+})
 
 // Midday UTC keeps the calendar day stable in every realistic local timezone.
 function item(overrides: Partial<BoardFeedback> = {}): BoardFeedback {
@@ -174,5 +182,81 @@ describe('body content', () => {
     const long = 'x'.repeat(500)
     renderCard(item({ body: long }))
     expect(screen.getByText(long).textContent).toHaveLength(500)
+  })
+})
+
+describe('up-vote control', () => {
+  const upvote = () => screen.queryByRole('button', { name: /upvote/i })
+
+  it('renders the arrow with the count on another person approved entry', () => {
+    renderCard(item({ voteCount: 3 }))
+    const b = upvote()
+    expect(b).toBeTruthy()
+    expect(b!.getAttribute('aria-pressed')).toBe('false')
+    expect(b!.textContent).toContain('3')
+  })
+
+  it('reflects the viewer own vote as pressed, with a label that says how to take it back', () => {
+    renderCard(item({ voteCount: 1, viewerVoted: true }))
+    const b = screen.getByRole('button', { name: /remove your upvote/i })
+    expect(b.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('renders no control on the viewer own entry — only a read-only count', () => {
+    renderCard(item({ mine: true, voteCount: 4 }))
+    expect(upvote()).toBeNull()
+    expect(screen.getByText('4')).toBeTruthy()
+  })
+
+  it.each(['pending', 'rejected'] as const)('renders no control and no count on a %s entry', (status) => {
+    renderCard(item({ status, voteCount: 2 }))
+    expect(upvote()).toBeNull()
+    expect(screen.queryByText('2')).toBeNull()
+  })
+
+  it('never puts a control in the team reply block, and there is no down arrow anywhere', () => {
+    const { container } = renderCard(
+      item({ voteCount: 1, reply: { body: 'Thanks!', tag: 'planned', repliedAt: '2026-10-06T12:00:00.000Z' } }),
+    )
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+    expect(container.textContent).not.toMatch(/down/i)
+    expect(container.querySelector('[aria-label*="down" i]')).toBeNull()
+  })
+
+  it('counts the vote at once on click, then keeps it when the server agrees', async () => {
+    let resolve!: (v: unknown) => void
+    actions.toggleProductFeedbackVoteAction.mockImplementation(() => new Promise((r) => (resolve = r)))
+    renderCard(item({ voteCount: 2 }))
+    fireEvent.click(upvote()!)
+    await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('true'))
+    expect(upvote()!.textContent).toContain('3')
+    resolve({ ok: true, state: 'added' })
+    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledWith({ feedbackId: 1 }))
+    await waitFor(() => expect(upvote()!.textContent).toContain('3'))
+    expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('takes the vote back on a second click', async () => {
+    actions.toggleProductFeedbackVoteAction.mockResolvedValue({ ok: true, state: 'removed' })
+    renderCard(item({ voteCount: 5, viewerVoted: true }))
+    fireEvent.click(screen.getByRole('button', { name: /remove your upvote/i }))
+    await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('false'))
+    expect(upvote()!.textContent).toContain('4')
+  })
+
+  it('reverts and shows the message when the server refuses', async () => {
+    actions.toggleProductFeedbackVoteAction.mockResolvedValue({ ok: false, error: 'This entry cannot be voted on.' })
+    renderCard(item({ voteCount: 2 }))
+    fireEvent.click(upvote()!)
+    expect(await screen.findByText('This entry cannot be voted on.')).toBeTruthy()
+    await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('false'))
+    expect(upvote()!.textContent).toContain('2')
+  })
+
+  it('sends only the entry id — never who is voting', async () => {
+    renderCard(item({ id: 77 }))
+    fireEvent.click(upvote()!)
+    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1))
+    expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledWith({ feedbackId: 77 })
   })
 })
