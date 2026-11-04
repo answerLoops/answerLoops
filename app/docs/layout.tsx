@@ -87,7 +87,7 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
           // Same entry points as the marketing header, so the docs are not a
           // dead end for someone who arrived from there. Absolute campaign
           // links in production, in-app routes in local/dev (nav-shared.ts).
-          { text: SIGNIN_LABEL, url: SIGNIN_HREF },
+          { type: 'button', text: SIGNIN_LABEL, url: SIGNIN_HREF },
           { type: 'button', text: START_LABEL, url: START_HREF },
         ]}
       >

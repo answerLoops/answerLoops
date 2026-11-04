@@ -1828,3 +1828,551 @@
     flex-basis: 100%;
   }
 }
+
+/* Hero: centered copy over the answer-loop overview, a live version of the
+   README overview diagram. The overview carries the channel row, so the hero
+   has no separate channel band. */
+/* Sized so the four step cards and the return arrow sit above the fold at
+   common laptop sizes (1024×768 and up). */
+.marketing-site .marketing-home-hero:has(> .home-hero-stacked) {
+  padding-top: 2rem;
+}
+.marketing-home-grid.home-hero-stacked {
+  grid-template-areas: 'copy' 'overview';
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+  padding-bottom: 2.5rem;
+}
+.home-hero-stacked .home-hero-copy {
+  max-width: 54rem;
+  margin-inline: auto;
+  text-align: center;
+}
+.home-hero-stacked .home-hero-copy h1 {
+  max-width: none;
+  margin-inline: auto;
+  font-size: clamp(2.25rem, 4.2vw, 3.25rem);
+}
+.marketing-home-hero .home-hero-stacked .marketing-eyebrow {
+  margin-bottom: 0.75rem;
+}
+.marketing-home-hero .home-hero-stacked .marketing-intro {
+  margin-top: 0.75rem;
+}
+.marketing-home-hero .home-hero-stacked .marketing-actions {
+  margin-top: 1.1rem;
+}
+.home-hero-stacked .hero-positioning,
+.home-hero-stacked .marketing-actions {
+  justify-content: center;
+}
+.home-hero-stacked .marketing-intro {
+  margin-inline: auto;
+  max-width: 50rem;
+}
+.home-hero-stacked .marketing-note {
+  margin-inline: auto;
+}
+
+.loop-overview {
+  --loop-gap: 1.75rem;
+  --loop-teal: #168fa3;
+  grid-area: overview;
+  position: relative;
+  min-width: 0;
+  margin: 0;
+  padding: 1.4rem 3rem 2.25rem;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #f6f1e8 0%, #e8f5f4 48%, #eee8f8 100%);
+  color: var(--marketing-navy);
+}
+/* Headline on the left, example picker and pause on the right: one row, so
+   the cards (and the text under their titles) stay in the first viewport. */
+.loop-overview-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin-bottom: 1.1rem;
+}
+.marketing-site .loop-overview-title {
+  margin: 0;
+  font-size: clamp(1.25rem, 2vw, 1.625rem);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.loop-overview-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.loop-run-picker {
+  display: flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.7);
+}
+.loop-run-picker button {
+  padding: 0.35rem 0.85rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--marketing-link);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+.loop-run-picker button:hover {
+  color: var(--marketing-navy);
+}
+.loop-run-picker button[aria-pressed='true'] {
+  background: var(--marketing-navy);
+  color: #fff;
+}
+.loop-overview-toggle {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgb(255 255 255 / 0.9);
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.7);
+  color: var(--marketing-link);
+  cursor: pointer;
+}
+.loop-overview-toggle:hover {
+  background: #fff;
+}
+
+.loop-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--loop-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.loop-step {
+  position: relative;
+  min-width: 0;
+  padding: 0.95rem 1.2rem 1.05rem;
+  border: 1.5px solid #fff;
+  border-radius: 20px;
+  background: rgb(255 255 255 / 0.9);
+  transition:
+    border-color 0.45s,
+    box-shadow 0.45s,
+    transform 0.45s,
+    opacity 0.45s;
+}
+.loop-step > svg {
+  display: block;
+  color: var(--loop-teal);
+}
+.loop-step h3 {
+  margin: 0.6rem 0 0.35rem;
+  font-size: 1.1875rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.loop-step p {
+  margin: 0;
+  color: #496575;
+  font-size: 0.9375rem;
+  line-height: 1.45;
+}
+
+/* What the step produced in the current example. The box keeps its height
+   while hidden, so cards do not jump as the example plays through. */
+.loop-example {
+  min-height: 3.1rem;
+  margin-top: 0.7rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  background: #f1f6f8;
+  color: var(--marketing-navy);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  transition: opacity 0.4s, transform 0.4s;
+}
+.loop-example[data-shown='false'] {
+  opacity: 0;
+  transform: translateY(4px);
+}
+.loop-example q {
+  display: block;
+  font-style: italic;
+}
+.loop-example-where {
+  display: block;
+  margin-top: 0.2rem;
+  color: #6a7f8c;
+  font-size: 0.75rem;
+}
+.loop-example-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.loop-example-sources li {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #e1f0f2;
+  color: var(--marketing-link);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.loop-example-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.35rem;
+  font-weight: 500;
+}
+.loop-example-note svg {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--loop-teal);
+}
+.loop-example[data-tone='warn'] {
+  background: #fbf3e3;
+}
+.loop-example[data-tone='warn'] .loop-example-note svg {
+  color: #b7791f;
+}
+.loop-step[data-final] .loop-example {
+  background: rgb(255 255 255 / 0.1);
+  color: #fff;
+}
+.loop-step[data-final] .loop-example-note svg {
+  color: #8fd3dc;
+}
+.loop-step[data-final] .loop-example[data-tone='warn'] .loop-example-note svg {
+  color: #f3c77a;
+}
+.loop-step[data-final] {
+  border-color: var(--marketing-navy);
+  background: var(--marketing-navy);
+  color: #fff;
+}
+.loop-step[data-final] > svg {
+  color: #b9e0e5;
+}
+.loop-step[data-final] p {
+  color: #d8e9ef;
+}
+.loop-step[data-state='idle'] {
+  opacity: 0.72;
+}
+.loop-step[data-state='active'] {
+  border-color: var(--loop-teal);
+  box-shadow: 0 14px 34px rgb(22 143 163 / 0.2);
+  transform: translateY(-3px);
+}
+.loop-step[data-final][data-state='active'] {
+  border-color: var(--marketing-navy);
+  box-shadow: 0 16px 38px rgb(8 46 80 / 0.3);
+}
+
+/* Arrow from each card to the next, centred in the gap. */
+.loop-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: calc(var(--loop-gap) / -2 - 8px);
+  width: 16px;
+  height: 2px;
+  transform: translateY(-50%);
+  background:
+    linear-gradient(var(--loop-teal), var(--loop-teal)) left / 10px 2px no-repeat;
+  opacity: 0.85;
+}
+.loop-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: calc(var(--loop-gap) / -2 - 8px);
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left: 7px solid var(--loop-teal);
+  border-right-width: 0;
+}
+.loop-step[data-state='active']:not(:last-child)::after {
+  animation: loop-nudge 0.9s ease-in-out infinite;
+}
+
+/* Return arrow: from the reply card back up into "Draft from your docs". */
+.loop-return {
+  position: relative;
+  height: 2.6rem;
+  margin: 0 0 1.75rem;
+}
+.loop-return::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc((100% - 3 * var(--loop-gap)) / 4 * 1.5 + var(--loop-gap));
+  right: calc((100% - 3 * var(--loop-gap)) / 8);
+  border: 1.5px solid var(--loop-teal);
+  border-top: 0;
+  border-radius: 0 0 14px 14px;
+  transition: border-color 0.45s, box-shadow 0.45s;
+}
+.loop-return::after {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: calc((100% - 3 * var(--loop-gap)) / 4 * 1.5 + var(--loop-gap) - 5px);
+  border: 5.5px solid transparent;
+  border-bottom: 7px solid var(--loop-teal);
+  border-top-width: 0;
+}
+.loop-return > span {
+  position: absolute;
+  left: calc((100% - 3 * var(--loop-gap)) / 4 * 2.5 + 2 * var(--loop-gap));
+  bottom: 0;
+  transform: translate(-50%, 50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 1.1rem;
+  border-radius: 999px;
+  background: #e8f5f4;
+  color: var(--marketing-link);
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  transition: background-color 0.45s, color 0.45s, box-shadow 0.45s;
+}
+.loop-return > span svg {
+  display: none;
+}
+.loop-return[data-state='active']::before {
+  border-width: 2.5px;
+  border-top: 0;
+  box-shadow: 0 6px 16px rgb(22 143 163 / 0.18);
+}
+.loop-return[data-state='active'] > span {
+  background: var(--loop-teal);
+  color: #fff;
+  box-shadow: 0 8px 20px rgb(22 143 163 / 0.28);
+}
+
+.loop-channels > p {
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  text-align: center;
+}
+.loop-channels ul {
+  display: grid;
+  grid-template-columns: repeat(9, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.loop-channels a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  height: 100%;
+  min-height: 5.1rem;
+  padding: 0.75rem 0.4rem;
+  border: 1px solid #fff;
+  border-radius: 15px;
+  background: rgb(255 255 255 / 0.88);
+  color: var(--marketing-link);
+  font-size: 0.875rem;
+  text-align: center;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.loop-channels a:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgb(8 46 80 / 0.08);
+}
+.loop-channels svg {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+@keyframes loop-nudge {
+  50% {
+    transform: translate(3px, -50%);
+  }
+}
+
+@media (max-width: 1023px) {
+  .loop-overview {
+    padding: 2rem 1.5rem 2.25rem;
+  }
+  .loop-channels ul {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* Narrow screens: cards stack, arrows point down, and the return arrow
+   becomes a plain label under the reply card. */
+@media (max-width: 899px) {
+  .loop-steps {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 28rem;
+    margin-inline: auto;
+  }
+  .loop-step:not(:last-child)::after {
+    top: auto;
+    right: auto;
+    left: 50%;
+    bottom: calc(var(--loop-gap) / -2 - 8px);
+    width: 2px;
+    height: 16px;
+    transform: translateX(-50%);
+    background:
+      linear-gradient(var(--loop-teal), var(--loop-teal)) top / 2px 10px no-repeat;
+  }
+  .loop-step:not(:last-child)::before {
+    top: auto;
+    right: auto;
+    left: 50%;
+    bottom: calc(var(--loop-gap) / -2 - 8px);
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top: 7px solid var(--loop-teal);
+    border-bottom-width: 0;
+  }
+  .loop-step[data-state='active']:not(:last-child)::after {
+    animation-name: loop-nudge-down;
+  }
+  .loop-return {
+    height: auto;
+    margin: 1.1rem 0 1.75rem;
+    text-align: center;
+  }
+  .loop-return::before,
+  .loop-return::after {
+    content: none;
+  }
+  .loop-return > span {
+    position: static;
+    transform: none;
+    white-space: normal;
+  }
+  .loop-return > span svg {
+    display: inline;
+    flex-shrink: 0;
+  }
+}
+@keyframes loop-nudge-down {
+  50% {
+    transform: translate(-50%, 3px);
+  }
+}
+@media (max-width: 767px) {
+  .marketing-home-grid.home-hero-stacked {
+    gap: 2rem;
+  }
+  .loop-overview {
+    padding: 1.75rem 1rem 1.5rem;
+    border-radius: 20px;
+  }
+  .loop-overview-head {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: 1.25rem;
+  }
+  .marketing-site .loop-overview-title {
+    font-size: 1.375rem;
+  }
+  .loop-run-picker button {
+    padding-inline: 0.7rem;
+    font-size: 0.75rem;
+  }
+  .loop-step {
+    padding: 1rem 1.1rem 1.1rem;
+  }
+  .loop-step h3 {
+    font-size: 1.0625rem;
+  }
+  .loop-channels > p {
+    font-size: 1.0625rem;
+  }
+  .loop-channels ul {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+/* Wide but short windows (laptops at 768-800px tall, browser panes): tighten
+   the hero so the step cards and the text under their titles are visible
+   without scrolling. The eyebrow is the one decorative line it drops. */
+@media (min-width: 900px) and (max-height: 820px) {
+  .marketing-site .marketing-home-hero:has(> .home-hero-stacked) {
+    padding-top: 1rem;
+  }
+  .marketing-home-grid.home-hero-stacked {
+    gap: 1rem;
+  }
+  .marketing-home-hero .home-hero-stacked .hero-positioning {
+    display: none;
+  }
+  .home-hero-stacked .home-hero-copy h1 {
+    font-size: clamp(2rem, 3.4vw, 2.75rem);
+  }
+  .marketing-home-hero .home-hero-stacked .marketing-intro {
+    margin-top: 0.5rem;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+  .marketing-home-hero .home-hero-stacked .marketing-actions {
+    margin-top: 0.85rem;
+  }
+  .home-hero-stacked .marketing-note {
+    margin-top: 0.5rem;
+  }
+  .loop-overview {
+    padding-top: 1rem;
+  }
+  .loop-overview-head {
+    margin-bottom: 0.8rem;
+  }
+  .loop-step {
+    padding: 0.8rem 1rem 0.9rem;
+  }
+  .loop-step > svg {
+    width: 24px;
+    height: 24px;
+  }
+  .loop-step h3 {
+    margin-top: 0.45rem;
+    font-size: 1.0625rem;
+  }
+  .loop-step p {
+    font-size: 0.875rem;
+  }
+  .loop-example {
+    margin-top: 0.55rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loop-step,
+  .loop-example,
+  .loop-return::before,
+  .loop-return > span,
+  .loop-channels a {
+    transition: none;
+  }
+  .loop-step[data-state='active'] {
+    transform: none;
+  }
+  .loop-step:not(:last-child)::after {
+    animation: none;
+  }
+}

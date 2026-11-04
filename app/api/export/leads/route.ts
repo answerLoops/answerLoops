@@ -22,8 +22,8 @@ export async function GET(req: Request) {
 
     const leads = await listWidgetLeads(orgId)
 
-    const header = ['id', 'email', 'widget_token', 'created_at']
-    const rows = leads.map((l) => [l.id, l.email, l.widgetToken, l.createdAt].map(escapeCSV).join(','))
+    const header = ['id', 'email', 'question', 'widget_token', 'created_at']
+    const rows = leads.map((l) => [l.id, l.email, l.question ?? '', l.widgetToken, l.createdAt].map(escapeCSV).join(','))
 
     const csv = [header.join(','), ...rows].join('\n')
 

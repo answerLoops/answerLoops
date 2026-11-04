@@ -14,6 +14,7 @@
      visitor moving from the site into the docs does not see a different
      product. Light only: the docs have no dark theme. */
   --docs-navy: #082e50;
+  --docs-navy-hover: #184566;
   --docs-link: #315e81;
   --docs-teal: #168fa3;
   --docs-aqua: #eef7f7;
@@ -118,4 +119,75 @@ a[data-card] > div:has(> [role='img']) {
   background: transparent;
   padding: 0;
   box-shadow: none;
+}
+
+/* Docs sidebar CTAs — match the marketing site's secondary/primary hierarchy. */
+#nd-sidebar a[href='/login'],
+#nd-sidebar a[href='https://dub.sh/sign-in-button'] {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  padding: 8px 12px;
+  color: var(--docs-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+#nd-sidebar a[href='/login']:hover,
+#nd-sidebar a[href='https://dub.sh/sign-in-button']:hover {
+  color: var(--docs-link);
+}
+
+#nd-sidebar a[href='/start-trial'],
+#nd-sidebar a[href='https://dub.sh/start-a-trial'] {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: 8px;
+  background: var(--docs-navy);
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+#nd-sidebar a[href='/start-trial']:hover,
+#nd-sidebar a[href='https://dub.sh/start-a-trial']:hover {
+  background: var(--docs-navy-hover);
+}
+
+#nd-sidebar a[href='/login']:active,
+#nd-sidebar a[href='https://dub.sh/sign-in-button']:active {
+  color: var(--docs-navy);
+}
+
+#nd-sidebar a[href='/start-trial']:active,
+#nd-sidebar a[href='https://dub.sh/start-a-trial']:active {
+  background: var(--docs-link);
+  transform: translateY(1px);
+}
+
+#nd-sidebar a[href='/login']:focus-visible,
+#nd-sidebar a[href='https://dub.sh/sign-in-button']:focus-visible,
+#nd-sidebar a[href='/start-trial']:focus-visible,
+#nd-sidebar a[href='https://dub.sh/start-a-trial']:focus-visible {
+  outline: 2px solid var(--docs-teal);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #nd-sidebar a[href='/login'],
+  #nd-sidebar a[href='https://dub.sh/sign-in-button'],
+  #nd-sidebar a[href='/start-trial'],
+  #nd-sidebar a[href='https://dub.sh/start-a-trial'] {
+    transition: none;
+  }
 }
