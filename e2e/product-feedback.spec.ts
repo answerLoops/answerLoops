@@ -1,6 +1,7 @@
 import postgres from 'postgres'
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { TEST_ENV } from '../playwright.config'
+import { hardPurgeOrg } from '../lib/db/queries/orgs'
 
 // The dashboard's floating feedback widget. The board has no admin controls in
 // the app: moderation, replies and updates are written by operator tooling
@@ -31,8 +32,26 @@ test.beforeEach(async () => {
   await sql`DELETE FROM product_updates`
 })
 
-const pill = (page: import('@playwright/test').Page) =>
-  page.getByRole('button', { name: /open product feedback/i })
+const pill = (page: Page) => page.getByRole('button', { name: /open product feedback/i })
+
+// The dashboard is listening once its own EventSource has received the
+// server's `connected` event, which the server sends only after its LISTEN is
+// registered. Watched through the DevTools protocol, so this is the widget's
+// stream and not a second one opened by the test. Arm it before the navigation
+// that mounts the widget; await it before any write the open dashboard is
+// expected to notice live. A fixed sleep here would pass on a fast machine
+// and prove nothing on a slow one.
+async function liveConnected(page: Page): Promise<void> {
+  const cdp = await page.context().newCDPSession(page)
+  await cdp.send('Network.enable')
+  return new Promise<void>((resolve) => {
+    cdp.on('Network.eventSourceMessageReceived', (event) => {
+      if (event.eventName !== 'connected') return
+      void cdp.detach().catch(() => undefined)
+      resolve()
+    })
+  })
+}
 
 test('collapsed pill shows the logo and a live count; clicking opens the panel', async ({ page }) => {
   await page.goto('/dashboard')
@@ -81,11 +100,11 @@ test('links are rejected in the composer', async ({ page }) => {
 })
 
 test('an approved entry reaches an open dashboard live, with no reload', async ({ page }) => {
+  const connected = liveConnected(page)
   await page.goto('/dashboard')
   await expect(pill(page)).toHaveAccessibleName(/0 entries/)
 
-  // Give the shared SSE stream time to register LISTEN before we write.
-  await page.waitForTimeout(1500)
+  await connected
 
   await sql`
     INSERT INTO product_feedback (author_label, body, status, approved_at)
@@ -121,6 +140,7 @@ test('another member’s pending feedback is never shown', async ({ page }) => {
 })
 
 test('updates tab shows posted updates live, and has no admin controls', async ({ page }) => {
+  const connected = liveConnected(page)
   await page.goto('/dashboard')
   await pill(page).click()
   const dialog = page.getByRole('dialog', { name: /product feedback/i })
@@ -128,7 +148,7 @@ test('updates tab shows posted updates live, and has no admin controls', async (
   await expect(dialog.getByText(/no updates yet/i)).toBeVisible()
   await expect(dialog.getByText(/post an update/i)).toHaveCount(0)
 
-  await page.waitForTimeout(1500)
+  await connected
   await sql`INSERT INTO product_updates (title, body) VALUES ('Faster KB sync', 'Syncs now run in the background.')`
   await expect(dialog.getByText('Faster KB sync')).toBeVisible({ timeout: 10_000 })
   await expect(dialog.getByRole('button', { name: /delete/i })).toHaveCount(0)
@@ -139,9 +159,10 @@ test('updates tab shows posted updates live, and has no admin controls', async (
 // exactly what proves the table triggers push those writes to open dashboards.
 test.describe('operator-side writes reach members live', () => {
   test('a posted update appears in an open widget and lights the new-update dot, then disappears when deleted', async ({ page }) => {
+    const connected = liveConnected(page)
     await page.goto('/dashboard')
     await expect(pill(page)).toBeVisible()
-    await page.waitForTimeout(1500)
+    await connected
 
     const [row] = await sql`INSERT INTO product_updates (title, body) VALUES ('Faster KB sync', 'Syncs now run in the background.') RETURNING id`
 
@@ -289,7 +310,7 @@ test.describe('up-votes', () => {
 
   const votesFor = (id: number) => sql`SELECT user_id, org_id FROM product_feedback_votes WHERE feedback_id = ${id}`
 
-  async function openBoard(page: import('@playwright/test').Page) {
+  async function openBoard(page: Page) {
     await page.goto('/dashboard')
     await pill(page).click()
     const dialog = page.getByRole('dialog', { name: /product feedback/i })
@@ -302,7 +323,7 @@ test.describe('up-votes', () => {
   // A server action is a POST to the page with a `next-action` header. The id
   // lives in the client bundle, so it is captured from one real click and then
   // replayed with payloads the UI would never send.
-  async function captureAction(page: import('@playwright/test').Page, click: () => Promise<void>) {
+  async function captureAction(page: Page, click: () => Promise<void>) {
     const seen = page.waitForRequest((r) => r.method() === 'POST' && Boolean(r.headers()['next-action']))
     await click()
     const req = await seen
@@ -316,8 +337,21 @@ test.describe('up-votes', () => {
     }
   }
   type Action = Awaited<ReturnType<typeof captureAction>>
-  const forged = (page: import('@playwright/test').Page, action: Action, payload: unknown) =>
+  const forged = (page: Page, action: Action, payload: unknown) =>
     page.request.post(action.url, { headers: action.headers, data: JSON.stringify([payload]), failOnStatusCode: false })
+  // What the action answered, as the browser would read it: the result object
+  // is in the response body verbatim. Every probe below reads its answer, so a
+  // refusal is proven by what the server said and not only by a row count
+  // taken after a guessed delay.
+  async function answer(page: Page, action: Action, payload: unknown) {
+    const res = await forged(page, action, payload)
+    expect(res.status()).toBe(200)
+    return res.text()
+  }
+  const ADDED = '"state":"added"'
+  const REMOVED = '"state":"removed"'
+  const REFUSED = 'This entry cannot be voted on.'
+  const INVALID = 'Invalid input'
 
   test('adds a vote and takes it back; the count follows at once and the row follows in the database', async ({ page }) => {
     const id = await entry(FEEDBACK)
@@ -342,11 +376,11 @@ test.describe('up-votes', () => {
     await seedMember(2, 1)
     const id = await entry(FEEDBACK)
 
+    const connected = liveConnected(page)
     const dialogA = await openBoard(page)
     const buttonA = upvote(card(dialogA, FEEDBACK))
     await expect(buttonA).toHaveText('0')
-    // Give the shared SSE stream time to register LISTEN before the other person writes.
-    await page.waitForTimeout(1500)
+    await connected
 
     const other = await browser.newContext({ baseURL: TEST_ENV.AUTH_URL })
     await other.addCookies([await sessionCookieFor(2, 1)])
@@ -406,8 +440,8 @@ test.describe('up-votes', () => {
     // below actually reaches the action (an empty table would otherwise pass).
     const action = await captureAction(page, () => upvote(card(dialog, 'A control entry')).click())
     await expect.poll(async () => (await votesFor(control)).length).toBe(1)
-    await forged(page, action, { feedbackId: probe, voted: true })
-    await expect.poll(async () => (await votesFor(probe)).length).toBe(1)
+    expect(await answer(page, action, { feedbackId: probe, voted: true })).toContain(ADDED)
+    expect(await votesFor(probe)).toHaveLength(1)
 
     // A colleague's approved entry takes a vote through the real button.
     await upvote(card(dialog, 'Another member approved entry')).click()
@@ -415,14 +449,15 @@ test.describe('up-votes', () => {
     expect((await votesFor(theirsApproved))[0]).toMatchObject({ user_id: 1, org_id: 1 })
 
     // Now the hostile payloads: own entry, pending entries (mine and theirs),
-    // a rejected entry, forged identity, wrong types.
-    await forged(page, action, { feedbackId: own, voted: true })
-    await forged(page, action, { feedbackId: pending, voted: true })
-    await forged(page, action, { feedbackId: theirsPending, voted: true })
-    await forged(page, action, { feedbackId: theirsRejected, voted: true })
-    await forged(page, action, { feedbackId: String(control), voted: false })
-    await forged(page, action, { feedbackId: control, voted: 'no' })
-    await page.waitForTimeout(500)
+    // a rejected entry, wrong types. Each answer is read before the rows are
+    // counted, so the count is taken after the server finished, not after a
+    // delay, and the refusal itself is on record.
+    expect(await answer(page, action, { feedbackId: own, voted: true })).toContain(REFUSED)
+    expect(await answer(page, action, { feedbackId: pending, voted: true })).toContain(REFUSED)
+    expect(await answer(page, action, { feedbackId: theirsPending, voted: true })).toContain(REFUSED)
+    expect(await answer(page, action, { feedbackId: theirsRejected, voted: true })).toContain(REFUSED)
+    expect(await answer(page, action, { feedbackId: String(control), voted: false })).toContain(INVALID)
+    expect(await answer(page, action, { feedbackId: control, voted: 'no' })).toContain(INVALID)
     expect(await votesFor(own)).toHaveLength(0)
     expect(await votesFor(pending)).toHaveLength(0)
     expect(await votesFor(theirsPending)).toHaveLength(0)
@@ -430,11 +465,18 @@ test.describe('up-votes', () => {
     expect(await votesFor(control)).toHaveLength(1)
 
     // A forged voter identity is ignored: the row belongs to the session, not the payload.
-    await forged(page, action, { feedbackId: probe, voted: false })
-    await expect.poll(async () => (await votesFor(probe)).length).toBe(0)
-    await forged(page, action, { feedbackId: probe, voted: true, userId: 2, orgId: 2 })
-    await expect.poll(async () => (await votesFor(probe)).length).toBe(1)
+    expect(await answer(page, action, { feedbackId: probe, voted: false })).toContain(REMOVED)
+    expect(await votesFor(probe)).toHaveLength(0)
+    expect(await answer(page, action, { feedbackId: probe, voted: true, userId: 2, orgId: 2 })).toContain(ADDED)
+    expect(await votesFor(probe)).toHaveLength(1)
     expect((await votesFor(probe))[0]).toMatchObject({ user_id: 1, org_id: 1 })
+
+    // An entry un-approved after the vote was cast: the next add is refused
+    // rather than reported as stored, so a stale card is told no instead of
+    // being shown a vote. The row from before stays; nothing new is written.
+    await sql`UPDATE product_feedback SET status = 'pending' WHERE id = ${theirsApproved}`
+    expect(await answer(page, action, { feedbackId: theirsApproved, voted: true })).toContain(REFUSED)
+    expect(await votesFor(theirsApproved)).toHaveLength(1)
   })
 
   test('a burst of simultaneous adds from one person stores exactly one row, and a burst of removes leaves none', async ({ page }) => {
@@ -447,8 +489,8 @@ test.describe('up-votes', () => {
     // Every request names the wanted state, so the outcome is deterministic:
     // one row, and every response succeeded (the losers of the race see an
     // existing row, which is the state they asked for).
-    const adds = await Promise.all(Array.from({ length: 6 }, () => forged(page, action, { feedbackId: id, voted: true })))
-    for (const res of adds) expect(res.status()).toBe(200)
+    const adds = await Promise.all(Array.from({ length: 6 }, () => answer(page, action, { feedbackId: id, voted: true })))
+    for (const text of adds) expect(text).toContain(ADDED)
     expect(await votesFor(id)).toHaveLength(1)
     await expect(upvote(card(dialog, FEEDBACK))).toHaveText('1', { timeout: 10_000 })
 
@@ -456,8 +498,8 @@ test.describe('up-votes', () => {
     // person and entry is rejected.
     await expect(sql`INSERT INTO product_feedback_votes (feedback_id, user_id, org_id) VALUES (${id}, 1, 1)`).rejects.toMatchObject({ code: '23505' })
 
-    const removes = await Promise.all(Array.from({ length: 6 }, () => forged(page, action, { feedbackId: id, voted: false })))
-    for (const res of removes) expect(res.status()).toBe(200)
+    const removes = await Promise.all(Array.from({ length: 6 }, () => answer(page, action, { feedbackId: id, voted: false })))
+    for (const text of removes) expect(text).toContain(REMOVED)
     expect(await votesFor(id)).toHaveLength(0)
     await expect(upvote(card(dialog, FEEDBACK))).toHaveText('0', { timeout: 10_000 })
   })
@@ -489,21 +531,58 @@ test.describe('up-votes', () => {
     await expect.poll(order).toEqual(['Newer', 'Older'])
   })
 
-  test('votes cast by a deleted workspace disappear, and open dashboards see the count drop', async ({ page }) => {
+  test('purging a workspace removes the votes its members cast on another workspace\'s entries, and open dashboards see the count drop', async ({ page }) => {
     await seedMember(2, 2)
-    const id = await entry(FEEDBACK)
+    await seedMember(3, 1)
+    // The entry belongs to workspace 1 (written by a third member, so the
+    // viewer still gets a button); the vote comes from a member of workspace 2.
+    const id = await entry(FEEDBACK, { author: { userId: 3, orgId: 1 } })
     await sql`INSERT INTO product_feedback_votes (feedback_id, user_id, org_id) VALUES (${id}, 2, 2)`
 
+    const connected = liveConnected(page)
     const dialog = await openBoard(page)
     const button = upvote(card(dialog, FEEDBACK))
     await expect(button).toHaveText('1')
-    await page.waitForTimeout(1500)
+    await connected
 
-    // The workspace goes; its vote goes with it through the cascade, and the
-    // votes-table trigger wakes the dashboard.
-    await sql`DELETE FROM memberships WHERE org_id = 2`
-    await sql`DELETE FROM orgs WHERE id = 2`
-    await expect(button).toHaveText('0', { timeout: 10_000 })
+    // The same purge the workspace-deletion flow runs, against this database:
+    // the vote goes with the voter's workspace, the entry stays with its own,
+    // and the votes-table trigger wakes the dashboard.
+    await hardPurgeOrg(2)
     expect(await votesFor(id)).toHaveLength(0)
+    expect(await sql`SELECT id FROM product_feedback WHERE id = ${id}`).toHaveLength(1)
+    await expect(button).toHaveText('0', { timeout: 10_000 })
+  })
+
+  test('Most voted is ordered in the database before the row cap, and equal counts tie-break newest first', async ({ page }) => {
+    await seedMember(2, 1)
+    await seedMember(3, 1)
+    // Three old entries carrying every vote, then 201 newer ones with none:
+    // a newest-first cap of 200 drops all three, so if the votes order were
+    // applied after the cap the popular entry could not appear at all.
+    const popular = await entry('The popular old entry.')
+    const olderTied = await entry('The older of two tied entries.')
+    const newerTied = await entry('The newer of two tied entries.')
+    await sql`UPDATE product_feedback SET created_at = (now() - interval '3 minutes')::text WHERE id = ${popular}`
+    await sql`UPDATE product_feedback SET created_at = (now() - interval '2 minutes')::text WHERE id = ${olderTied}`
+    await sql`UPDATE product_feedback SET created_at = (now() - interval '1 minute')::text WHERE id = ${newerTied}`
+    await sql`INSERT INTO product_feedback_votes (feedback_id, user_id, org_id)
+      VALUES (${popular}, 2, 1), (${popular}, 3, 1), (${olderTied}, 2, 1), (${newerTied}, 2, 1)`
+    await sql`INSERT INTO product_feedback (author_label, body, status, approved_at)
+      SELECT 'Sam K · DevRel', 'Filler entry number ' || n || ' with nothing to say.', 'approved', now()::text
+      FROM generate_series(1, 201) AS n`
+
+    await page.goto('/dashboard')
+    const ids = async (path: string) => {
+      const res = await page.request.get(path)
+      expect(res.status()).toBe(200)
+      return ((await res.json()).feedback as { id: number }[]).map((f) => f.id)
+    }
+    const newest = await ids('/api/product-feedback')
+    expect(newest).toHaveLength(200)
+    expect(newest).not.toContain(popular)
+    const byVotes = await ids('/api/product-feedback?sort=votes')
+    expect(byVotes).toHaveLength(200)
+    expect(byVotes.slice(0, 3)).toEqual([popular, newerTied, olderTied])
   })
 })
