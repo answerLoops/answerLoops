@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { subscribeLiveEvents } from '@/lib/live-events'
-import type { BoardSnapshot } from '@/lib/product-feedback/validation'
+import type { BoardSnapshot, BoardSort } from '@/lib/product-feedback/validation'
 import { LogoMark } from '@/components/logo'
 import { FeedbackCard } from './feedback-card'
 import { FeedbackComposer } from './feedback-composer'
@@ -54,9 +54,14 @@ function subscribeSeenUpdateId(notify: () => void) {
   }
 }
 
-async function fetchSnapshot(signal?: AbortSignal): Promise<BoardSnapshot | null> {
+const SNAPSHOT_PATH = '/api/product-feedback'
+
+// The only request the widget ever makes. The order is the server's: it sorts
+// before its row cap, so "votes" ranks the whole board, not only the rows in
+// hand. The default order keeps the bare path.
+async function fetchSnapshot(sort: BoardSort, signal?: AbortSignal): Promise<BoardSnapshot | null> {
   try {
-    const res = await fetch('/api/product-feedback', { cache: 'no-store', signal })
+    const res = await fetch(sort === 'votes' ? `${SNAPSHOT_PATH}?sort=votes` : SNAPSHOT_PATH, { cache: 'no-store', signal })
     if (!res.ok) return null
     return (await res.json()) as BoardSnapshot
   } catch {
@@ -67,10 +72,7 @@ async function fetchSnapshot(signal?: AbortSignal): Promise<BoardSnapshot | null
 }
 
 type Tab = 'feedback' | 'updates'
-// Newest is the server's order. Most voted is sorted here, over the same
-// snapshot: the list is capped at 200 rows either way, so no second request.
-type Sort = 'newest' | 'votes'
-const SORTS: readonly [Sort, string][] = [
+const SORTS: readonly [BoardSort, string][] = [
   ['newest', 'Newest'],
   ['votes', 'Most voted'],
 ]
@@ -91,7 +93,9 @@ export function FeedbackWidget() {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('feedback')
   const [snapshot, setSnapshot] = useState<BoardSnapshot | null>(null)
-  const [sort, setSort] = useState<Sort>('newest')
+  const [sort, setSort] = useState<BoardSort>('newest')
+  // The live refetch reads the current sort without being re-subscribed.
+  const sortRef = useRef<BoardSort>('newest')
   const pillRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const wasOpen = useRef(false)
@@ -103,14 +107,23 @@ export function FeedbackWidget() {
   const seenUpdateId = useSyncExternalStore<number | null>(subscribeSeenUpdateId, readSeenUpdateId, () => null)
 
   const load = useCallback(async (signal?: AbortSignal) => {
-    const next = await fetchSnapshot(signal)
+    const next = await fetchSnapshot(sortRef.current, signal)
     if (next) setSnapshot(next)
   }, [])
+
+  const changeSort = useCallback(
+    (next: BoardSort) => {
+      sortRef.current = next
+      setSort(next)
+      void load()
+    },
+    [load],
+  )
 
   useEffect(() => {
     const controller = new AbortController()
     let debounce: ReturnType<typeof setTimeout> | undefined
-    fetchSnapshot(controller.signal).then((next) => {
+    fetchSnapshot(sortRef.current, controller.signal).then((next) => {
       if (next && !controller.signal.aborted) setSnapshot(next)
     })
 
@@ -162,12 +175,7 @@ export function FeedbackWidget() {
 
   const count = snapshot?.approvedCount ?? 0
   const updatesCount = snapshot?.updates.length ?? 0
-  // Array.prototype.sort is stable, so entries with equal counts keep the
-  // server's newest-first order — the tie-break the spec asks for, for free.
-  const feedback = useMemo(() => {
-    const items = snapshot?.feedback ?? []
-    return sort === 'votes' ? [...items].sort((a, b) => b.voteCount - a.voteCount) : items
-  }, [snapshot, sort])
+  const feedback = snapshot?.feedback ?? []
 
   if (!open) {
     return (
@@ -293,7 +301,7 @@ export function FeedbackWidget() {
                         key={id}
                         type="button"
                         aria-pressed={sort === id}
-                        onClick={() => setSort(id)}
+                        onClick={() => changeSort(id)}
                         className={`h-8 rounded-md px-3 text-xs font-semibold transition sm:h-7 sm:px-2.5 ${
                           sort === id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
                         }`}

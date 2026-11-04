@@ -77,6 +77,15 @@ export interface BoardUpdate {
   publishedAt: string
 }
 
+/** The order the panel asks for. The database sorts before the row cap, so
+ *  "votes" really is the highest counts across the whole board. */
+export type BoardSort = 'newest' | 'votes'
+
+/** Anything that is not exactly "votes" is the default; the value comes from a URL. */
+export function parseBoardSort(value: unknown): BoardSort {
+  return value === 'votes' ? 'votes' : 'newest'
+}
+
 export interface BoardSnapshot {
   /** Approved feedback only — the number shown on the collapsed pill. */
   approvedCount: number

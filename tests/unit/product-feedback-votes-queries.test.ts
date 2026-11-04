@@ -88,7 +88,10 @@ describe('the rule is in the SQL, not only in the component', () => {
 
   it('the snapshot computes the count and the viewer flag, and still filters by the original predicate', () => {
     const snapshot = flat(src.slice(src.indexOf('export async function getBoardSnapshot'), src.indexOf('export async function createProductFeedback')))
-    expect(snapshot).toContain('voteCount: sql<number>`(SELECT COUNT(*)::int FROM ${productFeedbackVotes}')
+    expect(snapshot).toContain('const voteCount = sql<number>`(SELECT COUNT(*)::int FROM ${productFeedbackVotes}')
+    // The order is decided in the database, before the row cap.
+    expect(snapshot).toContain("input.sort === 'votes' ? [desc(voteCount), desc(productFeedback.createdAt)] : [desc(productFeedback.createdAt)]")
+    expect(snapshot.indexOf('.orderBy(...order)')).toBeLessThan(snapshot.indexOf('.limit(200)'))
     expect(snapshot).toContain('viewerVoted: sql<boolean>`EXISTS (SELECT 1 FROM ${productFeedbackVotes}')
     expect(snapshot).toContain("or(eq(productFeedback.status, 'approved'), eq(productFeedback.userId, input.userId))")
   })

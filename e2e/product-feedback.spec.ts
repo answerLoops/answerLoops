@@ -456,16 +456,18 @@ test.describe('up-votes', () => {
     void newer
 
     const dialog = await openBoard(page)
-    const order = () => dialog.getByRole('listitem').allTextContents()
+    const order = async () => (await dialog.getByRole('listitem').allTextContents()).map((t) => /Older|Newer/.exec(t)?.[0])
     await expect(dialog.getByRole('button', { name: 'Newest' })).toHaveAttribute('aria-pressed', 'true')
-    expect((await order()).map((t) => /Older|Newer/.exec(t)?.[0])).toEqual(['Newer', 'Older'])
+    expect(await order()).toEqual(['Newer', 'Older'])
 
+    // Switching the sort asks the server for the votes order, so the list
+    // changes when that response lands, not on the click itself.
     await dialog.getByRole('button', { name: 'Most voted' }).click()
-    expect((await order()).map((t) => /Older|Newer/.exec(t)?.[0])).toEqual(['Older', 'Newer'])
+    await expect.poll(order).toEqual(['Older', 'Newer'])
     await expect(upvote(card(dialog, 'Older entry'))).toHaveText('2')
 
     await dialog.getByRole('button', { name: 'Newest' }).click()
-    expect((await order()).map((t) => /Older|Newer/.exec(t)?.[0])).toEqual(['Newer', 'Older'])
+    await expect.poll(order).toEqual(['Newer', 'Older'])
   })
 
   test('votes cast by a deleted workspace disappear, and open dashboards see the count drop', async ({ page }) => {

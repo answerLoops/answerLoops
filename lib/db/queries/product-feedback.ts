@@ -5,6 +5,7 @@ import {
   isReplyTag,
   type BoardFeedback,
   type BoardSnapshot,
+  type BoardSort,
   type BoardUpdate,
   type FeedbackStatus,
   type ReplyTag,
@@ -15,11 +16,20 @@ import {
  * Everything the widget renders, scoped to one viewer. Approved feedback is
  * visible to all; a submitter additionally sees their own pending/rejected
  * rows. Author identity is resolved here so ids and emails never reach a
- * client.
+ * client. The order is decided here, before the 200-row cap, so "votes"
+ * ranks the whole board and not only the newest rows.
  */
-export async function getBoardSnapshot(input: { userId: number }): Promise<BoardSnapshot> {
+export async function getBoardSnapshot(input: { userId: number; sort?: BoardSort }): Promise<BoardSnapshot> {
   const db = getDb()
   const visible = or(eq(productFeedback.status, 'approved'), eq(productFeedback.userId, input.userId))
+  // Vote facts are computed per row from the votes table; nothing about other
+  // voters leaves the database, only the count and the viewer's own
+  // membership in it. The count is also the sort key for "votes".
+  const voteCount = sql<number>`(SELECT COUNT(*)::int FROM ${productFeedbackVotes} WHERE ${productFeedbackVotes.feedbackId} = ${productFeedback.id})`
+  const order =
+    input.sort === 'votes'
+      ? [desc(voteCount), desc(productFeedback.createdAt)]
+      : [desc(productFeedback.createdAt)]
 
   const rows = await db
     .select({
@@ -35,16 +45,13 @@ export async function getBoardSnapshot(input: { userId: number }): Promise<Board
       replyTag: productFeedback.replyTag,
       repliedAt: productFeedback.repliedAt,
       orgName: orgs.name,
-      // Vote facts are computed per row from the votes table; nothing about
-      // other voters leaves the database, only the count and the viewer's own
-      // membership in it.
-      voteCount: sql<number>`(SELECT COUNT(*)::int FROM ${productFeedbackVotes} WHERE ${productFeedbackVotes.feedbackId} = ${productFeedback.id})`,
+      voteCount,
       viewerVoted: sql<boolean>`EXISTS (SELECT 1 FROM ${productFeedbackVotes} WHERE ${productFeedbackVotes.feedbackId} = ${productFeedback.id} AND ${productFeedbackVotes.userId} = ${input.userId})`,
     })
     .from(productFeedback)
     .leftJoin(orgs, eq(orgs.id, productFeedback.orgId))
     .where(visible)
-    .orderBy(desc(productFeedback.createdAt))
+    .orderBy(...order)
     .limit(200)
 
   const feedback: BoardFeedback[] = rows.map((r) => ({

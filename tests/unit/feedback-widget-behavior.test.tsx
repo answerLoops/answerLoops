@@ -282,8 +282,9 @@ describe('tab ARIA wiring', () => {
 })
 
 describe('sort', () => {
-  // Server order is newest-first: 30 (newest), 20, 10. Votes: 20 has most, 10
-  // and 30 tie, so Most voted must be 20 then 30 then 10 (tie keeps newest first).
+  // The server owns the order: it sorts before its row cap. The mock does
+  // what the real route does — newest-first by default, highest count first
+  // (ties newest-first) when asked for votes.
   function threeEntries(): BoardSnapshot {
     const base = snap(3).feedback[0]
     return {
@@ -296,41 +297,51 @@ describe('sort', () => {
       ],
     }
   }
+  function byVotes(): BoardSnapshot {
+    const s = threeEntries()
+    return { ...s, feedback: [...s.feedback].sort((a, b) => b.voteCount - a.voteCount) }
+  }
   const bodies = () => screen.getAllByRole('listitem').map((li) => li.textContent?.match(/(Newest|Middle|Oldest) entry/)?.[0])
+  const urls = () => fetchMock.mock.calls.map(([url]) => String(url))
 
   async function openWithThree() {
-    fetchMock.mockImplementation(async () => ok(threeEntries()))
+    fetchMock.mockImplementation(async (url: unknown) => ok(String(url).includes('sort=votes') ? byVotes() : threeEntries()))
     render(<FeedbackWidget />)
     await waitFor(() => expect(screen.getByRole('button', { name: /3 entries/i })).toBeTruthy())
     fireEvent.click(pill())
     await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(3))
   }
 
-  it('defaults to Newest, in the server order', async () => {
+  it('defaults to Newest, fetched from the bare path, in the server order', async () => {
     await openWithThree()
     expect(screen.getByRole('button', { name: 'Newest' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('false')
+    expect(urls()).toEqual(['/api/product-feedback'])
     expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry'])
   })
 
-  it('Most voted orders by count, ties staying newest-first, and Newest restores', async () => {
+  it('Most voted asks the server for the votes order and shows what comes back; Newest restores', async () => {
     await openWithThree()
     fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
-    expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
     expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('true')
+    await waitFor(() => expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry']))
+    expect(urls().at(-1)).toBe('/api/product-feedback?sort=votes')
     fireEvent.click(screen.getByRole('button', { name: 'Newest' }))
-    expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry'])
+    await waitFor(() => expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry']))
+    expect(urls().at(-1)).toBe('/api/product-feedback')
   })
 
-  it('keeps the chosen sort across a live refetch, without a second request shape', async () => {
+  it('a live refetch keeps the chosen sort, and nothing but the snapshot is ever requested', async () => {
     await openWithThree()
     fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
+    await waitFor(() => expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry']))
     await act(async () => {
       live.handler?.('resync')
     })
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(3))
+    expect(urls().at(-1)).toBe('/api/product-feedback?sort=votes')
     expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
-    for (const call of fetchMock.mock.calls) expect(call[0]).toBe('/api/product-feedback')
+    for (const u of urls()) expect(u).toMatch(/^\/api\/product-feedback(\?sort=votes)?$/)
   })
 
   it('shows no sort control on an empty board', async () => {
@@ -356,10 +367,11 @@ describe('sort', () => {
     expect(screen.getByRole('button', { name: 'Most voted' })).toBeTruthy()
   })
 
-  it('keeps the chosen sort after a trip to the Updates tab and back', async () => {
+  it('keeps the chosen sort after a trip to the Updates tab and back, without a new request', async () => {
     await openWithThree()
     fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
-    expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
+    await waitFor(() => expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry']))
+    const calls = fetchMock.mock.calls.length
 
     fireEvent.click(screen.getByRole('tab', { name: /^updates/i }))
     expect(screen.queryByRole('button', { name: 'Most voted' })).toBeNull()
@@ -369,5 +381,6 @@ describe('sort', () => {
     expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByRole('button', { name: 'Newest' }).getAttribute('aria-pressed')).toBe('false')
     expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
+    expect(fetchMock.mock.calls.length).toBe(calls)
   })
 })
