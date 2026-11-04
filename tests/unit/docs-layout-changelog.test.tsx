@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import type { ReactElement } from 'react'
 
@@ -47,6 +48,24 @@ describe('docs layout changelog link', () => {
     expect(docsLayout.dynamic).toBe('force-dynamic')
   })
 
+  it('styles both docs CTAs in the sidebar with accessible interaction states', () => {
+    const css = readFileSync('app/docs/docs.css', 'utf8')
+
+    for (const href of [
+      '/login',
+      'https://dub.sh/sign-in-button',
+      '/start-trial',
+      'https://dub.sh/start-a-trial',
+    ]) {
+      expect(css).toContain(`#nd-sidebar a[href='${href}']`)
+      expect(css).toContain(`#nd-sidebar a[href='${href}']:focus-visible`)
+      expect(css).toContain(`#nd-sidebar a[href='${href}']:active`)
+    }
+
+    expect(css).toContain('var(--docs-navy-hover)')
+    expect(css).not.toContain('#nd-nav a[href')
+  })
+
   it('puts the link in the sidebar footer on the managed deployment', () => {
     process.env.DEPLOYMENT_MODE = 'cloud'
     const footer = layoutProps().sidebar?.footer
@@ -82,7 +101,7 @@ describe('docs layout changelog link', () => {
     }
   })
 
-  it('keeps the sign-in and start entries in the header either way', () => {
+  it('keeps the sign-in and start CTA entries configured in the docs layout', () => {
     delete process.env.DEPLOYMENT_MODE
     const links = layoutProps().links
     expect(links).toHaveLength(2)
