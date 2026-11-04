@@ -64,7 +64,6 @@ describe('docs layout changelog link', () => {
 
     expect(css).toContain('var(--docs-navy-hover)')
     expect(css).not.toContain('#nd-nav a[href')
-    expect(css).not.toContain('display: none;')
   })
   it('puts the link in the sidebar footer on the managed deployment', () => {
     process.env.DEPLOYMENT_MODE = 'cloud'

@@ -124,7 +124,7 @@ a[data-card] > div:has(> [role='img']) {
 /* Docs sidebar CTAs — match the marketing site's secondary/primary hierarchy. */
 #nd-sidebar a[href='/login'],
 #nd-sidebar a[href='https://dub.sh/sign-in-button'] {
-  display: inline-flex;
+  display: flex;
   min-height: 40px;
   align-items: center;
   justify-content: center;
@@ -144,7 +144,7 @@ a[data-card] > div:has(> [role='img']) {
 
 #nd-sidebar a[href='/start-trial'],
 #nd-sidebar a[href='https://dub.sh/start-a-trial'] {
-  display: inline-flex;
+  display: flex;
   min-height: 40px;
   align-items: center;
   justify-content: center;
