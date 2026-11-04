@@ -263,26 +263,36 @@ describe('up-vote control', () => {
     expect(actions.voteProductFeedbackAction).toHaveBeenCalledWith({ feedbackId: 77, voted: true })
   })
 
-  it('keeps the confirmed count while the parent re-renders with the same stale prop, then yields to a new prop', async () => {
-    const { rerender } = renderCard(item({ voteCount: 2 }))
+  it('keeps the confirmed count across a re-render of the same snapshot, and yields to any new snapshot, equal numbers or not', async () => {
+    const stale = item({ voteCount: 2 })
+    const { rerender } = renderCard(stale)
     fireEvent.click(upvote()!)
     await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1))
     await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
     expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
     expect(upvote()!.textContent).toContain('3')
 
-    // The parent re-renders before its refetch lands: same prop, so the
-    // server's confirmed answer must not flicker back to the stale 2.
+    // The parent re-renders before its refetch lands: same snapshot object,
+    // so the server's confirmed answer must not flicker back to the stale 2.
     rerender(
       <ul>
-        <FeedbackCard item={item({ voteCount: 2 })} />
+        <FeedbackCard item={stale} />
       </ul>,
     )
     expect(upvote()!.textContent).toContain('3')
     expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
 
-    // The refetch arrives with a different count (others voted too): the
-    // snapshot wins and the remembered answer is dropped.
+    // A refetch lands carrying the click-time numbers — someone undid the
+    // vote before it arrived. New object, so the server's word wins.
+    rerender(
+      <ul>
+        <FeedbackCard item={item({ voteCount: 2 })} />
+      </ul>,
+    )
+    expect(upvote()!.textContent).toContain('2')
+    expect(upvote()!.getAttribute('aria-pressed')).toBe('false')
+
+    // And a refetch with a different count (others voted too) is shown as is.
     rerender(
       <ul>
         <FeedbackCard item={item({ voteCount: 7, viewerVoted: true })} />
