@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { START_HREF, PRICING_HREF } from '@/components/marketing/nav-shared'
 import { redirect } from 'next/navigation'
-import { AnimatedChat } from '@/components/marketing/animated-chat'
+import { AnswerLoopOverview } from '@/components/marketing/answer-loop-overview'
 import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
 import { MarketingPage, TrialCta } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
@@ -11,8 +11,6 @@ import { ORDERED_PLANS } from '@/lib/billing/plans'
 import { GITHUB_SOURCE_URL, marketingSiteEnabled } from '@/lib/site'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { BookOpen, ShieldCheck, MessageCircle, MessagesSquare, FileQuestion, Cloud, Server, Terminal, GraduationCap, Users, Palette, Blocks, Building2 } from 'lucide-react'
-import { IntegrationIcon } from '@/components/marketing/integration-icon'
-import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 
 export const dynamic = 'force-dynamic'
 const PAGE_TITLE = 'AI community support from your docs | answerLoops'
@@ -125,7 +123,7 @@ export default function LandingPage() {
         }}
       />
       <section className="marketing-home-hero">
-        <div className="marketing-container marketing-home-grid">
+        <div className="marketing-container marketing-home-grid home-hero-stacked">
           <div className="home-hero-copy">
             <p className="marketing-eyebrow hero-positioning">
               <span className="hero-positioning-dot" aria-hidden="true" />
@@ -160,22 +158,7 @@ export default function LandingPage() {
               No card required. Every feature is free for 14 days, with no obligation.
             </p>
           </div>
-          <AnimatedChat />
-          <div
-            id="integrations"
-            className="channel-band scroll-mt-20"
-            aria-label="Supported channels"
-          >
-            <p>Connect the channels your community uses.</p>
-            <div className="marketing-channel-list">
-              {MARKETED_CHANNELS.map(({ name, href, color }) => (
-                <Link key={href} href={href}>
-                  <IntegrationIcon name={name} color={color} />
-                  <span>{name}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
+          <AnswerLoopOverview />
         </div>
       </section>
       <section id="how-it-works" className="marketing-section scroll-mt-20">
