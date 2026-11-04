@@ -100,6 +100,7 @@ export default async function WidgetPage({ params }: Props) {
       orgName={org.name}
       showBranding={!whiteLabel}
       isSelfPreview={isSelfPreview}
+      leadCaptureMode={org.widget_lead_capture_mode}
     />
   )
 }

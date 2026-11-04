@@ -16,11 +16,13 @@ export function widgetChatRequest({
   widgetToken,
   renderToken,
   visitorId,
+  turnId,
   messages,
 }: {
   widgetToken?: unknown
   renderToken?: unknown
   visitorId?: unknown
+  turnId?: unknown
   messages?: unknown
 }): Request {
   const envelope = {
@@ -32,7 +34,7 @@ export function widgetChatRequest({
       tools: [],
       context: [],
       messages,
-      forwardedProps: { widgetToken, renderToken, visitorId },
+      forwardedProps: { widgetToken, renderToken, visitorId, turnId },
     },
   }
   return new Request('https://app.test/api/widget/chat', {
