@@ -64,9 +64,11 @@ export interface BoardFeedback {
   viewerVoted: boolean
 }
 
-/** Outcome of one click on the up arrow. `refused` means the rule said no: the
- *  entry is not approved, it is the viewer's own, or the id matched nothing. */
-export type VoteToggleResult = 'added' | 'removed' | 'refused'
+/** The state a vote request ended in. `added` and `removed` are the final
+ *  state whether or not the request changed anything; `refused` means the rule
+ *  said no: the entry is not approved, it is the viewer's own, or the id
+ *  matched nothing. */
+export type VoteResult = 'added' | 'removed' | 'refused'
 
 export interface BoardUpdate {
   id: number

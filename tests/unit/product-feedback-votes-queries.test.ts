@@ -12,50 +12,58 @@ import type { BoardFeedback } from '@/lib/product-feedback/validation'
 const { getDb } = vi.hoisted(() => ({ getDb: vi.fn() }))
 vi.mock('@/lib/db/drizzle', () => ({ getDb }))
 
-import { toggleProductFeedbackVote } from '@/lib/db/queries/product-feedback'
+import { setProductFeedbackVote } from '@/lib/db/queries/product-feedback'
 
 const ROOT = process.cwd()
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf-8')
 const flat = (s: string) => s.replace(/\s+/g, ' ')
 
-function fakeTx(deleteRows: { id: number }[], executeRows: { id: number }[]) {
-  const returning = vi.fn(async () => deleteRows)
-  const where = vi.fn(() => ({ returning }))
+function fakeDb(insertRows: { id: number }[], existingRows: { id: number }[]) {
+  const where = vi.fn(async () => undefined)
   const del = vi.fn(() => ({ where }))
-  const execute = vi.fn(async () => executeRows)
-  const tx = { delete: del, execute }
-  getDb.mockReturnValue({ transaction: async (fn: (t: typeof tx) => Promise<unknown>) => fn(tx) })
-  return { del, execute }
+  const execute = vi.fn(async () => insertRows)
+  const limit = vi.fn(async () => existingRows)
+  const select = vi.fn(() => ({ from: () => ({ where: () => ({ limit }) }) }))
+  getDb.mockReturnValue({ delete: del, execute, select })
+  return { del, execute, select }
 }
 
 const VIEWER = { feedbackId: 7, userId: 42, orgId: 3 }
 
-describe('toggleProductFeedbackVote', () => {
+describe('setProductFeedbackVote', () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it('retracts when the viewer already voted, and never tries to add', async () => {
-    const { del, execute } = fakeTx([{ id: 11 }], [])
-    await expect(toggleProductFeedbackVote(VIEWER)).resolves.toBe('removed')
+  it('removing is a plain delete and reports the final state, whether or not a row existed', async () => {
+    const { del, execute } = fakeDb([], [])
+    await expect(setProductFeedbackVote({ ...VIEWER, voted: false })).resolves.toBe('removed')
     expect(del).toHaveBeenCalledTimes(1)
     expect(execute).not.toHaveBeenCalled()
   })
 
-  it('adds when no vote existed and the entry qualified', async () => {
-    const { execute } = fakeTx([], [{ id: 12 }])
-    await expect(toggleProductFeedbackVote(VIEWER)).resolves.toBe('added')
+  it('adds when the entry qualified', async () => {
+    const { execute, select } = fakeDb([{ id: 12 }], [])
+    await expect(setProductFeedbackVote({ ...VIEWER, voted: true })).resolves.toBe('added')
     expect(execute).toHaveBeenCalledTimes(1)
+    expect(select).not.toHaveBeenCalled()
   })
 
-  it('refuses when no vote existed and the insert predicate matched nothing', async () => {
-    fakeTx([], [])
-    await expect(toggleProductFeedbackVote(VIEWER)).resolves.toBe('refused')
+  it('treats an existing vote as success — a doubled or retried add changes nothing and is not an error', async () => {
+    const { del } = fakeDb([], [{ id: 12 }])
+    await expect(setProductFeedbackVote({ ...VIEWER, voted: true })).resolves.toBe('added')
+    expect(del).not.toHaveBeenCalled()
+  })
+
+  it('refuses when nothing was written and no vote exists — the rule said no', async () => {
+    fakeDb([], [])
+    await expect(setProductFeedbackVote({ ...VIEWER, voted: true })).resolves.toBe('refused')
   })
 
   it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
-    'refuses a hostile feedback id %j before touching the database',
+    'refuses a hostile feedback id %j before touching the database, in both directions',
     async (feedbackId) => {
-      fakeTx([{ id: 1 }], [{ id: 1 }])
-      await expect(toggleProductFeedbackVote({ ...VIEWER, feedbackId })).resolves.toBe('refused')
+      fakeDb([{ id: 1 }], [{ id: 1 }])
+      await expect(setProductFeedbackVote({ ...VIEWER, feedbackId, voted: true })).resolves.toBe('refused')
+      await expect(setProductFeedbackVote({ ...VIEWER, feedbackId, voted: false })).resolves.toBe('refused')
       expect(getDb).not.toHaveBeenCalled()
     },
   )
@@ -63,7 +71,7 @@ describe('toggleProductFeedbackVote', () => {
 
 describe('the rule is in the SQL, not only in the component', () => {
   const src = read('lib/db/queries/product-feedback.ts')
-  const start = src.indexOf('export async function toggleProductFeedbackVote')
+  const start = src.indexOf('export async function setProductFeedbackVote')
   const toggle = flat(src.slice(start, src.indexOf('\n}\n', start)))
 
   it('adds only where the entry is approved and not the viewer own', () => {
@@ -71,10 +79,11 @@ describe('the rule is in the SQL, not only in the component', () => {
     expect(toggle).toContain('${productFeedback.userId} IS DISTINCT FROM ${input.userId}')
   })
 
-  it('writes the voter workspace, tolerates a racing duplicate, and runs in one transaction', () => {
+  it('writes the voter workspace and lets the unique constraint settle a racing duplicate', () => {
     expect(toggle).toContain('INSERT INTO ${productFeedbackVotes} (feedback_id, user_id, org_id)')
     expect(toggle).toContain('ON CONFLICT DO NOTHING')
-    expect(toggle).toContain('.transaction(')
+    // Each statement stands alone; nothing here pretends a transaction serialises clicks.
+    expect(toggle).not.toContain('.transaction(')
   })
 
   it('the snapshot computes the count and the viewer flag, and still filters by the original predicate', () => {

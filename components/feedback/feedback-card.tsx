@@ -1,7 +1,7 @@
 'use client'
 
 import { useOptimistic, useState, useTransition } from 'react'
-import { toggleProductFeedbackVoteAction } from '@/lib/actions/product-feedback'
+import { voteProductFeedbackAction } from '@/lib/actions/product-feedback'
 import { formatBoardDate } from '@/lib/product-feedback/dates'
 import { REPLY_TAG_LABELS, type BoardFeedback } from '@/lib/product-feedback/validation'
 import { LogoMark } from '@/components/logo'
@@ -41,8 +41,9 @@ function VoteButton({ item, onError }: { item: BoardFeedback; onError: (message:
     startTransition(async () => {
       setOptimistic(next)
       try {
-        // Only the entry id travels; the server decides who is voting.
-        const result = await toggleProductFeedbackVoteAction({ feedbackId: item.id })
+        // The entry id and the wanted state travel; the server decides who is
+        // voting, and a stale card cannot flip the vote the wrong way.
+        const result = await voteProductFeedbackAction({ feedbackId: item.id, voted: next })
         if (!result.ok) {
           // The optimistic layer falls away with the transition; say why.
           onError(result.error)

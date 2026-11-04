@@ -83,6 +83,6 @@ describe('when the widget is not enabled', () => {
 
 describe('exports', () => {
   it('exposes only member actions (submit, up-vote) — moderation, replies and updates are written by operator tooling outside this app', () => {
-    expect(Object.keys(actions).sort()).toEqual(['submitProductFeedbackAction', 'toggleProductFeedbackVoteAction'])
+    expect(Object.keys(actions).sort()).toEqual(['submitProductFeedbackAction', 'voteProductFeedbackAction'])
   })
 })

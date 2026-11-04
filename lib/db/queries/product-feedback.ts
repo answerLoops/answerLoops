@@ -8,7 +8,7 @@ import {
   type BoardUpdate,
   type FeedbackStatus,
   type ReplyTag,
-  type VoteToggleResult,
+  type VoteResult,
 } from '@/lib/product-feedback/validation'
 
 /**
@@ -105,52 +105,61 @@ export async function createProductFeedback(input: {
 }
 
 /**
- * One click on the up arrow. If the viewer already voted on this entry the
- * vote is retracted; otherwise a vote is added — but only where the entry is
- * approved and not the viewer's own. That predicate IS the rule: hiding the
- * arrow in the UI is a courtesy, this is what refuses a self-vote or a vote on
- * a pending entry, whatever the client sent. One transaction so the
- * retract-or-add decision cannot interleave with another click.
+ * Set the caller's up-vote on an entry to the state they asked for. Removing
+ * is a plain delete, so repeating it is harmless. Adding inserts only where
+ * the entry is approved and not the caller's own — that predicate IS the
+ * rule; hiding the arrow in the UI is a courtesy — and an existing row counts
+ * as success, so a retried or doubled request lands in the same place. The
+ * UNIQUE (feedback_id, user_id) constraint is what keeps one vote per person
+ * under concurrent adds; ON CONFLICT DO NOTHING turns the loser's insert into
+ * a no-op instead of an error. No transaction: every statement here is
+ * idempotent on its own.
  *
  * org_id on the vote is the voter's workspace, so hardPurgeOrg can find it.
  */
-export async function toggleProductFeedbackVote(input: {
+export async function setProductFeedbackVote(input: {
   feedbackId: number
   userId: number
   orgId: number
-}): Promise<VoteToggleResult> {
+  voted: boolean
+}): Promise<VoteResult> {
   // Cheap guard before any query: the action validates, this never trusts it.
   if (!Number.isInteger(input.feedbackId) || input.feedbackId < 1) return 'refused'
+  const db = getDb()
+  const own = and(
+    eq(productFeedbackVotes.feedbackId, input.feedbackId),
+    eq(productFeedbackVotes.userId, input.userId),
+  )
 
-  return getDb().transaction(async (tx) => {
-    const retracted = await tx
-      .delete(productFeedbackVotes)
-      .where(
-        and(
-          eq(productFeedbackVotes.feedbackId, input.feedbackId),
-          eq(productFeedbackVotes.userId, input.userId),
-        ),
-      )
-      .returning({ id: productFeedbackVotes.id })
-    if (retracted.length > 0) return 'removed'
+  if (!input.voted) {
+    await db.delete(productFeedbackVotes).where(own)
+    return 'removed'
+  }
 
-    // INSERT ... SELECT so the eligibility check and the write are one
-    // statement. IS DISTINCT FROM (not <>) because seeded example rows have a
-    // NULL author and are votable. ON CONFLICT covers the same person adding
-    // twice in a race: the second insert writes nothing and reports `refused`,
-    // and the board still shows one vote.
-    const inserted = (await tx.execute(sql`
-      INSERT INTO ${productFeedbackVotes} (feedback_id, user_id, org_id)
-      SELECT ${productFeedback.id}, ${input.userId}, ${input.orgId}
-      FROM ${productFeedback}
-      WHERE ${productFeedback.id} = ${input.feedbackId}
-        AND ${productFeedback.status} = 'approved'
-        AND ${productFeedback.userId} IS DISTINCT FROM ${input.userId}
-      ON CONFLICT DO NOTHING
-      RETURNING id
-    `)) as unknown as { id: number }[]
-    return inserted.length > 0 ? 'added' : 'refused'
-  })
+  // INSERT ... SELECT so the eligibility check and the write are one
+  // statement. IS DISTINCT FROM (not <>) because seeded example rows have a
+  // NULL author and are votable.
+  const inserted = (await db.execute(sql`
+    INSERT INTO ${productFeedbackVotes} (feedback_id, user_id, org_id)
+    SELECT ${productFeedback.id}, ${input.userId}, ${input.orgId}
+    FROM ${productFeedback}
+    WHERE ${productFeedback.id} = ${input.feedbackId}
+      AND ${productFeedback.status} = 'approved'
+      AND ${productFeedback.userId} IS DISTINCT FROM ${input.userId}
+    ON CONFLICT DO NOTHING
+    RETURNING id
+  `)) as unknown as { id: number }[]
+  if (inserted.length > 0) return 'added'
+
+  // Nothing written: either the vote already existed (a doubled or retried
+  // request — the state the caller asked for is already true) or the rule
+  // refused it. Only the first is success.
+  const [existing] = await db
+    .select({ id: productFeedbackVotes.id })
+    .from(productFeedbackVotes)
+    .where(own)
+    .limit(1)
+  return existing ? 'added' : 'refused'
 }
 
 /**

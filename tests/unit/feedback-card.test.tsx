@@ -3,7 +3,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 import type { BoardFeedback } from '@/lib/product-feedback/validation'
 
-const actions = vi.hoisted(() => ({ toggleProductFeedbackVoteAction: vi.fn() }))
+const actions = vi.hoisted(() => ({ voteProductFeedbackAction: vi.fn() }))
 vi.mock('@/lib/actions/product-feedback', () => actions)
 
 import { FeedbackCard } from '@/components/feedback/feedback-card'
@@ -11,7 +11,7 @@ import { FeedbackCard } from '@/components/feedback/feedback-card'
 afterEach(cleanup)
 beforeEach(() => {
   vi.clearAllMocks()
-  actions.toggleProductFeedbackVoteAction.mockResolvedValue({ ok: true, state: 'added' })
+  actions.voteProductFeedbackAction.mockResolvedValue({ ok: true, state: 'added' })
 })
 
 // Midday UTC keeps the calendar day stable in every realistic local timezone.
@@ -225,19 +225,19 @@ describe('up-vote control', () => {
 
   it('counts the vote at once on click, then keeps it when the server agrees', async () => {
     let resolve!: (v: unknown) => void
-    actions.toggleProductFeedbackVoteAction.mockImplementation(() => new Promise((r) => (resolve = r)))
+    actions.voteProductFeedbackAction.mockImplementation(() => new Promise((r) => (resolve = r)))
     renderCard(item({ voteCount: 2 }))
     fireEvent.click(upvote()!)
     await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('true'))
     expect(upvote()!.textContent).toContain('3')
     resolve({ ok: true, state: 'added' })
-    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledWith({ feedbackId: 1 }))
+    await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledWith({ feedbackId: 1, voted: true }))
     await waitFor(() => expect(upvote()!.textContent).toContain('3'))
     expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
   })
 
   it('takes the vote back on a second click', async () => {
-    actions.toggleProductFeedbackVoteAction.mockResolvedValue({ ok: true, state: 'removed' })
+    actions.voteProductFeedbackAction.mockResolvedValue({ ok: true, state: 'removed' })
     renderCard(item({ voteCount: 5, viewerVoted: true }))
     fireEvent.click(screen.getByRole('button', { name: /remove your upvote/i }))
     await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('false'))
@@ -245,7 +245,7 @@ describe('up-vote control', () => {
   })
 
   it('reverts and shows the message when the server refuses', async () => {
-    actions.toggleProductFeedbackVoteAction.mockResolvedValue({ ok: false, error: 'This entry cannot be voted on.' })
+    actions.voteProductFeedbackAction.mockResolvedValue({ ok: false, error: 'This entry cannot be voted on.' })
     renderCard(item({ voteCount: 2 }))
     fireEvent.click(upvote()!)
     expect(await screen.findByText('This entry cannot be voted on.')).toBeTruthy()
@@ -253,17 +253,17 @@ describe('up-vote control', () => {
     expect(upvote()!.textContent).toContain('2')
   })
 
-  it('sends only the entry id — never who is voting', async () => {
+  it('sends the entry id and the wanted state — never who is voting', async () => {
     renderCard(item({ id: 77 }))
     fireEvent.click(upvote()!)
-    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1))
-    expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledWith({ feedbackId: 77 })
+    await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1))
+    expect(actions.voteProductFeedbackAction).toHaveBeenCalledWith({ feedbackId: 77, voted: true })
   })
 
   it('keeps the confirmed count while the parent re-renders with the same stale prop, then yields to a new prop', async () => {
     const { rerender } = renderCard(item({ voteCount: 2 }))
     fireEvent.click(upvote()!)
-    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('true'))
     expect(upvote()!.textContent).toContain('3')
 
@@ -290,10 +290,10 @@ describe('up-vote control', () => {
 
   it('follows the server answer when it disagrees with the optimistic guess (vote already cast elsewhere)', async () => {
     // The prop says "not voted", but another tab already voted, so the toggle removes it.
-    actions.toggleProductFeedbackVoteAction.mockResolvedValue({ ok: true, state: 'removed' })
+    actions.voteProductFeedbackAction.mockResolvedValue({ ok: true, state: 'removed' })
     renderCard(item({ voteCount: 2 }))
     fireEvent.click(upvote()!)
-    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1))
     await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('false'))
     expect(upvote()!.textContent).toContain('2')
     expect(screen.queryByRole('status')).toBeNull()
@@ -301,10 +301,10 @@ describe('up-vote control', () => {
 
   it('keeps the card on screen, reverts and re-enables the button when the action rejects outright', async () => {
     // A network blip rejects the server action instead of returning { ok: false }.
-    actions.toggleProductFeedbackVoteAction.mockRejectedValue(new Error('network down'))
+    actions.voteProductFeedbackAction.mockRejectedValue(new Error('network down'))
     const { container } = renderCard(item({ voteCount: 2, body: 'Still here after the blip.' }))
     fireEvent.click(upvote()!)
-    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1))
     // Let the rejection settle before looking at what is left on screen.
     await act(async () => {})
     // The card must survive the failure — a rejected vote is not a reason to blank the board.
@@ -317,23 +317,23 @@ describe('up-vote control', () => {
 
   it('ignores a second click while the first request is still in flight', async () => {
     let resolve!: (v: unknown) => void
-    actions.toggleProductFeedbackVoteAction.mockImplementation(() => new Promise((r) => (resolve = r)))
+    actions.voteProductFeedbackAction.mockImplementation(() => new Promise((r) => (resolve = r)))
     renderCard(item({ voteCount: 2 }))
     fireEvent.click(upvote()!)
     await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(true))
     fireEvent.click(upvote()!)
     fireEvent.click(upvote()!)
-    expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1)
+    expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1)
     // Still the optimistic +1 — the extra clicks did not toggle it back.
     expect(upvote()!.textContent).toContain('3')
     resolve({ ok: true, state: 'added' })
     await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
-    expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1)
+    expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1)
     expect(upvote()!.textContent).toContain('3')
   })
 
   it('clears the refusal message on the next click', async () => {
-    actions.toggleProductFeedbackVoteAction.mockResolvedValueOnce({ ok: false, error: 'Try again in a moment.' })
+    actions.voteProductFeedbackAction.mockResolvedValueOnce({ ok: false, error: 'Try again in a moment.' })
     renderCard(item({ voteCount: 2 }))
     fireEvent.click(upvote()!)
     expect(await screen.findByText('Try again in a moment.')).toBeTruthy()
@@ -344,6 +344,6 @@ describe('up-vote control', () => {
     await waitFor(() => expect(screen.queryByText('Try again in a moment.')).toBeNull())
     await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('true'))
     expect(upvote()!.textContent).toContain('3')
-    expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(2)
+    expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(2)
   })
 })

@@ -23,6 +23,9 @@ test.afterAll(async () => {
 
 test.beforeEach(async () => {
   await sql`DELETE FROM product_feedback_votes`
+  // Vote calls are rate-limited per person per hour and the counters live in
+  // the database, so repeated local runs would otherwise trip the cap.
+  await sql`DELETE FROM rate_limit_buckets WHERE key LIKE 'product-feedback-vote:%'`
   await sql`DELETE FROM product_feedback`
   await sql`DELETE FROM product_updates`
 })
@@ -393,13 +396,14 @@ test.describe('up-votes', () => {
     // below actually reaches the action (an empty table would otherwise pass).
     const action = await captureAction(page, () => upvote(card(dialog, 'A control entry')).click())
     await expect.poll(async () => (await votesFor(control)).length).toBe(1)
-    await forged(page, action, { feedbackId: probe })
+    await forged(page, action, { feedbackId: probe, voted: true })
     await expect.poll(async () => (await votesFor(probe)).length).toBe(1)
 
-    // Now the hostile payloads: own entry, pending entry, forged identity, wrong type.
-    await forged(page, action, { feedbackId: own })
-    await forged(page, action, { feedbackId: pending })
-    await forged(page, action, { feedbackId: String(control) })
+    // Now the hostile payloads: own entry, pending entry, forged identity, wrong types.
+    await forged(page, action, { feedbackId: own, voted: true })
+    await forged(page, action, { feedbackId: pending, voted: true })
+    await forged(page, action, { feedbackId: String(control), voted: false })
+    await forged(page, action, { feedbackId: control, voted: 'no' })
     await page.waitForTimeout(500)
     expect(await votesFor(own)).toHaveLength(0)
     expect(await votesFor(pending)).toHaveLength(0)
@@ -407,25 +411,36 @@ test.describe('up-votes', () => {
 
     // A forged voter identity is ignored: the row belongs to the session, not the payload.
     await seedMember(2, 1)
-    await forged(page, action, { feedbackId: probe })
+    await forged(page, action, { feedbackId: probe, voted: false })
     await expect.poll(async () => (await votesFor(probe)).length).toBe(0)
-    await forged(page, action, { feedbackId: probe, userId: 2, orgId: 2 })
+    await forged(page, action, { feedbackId: probe, voted: true, userId: 2, orgId: 2 })
     await expect.poll(async () => (await votesFor(probe)).length).toBe(1)
     expect((await votesFor(probe))[0]).toMatchObject({ user_id: 1, org_id: 1 })
   })
 
-  test('a burst of simultaneous votes from one person never stores more than one row', async ({ page }) => {
+  test('a burst of simultaneous adds from one person stores exactly one row, and a burst of removes leaves none', async ({ page }) => {
     const id = await entry(FEEDBACK)
     const dialog = await openBoard(page)
     const action = await captureAction(page, () => upvote(card(dialog, FEEDBACK)).click())
     await expect.poll(async () => (await votesFor(id)).length).toBe(1)
     await sql`DELETE FROM product_feedback_votes WHERE feedback_id = ${id}`
 
-    await Promise.all(Array.from({ length: 6 }, () => forged(page, action, { feedbackId: id })))
-    const rows = await votesFor(id)
-    expect(rows.length).toBeLessThanOrEqual(1)
-    // Whatever the race settled on, the panel agrees with the table.
-    await expect(upvote(card(dialog, FEEDBACK))).toHaveText(String(rows.length), { timeout: 10_000 })
+    // Every request names the wanted state, so the outcome is deterministic:
+    // one row, and every response succeeded (the losers of the race see an
+    // existing row, which is the state they asked for).
+    const adds = await Promise.all(Array.from({ length: 6 }, () => forged(page, action, { feedbackId: id, voted: true })))
+    for (const res of adds) expect(res.status()).toBe(200)
+    expect(await votesFor(id)).toHaveLength(1)
+    await expect(upvote(card(dialog, FEEDBACK))).toHaveText('1', { timeout: 10_000 })
+
+    // The constraint itself, straight at the table: a second row for the same
+    // person and entry is rejected.
+    await expect(sql`INSERT INTO product_feedback_votes (feedback_id, user_id, org_id) VALUES (${id}, 1, 1)`).rejects.toMatchObject({ code: '23505' })
+
+    const removes = await Promise.all(Array.from({ length: 6 }, () => forged(page, action, { feedbackId: id, voted: false })))
+    for (const res of removes) expect(res.status()).toBe(200)
+    expect(await votesFor(id)).toHaveLength(0)
+    await expect(upvote(card(dialog, FEEDBACK))).toHaveText('0', { timeout: 10_000 })
   })
 
   test('Most voted reorders the list by count and Newest restores the server order', async ({ page }) => {

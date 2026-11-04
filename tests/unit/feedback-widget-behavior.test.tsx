@@ -10,7 +10,7 @@ vi.mock('@/lib/live-events', () => ({
     return live.unsubscribe
   },
 }))
-vi.mock('@/lib/actions/product-feedback', () => ({ submitProductFeedbackAction: vi.fn(), toggleProductFeedbackVoteAction: vi.fn() }))
+vi.mock('@/lib/actions/product-feedback', () => ({ submitProductFeedbackAction: vi.fn(), voteProductFeedbackAction: vi.fn() }))
 
 import { FeedbackWidget } from '@/components/feedback/feedback-widget'
 
