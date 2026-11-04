@@ -146,13 +146,43 @@ jobs:
         if: steps.token.outputs.present == 'true'
         uses: snyk/actions/setup@9adf32b1121593767fc3c057af55b55db032dc04  # v1.0.0
 
-      # --fail-on=upgradable mirrors Trivy's ignore-unfixed: only fail when a
-      # fix exists, so an advisory with no patched release does not block every PR.
-      - name: Snyk test (open source dependencies)
+      # --exclude=security-tools skips .github/security-tools/requirements.txt: Snyk
+      # resolves Python projects by reading installed packages, this job does not
+      # install them, and Trivy and Dependabot already cover that file.
+      #
+      # Snapshot to the private Snyk dashboard first, so the findings are there
+      # even when the gate below fails. Only pushes to the default branch upload:
+      # a pull request snapshot would replace the baseline with unmerged code.
+      - name: Snyk monitor (private dashboard)
+        if: steps.token.outputs.present == 'true' && github.event_name != 'pull_request'
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}  # zizmor: ignore[secrets-outside-env] repo-level secret, read-only scan, no deploy environment exists
+        run: snyk monitor --all-projects --exclude=security-tools
+
+      # The gate keeps working but its findings are not printed: this is a
+      # public repository and the job log is public, so stdout (where `snyk
+      # test` writes every finding) is discarded and the details are read in
+      # the Snyk dashboard. stderr stays visible, so a CLI or auth failure still
+      # explains itself. --fail-on=upgradable mirrors Trivy's ignore-unfixed:
+      # only fail when a fix exists, so an advisory with no patched release does
+      # not block every PR.
+      - name: Snyk test (open source dependencies, output withheld)
         if: steps.token.outputs.present == 'true'
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}  # zizmor: ignore[secrets-outside-env] repo-level secret, read-only scan, no deploy environment exists
-        run: snyk test --all-projects --severity-threshold=high --fail-on=upgradable
+        run: |
+          set +e
+          snyk test --all-projects --exclude=security-tools --severity-threshold=high --fail-on=upgradable > /dev/null
+          code=$?
+          if [ "$code" -eq 0 ]; then
+            echo "Snyk found no high severity dependency issues with an available fix."
+          elif [ "$code" -eq 1 ]; then
+            echo "::error::Snyk found high severity dependency issues with an available fix. Details are in the Snyk dashboard, not in this log."
+          else
+            echo "::error::Snyk could not complete (exit code $code)."
+          fi
+          exit "$code"
 
   semgrep:
     name: Semgrep SAST
