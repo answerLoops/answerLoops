@@ -106,9 +106,22 @@ export function FeedbackWidget() {
   // and the real value arrives right after hydration.
   const seenUpdateId = useSyncExternalStore<number | null>(subscribeSeenUpdateId, readSeenUpdateId, () => null)
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const next = await fetchSnapshot(sortRef.current, signal)
-    if (next) setSnapshot(next)
+  // Latest request wins. Every snapshot request — first load, sort change,
+  // live refetch — takes a sequence number here, and only the answer to the
+  // newest one is applied, so a slower earlier response is dropped even when
+  // the network delivers it last. The request still in flight is aborted too,
+  // which saves the work, but the sequence check is the guarantee: this
+  // component is the single writer of `snapshot` and assigns order at request
+  // time, never at arrival.
+  const requestSeq = useRef(0)
+  const inFlight = useRef<AbortController | null>(null)
+  const load = useCallback(async () => {
+    inFlight.current?.abort()
+    const controller = new AbortController()
+    inFlight.current = controller
+    const seq = ++requestSeq.current
+    const next = await fetchSnapshot(sortRef.current, controller.signal)
+    if (next && seq === requestSeq.current) setSnapshot(next)
   }, [])
 
   const changeSort = useCallback(
@@ -121,11 +134,8 @@ export function FeedbackWidget() {
   )
 
   useEffect(() => {
-    const controller = new AbortController()
     let debounce: ReturnType<typeof setTimeout> | undefined
-    fetchSnapshot(sortRef.current, controller.signal).then((next) => {
-      if (next && !controller.signal.aborted) setSnapshot(next)
-    })
+    void load()
 
     const unsubscribe = subscribeLiveEvents(['feedback_changed', 'resync'], (event) => {
       clearTimeout(debounce)
@@ -137,7 +147,7 @@ export function FeedbackWidget() {
     })
 
     return () => {
-      controller.abort()
+      inFlight.current?.abort()
       clearTimeout(debounce)
       unsubscribe()
     }

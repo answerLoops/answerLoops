@@ -344,6 +344,46 @@ describe('sort', () => {
     for (const u of urls()) expect(u).toMatch(/^\/api\/product-feedback(\?sort=votes)?$/)
   })
 
+  it('applies only the latest request: a slower earlier response cannot overwrite a newer one', async () => {
+    await openWithThree()
+    // Hold every response and release them out of order. The mock ignores the
+    // abort signal on purpose: the widget must drop a stale answer even when
+    // the network delivers it.
+    const held: { url: string; resolve: (v: unknown) => void }[] = []
+    fetchMock.mockImplementation((url: unknown) => new Promise((resolve) => held.push({ url: String(url), resolve })))
+    fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Newest' }))
+    expect(held.map((h) => h.url)).toEqual(['/api/product-feedback?sort=votes', '/api/product-feedback'])
+
+    // The later request (Newest) answers first…
+    await act(async () => held[1].resolve(ok(threeEntries())))
+    await waitFor(() => expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry']))
+    // …then the earlier one (Most voted) lands. It is stale and must change nothing.
+    await act(async () => held[0].resolve(ok(byVotes())))
+    await act(async () => {})
+    expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry'])
+    expect(screen.getByRole('button', { name: 'Newest' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('a live refetch that answers after a later sort change is ignored too', async () => {
+    await openWithThree()
+    const held: { url: string; resolve: (v: unknown) => void }[] = []
+    fetchMock.mockImplementation((url: unknown) => new Promise((resolve) => held.push({ url: String(url), resolve })))
+    await act(async () => {
+      live.handler?.('resync')
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
+    expect(held.map((h) => h.url)).toEqual(['/api/product-feedback', '/api/product-feedback?sort=votes'])
+
+    await act(async () => held[1].resolve(ok(byVotes())))
+    await waitFor(() => expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry']))
+    await act(async () => held[0].resolve(ok(threeEntries())))
+    await act(async () => {})
+    expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
+    expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
   it('shows no sort control on an empty board', async () => {
     fetchMock.mockImplementation(async () => ok({ approvedCount: 0, feedback: [], updates: [] }))
     render(<FeedbackWidget />)
