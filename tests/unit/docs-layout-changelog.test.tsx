@@ -49,9 +49,9 @@ describe('docs layout changelog link', () => {
   })
 
   it('styles both docs CTAs in the sidebar with accessible interaction states', () => {
-  const css = readFileSync('app/docs/docs.css', 'utf8')
+    const css = readFileSync('app/docs/docs.css', 'utf8')
 
-  for (const href of [
+    for (const href of [
       '/login',
       'https://dub.sh/sign-in-button',
       '/start-trial',
