@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimistic, useState, useTransition } from 'react'
+import { useOptimistic, useState, useTransition, useRef } from 'react'
 import { voteProductFeedbackAction } from '@/lib/actions/product-feedback'
 import { formatBoardDate } from '@/lib/product-feedback/dates'
 import { REPLY_TAG_LABELS, type BoardFeedback } from '@/lib/product-feedback/validation'
@@ -38,9 +38,15 @@ function VoteButton({ item, onError }: { item: BoardFeedback; onError: (message:
     next === cur.viewerVoted ? cur : { viewerVoted: next, voteCount: Math.max(0, cur.voteCount + (next ? 1 : -1)) },
   )
   const [pending, startTransition] = useTransition()
+  // Set the moment a request starts and cleared when it settles, so a second
+  // click that lands before React has re-rendered — while `pending` still
+  // reads false and the button is not yet disabled — is a no-op. `disabled`
+  // below is the visible half of the same rule.
+  const inFlight = useRef(false)
 
   function toggle() {
-    if (pending) return
+    if (inFlight.current) return
+    inFlight.current = true
     onError(null)
     const next = !view.viewerVoted
     startTransition(async () => {
@@ -64,6 +70,8 @@ function VoteButton({ item, onError }: { item: BoardFeedback; onError: (message:
         // boundary — there is none above the card, and an unhandled rejection
         // inside a transition would unmount the whole list.
         onError('Your vote was not saved. Please try again.')
+      } finally {
+        inFlight.current = false
       }
     })
   }

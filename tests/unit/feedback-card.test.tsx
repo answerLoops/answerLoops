@@ -360,21 +360,38 @@ describe('up-vote control', () => {
     expect(upvote()!.textContent).toContain('2')
   })
 
-  it('ignores a second click while the first request is still in flight', async () => {
+  it('ignores a second click while the first request is still in flight — the guard is in the handler, not only the disabled attribute', async () => {
     let resolve!: (v: unknown) => void
     actions.voteProductFeedbackAction.mockImplementation(() => new Promise((r) => (resolve = r)))
     renderCard(item({ voteCount: 2 }))
-    fireEvent.click(upvote()!)
-    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(true))
-    fireEvent.click(upvote()!)
-    fireEvent.click(upvote()!)
+    const button = upvote() as HTMLButtonElement
+    // Both clicks land inside one batch: React has not re-rendered between
+    // them, so `disabled` is still false and the handler runs twice. Only a
+    // guard inside the handler can stop the second request.
+    act(() => {
+      fireEvent.click(button)
+      fireEvent.click(button)
+    })
     expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1)
-    // Still the optimistic +1 — the extra clicks did not toggle it back.
-    expect(upvote()!.textContent).toContain('3')
+    await waitFor(() => expect(button.disabled).toBe(true))
+    // Still the optimistic +1 — the extra click did not toggle it back.
+    expect(button.textContent).toContain('3')
+    // And a click on the now-disabled button is a no-op as before.
+    fireEvent.click(button)
+    expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1)
+
     resolve({ ok: true, state: 'added' })
-    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
+    await waitFor(() => expect(button.disabled).toBe(false))
     expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1)
-    expect(upvote()!.textContent).toContain('3')
+    expect(button.textContent).toContain('3')
+
+    // Once settled, the next click goes through: the guard lifts. Resolved
+    // before the test ends — React entangles every transition with a pending
+    // async action, so a promise left hanging here would stall the next test.
+    fireEvent.click(button)
+    await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(2))
+    resolve({ ok: true, state: 'removed' })
+    await waitFor(() => expect(button.disabled).toBe(false))
   })
 
   it('clears the refusal message on the next click', async () => {
