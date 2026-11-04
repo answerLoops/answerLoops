@@ -25,7 +25,7 @@ const sameView = (a: VoteView, b: VoteView) => a.voteCount === b.voteCount && a.
  * moment the prop moves (the refetch arrived) it is dropped — no effect, no
  * flicker back to the stale count in between.
  */
-function VoteButton({ item }: { item: BoardFeedback }) {
+function VoteButton({ item, onError }: { item: BoardFeedback; onError: (message: string | null) => void }) {
   const server: VoteView = { voteCount: item.voteCount, viewerVoted: item.viewerVoted }
   const [confirmed, setConfirmed] = useState<{ from: VoteView; view: VoteView } | null>(null)
   const base = confirmed && sameView(confirmed.from, server) ? confirmed.view : server
@@ -33,51 +33,52 @@ function VoteButton({ item }: { item: BoardFeedback }) {
     next === cur.viewerVoted ? cur : { viewerVoted: next, voteCount: Math.max(0, cur.voteCount + (next ? 1 : -1)) },
   )
   const [pending, startTransition] = useTransition()
-  const [error, setError] = useState<string | null>(null)
 
   function toggle() {
     if (pending) return
-    setError(null)
+    onError(null)
     const next = !view.viewerVoted
     startTransition(async () => {
       setOptimistic(next)
-      // Only the entry id travels; the server decides who is voting.
-      const result = await toggleProductFeedbackVoteAction({ feedbackId: item.id })
-      if (!result.ok) {
-        // The optimistic layer falls away with the transition; say why.
-        setError(result.error)
-        return
+      try {
+        // Only the entry id travels; the server decides who is voting.
+        const result = await toggleProductFeedbackVoteAction({ feedbackId: item.id })
+        if (!result.ok) {
+          // The optimistic layer falls away with the transition; say why.
+          onError(result.error)
+          return
+        }
+        const added = result.state === 'added'
+        setConfirmed({
+          from: server,
+          view: { viewerVoted: added, voteCount: Math.max(0, base.voteCount + (added === base.viewerVoted ? 0 : added ? 1 : -1)) },
+        })
+      } catch {
+        // A rejected call (network, server down) must not reach React's error
+        // boundary — there is none above the card, and an unhandled rejection
+        // inside a transition would unmount the whole list.
+        onError('Your vote was not saved. Please try again.')
       }
-      const added = result.state === 'added'
-      setConfirmed({
-        from: server,
-        view: { viewerVoted: added, voteCount: Math.max(0, base.voteCount + (added === base.viewerVoted ? 0 : added ? 1 : -1)) },
-      })
     })
   }
 
   const noun = view.voteCount === 1 ? 'vote' : 'votes'
   return (
-    <div className="flex shrink-0 flex-col items-end gap-1">
-      <button
-        type="button"
-        onClick={toggle}
-        disabled={pending}
-        aria-pressed={view.viewerVoted}
-        aria-label={`${view.viewerVoted ? 'Remove your upvote' : 'Upvote'}, ${view.voteCount} ${noun}`}
-        className={`inline-flex h-8 items-center gap-1 rounded-lg border px-2 text-xs font-semibold tabular-nums transition ${
-          view.viewerVoted
-            ? 'border-[#168fa3] bg-[#168fa3]/10 text-[#0e7c8f]'
-            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
-        } disabled:opacity-70`}
-      >
-        <ArrowUpIcon className="h-3.5 w-3.5" />
-        <span>{view.voteCount}</span>
-      </button>
-      {error && (
-        <output className="max-w-40 text-right text-xs leading-snug text-amber-700">{error}</output>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={toggle}
+      disabled={pending}
+      aria-pressed={view.viewerVoted}
+      aria-label={`${view.viewerVoted ? 'Remove your upvote' : 'Upvote'}, ${view.voteCount} ${noun}`}
+      className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border px-2 text-xs font-semibold tabular-nums transition ${
+        view.viewerVoted
+          ? 'border-[#168fa3] bg-[#168fa3]/10 text-[#0e7c8f]'
+          : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
+      } disabled:opacity-70`}
+    >
+      <ArrowUpIcon className="h-3.5 w-3.5" />
+      <span>{view.voteCount}</span>
+    </button>
   )
 }
 
@@ -89,6 +90,9 @@ export function FeedbackCard({ item }: { item: BoardFeedback }) {
   // Votes exist only on approved entries. Someone else's entry gets the arrow;
   // the author sees their own count but cannot vote for themselves.
   const approved = item.status === 'approved'
+  // Held here, not in the button, so the message renders full-width under the
+  // body instead of widening the header's right column on a phone.
+  const [voteError, setVoteError] = useState<string | null>(null)
 
   return (
     <li className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -101,7 +105,7 @@ export function FeedbackCard({ item }: { item: BoardFeedback }) {
             <p className="truncate text-sm font-semibold text-slate-900">{item.authorLabel}</p>
             <p className="text-xs text-slate-500">{stamp}</p>
           </div>
-          {approved && !item.mine && <VoteButton item={item} />}
+          {approved && !item.mine && <VoteButton item={item} onError={setVoteError} />}
           {approved && item.mine && (
             <span
               aria-label={`${item.voteCount} ${item.voteCount === 1 ? 'upvote' : 'upvotes'}`}
@@ -114,6 +118,8 @@ export function FeedbackCard({ item }: { item: BoardFeedback }) {
         </div>
 
         <p className="mt-2.5 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700">{item.body}</p>
+
+        {voteError && <output className="mt-2 block text-xs leading-snug text-amber-700">{voteError}</output>}
 
         {(item.mine || item.status !== 'approved') && (
           <div className="mt-3 flex flex-wrap items-center gap-2">

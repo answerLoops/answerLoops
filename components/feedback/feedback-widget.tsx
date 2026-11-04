@@ -294,7 +294,7 @@ export function FeedbackWidget() {
                         type="button"
                         aria-pressed={sort === id}
                         onClick={() => setSort(id)}
-                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition ${
+                        className={`h-8 rounded-md px-3 text-xs font-semibold transition sm:h-7 sm:px-2.5 ${
                           sort === id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >

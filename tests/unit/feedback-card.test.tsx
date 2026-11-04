@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 import type { BoardFeedback } from '@/lib/product-feedback/validation'
 
 const actions = vi.hoisted(() => ({ toggleProductFeedbackVoteAction: vi.fn() }))
@@ -258,5 +258,92 @@ describe('up-vote control', () => {
     fireEvent.click(upvote()!)
     await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1))
     expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledWith({ feedbackId: 77 })
+  })
+
+  it('keeps the confirmed count while the parent re-renders with the same stale prop, then yields to a new prop', async () => {
+    const { rerender } = renderCard(item({ voteCount: 2 }))
+    fireEvent.click(upvote()!)
+    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('true'))
+    expect(upvote()!.textContent).toContain('3')
+
+    // The parent re-renders before its refetch lands: same prop, so the
+    // server's confirmed answer must not flicker back to the stale 2.
+    rerender(
+      <ul>
+        <FeedbackCard item={item({ voteCount: 2 })} />
+      </ul>,
+    )
+    expect(upvote()!.textContent).toContain('3')
+    expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
+
+    // The refetch arrives with a different count (others voted too): the
+    // snapshot wins and the remembered answer is dropped.
+    rerender(
+      <ul>
+        <FeedbackCard item={item({ voteCount: 7, viewerVoted: true })} />
+      </ul>,
+    )
+    expect(upvote()!.textContent).toContain('7')
+    expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('follows the server answer when it disagrees with the optimistic guess (vote already cast elsewhere)', async () => {
+    // The prop says "not voted", but another tab already voted, so the toggle removes it.
+    actions.toggleProductFeedbackVoteAction.mockResolvedValue({ ok: true, state: 'removed' })
+    renderCard(item({ voteCount: 2 }))
+    fireEvent.click(upvote()!)
+    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('false'))
+    expect(upvote()!.textContent).toContain('2')
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('keeps the card on screen, reverts and re-enables the button when the action rejects outright', async () => {
+    // A network blip rejects the server action instead of returning { ok: false }.
+    actions.toggleProductFeedbackVoteAction.mockRejectedValue(new Error('network down'))
+    const { container } = renderCard(item({ voteCount: 2, body: 'Still here after the blip.' }))
+    fireEvent.click(upvote()!)
+    await waitFor(() => expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1))
+    // Let the rejection settle before looking at what is left on screen.
+    await act(async () => {})
+    // The card must survive the failure — a rejected vote is not a reason to blank the board.
+    expect(container.querySelector('li')).not.toBeNull()
+    expect(screen.queryByText('Still here after the blip.')).not.toBeNull()
+    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
+    expect(upvote()!.getAttribute('aria-pressed')).toBe('false')
+    expect(upvote()!.textContent).toContain('2')
+  })
+
+  it('ignores a second click while the first request is still in flight', async () => {
+    let resolve!: (v: unknown) => void
+    actions.toggleProductFeedbackVoteAction.mockImplementation(() => new Promise((r) => (resolve = r)))
+    renderCard(item({ voteCount: 2 }))
+    fireEvent.click(upvote()!)
+    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(true))
+    fireEvent.click(upvote()!)
+    fireEvent.click(upvote()!)
+    expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1)
+    // Still the optimistic +1 — the extra clicks did not toggle it back.
+    expect(upvote()!.textContent).toContain('3')
+    resolve({ ok: true, state: 'added' })
+    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
+    expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(1)
+    expect(upvote()!.textContent).toContain('3')
+  })
+
+  it('clears the refusal message on the next click', async () => {
+    actions.toggleProductFeedbackVoteAction.mockResolvedValueOnce({ ok: false, error: 'Try again in a moment.' })
+    renderCard(item({ voteCount: 2 }))
+    fireEvent.click(upvote()!)
+    expect(await screen.findByText('Try again in a moment.')).toBeTruthy()
+    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
+
+    // Default mock: the retry succeeds.
+    fireEvent.click(upvote()!)
+    await waitFor(() => expect(screen.queryByText('Try again in a moment.')).toBeNull())
+    await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('true'))
+    expect(upvote()!.textContent).toContain('3')
+    expect(actions.toggleProductFeedbackVoteAction).toHaveBeenCalledTimes(2)
   })
 })

@@ -340,4 +340,34 @@ describe('sort', () => {
     fireEvent.click(pill())
     expect(screen.queryByRole('button', { name: 'Most voted' })).toBeNull()
   })
+
+  it('shows no sort control while the first snapshot is still loading, then shows it with the list', async () => {
+    let resolve!: (v: unknown) => void
+    fetchMock.mockImplementation(() => new Promise((r) => (resolve = r)))
+    render(<FeedbackWidget />)
+    fireEvent.click(pill())
+    expect(screen.getByText('Loading…')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Newest' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Most voted' })).toBeNull()
+
+    await act(async () => resolve(ok(threeEntries())))
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(3))
+    expect(screen.getByRole('button', { name: 'Newest' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Most voted' })).toBeTruthy()
+  })
+
+  it('keeps the chosen sort after a trip to the Updates tab and back', async () => {
+    await openWithThree()
+    fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
+    expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
+
+    fireEvent.click(screen.getByRole('tab', { name: /^updates/i }))
+    expect(screen.queryByRole('button', { name: 'Most voted' })).toBeNull()
+    expect(screen.queryAllByRole('listitem')).toHaveLength(0)
+
+    fireEvent.click(screen.getByRole('tab', { name: /^feedback/i }))
+    expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Newest' }).getAttribute('aria-pressed')).toBe('false')
+    expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
+  })
 })
