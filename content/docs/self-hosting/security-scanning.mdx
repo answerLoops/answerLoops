@@ -12,7 +12,7 @@ When you are done, you will know what is already covered and which six settings 
 
 Every change to the codebase is scanned for known-vulnerable dependencies, leaked credentials, and common code-level security issues before it is merged. You do not need to run anything yourself to benefit from this. It is already reflected in the code you `git clone` or `docker pull`.
 
-The scanners are Trivy (dependencies, secrets, image), Semgrep (code analysis), and Zizmor (GitHub Actions workflow audit). They run at pinned versions, and Dependabot opens a PR whenever a newer version is released, so the tooling stays current without silently changing under CI.
+The scanners are Trivy (dependencies, secrets, image), Snyk (open source dependencies), Semgrep (code analysis), and Zizmor (GitHub Actions workflow audit). They run at pinned versions, and Dependabot opens a PR whenever a newer version is released, so the tooling stays current without silently changing under CI.
 
 ## What you are responsible for
 
