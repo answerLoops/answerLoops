@@ -14,6 +14,7 @@
      visitor moving from the site into the docs does not see a different
      product. Light only: the docs have no dark theme. */
   --docs-navy: #082e50;
+  --docs-navy-hover: #184566;
   --docs-link: #315e81;
   --docs-teal: #168fa3;
   --docs-aqua: #eef7f7;
@@ -119,36 +120,37 @@ a[data-card] > div:has(> [role='img']) {
   padding: 0;
   box-shadow: none;
 }
-/* Docs header CTAs — match the marketing site's secondary/primary hierarchy. */
-#nd-nav a[href='/login'],
-#nd-nav a[href='https://dub.sh/sign-in-button'] {
+
+/* Docs sidebar CTAs — match the marketing site's secondary/primary hierarchy. */
+#nd-sidebar a[href='/login'],
+#nd-sidebar a[href='https://dub.sh/sign-in-button'] {
   display: inline-flex;
   min-height: 40px;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
   padding: 8px 12px;
-  color: #5d6b7c;
+  color: var(--docs-muted);
   font-size: 14px;
   font-weight: 500;
   text-decoration: none;
   transition: color 150ms ease;
 }
 
-#nd-nav a[href='/login']:hover,
-#nd-nav a[href='https://dub.sh/sign-in-button']:hover {
-  color: #315e81;
+#nd-sidebar a[href='/login']:hover,
+#nd-sidebar a[href='https://dub.sh/sign-in-button']:hover {
+  color: var(--docs-link);
 }
 
-#nd-nav a[href='/start-trial'],
-#nd-nav a[href='https://dub.sh/start-a-trial'] {
+#nd-sidebar a[href='/start-trial'],
+#nd-sidebar a[href='https://dub.sh/start-a-trial'] {
   display: inline-flex;
   min-height: 40px;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
   border-radius: 8px;
-  background: #082e50;
+  background: var(--docs-navy);
   padding: 8px 12px;
   color: #ffffff;
   font-size: 14px;
@@ -157,40 +159,35 @@ a[data-card] > div:has(> [role='img']) {
   transition: background-color 150ms ease;
 }
 
-#nd-nav a[href='/start-trial']:hover,
-#nd-nav a[href='https://dub.sh/start-a-trial']:hover {
-  background: #184566;
+#nd-sidebar a[href='/start-trial']:hover,
+#nd-sidebar a[href='https://dub.sh/start-a-trial']:hover {
+  background: var(--docs-navy-hover);
 }
 
-#nd-nav a[href='/login']:focus-visible,
-#nd-nav a[href='https://dub.sh/sign-in-button']:focus-visible,
-#nd-nav a[href='/start-trial']:focus-visible,
-#nd-nav a[href='https://dub.sh/start-a-trial']:focus-visible {
+#nd-sidebar a[href='/login']:active,
+#nd-sidebar a[href='https://dub.sh/sign-in-button']:active {
+  color: var(--docs-navy);
+}
+
+#nd-sidebar a[href='/start-trial']:active,
+#nd-sidebar a[href='https://dub.sh/start-a-trial']:active {
+  background: var(--docs-link);
+  transform: translateY(1px);
+}
+
+#nd-sidebar a[href='/login']:focus-visible,
+#nd-sidebar a[href='https://dub.sh/sign-in-button']:focus-visible,
+#nd-sidebar a[href='/start-trial']:focus-visible,
+#nd-sidebar a[href='https://dub.sh/start-a-trial']:focus-visible {
   outline: 2px solid var(--docs-teal);
   outline-offset: 3px;
 }
 
-
-/* Keep the primary action visible and collapse the secondary action on narrow screens. */
-@media (max-width: 480px) {
-  #nd-nav a[href='/login'],
-  #nd-nav a[href='https://dub.sh/sign-in-button'] {
-    display: none;
-  }
-
-  #nd-nav a[href='/start-trial'],
-  #nd-nav a[href='https://dub.sh/start-a-trial'] {
-    min-height: 36px;
-    padding: 6px 8px;
-    font-size: 13px;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  #nd-nav a[href='/login'],
-  #nd-nav a[href='https://dub.sh/sign-in-button'],
-  #nd-nav a[href='/start-trial'],
-  #nd-nav a[href='https://dub.sh/start-a-trial'] {
+  #nd-sidebar a[href='/login'],
+  #nd-sidebar a[href='https://dub.sh/sign-in-button'],
+  #nd-sidebar a[href='/start-trial'],
+  #nd-sidebar a[href='https://dub.sh/start-a-trial'] {
     transition: none;
   }
 }
