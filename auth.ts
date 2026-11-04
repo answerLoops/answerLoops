@@ -12,6 +12,7 @@ import { isWebsitePath } from '@/lib/marketing/website-paths'
 import { isKnownRoute } from '@/lib/marketing/known-routes'
 import { notFoundResponse } from '@/lib/marketing/not-found-response'
 import { beginTrial } from '@/lib/auth/signup'
+import { DEFAULT_WIDGET_LEAD_CAPTURE_MODE } from '@/lib/widget/lead-capture'
 
 const PUBLIC_PATHS = ['/', '/login', '/api/auth', '/api/ingest', '/api/feedback', '/api/slack', '/api/widget', '/widget', '/widget.js', '/api/billing/webhook', '/api/newsletter', '/unsubscribe', '/api/health', '/api/github/webhook', '/api/telegram/webhook', '/api/circle/webhook', '/api/discourse/webhook', '/api/email/ingest', '/api/mcp', '/api/v1/agent', '/openapi.json', '/.well-known', '/api/google-chat', '/api/nav-state', '/api/kb/sync-jobs/run', '/api/kb/embedding-migration/run', '/api/billing/trial-reminders/run','/vs', '/alternatives', '/about', '/blog', '/changelog', '/pricing', '/agentic-support', '/docs', '/privacy', '/terms', '/robots.txt', '/sitemap.xml', '/llms.txt', '/llms-full.txt', '/architecture', '/circle-ai-answers', '/discourse-ai-answers', '/dual-agent-ai-support', '/discord-github-support', '/mcp-support-agents', '/open-source-support', '/self-hosted-ai-support', '/self-hosting-proof', '/support-example', '/support-workflow']
 const ONBOARDING_PATH = '/onboarding'
@@ -94,9 +95,19 @@ async function provisionUser(
 
   // New user: create a fresh org workspace. The trial starts when they accept
   // the terms, not here.
+  //
+  // widgetLeadCaptureMode is set explicitly rather than left to the column's
+  // own default: that default is 'up-front' so existing workspaces aren't
+  // silently switched when the column was added, but a brand-new workspace
+  // should start on the product's actual recommended behavior. See
+  // lib/widget/lead-capture.ts and lib/db/schema.ts's doc comment on the column.
   const [newOrg] = await db
     .insert(orgs)
-    .values({ name: 'My Workspace', slug: `org-${user.id}-${Date.now()}` })
+    .values({
+      name: 'My Workspace',
+      slug: `org-${user.id}-${Date.now()}`,
+      widgetLeadCaptureMode: DEFAULT_WIDGET_LEAD_CAPTURE_MODE,
+    })
     .returning({ id: orgs.id })
 
   await db

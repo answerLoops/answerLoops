@@ -1,6 +1,0 @@
-[build]
-builder = "nixpacks"
-
-[deploy]
-startCommand = "pnpm bot:start"
-restartPolicyType = "on_failure"

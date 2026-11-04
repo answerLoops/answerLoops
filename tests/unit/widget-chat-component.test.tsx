@@ -83,7 +83,7 @@ async function renderWidget(fake: ReturnType<typeof makeFakeAgent>) {
   h2.current = fake
   const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
   return render(
-    <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} />
+    <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} leadCaptureMode="up-front" />
   )
 }
 
@@ -127,7 +127,7 @@ describe('WidgetChat: email gate', () => {
     )
   })
 
-  it('still reveals the thread when the lead request fails, non-blocking', async () => {
+  it('keeps the gate up and tells the visitor when the lead request fails, with Skip still available', async () => {
     h.fetchMock.mockRejectedValueOnce(new Error('network down'))
     await renderWidget(makeFakeAgent())
     const user = userEvent.setup()
@@ -135,7 +135,11 @@ describe('WidgetChat: email gate', () => {
     await user.type(screen.getByPlaceholderText('you@example.com'), 'visitor@example.com')
     await user.click(screen.getByRole('button', { name: 'Start chat' }))
 
-    await waitFor(() => expect(screen.getByPlaceholderText('Ask a question…')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/couldn.t save that right now/i)).toBeTruthy())
+    expect(screen.queryByPlaceholderText('Ask a question…')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+    expect(screen.getByPlaceholderText('Ask a question…')).toBeTruthy()
   })
 })
 
@@ -239,7 +243,7 @@ describe('WidgetChat: branding', () => {
     h2.current = makeFakeAgent()
     const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
     render(
-      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} />
+      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding isSelfPreview={false} leadCaptureMode="up-front" />
     )
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Skip' }))
@@ -251,7 +255,7 @@ describe('WidgetChat: branding', () => {
     h2.current = makeFakeAgent()
     const { WidgetChat } = await import('@/app/widget/[widgetToken]/widget-chat')
     render(
-      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding={false} isSelfPreview={false} />
+      <WidgetChat widgetToken={'a'.repeat(48)} renderToken="test-render-token" orgName="Acme" showBranding={false} isSelfPreview={false} leadCaptureMode="up-front" />
     )
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Skip' }))

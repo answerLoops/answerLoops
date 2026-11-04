@@ -55,6 +55,7 @@ export default async function LeadsPage() {
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
                 <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Email</th>
+                <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Question</th>
                 <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Collected</th>
               </tr>
             </thead>
@@ -62,6 +63,9 @@ export default async function LeadsPage() {
               {leads.map((lead) => (
                 <tr key={lead.id} className="hover:bg-gray-50/50">
                   <td className="px-5 py-3 text-gray-800">{lead.email}</td>
+                  <td className="px-5 py-3 text-gray-500 max-w-xs truncate" title={lead.question ?? undefined}>
+                    {lead.question ?? <span className="text-gray-300">—</span>}
+                  </td>
                   <td className="px-5 py-3 text-gray-400 text-xs">
                     {new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </td>
