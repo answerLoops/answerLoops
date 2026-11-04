@@ -44,7 +44,11 @@ export function isReplyTag(value: unknown): value is ReplyTag {
   return typeof value === 'string' && (REPLY_TAGS as readonly string[]).includes(value)
 }
 
-/** Wire shape returned to the widget. Never carries user ids or emails. */
+/**
+ * Wire shape returned to the widget. Never carries user ids or emails. The
+ * only vote facts on the wire are a count and whether the viewer is in it —
+ * never who else voted.
+ */
 export interface BoardFeedback {
   id: number
   authorLabel: string
@@ -54,7 +58,15 @@ export interface BoardFeedback {
   approvedAt: string | null
   mine: boolean
   reply: { body: string; tag: ReplyTag | null; repliedAt: string } | null
+  /** Up-votes on this entry, computed at read time. */
+  voteCount: number
+  /** Whether the viewer's own up-vote is among them. */
+  viewerVoted: boolean
 }
+
+/** Outcome of one click on the up arrow. `refused` means the rule said no: the
+ *  entry is not approved, it is the viewer's own, or the id matched nothing. */
+export type VoteToggleResult = 'added' | 'removed' | 'refused'
 
 export interface BoardUpdate {
   id: number

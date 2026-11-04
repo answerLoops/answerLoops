@@ -1,6 +1,6 @@
-import { desc, eq, or, sql } from 'drizzle-orm'
+import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
-import { orgs, productFeedback, productUpdates } from '../schema'
+import { orgs, productFeedback, productFeedbackVotes, productUpdates } from '../schema'
 import {
   isReplyTag,
   type BoardFeedback,
@@ -8,6 +8,7 @@ import {
   type BoardUpdate,
   type FeedbackStatus,
   type ReplyTag,
+  type VoteToggleResult,
 } from '@/lib/product-feedback/validation'
 
 /**
@@ -34,6 +35,11 @@ export async function getBoardSnapshot(input: { userId: number }): Promise<Board
       replyTag: productFeedback.replyTag,
       repliedAt: productFeedback.repliedAt,
       orgName: orgs.name,
+      // Vote facts are computed per row from the votes table; nothing about
+      // other voters leaves the database, only the count and the viewer's own
+      // membership in it.
+      voteCount: sql<number>`(SELECT COUNT(*)::int FROM ${productFeedbackVotes} WHERE ${productFeedbackVotes.feedbackId} = ${productFeedback.id})`,
+      viewerVoted: sql<boolean>`EXISTS (SELECT 1 FROM ${productFeedbackVotes} WHERE ${productFeedbackVotes.feedbackId} = ${productFeedback.id} AND ${productFeedbackVotes.userId} = ${input.userId})`,
     })
     .from(productFeedback)
     .leftJoin(orgs, eq(orgs.id, productFeedback.orgId))
@@ -54,6 +60,8 @@ export async function getBoardSnapshot(input: { userId: number }): Promise<Board
       r.replyBody && r.repliedAt
         ? { body: r.replyBody, tag: isReplyTag(r.replyTag) ? (r.replyTag as ReplyTag) : null, repliedAt: r.repliedAt }
         : null,
+    voteCount: Number(r.voteCount ?? 0),
+    viewerVoted: r.viewerVoted === true,
   }))
 
   const [counts] = await db
@@ -94,6 +102,55 @@ export async function createProductFeedback(input: {
     })
     .returning({ id: productFeedback.id })
   return row.id
+}
+
+/**
+ * One click on the up arrow. If the viewer already voted on this entry the
+ * vote is retracted; otherwise a vote is added — but only where the entry is
+ * approved and not the viewer's own. That predicate IS the rule: hiding the
+ * arrow in the UI is a courtesy, this is what refuses a self-vote or a vote on
+ * a pending entry, whatever the client sent. One transaction so the
+ * retract-or-add decision cannot interleave with another click.
+ *
+ * org_id on the vote is the voter's workspace, so hardPurgeOrg can find it.
+ */
+export async function toggleProductFeedbackVote(input: {
+  feedbackId: number
+  userId: number
+  orgId: number
+}): Promise<VoteToggleResult> {
+  // Cheap guard before any query: the action validates, this never trusts it.
+  if (!Number.isInteger(input.feedbackId) || input.feedbackId < 1) return 'refused'
+
+  return getDb().transaction(async (tx) => {
+    const retracted = await tx
+      .delete(productFeedbackVotes)
+      .where(
+        and(
+          eq(productFeedbackVotes.feedbackId, input.feedbackId),
+          eq(productFeedbackVotes.userId, input.userId),
+        ),
+      )
+      .returning({ id: productFeedbackVotes.id })
+    if (retracted.length > 0) return 'removed'
+
+    // INSERT ... SELECT so the eligibility check and the write are one
+    // statement. IS DISTINCT FROM (not <>) because seeded example rows have a
+    // NULL author and are votable. ON CONFLICT covers the same person adding
+    // twice in a race: the second insert writes nothing and reports `refused`,
+    // and the board still shows one vote.
+    const inserted = (await tx.execute(sql`
+      INSERT INTO ${productFeedbackVotes} (feedback_id, user_id, org_id)
+      SELECT ${productFeedback.id}, ${input.userId}, ${input.orgId}
+      FROM ${productFeedback}
+      WHERE ${productFeedback.id} = ${input.feedbackId}
+        AND ${productFeedback.status} = 'approved'
+        AND ${productFeedback.userId} IS DISTINCT FROM ${input.userId}
+      ON CONFLICT DO NOTHING
+      RETURNING id
+    `)) as unknown as { id: number }[]
+    return inserted.length > 0 ? 'added' : 'refused'
+  })
 }
 
 /**

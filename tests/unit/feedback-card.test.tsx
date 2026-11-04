@@ -17,6 +17,8 @@ function item(overrides: Partial<BoardFeedback> = {}): BoardFeedback {
     approvedAt: '2026-10-06T12:00:00.000Z',
     mine: false,
     reply: null,
+    voteCount: 0,
+    viewerVoted: false,
     ...overrides,
   }
 }
