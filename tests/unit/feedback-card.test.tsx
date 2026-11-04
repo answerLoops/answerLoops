@@ -232,7 +232,10 @@ describe('up-vote control', () => {
     expect(upvote()!.textContent).toContain('3')
     resolve({ ok: true, state: 'added' })
     await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledWith({ feedbackId: 1, voted: true }))
-    await waitFor(() => expect(upvote()!.textContent).toContain('3'))
+    // Wait for the transition to settle: only then is the shown value the
+    // confirmed one rather than the optimistic one.
+    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
+    expect(upvote()!.textContent).toContain('3')
     expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
   })
 
@@ -264,7 +267,8 @@ describe('up-vote control', () => {
     const { rerender } = renderCard(item({ voteCount: 2 }))
     fireEvent.click(upvote()!)
     await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1))
-    await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('true'))
+    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
+    expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
     expect(upvote()!.textContent).toContain('3')
 
     // The parent re-renders before its refetch lands: same prop, so the
@@ -288,13 +292,42 @@ describe('up-vote control', () => {
     expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
   })
 
+  it('drops the remembered answer once the snapshot moves, so a later snapshot equal to the click-time value is believed', async () => {
+    // Tab A votes 5→6 and remembers the server's "added". The refetch brings
+    // {6, voted}. Then tab B removes the vote and the refetch brings {5, not
+    // voted} — exactly the click-time value. The snapshot must win.
+    const { rerender } = renderCard(item({ voteCount: 5 }))
+    fireEvent.click(upvote()!)
+    await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
+    expect(upvote()!.textContent).toContain('6')
+
+    rerender(
+      <ul>
+        <FeedbackCard item={item({ voteCount: 6, viewerVoted: true })} />
+      </ul>,
+    )
+    expect(upvote()!.textContent).toContain('6')
+    expect(upvote()!.getAttribute('aria-pressed')).toBe('true')
+
+    rerender(
+      <ul>
+        <FeedbackCard item={item({ voteCount: 5, viewerVoted: false })} />
+      </ul>,
+    )
+    expect(upvote()!.textContent).toContain('5')
+    expect(upvote()!.getAttribute('aria-pressed')).toBe('false')
+    expect(screen.getByRole('button', { name: /^upvote, 5 votes$/i })).toBeTruthy()
+  })
+
   it('follows the server answer when it disagrees with the optimistic guess (vote already cast elsewhere)', async () => {
     // The prop says "not voted", but another tab already voted, so the toggle removes it.
     actions.voteProductFeedbackAction.mockResolvedValue({ ok: true, state: 'removed' })
     renderCard(item({ voteCount: 2 }))
     fireEvent.click(upvote()!)
     await waitFor(() => expect(actions.voteProductFeedbackAction).toHaveBeenCalledTimes(1))
-    await waitFor(() => expect(upvote()!.getAttribute('aria-pressed')).toBe('false'))
+    await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
+    expect(upvote()!.getAttribute('aria-pressed')).toBe('false')
     expect(upvote()!.textContent).toContain('2')
     expect(screen.queryByRole('status')).toBeNull()
   })
@@ -310,6 +343,8 @@ describe('up-vote control', () => {
     // The card must survive the failure — a rejected vote is not a reason to blank the board.
     expect(container.querySelector('li')).not.toBeNull()
     expect(screen.queryByText('Still here after the blip.')).not.toBeNull()
+    // And the person is told why nothing changed.
+    expect(await screen.findByText('Your vote was not saved. Please try again.')).toBeTruthy()
     await waitFor(() => expect((upvote() as HTMLButtonElement).disabled).toBe(false))
     expect(upvote()!.getAttribute('aria-pressed')).toBe('false')
     expect(upvote()!.textContent).toContain('2')

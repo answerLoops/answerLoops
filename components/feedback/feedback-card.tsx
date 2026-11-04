@@ -18,17 +18,23 @@ type VoteView = { voteCount: number; viewerVoted: boolean }
 const sameView = (a: VoteView, b: VoteView) => a.voteCount === b.voteCount && a.viewerVoted === b.viewerVoted
 
 /**
- * The up arrow with its count. Three layers of truth, newest wins: the
- * optimistic flip while the click is in flight, the server's answer once it
- * lands, and the snapshot prop once the live refetch catches up. The confirmed
- * answer is remembered together with the prop it was computed from, so the
- * moment the prop moves (the refetch arrived) it is dropped — no effect, no
- * flicker back to the stale count in between.
+ * The up arrow with its count. Three layers, newest wins: the optimistic flip
+ * while the click is in flight, the action's confirmed answer once it lands,
+ * and the snapshot prop once the live refetch catches up. The confirmed
+ * answer is remembered together with the snapshot it was computed from and
+ * exists only to cover the gap before that refetch: the first time the
+ * snapshot moves away from the click-time value, the refetch has arrived and
+ * the memory is dropped for good — not merely skipped — so a later snapshot
+ * that happens to equal the click-time value again (another tab removing the
+ * vote, say) cannot bring a stale answer back.
  */
 function VoteButton({ item, onError }: { item: BoardFeedback; onError: (message: string | null) => void }) {
-  const server: VoteView = { voteCount: item.voteCount, viewerVoted: item.viewerVoted }
+  const snapshot: VoteView = { voteCount: item.voteCount, viewerVoted: item.viewerVoted }
   const [confirmed, setConfirmed] = useState<{ from: VoteView; view: VoteView } | null>(null)
-  const base = confirmed && sameView(confirmed.from, server) ? confirmed.view : server
+  // Adjusting state during render is React's own pattern for "reset when a
+  // prop changes" without an effect; the render is redone with the new state.
+  if (confirmed && !sameView(confirmed.from, snapshot)) setConfirmed(null)
+  const base = confirmed && sameView(confirmed.from, snapshot) ? confirmed.view : snapshot
   const [view, setOptimistic] = useOptimistic(base, (cur: VoteView, next: boolean): VoteView =>
     next === cur.viewerVoted ? cur : { viewerVoted: next, voteCount: Math.max(0, cur.voteCount + (next ? 1 : -1)) },
   )
@@ -51,7 +57,7 @@ function VoteButton({ item, onError }: { item: BoardFeedback; onError: (message:
         }
         const added = result.state === 'added'
         setConfirmed({
-          from: server,
+          from: snapshot,
           view: { viewerVoted: added, voteCount: Math.max(0, base.voteCount + (added === base.viewerVoted ? 0 : added ? 1 : -1)) },
         })
       } catch {
