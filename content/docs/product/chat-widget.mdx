@@ -191,6 +191,10 @@ Where you paste the snippet depends on how your site is built. Find your platfor
 
 The chat bubble sits at the bottom right of the page, and the answer language follows the visitor's language. Neither is configurable.
 
+### How the snippet gets its display settings
+
+When a page loads, the snippet asks your answerLoops instance how this workspace wants the widget to look (window size and bubble color). The answer contains display settings only, nothing else about your workspace. It is cached for about a minute, so a change reaches pages shortly after you save it. Which settings a workspace gets always follows its plan and is decided on the server, never by what the snippet says. Until you choose something the widget looks exactly as it did before, and if the lookup is slow or fails the snippet shows that default look after two seconds, so existing installs keep working without re-pasting anything.
+
 ## Restricting where the widget works
 
 The `data-widget-id` value is an **embed token**, and it is deliberately public: it ships in the HTML of every page the widget renders on. Because anyone can read it, **Settings → Widget → Allowed domains** is how you control where the widget works. List the domains you embed on, one per line:
@@ -270,6 +274,7 @@ The widget chat endpoint is public (no login required), so it enforces limits to
 - Up to **20 requests/minute per visitor** (token + IP combination)
 - Up to **500 answers/hour and 3,000 answers/day per workspace**, across all visitors and widget tokens
 - Loading the widget panel itself is limited to **30 loads/minute per visitor address** and **600/minute per widget token**
+- The display-settings lookup the snippet makes on every page load is limited to **120/minute per visitor address** and **1,200/minute per widget**
 - Each message capped at **4,000 characters**; at most **50 messages** per request
 - Request bodies capped at **512KB**
 
