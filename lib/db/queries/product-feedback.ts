@@ -118,8 +118,8 @@ export async function createProductFeedback(input: {
  * rule; hiding the arrow in the UI is a courtesy — and an existing row counts
  * as success, so a retried or doubled request lands in the same place. The
  * UNIQUE (feedback_id, user_id) constraint is what keeps one vote per person
- * under concurrent adds; ON CONFLICT DO NOTHING turns the loser's insert into
- * a no-op instead of an error. No transaction: every statement here is
+ * under concurrent adds; the loser's insert lands on the existing row and
+ * reports it instead of erroring. No transaction: every statement here is
  * idempotent on its own.
  *
  * org_id on the vote is the voter's workspace, so hardPurgeOrg can find it.
@@ -143,30 +143,28 @@ export async function setProductFeedbackVote(input: {
     return 'removed'
   }
 
-  // INSERT ... SELECT so the eligibility check and the write are one
-  // statement. IS DISTINCT FROM (not <>) because seeded example rows have a
-  // NULL author and are votable.
-  const inserted = (await db.execute(sql`
+  // One statement, and its result is the answer. INSERT ... SELECT keeps the
+  // eligibility check and the write together; IS DISTINCT FROM (not <>)
+  // because seeded example rows have a NULL author and are votable. On a
+  // conflict with the caller's own existing row, the no-op UPDATE makes
+  // RETURNING hand that row back. So a row back means the vote is stored now,
+  // new or already there; nothing back means only the rule refused: not
+  // approved (any more), the caller's own entry, or no such entry. There is
+  // no second read, so there is no moment for the row to vanish between a
+  // write and a check, and a stale card voting on an entry un-approved since
+  // is told no rather than shown a vote. The no-op UPDATE fires the board
+  // trigger once more; a doubled add is rare and the extra refetch harmless.
+  const stored = (await db.execute(sql`
     INSERT INTO ${productFeedbackVotes} (feedback_id, user_id, org_id)
     SELECT ${productFeedback.id}, ${input.userId}, ${input.orgId}
     FROM ${productFeedback}
     WHERE ${productFeedback.id} = ${input.feedbackId}
       AND ${productFeedback.status} = 'approved'
       AND ${productFeedback.userId} IS DISTINCT FROM ${input.userId}
-    ON CONFLICT DO NOTHING
+    ON CONFLICT (feedback_id, user_id) DO UPDATE SET created_at = ${productFeedbackVotes}.created_at
     RETURNING id
   `)) as unknown as { id: number }[]
-  if (inserted.length > 0) return 'added'
-
-  // Nothing written: either the vote already existed (a doubled or retried
-  // request — the state the caller asked for is already true) or the rule
-  // refused it. Only the first is success.
-  const [existing] = await db
-    .select({ id: productFeedbackVotes.id })
-    .from(productFeedbackVotes)
-    .where(own)
-    .limit(1)
-  return existing ? 'added' : 'refused'
+  return stored.length > 0 ? 'added' : 'refused'
 }
 
 /**

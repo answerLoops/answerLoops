@@ -40,22 +40,28 @@ describe('setProductFeedbackVote', () => {
     expect(execute).not.toHaveBeenCalled()
   })
 
-  it('adds when the entry qualified', async () => {
-    const { execute, select } = fakeDb([{ id: 12 }], [])
+  it('adds when the entry qualified — one statement, no second read', async () => {
+    const { execute, select, del } = fakeDb([{ id: 12 }], [])
     await expect(setProductFeedbackVote({ ...VIEWER, voted: true })).resolves.toBe('added')
     expect(execute).toHaveBeenCalledTimes(1)
     expect(select).not.toHaveBeenCalled()
-  })
-
-  it('treats an existing vote as success — a doubled or retried add changes nothing and is not an error', async () => {
-    const { del } = fakeDb([], [{ id: 12 }])
-    await expect(setProductFeedbackVote({ ...VIEWER, voted: true })).resolves.toBe('added')
     expect(del).not.toHaveBeenCalled()
   })
 
-  it('refuses when nothing was written and no vote exists — the rule said no', async () => {
-    fakeDb([], [])
+  it('an existing vote is success too: the conflict clause hands the row back, so a doubled or retried add reads the same as a fresh one', async () => {
+    // From the function's point of view there is no difference: the statement
+    // returned a row. The e2e burst case proves the database side of that.
+    const { select } = fakeDb([{ id: 12 }], [{ id: 12 }])
+    await expect(setProductFeedbackVote({ ...VIEWER, voted: true })).resolves.toBe('added')
+    expect(select).not.toHaveBeenCalled()
+  })
+
+  it('refuses when the statement returns nothing — the rule said no, including an entry un-approved since the card was drawn', async () => {
+    // Before, a row left over from an earlier vote on a now-pending entry made
+    // this read "added". There is no row check to be fooled now.
+    const { select } = fakeDb([], [{ id: 12 }])
     await expect(setProductFeedbackVote({ ...VIEWER, voted: true })).resolves.toBe('refused')
+    expect(select).not.toHaveBeenCalled()
   })
 
   it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
@@ -79,9 +85,14 @@ describe('the rule is in the SQL, not only in the component', () => {
     expect(toggle).toContain('${productFeedback.userId} IS DISTINCT FROM ${input.userId}')
   })
 
-  it('writes the voter workspace and lets the unique constraint settle a racing duplicate', () => {
+  it('writes the voter workspace and lets the unique constraint settle a racing duplicate by returning the existing row', () => {
     expect(toggle).toContain('INSERT INTO ${productFeedbackVotes} (feedback_id, user_id, org_id)')
-    expect(toggle).toContain('ON CONFLICT DO NOTHING')
+    expect(toggle).toContain('ON CONFLICT (feedback_id, user_id) DO UPDATE SET')
+    expect(toggle).toContain('RETURNING id')
+    expect(toggle).not.toContain('ON CONFLICT DO NOTHING')
+    // The statement's result is the answer: no follow-up select, no window
+    // between a write and a check for a row to vanish in.
+    expect(toggle).not.toContain('.select(')
     // Each statement stands alone; nothing here pretends a transaction serialises clicks.
     expect(toggle).not.toContain('.transaction(')
   })
