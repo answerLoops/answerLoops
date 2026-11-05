@@ -20,9 +20,13 @@
   // How long the page waits for the settings lookup before showing the widget
   // as it looked before the lookup existed.
   var CONFIG_TIMEOUT_MS = 2000;
+  var TOKEN_PATTERN = /^[0-9a-f]{48}$/;
   var PANEL_W = SIZES.small[0];
   var PANEL_H = SIZES.small[1];
   var bubbleColor = DEFAULT_COLOR;
+  // The token the chat panel is loaded with. Equal to data-widget-id for a
+  // token snippet; for a slug snippet it is whatever the lookup resolves to.
+  var panelToken = widgetId;
   var isOpen = false;
   var panel = null;
   var bubble = null;
@@ -60,7 +64,7 @@
     // forge. Anything this script could send would be equally settable by
     // whoever is embedding the widget, so it would defeat the allowed-domains
     // check rather than support it.
-    iframe.src = baseUrl + '/widget/' + widgetId;
+    iframe.src = baseUrl + '/widget/' + panelToken;
     iframe.title = 'Support chat';
     iframe.setAttribute('allow', 'clipboard-write');
 
@@ -83,6 +87,9 @@
 
   function applyConfig(config) {
     if (!config || typeof config !== 'object') return;
+    if (typeof config.token === 'string' && TOKEN_PATTERN.test(config.token)) {
+      panelToken = config.token;
+    }
     var display = config.display;
     if (display && typeof display === 'object') {
       if (typeof display.windowSize === 'string' && Object.prototype.hasOwnProperty.call(SIZES, display.windowSize)) {
@@ -97,7 +104,8 @@
     }
   }
 
-  // Asks the server how this business wants the widget to look. Never rejects: any failure, a slow reply
+  // Asks the server how this business wants the widget to look and, for a slug
+  // snippet, which token is current. Never rejects: any failure, a slow reply
   // or an unreadable answer resolves to null and the widget shows as before.
   function loadConfig() {
     if (typeof fetch !== 'function') return Promise.resolve(null);
@@ -124,6 +132,10 @@
   function init() {
     loadConfig().then(function (config) {
       applyConfig(config);
+      // A slug is only a name. If the lookup could not turn it into a token
+      // there is nothing to load, so the widget stays off rather than opening
+      // onto a page that cannot exist.
+      if (!TOKEN_PATTERN.test(panelToken)) return;
       createStyles();
       createBubble();
       createPanel();

@@ -185,10 +185,11 @@ describe('widget token actions cannot act on a defaulted org', () => {
     expect(s).toContain("const WIDGET_ADMIN_ROLES = ['owner', 'admin'] as const")
     // Rotation breaks every live embed; the allowlist decides where the widget
     // works at all; the lead-capture mode decides when a chat visitor is asked
-    // for an email. All three are owner/admin. Reading the token stays open to
-    // any member so they can still see the embed snippet.
+    // for an email; the public slug decides what name live embeds depend on.
+    // All four are owner/admin. Reading the token stays open to any member so
+    // they can still see the embed snippet.
     const gated = [...s.matchAll(/requireOrgAccess\(WIDGET_ADMIN_ROLES\)/g)]
-    expect(gated.length).toBe(3)
+    expect(gated.length).toBe(4)
     const ungated = [...s.matchAll(/requireOrgAccess\(\)/g)]
     expect(ungated.length).toBe(1)
   })
@@ -274,7 +275,7 @@ describe('the allowlist is enforced where the parent origin is visible', () => {
     // Comments stripped: the file explains why the parameter is absent, and
     // matching raw source would flag its own rationale.
     const s = read('public/widget.js').replace(/\/\/.*$/gm, '')
-    expect(s).toContain("iframe.src = baseUrl + '/widget/' + widgetId;")
+    expect(s).toContain("iframe.src = baseUrl + '/widget/' + panelToken;")
     expect(s).not.toContain('?parent=')
     expect(s).not.toContain('parentOrigin')
     // window.location.origin still appears legitimately, as the fallback for

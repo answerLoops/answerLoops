@@ -4,13 +4,14 @@ import path from 'node:path'
 import vm from 'node:vm'
 
 /**
- * public/widget.js against a stub DOM and a fake fetch: how the loader applies
- * the display settings the server returns, and that it degrades to today's look
- * when the lookup is slow, broken or hostile.
+ * public/widget.js against a stub DOM and a fake fetch: how the loader turns a
+ * widget id (token or slug) into an iframe, and that it degrades to today's
+ * look when the settings lookup is slow, broken or hostile.
  */
 
 const SOURCE = fs.readFileSync(path.join(process.cwd(), 'public/widget.js'), 'utf8')
 const TOKEN = 'a1'.repeat(24)
+const ROTATED = 'b2'.repeat(24)
 
 interface El {
   tag: string
@@ -99,21 +100,32 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-describe('widget.js: asking for settings', () => {
+describe('widget.js: resolving the id', () => {
   it('asks the server about the id it was given, without credentials', async () => {
     const seen: { url: string; credentials?: string }[] = []
-    run(TOKEN, async (url, init) => {
+    run('acme-support', async (url, init) => {
       seen.push({ url, credentials: init?.credentials })
-      return { ok: true, json: async () => ({ display: {} }) }
+      return { ok: true, json: async () => ({ token: ROTATED, display: {} }) }
     })
     await vi.waitFor(() => expect(seen.length).toBe(1))
-    expect(seen[0].url).toBe(`https://app.test/api/widget/config?id=${TOKEN}`)
+    expect(seen[0].url).toBe('https://app.test/api/widget/config?id=acme-support')
     expect(seen[0].credentials).toBe('omit')
   })
 
-  it('loads the panel with the id from the snippet', async () => {
-    const w = run(TOKEN, reply({ display: {} }))
+  it('loads the panel with the token a slug resolves to', async () => {
+    const w = run('acme-support', reply({ token: ROTATED, display: {} }))
+    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${ROTATED}`))
+  })
+
+  it('keeps a token snippet\'s own token when the reply carries none', async () => {
+    const w = run(TOKEN, reply({ token: null, display: {} }))
     await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
+  })
+
+  it('ignores a resolved token that is not token-shaped', async () => {
+    const w = run('acme-support', reply({ token: '../../evil', display: {} }))
+    await new Promise((r) => setTimeout(r, 20))
+    expect(w.panel()).toBeUndefined()
   })
 
   it('still no-ops without a widget id, and asks nothing', async () => {
@@ -136,7 +148,7 @@ describe('widget.js: when the lookup fails', () => {
   })
 
   it.each([
-    ['a 429', reply({ display: {} }, false)],
+    ['a 429', reply({ token: null, display: {} }, false)],
     ['unreadable JSON', async () => ({ ok: true, json: async () => { throw new SyntaxError('bad') } })],
     ['a null body', reply(null)],
   ])('shows a token install as before after %s', async (_name, impl) => {
@@ -148,6 +160,15 @@ describe('widget.js: when the lookup fails', () => {
   it('shows a token install as before when fetch does not exist', async () => {
     const w = run(TOKEN, undefined)
     await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
+  })
+
+  it('does not load a slug install it could not resolve', async () => {
+    const w = run('acme-support', async () => {
+      throw new Error('network down')
+    })
+    await new Promise((r) => setTimeout(r, 20))
+    expect(w.panel()).toBeUndefined()
+    expect(w.bubble()).toBeUndefined()
   })
 
   it('gives up on a slow lookup after two seconds and falls back', async () => {
@@ -167,7 +188,7 @@ describe('widget.js: when the lookup fails', () => {
 
 describe('widget.js: applying display settings', () => {
   it('uses the served bubble color and window size', async () => {
-    const w = run(TOKEN, reply({ display: { windowSize: 'large', bubbleColor: '#aa00ff' } }))
+    const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'large', bubbleColor: '#aa00ff' } }))
     await vi.waitFor(() => expect(w.panel()).toBeDefined())
     expect(w.css()).toContain('background:#aa00ff')
     expect(w.css()).toContain('width:520px')
@@ -175,7 +196,10 @@ describe('widget.js: applying display settings', () => {
   })
 
   it('never lets a hostile color reach the stylesheet', async () => {
-    const w = run(TOKEN, reply({ display: { windowSize: 'small', bubbleColor: 'red;}body{display:none' } }))
+    const w = run(
+      TOKEN,
+      reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: 'red;}body{display:none' } })
+    )
     await vi.waitFor(() => expect(w.panel()).toBeDefined())
     expect(w.css()).not.toContain('display:none')
     expect(w.css()).toContain('background:#4f46e5')
@@ -183,14 +207,14 @@ describe('widget.js: applying display settings', () => {
 
   it('treats an unknown size name, including inherited ones, as small', async () => {
     for (const windowSize of ['huge', 'constructor', '__proto__']) {
-      const w = run(TOKEN, reply({ display: { windowSize, bubbleColor: '#112233' } }))
+      const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize, bubbleColor: '#112233' } }))
       await vi.waitFor(() => expect(w.panel()).toBeDefined())
       expect(w.css()).toContain('width:380px')
     }
   })
 
   it('keeps the window inside the browser window', async () => {
-    const w = run(TOKEN, reply({ display: { windowSize: 'large' } }))
+    const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'large' } }))
     await vi.waitFor(() => expect(w.panel()).toBeDefined())
     expect(w.css()).toContain('max-width:calc(100vw - 48px)')
     expect(w.css()).toContain('max-height:calc(100vh - 112px)')
