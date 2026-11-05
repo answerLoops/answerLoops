@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const h = vi.hoisted(() => ({
   getInstallationOctokit: vi.fn(),
+  getCommit: vi.fn(),
   getTree: vi.fn(),
   getContent: vi.fn(),
   getKBSourceByFilename: vi.fn(),
@@ -65,9 +66,10 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.resetModules()
   h.getInstallationOctokit.mockResolvedValue({
-    rest: { git: { getTree: h.getTree }, repos: { getContent: h.getContent } },
+    rest: { git: { getTree: h.getTree }, repos: { getContent: h.getContent, getCommit: h.getCommit } },
     auth: async () => ({ token: 'tok' }),
   })
+  h.getCommit.mockResolvedValue({ data: { sha: 'a'.repeat(40) } })
   h.getTree.mockResolvedValue({ data: { tree: [{ type: 'blob', path: 'docs/guide.md' }] } })
   h.getContent.mockResolvedValue({ data: { type: 'file', content: Buffer.from('# Guide').toString('base64') } })
   h.chunkMarkdown.mockReturnValue([{ question: 'Q1', answer: 'A1' }, { question: 'Q2', answer: 'A2' }])

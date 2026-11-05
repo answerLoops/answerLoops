@@ -85,11 +85,17 @@ export async function syncRepoToKB(
 ): Promise<number> {
   const octokit = await getInstallationOctokit(owner, repo, orgId)
 
+  // Resolve the head once and read everything from that commit. Without this a
+  // push landing mid-sync could mix files from two versions, and there would be
+  // no single commit to record as the one this knowledge reflects.
+  const { data: head } = await octokit.rest.repos.getCommit({ owner, repo, ref: 'HEAD' })
+  const commitSha = head.sha
+
   // Get full file tree
   const { data: tree } = await octokit.rest.git.getTree({
     owner,
     repo,
-    tree_sha: 'HEAD',
+    tree_sha: commitSha,
     recursive: '1',
   })
 
@@ -131,7 +137,7 @@ export async function syncRepoToKB(
       opts.onProgress?.(fi, mdFiles.length)
       if (created >= budget) break
       try {
-        const { data } = await octokit.rest.repos.getContent({ owner, repo, path: file.path! })
+        const { data } = await octokit.rest.repos.getContent({ owner, repo, path: file.path!, ref: commitSha })
         if (Array.isArray(data) || data.type !== 'file') continue
 
         const content = Buffer.from(data.content, 'base64').toString('utf8')
@@ -178,6 +184,7 @@ export async function syncRepoToKB(
   const discussionsSource = await getKBSourceByFilename(orgId, discussionSourceFilename(owner, repo))
   await updateRepoSettings(repoId, orgId, {
     kbLastSynced: new Date().toISOString(),
+    kbSyncedCommit: commitSha,
     kbChunkCount: created + (discussionsSource?.chunk_count ?? 0),
   })
 
