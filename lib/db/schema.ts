@@ -28,6 +28,11 @@ export const orgs = pgTable('orgs', {
   onboardedAt: text('onboarded_at'),
   widgetToken: text('widget_token').unique(),
   widgetTokenExpiresAt: text('widget_token_expires_at'),
+  // Stable public identifier the embed snippet can carry instead of the token,
+  // so rotating the token does not break live embeds. NULL until an owner picks
+  // one. Shape is enforced by lib/widget/slug.ts at every write; uniqueness by
+  // the partial unique index in migration 0073 (NULLs are not compared).
+  widgetSlug: text('widget_slug'),
   // Newline-separated hostnames the widget may be embedded on. NULL or empty
   // means unrestricted, which is the pre-existing behaviour and stays the
   // default so adding this column cannot break a live embed.

@@ -1,7 +1,9 @@
 import crypto from 'crypto'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, type SQL } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { orgs, subscriptions } from '../schema'
+import { isUniqueViolation } from '@/lib/ingest/db-errors'
+import { validateWidgetSlug } from '@/lib/widget/slug'
 import {
   SAFE_WIDGET_LEAD_CAPTURE_MODE_FALLBACK,
   isWidgetLeadCaptureMode,
@@ -32,7 +34,7 @@ function expiryFromNow(): string {
   return d.toISOString()
 }
 
-export async function getOrgByWidgetToken(token: string): Promise<WidgetOrg | null> {
+async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
   const [row] = await getDb()
     .select({
       id: orgs.id,
@@ -51,7 +53,7 @@ export async function getOrgByWidgetToken(token: string): Promise<WidgetOrg | nu
     // nothing else was applying it here — a deleted customer's widget kept
     // answering from their knowledge base, spending against their AI provider
     // and writing new leads, for the whole 30-day grace period.
-    .where(and(eq(orgs.widgetToken, token), isNull(orgs.deletedAt)))
+    .where(and(match, isNull(orgs.deletedAt)))
     .limit(1)
 
   if (!row) return null
@@ -71,6 +73,18 @@ export async function getOrgByWidgetToken(token: string): Promise<WidgetOrg | nu
       ? row.widget_lead_capture_mode
       : SAFE_WIDGET_LEAD_CAPTURE_MODE_FALLBACK,
   }
+}
+
+export async function getOrgByWidgetToken(token: string): Promise<WidgetOrg | null> {
+  return findWidgetOrg(eq(orgs.widgetToken, token))
+}
+
+/**
+ * Resolve a public slug to the workspace it names, under exactly the rules a
+ * token gets: a deleted workspace or an expired token resolves to nothing.
+ */
+export async function getOrgByWidgetSlug(slug: string): Promise<WidgetOrg | null> {
+  return findWidgetOrg(eq(orgs.widgetSlug, slug))
 }
 
 export async function ensureWidgetToken(orgId: number): Promise<WidgetTokenInfo> {
@@ -136,4 +150,38 @@ export async function setWidgetLeadCaptureMode(orgId: number, mode: string): Pro
     throw new Error(`Invalid widget lead capture mode: ${mode}`)
   }
   await getDb().update(orgs).set({ widgetLeadCaptureMode: mode }).where(eq(orgs.id, orgId))
+}
+
+/** The org's current public slug, or null when none has been chosen. */
+export async function getWidgetSlug(orgId: number): Promise<string | null> {
+  const [row] = await getDb()
+    .select({ slug: orgs.widgetSlug })
+    .from(orgs)
+    .where(eq(orgs.id, orgId))
+    .limit(1)
+  return row?.slug ?? null
+}
+
+export type SetWidgetSlugResult = { ok: true; slug: string | null } | { ok: false; error: string }
+
+/**
+ * Set or clear (null) the org's public widget slug. Validated here as well as
+ * in the action, because this is the only write path and the column has no
+ * CHECK. A slug already held by another workspace reports as taken rather than
+ * throwing, so two owners racing for the same name get a clear answer.
+ */
+export async function setWidgetSlug(orgId: number, raw: string | null): Promise<SetWidgetSlugResult> {
+  let slug: string | null = null
+  if (raw !== null) {
+    const checked = validateWidgetSlug(raw)
+    if (!checked.ok) return checked
+    slug = checked.slug
+  }
+  try {
+    await getDb().update(orgs).set({ widgetSlug: slug }).where(eq(orgs.id, orgId))
+  } catch (err) {
+    if (isUniqueViolation(err)) return { ok: false, error: 'That name is already taken. Try another.' }
+    throw err
+  }
+  return { ok: true, slug }
 }
