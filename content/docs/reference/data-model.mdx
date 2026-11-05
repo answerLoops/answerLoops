@@ -74,10 +74,11 @@ The diagram shows the key relationships only. The link from an article to its im
 
 | Table | Contents |
 |---|---|
-| `product_feedback` | Feedback entries from the in-app widget: vote, text, moderation status, and the team's reply. Shared across workspaces; each row records its author's workspace for display. |
+| `product_feedback` | Feedback entries from the in-app widget: text, moderation status, and the team's reply. Shared across workspaces; each row records its author's workspace for display. |
+| `product_feedback_votes` | One row per person per approved entry they up-voted, with the voter's workspace so the votes go when the workspace does. Counts are computed from these rows at read time; nothing identifies a voter to other users. |
 | `product_updates` | The "what's new" feed shown on the widget's Updates tab. |
 
-Changes to the feedback and updates tables notify connected dashboards so the widget updates live.
+Changes to the feedback, votes and updates tables notify connected dashboards so the widget updates live.
 
 ## Configuration and billing
 
