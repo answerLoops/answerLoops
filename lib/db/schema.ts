@@ -275,6 +275,10 @@ export const githubRepos = pgTable('github_repos', {
   monitoredEvents: text('monitored_events').notNull().default('both'),
   kbEnabled: integer('kb_enabled').notNull().default(0),
   kbLastSynced: text('kb_last_synced'),
+  // Commit the last repo files sync read, so a reviewer can tell which version
+  // of the docs the knowledge was built from. NULL for syncs that ran before
+  // this column existed (migration 0074).
+  kbSyncedCommit: text('kb_synced_commit'),
   kbChunkCount: integer('kb_chunk_count').notNull().default(0),
   // Automatic Deflections for this repo — same meaning/default as
   // integrations.autoDeflectEnabled, but GitHub has no integrations row

@@ -101,7 +101,7 @@ Pick the method that matches where your knowledge already lives. Importing, uplo
       </Step>
     </Steps>
 
-    A sync reads up to 100 `.md` and `.mdx` files from the repository. It skips folders such as `node_modules`, `vendor`, `.github`, `test`, `tests`, `__tests__`, and `spec`, plus `CHANGELOG`, `LICENSE.md`, and `CODE_OF_CONDUCT.md`. The whole repository is one entry in the Sources list, and its answered Discussions are a second one (type `github-discussion`).
+    A sync reads up to 100 `.md` and `.mdx` files from the repository. It skips folders such as `node_modules`, `vendor`, `.github`, `test`, `tests`, `__tests__`, and `spec`, plus `CHANGELOG`, `LICENSE.md`, and `CODE_OF_CONDUCT.md`. Every file is read from the repository's head commit at the start of the sync, and that commit is shown next to the last-synced time as a short link to it on GitHub. The whole repository is one entry in the Sources list, and its answered Discussions are a second one (type `github-discussion`).
 
     With **Knowledge Base** switched on, answerLoops also re-syncs automatically on every push to the default branch, and a Discussion is added the moment it is marked as answered.
   </Tab>

@@ -1,5 +1,6 @@
 'use client'
 
+import { RepoSyncStatus } from '@/components/kb/repo-sync-status'
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -288,9 +289,7 @@ function GitHubKBSection({ onSynced }: { onSynced: () => void }) {
             <div className="min-w-0">
               <p className="text-sm font-medium text-gray-800 font-mono break-all">{repo.owner}/{repo.repo}</p>
               <p className="text-xs text-gray-400">
-                {repo.kb_chunk_count > 0
-                  ? `${repo.kb_chunk_count} chunks · last synced ${repo.kb_last_synced ? new Date(repo.kb_last_synced).toLocaleDateString() : 'never'}`
-                  : 'Not yet synced'}
+                <RepoSyncStatus repo={repo} />
               </p>
             </div>
             <Button
