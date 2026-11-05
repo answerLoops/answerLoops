@@ -37,6 +37,8 @@ function snapshot(overrides: Partial<BoardSnapshot> = {}): BoardSnapshot {
         createdAt: '2026-10-05T15:04:00.000Z',
         approvedAt: '2026-10-05T15:30:00.000Z',
         mine: false,
+        voteCount: 0,
+        viewerVoted: false,
         reply: { body: 'Thanks for the kind words!', tag: 'great_feedback', repliedAt: '2026-10-05T16:00:00.000Z' },
       },
     ],

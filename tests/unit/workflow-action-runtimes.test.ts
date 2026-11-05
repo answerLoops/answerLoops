@@ -39,7 +39,7 @@ const NODE24_FLOOR: Record<string, number> = {
  * Node runtime, so the deprecation does not reach them and there is no major
  * to floor.
  */
-const COMPOSITE_ACTIONS = new Set(['aquasecurity/trivy-action'])
+const COMPOSITE_ACTIONS = new Set(['aquasecurity/trivy-action', 'snyk/actions/setup'])
 
 interface Use {
   file: string

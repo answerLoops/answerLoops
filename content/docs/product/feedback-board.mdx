@@ -11,7 +11,7 @@ Tell the answerLoops team what is working, what is missing, and what you would c
   only={['tabs', 'feedback-item', 'team-reply', 'compose']}
   notes={{
     tabs: 'Switch between the Feedback board and the Updates feed. The number beside each tab is how many entries it holds.',
-    'feedback-item': 'Each entry shows who it is from and the date it was approved. Your own entries are marked You.',
+    'feedback-item': 'Each entry shows who it is from, the date it was approved, and an up arrow with its vote count. Your own entries are marked You.',
     'team-reply': 'When the answerLoops team replies, the reply appears under the entry, optionally with a tag such as Great feedback, Planned, Shipped, or Considering.',
     compose: 'Write your own feedback here, choose whether to post anonymously, then select Submit.',
   }}
@@ -59,19 +59,27 @@ New feedback is reviewed before other people can see it. Until it is approved, o
 
 The **Feedback** tab lists approved feedback from people across answerLoops. Each entry shows the workspace it came from, or "Anonymous feedback" when the author chose to hide it, along with the date it was approved. Replies from the answerLoops team appear directly beneath the entry they answer.
 
+### Up-vote what you want too
+
+Each approved entry carries an up arrow with a count. Select the arrow to add your vote; select it again to take it back. One vote per person per entry, and you cannot vote on your own feedback, which shows its count without a button. Votes are anonymous: everyone sees the number, nobody sees who voted. There is no down-vote, and the team's replies and the Updates feed cannot be voted on.
+
+### Sort the list
+
+Use **Sort** above the list to switch between **Newest**, the default, and **Most voted**. Most voted puts the entries with the highest counts first; entries with the same count stay in newest-first order.
+
 ## Follow product updates
 
 The **Updates** tab is a feed of what the answerLoops team has recently shipped, newest first. The number beside the tab is how many updates are posted. Opening the tab clears the new-update dot.
 
 ## Live updates
 
-The panel and the count on the collapsed pill update on their own when feedback is approved, replied to, or a new update is posted. You do not need to refresh the page.
+The panel and the count on the collapsed pill update on their own when feedback is approved, replied to, voted on, or a new update is posted. You do not need to refresh the page.
 
 ## Availability and data
 
 The feedback board is part of the answerLoops-hosted product. It collects feedback on answerLoops itself, so self-hosted deployments do not show it.
 
-When a workspace is permanently deleted, the feedback its members submitted is deleted with it.
+When a workspace is permanently deleted, the feedback its members submitted is deleted with it, and so are the votes they cast.
 
 ## Where to go next
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { subscribeLiveEvents } from '@/lib/live-events'
-import type { BoardSnapshot } from '@/lib/product-feedback/validation'
+import type { BoardSnapshot, BoardSort } from '@/lib/product-feedback/validation'
 import { LogoMark } from '@/components/logo'
 import { FeedbackCard } from './feedback-card'
 import { FeedbackComposer } from './feedback-composer'
@@ -54,9 +54,14 @@ function subscribeSeenUpdateId(notify: () => void) {
   }
 }
 
-async function fetchSnapshot(signal?: AbortSignal): Promise<BoardSnapshot | null> {
+const SNAPSHOT_PATH = '/api/product-feedback'
+
+// The only request the widget ever makes. The order is the server's: it sorts
+// before its row cap, so "votes" ranks the whole board, not only the rows in
+// hand. The default order keeps the bare path.
+async function fetchSnapshot(sort: BoardSort, signal?: AbortSignal): Promise<BoardSnapshot | null> {
   try {
-    const res = await fetch('/api/product-feedback', { cache: 'no-store', signal })
+    const res = await fetch(sort === 'votes' ? `${SNAPSHOT_PATH}?sort=votes` : SNAPSHOT_PATH, { cache: 'no-store', signal })
     if (!res.ok) return null
     return (await res.json()) as BoardSnapshot
   } catch {
@@ -67,6 +72,10 @@ async function fetchSnapshot(signal?: AbortSignal): Promise<BoardSnapshot | null
 }
 
 type Tab = 'feedback' | 'updates'
+const SORTS: readonly [BoardSort, string][] = [
+  ['newest', 'Newest'],
+  ['votes', 'Most voted'],
+]
 
 /**
  * Floating product-feedback board, mounted once in the dashboard layout so it
@@ -84,6 +93,9 @@ export function FeedbackWidget() {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('feedback')
   const [snapshot, setSnapshot] = useState<BoardSnapshot | null>(null)
+  const [sort, setSort] = useState<BoardSort>('newest')
+  // The live refetch reads the current sort without being re-subscribed.
+  const sortRef = useRef<BoardSort>('newest')
   const pillRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
   const wasOpen = useRef(false)
@@ -94,17 +106,36 @@ export function FeedbackWidget() {
   // and the real value arrives right after hydration.
   const seenUpdateId = useSyncExternalStore<number | null>(subscribeSeenUpdateId, readSeenUpdateId, () => null)
 
-  const load = useCallback(async (signal?: AbortSignal) => {
-    const next = await fetchSnapshot(signal)
-    if (next) setSnapshot(next)
+  // Latest request wins. Every snapshot request — first load, sort change,
+  // live refetch — takes a sequence number here, and only the answer to the
+  // newest one is applied, so a slower earlier response is dropped even when
+  // the network delivers it last. The request still in flight is aborted too,
+  // which saves the work, but the sequence check is the guarantee: this
+  // component is the single writer of `snapshot` and assigns order at request
+  // time, never at arrival.
+  const requestSeq = useRef(0)
+  const inFlight = useRef<AbortController | null>(null)
+  const load = useCallback(async () => {
+    inFlight.current?.abort()
+    const controller = new AbortController()
+    inFlight.current = controller
+    const seq = ++requestSeq.current
+    const next = await fetchSnapshot(sortRef.current, controller.signal)
+    if (next && seq === requestSeq.current) setSnapshot(next)
   }, [])
 
+  const changeSort = useCallback(
+    (next: BoardSort) => {
+      sortRef.current = next
+      setSort(next)
+      void load()
+    },
+    [load],
+  )
+
   useEffect(() => {
-    const controller = new AbortController()
     let debounce: ReturnType<typeof setTimeout> | undefined
-    fetchSnapshot(controller.signal).then((next) => {
-      if (next && !controller.signal.aborted) setSnapshot(next)
-    })
+    void load()
 
     const unsubscribe = subscribeLiveEvents(['feedback_changed', 'resync'], (event) => {
       clearTimeout(debounce)
@@ -116,7 +147,7 @@ export function FeedbackWidget() {
     })
 
     return () => {
-      controller.abort()
+      inFlight.current?.abort()
       clearTimeout(debounce)
       unsubscribe()
     }
@@ -154,6 +185,7 @@ export function FeedbackWidget() {
 
   const count = snapshot?.approvedCount ?? 0
   const updatesCount = snapshot?.updates.length ?? 0
+  const feedback = snapshot?.feedback ?? []
 
   if (!open) {
     return (
@@ -267,11 +299,34 @@ export function FeedbackWidget() {
                 No feedback yet. Be the first to tell us what you think.
               </p>
             ) : (
-              <ul className="space-y-3">
-                {snapshot.feedback.map((item) => (
-                  <FeedbackCard key={item.id} item={item} />
-                ))}
-              </ul>
+              <>
+                <fieldset className="mb-3 flex items-center justify-end gap-2">
+                  <legend className="sr-only">Sort feedback</legend>
+                  <span aria-hidden className="text-xs font-medium text-slate-500">
+                    Sort
+                  </span>
+                  <div className="flex rounded-lg border border-slate-200 bg-white p-0.5">
+                    {SORTS.map(([id, label]) => (
+                      <button
+                        key={id}
+                        type="button"
+                        aria-pressed={sort === id}
+                        onClick={() => changeSort(id)}
+                        className={`h-8 rounded-md px-3 text-xs font-semibold transition sm:h-7 sm:px-2.5 ${
+                          sort === id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <ul className="space-y-3">
+                  {feedback.map((item) => (
+                    <FeedbackCard key={item.id} item={item} />
+                  ))}
+                </ul>
+              </>
             )}
           </div>
           <FeedbackComposer />

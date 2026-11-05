@@ -1,24 +1,35 @@
-import { desc, eq, or, sql } from 'drizzle-orm'
+import { and, desc, eq, or, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
-import { orgs, productFeedback, productUpdates } from '../schema'
+import { orgs, productFeedback, productFeedbackVotes, productUpdates } from '../schema'
 import {
   isReplyTag,
   type BoardFeedback,
   type BoardSnapshot,
+  type BoardSort,
   type BoardUpdate,
   type FeedbackStatus,
   type ReplyTag,
+  type VoteResult,
 } from '@/lib/product-feedback/validation'
 
 /**
  * Everything the widget renders, scoped to one viewer. Approved feedback is
  * visible to all; a submitter additionally sees their own pending/rejected
  * rows. Author identity is resolved here so ids and emails never reach a
- * client.
+ * client. The order is decided here, before the 200-row cap, so "votes"
+ * ranks the whole board and not only the newest rows.
  */
-export async function getBoardSnapshot(input: { userId: number }): Promise<BoardSnapshot> {
+export async function getBoardSnapshot(input: { userId: number; sort?: BoardSort }): Promise<BoardSnapshot> {
   const db = getDb()
   const visible = or(eq(productFeedback.status, 'approved'), eq(productFeedback.userId, input.userId))
+  // Vote facts are computed per row from the votes table; nothing about other
+  // voters leaves the database, only the count and the viewer's own
+  // membership in it. The count is also the sort key for "votes".
+  const voteCount = sql<number>`(SELECT COUNT(*)::int FROM ${productFeedbackVotes} WHERE ${productFeedbackVotes.feedbackId} = ${productFeedback.id})`
+  const order =
+    input.sort === 'votes'
+      ? [desc(voteCount), desc(productFeedback.createdAt)]
+      : [desc(productFeedback.createdAt)]
 
   const rows = await db
     .select({
@@ -34,11 +45,13 @@ export async function getBoardSnapshot(input: { userId: number }): Promise<Board
       replyTag: productFeedback.replyTag,
       repliedAt: productFeedback.repliedAt,
       orgName: orgs.name,
+      voteCount,
+      viewerVoted: sql<boolean>`EXISTS (SELECT 1 FROM ${productFeedbackVotes} WHERE ${productFeedbackVotes.feedbackId} = ${productFeedback.id} AND ${productFeedbackVotes.userId} = ${input.userId})`,
     })
     .from(productFeedback)
     .leftJoin(orgs, eq(orgs.id, productFeedback.orgId))
     .where(visible)
-    .orderBy(desc(productFeedback.createdAt))
+    .orderBy(...order)
     .limit(200)
 
   const feedback: BoardFeedback[] = rows.map((r) => ({
@@ -54,6 +67,8 @@ export async function getBoardSnapshot(input: { userId: number }): Promise<Board
       r.replyBody && r.repliedAt
         ? { body: r.replyBody, tag: isReplyTag(r.replyTag) ? (r.replyTag as ReplyTag) : null, repliedAt: r.repliedAt }
         : null,
+    voteCount: Number(r.voteCount ?? 0),
+    viewerVoted: r.viewerVoted === true,
   }))
 
   const [counts] = await db
@@ -94,6 +109,62 @@ export async function createProductFeedback(input: {
     })
     .returning({ id: productFeedback.id })
   return row.id
+}
+
+/**
+ * Set the caller's up-vote on an entry to the state they asked for. Removing
+ * is a plain delete, so repeating it is harmless. Adding inserts only where
+ * the entry is approved and not the caller's own — that predicate IS the
+ * rule; hiding the arrow in the UI is a courtesy — and an existing row counts
+ * as success, so a retried or doubled request lands in the same place. The
+ * UNIQUE (feedback_id, user_id) constraint is what keeps one vote per person
+ * under concurrent adds; the loser's insert lands on the existing row and
+ * reports it instead of erroring. No transaction: every statement here is
+ * idempotent on its own.
+ *
+ * org_id on the vote is the voter's workspace, so hardPurgeOrg can find it.
+ */
+export async function setProductFeedbackVote(input: {
+  feedbackId: number
+  userId: number
+  orgId: number
+  voted: boolean
+}): Promise<VoteResult> {
+  // Cheap guard before any query: the action validates, this never trusts it.
+  if (!Number.isInteger(input.feedbackId) || input.feedbackId < 1) return 'refused'
+  const db = getDb()
+  const own = and(
+    eq(productFeedbackVotes.feedbackId, input.feedbackId),
+    eq(productFeedbackVotes.userId, input.userId),
+  )
+
+  if (!input.voted) {
+    await db.delete(productFeedbackVotes).where(own)
+    return 'removed'
+  }
+
+  // One statement, and its result is the answer. INSERT ... SELECT keeps the
+  // eligibility check and the write together; IS DISTINCT FROM (not <>)
+  // because seeded example rows have a NULL author and are votable. On a
+  // conflict with the caller's own existing row, the no-op UPDATE makes
+  // RETURNING hand that row back. So a row back means the vote is stored now,
+  // new or already there; nothing back means only the rule refused: not
+  // approved (any more), the caller's own entry, or no such entry. There is
+  // no second read, so there is no moment for the row to vanish between a
+  // write and a check, and a stale card voting on an entry un-approved since
+  // is told no rather than shown a vote. The no-op UPDATE fires the board
+  // trigger once more; a doubled add is rare and the extra refetch harmless.
+  const stored = (await db.execute(sql`
+    INSERT INTO ${productFeedbackVotes} (feedback_id, user_id, org_id)
+    SELECT ${productFeedback.id}, ${input.userId}, ${input.orgId}
+    FROM ${productFeedback}
+    WHERE ${productFeedback.id} = ${input.feedbackId}
+      AND ${productFeedback.status} = 'approved'
+      AND ${productFeedback.userId} IS DISTINCT FROM ${input.userId}
+    ON CONFLICT (feedback_id, user_id) DO UPDATE SET created_at = ${productFeedbackVotes}.created_at
+    RETURNING id
+  `)) as unknown as { id: number }[]
+  return stored.length > 0 ? 'added' : 'refused'
 }
 
 /**

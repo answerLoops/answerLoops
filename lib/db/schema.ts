@@ -1117,6 +1117,32 @@ export const productFeedback = pgTable(
   ]
 )
 
+// Up-votes on feedback-board entries (migration 0072). One row per person per
+// entry — the unique constraint is the "one vote" rule. org_id is the VOTER's
+// workspace so hardPurgeOrg can remove the votes a deleted workspace cast, not
+// only the votes on its own entries. No direction column: the board has no
+// down-vote. Counts are computed at read time in getBoardSnapshot.
+export const productFeedbackVotes = pgTable(
+  'product_feedback_votes',
+  {
+    id: serial('id').primaryKey(),
+    feedbackId: integer('feedback_id')
+      .notNull()
+      .references(() => productFeedback.id, { onDelete: 'cascade' }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    orgId: integer('org_id')
+      .notNull()
+      .references(() => orgs.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').notNull().default(now),
+  },
+  (t) => [
+    unique('product_feedback_votes_unique').on(t.feedbackId, t.userId),
+    index('idx_product_feedback_votes_feedback').on(t.feedbackId),
+  ]
+)
+
 // Operator-authored "what's new" feed, the widget's Updates tab.
 export const productUpdates = pgTable(
   'product_updates',
