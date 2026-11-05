@@ -9,12 +9,16 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const h = vi.hoisted(() => ({
   getOrgByWidgetToken: vi.fn(),
+  getOrgByWidgetSlug: vi.fn(),
   orgHasFeature: vi.fn(),
   rateLimitShared: vi.fn(),
   verifyOriginProxy: vi.fn(),
 }))
 
-vi.mock('@/lib/db/queries/widgets', () => ({ getOrgByWidgetToken: h.getOrgByWidgetToken }))
+vi.mock('@/lib/db/queries/widgets', () => ({
+  getOrgByWidgetToken: h.getOrgByWidgetToken,
+  getOrgByWidgetSlug: h.getOrgByWidgetSlug,
+}))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: h.verifyOriginProxy }))
@@ -22,6 +26,7 @@ vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
 vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }))
 
 const TOKEN = 'a1'.repeat(24)
+const NEXT_TOKEN = 'b2'.repeat(24)
 const DEFAULTS = { windowSize: 'small', bubbleColor: '#4f46e5' }
 
 const org = (token: string) => ({
@@ -46,44 +51,62 @@ beforeEach(() => {
   h.rateLimitShared.mockResolvedValue({ ok: true })
   h.orgHasFeature.mockResolvedValue(true)
   h.getOrgByWidgetToken.mockResolvedValue(org(TOKEN))
+  h.getOrgByWidgetSlug.mockResolvedValue(org(NEXT_TOKEN))
 })
 
-describe('GET /api/widget/config: looking up the widget', () => {
-  it('returns display settings for a live widget token', async () => {
+describe('GET /api/widget/config: resolving the id', () => {
+  it('resolves a token to itself and returns display settings', async () => {
     const res = await call(TOKEN)
     expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ display: DEFAULTS })
+    expect(await res.json()).toEqual({ token: TOKEN, display: DEFAULTS })
     expect(h.getOrgByWidgetToken).toHaveBeenCalledWith(TOKEN)
+    expect(h.getOrgByWidgetSlug).not.toHaveBeenCalled()
   })
 
-  it('returns harmless defaults, not an error, for an unknown or expired token', async () => {
+  it('resolves a slug to the workspace\'s current token', async () => {
+    const res = await call('acme-support')
+    expect(await res.json()).toEqual({ token: NEXT_TOKEN, display: DEFAULTS })
+    expect(h.getOrgByWidgetSlug).toHaveBeenCalledWith('acme-support')
+    expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
+  })
+
+  it('follows a rotation: the same slug returns whatever token is current', async () => {
+    h.getOrgByWidgetSlug.mockResolvedValueOnce(org(TOKEN)).mockResolvedValueOnce(org(NEXT_TOKEN))
+    expect((await (await call('acme-support')).json()).token).toBe(TOKEN)
+    expect((await (await call('acme-support')).json()).token).toBe(NEXT_TOKEN)
+  })
+
+  it('returns harmless defaults, not an error, for an unknown or expired id', async () => {
     h.getOrgByWidgetToken.mockResolvedValue(null)
-    const res = await call(TOKEN)
-    expect(res.status).toBe(200)
-    expect(await res.json()).toEqual({ display: DEFAULTS })
+    h.getOrgByWidgetSlug.mockResolvedValue(null)
+    for (const id of [TOKEN, 'no-such-widget']) {
+      const res = await call(id)
+      expect(res.status).toBe(200)
+      expect(await res.json()).toEqual({ token: null, display: DEFAULTS })
+    }
   })
 
   it('answers a missing or malformed id with defaults, without touching the database or limiter', async () => {
-    for (const id of [undefined, '', 'X', 'has space', 'UPPER', "a'; drop table orgs;--", 'z'.repeat(200), 'A1'.repeat(24)]) {
+    for (const id of [undefined, '', 'X', 'has space', 'UPPER', "a'; drop table orgs;--", 'z'.repeat(200)]) {
       const res = await call(id)
       expect(res.status).toBe(200)
-      expect(await res.json()).toEqual({ display: DEFAULTS })
+      expect(await res.json()).toEqual({ token: null, display: DEFAULTS })
     }
     expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
+    expect(h.getOrgByWidgetSlug).not.toHaveBeenCalled()
     expect(h.rateLimitShared).not.toHaveBeenCalled()
   })
 })
 
 describe('GET /api/widget/config: what leaves the server', () => {
-  it('returns only display settings, nothing about the workspace', async () => {
-    const body = await (await call(TOKEN)).json()
-    expect(Object.keys(body)).toEqual(['display'])
+  it('returns only the token and display settings, nothing about the workspace', async () => {
+    const body = await (await call('acme-support')).json()
+    expect(Object.keys(body).sort()).toEqual(['display', 'token'])
     expect(Object.keys(body.display).sort()).toEqual(['bubbleColor', 'windowSize'])
     const raw = JSON.stringify(body)
     expect(raw).not.toContain('Acme')
     expect(raw).not.toContain('acme.test')
     expect(raw).not.toContain('pro')
-    expect(raw).not.toContain(TOKEN)
   })
 
   it('is readable from any site, without credentials', async () => {
@@ -109,18 +132,18 @@ describe('GET /api/widget/config: caching', () => {
     expect(cc).toContain('stale-while-revalidate')
   })
 
-  it('caches the harmless default for an unknown token too, so probing it costs nothing', async () => {
-    h.getOrgByWidgetToken.mockResolvedValue(null)
-    expect((await call(TOKEN)).headers.get('cache-control')).toContain('s-maxage=60')
+  it('caches the harmless default for an unknown id too, so probing it costs nothing', async () => {
+    h.getOrgByWidgetSlug.mockResolvedValue(null)
+    expect((await call('no-such-widget')).headers.get('cache-control')).toContain('s-maxage=60')
   })
 })
 
 describe('GET /api/widget/config: abuse controls', () => {
   it('charges a per-address and a per-id counter on every lookup', async () => {
-    await call(TOKEN)
+    await call('acme-support')
     const keys = h.rateLimitShared.mock.calls.map((c) => c[0])
     expect(keys).toContain('widget-config-ip:203.0.113.9')
-    expect(keys).toContain(`widget-config-id:${TOKEN}`)
+    expect(keys).toContain('widget-config-id:acme-support')
   })
 
   it('answers 429 with defaults and never caches it', async () => {
@@ -128,7 +151,7 @@ describe('GET /api/widget/config: abuse controls', () => {
     const res = await call(TOKEN)
     expect(res.status).toBe(429)
     expect(res.headers.get('cache-control')).toBe('no-store')
-    expect(await res.json()).toEqual({ display: DEFAULTS })
+    expect(await res.json()).toEqual({ token: null, display: DEFAULTS })
     expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
   })
 
@@ -148,6 +171,6 @@ describe('GET /api/widget/config: abuse controls', () => {
     const res = await call(TOKEN)
     expect(res.status).toBe(503)
     expect(res.headers.get('cache-control')).toBe('no-store')
-    expect(await res.json()).toEqual({ display: DEFAULTS })
+    expect(await res.json()).toEqual({ token: null, display: DEFAULTS })
   })
 })

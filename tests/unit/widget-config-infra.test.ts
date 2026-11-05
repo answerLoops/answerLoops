@@ -111,9 +111,11 @@ describe('GET /api/widget/config behavior: no cookies, no workspace identifiers'
     const res = await run()
     expect(res.headers.get('set-cookie')).toBeNull()
     const raw = JSON.stringify(await res.json())
-    for (const secret of ['424242', 'Distinctive Org Name', 'distinctive-org-slug', 'enterprise', 'allowed.example', 'always', TOKEN]) {
+    // The only identifier in the body is the widget token the panel loads with.
+    for (const secret of ['424242', 'Distinctive Org Name', 'distinctive-org-slug', 'enterprise', 'allowed.example', 'always']) {
       expect(raw).not.toContain(secret)
     }
+    expect(Object.keys(JSON.parse(raw)).sort()).toEqual(['display', 'token'])
   })
 
   it('sets no cookie on the throttled and failure paths either', async () => {
@@ -133,8 +135,9 @@ describe('GET /api/widget/config behavior: no cookies, no workspace identifiers'
 describe('public/widget.js wiring', () => {
   const js = read('public/widget.js')
 
-  it('still points the iframe at baseUrl + /widget/ + widgetId', () => {
-    expect(js).toContain("iframe.src = baseUrl + '/widget/' + widgetId")
+  it('points the iframe at baseUrl + /widget/ + the resolved panel token', () => {
+    expect(js).toContain("iframe.src = baseUrl + '/widget/' + panelToken")
+    expect(js).toContain('var panelToken = widgetId;')
   })
 
   it('fetches the config lookup from the same baseUrl with the widget id', () => {

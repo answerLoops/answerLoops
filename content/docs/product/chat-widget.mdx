@@ -185,6 +185,7 @@ Where you paste the snippet depends on how your site is built. Find your platfor
 | Branding | **Settings → Widget** | Standard shows the answerLoops logo and a "Powered by answerLoops" line. Pro and Enterprise can remove the answerLoops branding; **Settings → Widget** shows an upgrade option when your plan does not include it. Self-hosted installs have it unlocked. |
 | Allowed domains | **Settings → Widget** | The domains the widget may load on. Subdomains are included. |
 | Embed token | **Settings → Widget** | Issued per workspace and expires after 90 days; **Regenerate token** issues a new one. |
+| Public name | **Settings → Widget** | An optional stable name for the snippet, so regenerating the token never breaks a page. See [Rotating the token](#rotating-the-token). |
 | Ask for an email | **Settings → Widget** | When the widget collects a visitor's email address: only after an unanswered question (default), before the conversation starts, or never. |
 | What it knows | **Knowledge Base** | Publish or unpublish articles and sources. The widget only answers from published articles. |
 | Contact and link cards | Your articles | Cards show links and contact details only when they are written in your articles. There is nothing to configure. |
@@ -193,11 +194,11 @@ The chat bubble sits at the bottom right of the page, and the answer language fo
 
 ### How the snippet gets its display settings
 
-When a page loads, the snippet asks your answerLoops instance how this workspace wants the widget to look (window size and bubble color). The answer contains display settings only, nothing else about your workspace. It is cached for about a minute, so a change reaches pages shortly after you save it. Which settings a workspace gets always follows its plan and is decided on the server, never by what the snippet says. Until you choose something the widget looks exactly as it did before, and if the lookup is slow or fails the snippet shows that default look after two seconds, so existing installs keep working without re-pasting anything.
+When a page loads, the snippet asks your answerLoops instance how this workspace wants the widget to look (window size and bubble color) and which widget token is current. The answer contains display settings and the widget token only, nothing else about your workspace. It is cached for about a minute, so a change reaches pages shortly after you save it. Which settings a workspace gets always follows its plan and is decided on the server, never by what the snippet says. Until you choose something the widget looks exactly as it did before, and if the lookup is slow or fails the snippet shows that default look after two seconds, so existing installs keep working without re-pasting anything.
 
 ## Restricting where the widget works
 
-The `data-widget-id` value is an **embed token**, and it is deliberately public: it ships in the HTML of every page the widget renders on. Because anyone can read it, **Settings → Widget → Allowed domains** is how you control where the widget works. List the domains you embed on, one per line:
+The `data-widget-id` value is an **embed token** (or a [public name](#rotating-the-token), which resolves to one), and it is deliberately public: it ships in the HTML of every page the widget renders on. Because anyone can read it, **Settings → Widget → Allowed domains** is how you control where the widget works. List the domains you embed on, one per line:
 
 ```
 example.com
@@ -249,8 +250,23 @@ When a visitor leaves an email through the "couldn't help" prompt, the lead also
 Tokens expire after **90 days**. Settings warns you as the date approaches, and **Regenerate token** issues a new one.
 
 <Callout type="warn" title="Rotating takes effect immediately">
-  Regenerating invalidates the old token. Every page still using the old snippet stops working until you update it. Rotate when you are able to update your site, not before.
+  Regenerating invalidates the old token. Every page whose snippet carries the token itself stops working until you update it. Rotate when you are able to update your site, or give the widget a public name first and the pages need no edit at all.
 </Callout>
+
+### Give the snippet a public name
+
+A **public name** is a stable label for your widget, such as `acme-support`, that the snippet carries instead of the token. When a page loads, the snippet looks the name up and gets whichever token is current, so regenerating the token takes effect everywhere within about a minute and nobody has to edit or redeploy a page. This is the better choice for documentation sites, where changing the snippet means a commit.
+
+1. In **Settings → Widget**, enter a name under **Public name** and select **Save name**. Use 3 to 40 lowercase letters, numbers and single hyphens.
+2. Copy the updated snippet, which now shows your name in `data-widget-id`, and paste it into your site.
+
+**What you should see:** the snippet reads `data-widget-id="acme-support"`, and after you regenerate the token the widget keeps loading on the same page with no change to it.
+
+```html
+<script src="https://your-instance.example.com/widget.js" data-widget-id="acme-support"></script>
+```
+
+A public name is as visible as the token and grants nothing more. The allowed-domains list still decides where the widget loads. Names are unique across the instance, so one that another workspace holds is refused. Snippets that carry the token keep working until it expires or is regenerated. Clearing the name stops the widget loading on any page that still uses it. Only owners and admins can set or clear it.
 
 ## Rich answer cards
 

@@ -5,7 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { updateSLAAction } from '@/lib/actions/sla'
 import { sendInviteAction, revokeInviteAction, removeMemberAction, transferOwnershipAction } from '@/lib/actions/invitations'
-import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction, saveWidgetLeadCaptureModeAction } from '@/lib/actions/widget'
+import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction, saveWidgetLeadCaptureModeAction, saveWidgetSlugAction } from '@/lib/actions/widget'
 import type { WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import { saveAIConfigAction, clearAIConfigAction, testAIConfigAction, listModelsAction, includedEmbeddingsAvailableAction } from '@/lib/actions/ai-config'
 import type { AIConnectionResult } from '@/lib/ai/test-connection'
@@ -885,6 +885,11 @@ export function WidgetSection() {
   const [leadCaptureMode, setLeadCaptureMode] = useState<WidgetLeadCaptureMode>('on-failure')
   const [savingLeadCaptureMode, setSavingLeadCaptureMode] = useState(false)
   const [leadCaptureMsg, setLeadCaptureMsg] = useState<string | null>(null)
+  // The saved slug is what the snippet carries; the draft is what's in the box.
+  const [slug, setSlug] = useState<string | null>(null)
+  const [slugDraft, setSlugDraft] = useState('')
+  const [savingSlug, setSavingSlug] = useState(false)
+  const [slugMsg, setSlugMsg] = useState<string | null>(null)
 
   async function changeLeadCaptureMode(mode: WidgetLeadCaptureMode) {
     const previous = leadCaptureMode
@@ -924,6 +929,27 @@ export function WidgetSection() {
     setSavingOrigins(false)
   }
 
+  async function saveSlug() {
+    setSavingSlug(true)
+    setSlugMsg(null)
+    const fd = new FormData()
+    fd.set('slug', slugDraft)
+    const result = await saveWidgetSlugAction(null, fd)
+    if (result.error) {
+      setSlugMsg(result.error)
+    } else {
+      const saved = result.slug ?? null
+      setSlug(saved)
+      setSlugDraft(saved ?? '')
+      setSlugMsg(
+        saved
+          ? 'Saved. Use the updated snippet above on your site.'
+          : 'Cleared. Any page still using the old name will stop loading the widget.'
+      )
+    }
+    setSavingSlug(false)
+  }
+
   useEffect(() => {
     let cancelled = false
     getWidgetTokenAction()
@@ -936,6 +962,8 @@ export function WidgetSection() {
           setOrigins(result.allowedOrigins ?? '')
           setSavedOrigins(result.allowedOrigins ?? '')
           if (result.leadCaptureMode) setLeadCaptureMode(result.leadCaptureMode)
+          setSlug(result.slug ?? null)
+          setSlugDraft(result.slug ?? '')
         }
         setLoading(false)
       })
@@ -959,8 +987,10 @@ export function WidgetSection() {
   }
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+  // The slug survives token rotation; the token does not. Prefer the slug once
+  // one is set so the pasted snippet never needs editing again.
   const embedCode = token
-    ? `<script src="${baseUrl}/widget.js" data-widget-id="${token}"></script>`
+    ? `<script src="${baseUrl}/widget.js" data-widget-id="${slug ?? token}"></script>`
     : ''
 
   // Read once on mount so rendering stays pure; the count only needs to be
@@ -1042,8 +1072,10 @@ export function WidgetSection() {
             </div>
 
             {!canManage ? null : confirmRotate ? (
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-red-600">Old token breaks immediately.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="w-full text-xs text-red-600 sm:w-auto">
+                  {slug ? 'Embeds that use your public name keep working.' : 'Old token breaks immediately.'}
+                </p>
                 <Button size="sm" variant="danger" onClick={regenerate} disabled={rotating}>
                   {rotating ? 'Rotating…' : 'Confirm rotate'}
                 </Button>
@@ -1053,6 +1085,40 @@ export function WidgetSection() {
               <Button size="sm" variant="secondary" onClick={() => setConfirmRotate(true)} disabled={rotating}>
                 Regenerate token
               </Button>
+            )}
+          </div>
+
+          <div className="space-y-2 border-t border-gray-100 pt-3">
+            <div>
+              <p className="text-xs font-medium text-gray-900">Public name</p>
+              <p className="text-[0.6875rem] text-gray-500">
+                A stable name for the embed snippet, so you can regenerate the token without editing
+                your site. Like the token, it is visible in your page source.
+              </p>
+            </div>
+            {canManage ? (
+              <>
+                <input
+                  value={slugDraft}
+                  onChange={(e) => setSlugDraft(e.target.value)}
+                  spellCheck={false}
+                  autoCapitalize="none"
+                  maxLength={40}
+                  placeholder="acme-support"
+                  aria-label="Public name"
+                  className="w-full rounded border border-gray-200 px-3 py-2 font-mono text-xs sm:w-72"
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button size="sm" onClick={saveSlug} disabled={savingSlug || slugDraft.trim() === (slug ?? '')}>
+                    {savingSlug ? 'Saving…' : 'Save name'}
+                  </Button>
+                  {slugMsg && <p className="text-[0.6875rem] text-gray-600">{slugMsg}</p>}
+                </div>
+              </>
+            ) : (
+              <p className="rounded-md border border-gray-200 bg-gray-50 break-words px-3 py-2 text-[0.6875rem] text-gray-600">
+                {slug ? `Public name: ${slug}.` : 'No public name set.'} Only owners and admins can change this.
+              </p>
             )}
           </div>
 
