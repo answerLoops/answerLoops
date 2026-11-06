@@ -179,6 +179,7 @@ export async function syncRepoToKB(
     newSourceId: source.id,
     targetFilename: sourceFilename,
     published: existing ? existing.published : 1,
+    flagRelatedResolutions: true,
   })
   // The repo's chunk total is its files source plus its discussions source.
   const discussionsSource = await getKBSourceByFilename(orgId, discussionSourceFilename(owner, repo))
@@ -378,6 +379,7 @@ export async function syncDiscussionsToKB(
     newSourceId: source.id,
     targetFilename: sourceFilename,
     published: existing ? existing.published : 1,
+    flagRelatedResolutions: true,
   })
 
   // The repo's chunk total is its files source plus its discussions source.
