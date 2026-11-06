@@ -1151,10 +1151,9 @@ export const productFeedbackVotes = pgTable(
       .references(() => orgs.id, { onDelete: 'cascade' }),
     createdAt: text('created_at').notNull().default(now),
   },
-  (t) => [
-    unique('product_feedback_votes_unique').on(t.feedbackId, t.userId),
-    index('idx_product_feedback_votes_feedback').on(t.feedbackId),
-  ]
+  // The unique index leads with feedback_id, so it also serves every lookup by
+  // entry alone; a separate index on that column would only add a write per vote.
+  (t) => [unique('product_feedback_votes_unique').on(t.feedbackId, t.userId)]
 )
 
 // Operator-authored "what's new" feed, the widget's Updates tab.

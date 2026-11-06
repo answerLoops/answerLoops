@@ -16,7 +16,7 @@ import { validateFeedbackBody, type VoteResult } from '@/lib/product-feedback/va
 export type BoardActionResult = { ok: true } | { ok: false; error: string }
 
 /** One click on the up arrow: the state the vote ended in, or why it could not. */
-export type VoteActionResult =
+type VoteActionResult =
   | { ok: true; state: Exclude<VoteResult, 'refused'> }
   | { ok: false; error: string }
 
