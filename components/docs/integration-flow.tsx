@@ -25,8 +25,8 @@ interface FlowOutcome extends FlowItem {
 
 const OUTCOME_STYLE = {
   post: 'border-fd-primary/30 bg-fd-card',
-  review: 'border-amber-300 bg-amber-50',
-  escalate: 'border-orange-300 bg-orange-50',
+  review: 'border-amber-300 bg-amber-50 dark:border-amber-500 dark:text-slate-900',
+  escalate: 'border-orange-300 bg-orange-50 dark:border-orange-500 dark:text-slate-900',
   info: 'border-fd-border bg-fd-card',
 } as const
 
@@ -128,7 +128,7 @@ export function IntegrationFlow({
         {/* answerLoops pipeline */}
         <div className="flex flex-col gap-2 rounded-xl bg-fd-accent p-3">
           <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-fd-muted-foreground">
-            <LogoMark size={18} />
+            <LogoMark size={18} className="docs-logo-mark" />
             answerLoops
           </p>
           <ol className="flex flex-1 flex-col gap-2">
