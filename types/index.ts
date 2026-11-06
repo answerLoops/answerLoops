@@ -203,6 +203,8 @@ export interface KBArticle {
   verification?: ArticleVerification
   /** Present on the article list: whether this viewer (owner or admin) may see the answers it was supplied to. */
   can_view_answers?: boolean
+  /** A saved resolution only: documentation related to it changed after it was last saved and verified. */
+  related_docs_changed?: { at: string; source: string } | null
 }
 
 export type KBArticleEventType =

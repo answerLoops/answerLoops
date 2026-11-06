@@ -516,6 +516,11 @@ export const kbArticles = pgTable(
     verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
     verifiedContentHash: text('verified_content_hash'),
     verificationNote: text('verification_note'),
+    // Set on a saved resolution when a repo sync changed documentation related
+    // to it (migration 0075). The notice shows only while this is later than
+    // updated_at and verified_at (lib/kb/docs-change.ts), so it needs no clearing.
+    docsChangedAt: text('docs_changed_at'),
+    docsChangedSource: text('docs_changed_source'),
     createdAt: text('created_at').notNull().default(now),
     updatedAt: text('updated_at').notNull().default(now),
   },

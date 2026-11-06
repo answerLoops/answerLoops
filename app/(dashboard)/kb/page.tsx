@@ -544,6 +544,21 @@ function ResolutionSavedLine({ updatedAt }: { updatedAt: string }) {
   )
 }
 
+// Shown on a saved resolution while documentation related to it has changed
+// since it was last saved or verified. Verifying it again, or saving it again,
+// clears the notice.
+function RelatedDocsNotice({ change }: { change: { at: string; source: string } }) {
+  const date = new Date(change.at)
+  if (Number.isNaN(date.getTime())) return null
+  return (
+    <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 break-words">
+      Docs related to this answer changed after it was saved ({change.source},{' '}
+      <time dateTime={change.at}>{date.toLocaleDateString()}</time>). Check it still holds, then use{' '}
+      <span className="font-medium">Verify again</span> to clear this.
+    </p>
+  )
+}
+
 function ArticlesList({
   articles,
   onDeleted,
@@ -656,6 +671,7 @@ function ArticlesList({
                 </Link>
               )}
               {isResolution(a) && <ResolutionSavedLine updatedAt={a.updated_at} />}
+              {a.related_docs_changed && <RelatedDocsNotice change={a.related_docs_changed} />}
               {a.verification && (
                 <ArticleVerificationControl articleId={a.id} verification={a.verification} onVerified={onVerified} />
               )}
