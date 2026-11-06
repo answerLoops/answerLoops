@@ -216,10 +216,13 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     await tx.delete(platformAiUsage).where(eq(platformAiUsage.orgId, orgId))
     await tx.delete(widgetLeads).where(eq(widgetLeads.orgId, orgId))
     await tx.delete(slaConfigs).where(eq(slaConfigs.orgId, orgId))
-    // The workspace is gone, so the up-votes its members cast go first — they
-    // can sit on other workspaces' entries, which the cascade below wouldn't
-    // reach — and then its own feedback-board entries, even approved ones,
-    // which are otherwise visible to every workspace.
+    // The up-votes this workspace's members cast go first. They can sit on
+    // other workspaces' entries, but each vote's org_id is the voter's
+    // workspace, which is deleted at the end of this same transaction, so the
+    // cascade would remove them anyway. The explicit delete is a safeguard that
+    // keeps the purge correct even if that foreign key ever changes. Then the
+    // workspace's own feedback-board entries, even approved ones, which are
+    // otherwise visible to every workspace.
     await tx.delete(productFeedbackVotes).where(eq(productFeedbackVotes.orgId, orgId))
     await tx.delete(productFeedback).where(eq(productFeedback.orgId, orgId))
     await tx.delete(apiKeys).where(eq(apiKeys.orgId, orgId))

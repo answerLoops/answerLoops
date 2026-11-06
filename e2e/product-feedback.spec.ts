@@ -2,6 +2,7 @@ import postgres from 'postgres'
 import { test, expect, type Page } from '@playwright/test'
 import { TEST_ENV } from '../playwright.config'
 import { hardPurgeOrg } from '../lib/db/queries/orgs'
+import { runMigrations } from '../lib/db/migrate'
 
 // The dashboard's floating feedback widget. The board has no admin controls in
 // the app: moderation, replies and updates are written by operator tooling
@@ -584,5 +585,90 @@ test.describe('up-votes', () => {
     const byVotes = await ids('/api/product-feedback?sort=votes')
     expect(byVotes).toHaveLength(200)
     expect(byVotes.slice(0, 3)).toEqual([popular, newerTied, olderTied])
+  })
+
+  test('voting again on an entry you already voted on keeps the same row, answers "added", and wakes open dashboards once', async ({ page }) => {
+    const id = await entry(FEEDBACK)
+    const dialog = await openBoard(page)
+    const action = await captureAction(page, () => upvote(card(dialog, FEEDBACK)).click())
+    await expect.poll(async () => (await votesFor(id)).length).toBe(1)
+    const [first] = await sql`SELECT id, created_at FROM product_feedback_votes WHERE feedback_id = ${id}`
+
+    // Count the board channel's notifications on a connection of its own, from
+    // here on. The no-op update that settles a repeated add still fires the
+    // votes trigger, which is the one extra wake-up open dashboards get.
+    let wakeUps = 0
+    const listener = await sql.listen('product_feedback_changed', () => {
+      wakeUps += 1
+    })
+    try {
+      const text = await answer(page, action, { feedbackId: id, voted: true })
+      expect(text).toContain(ADDED)
+      await expect.poll(() => wakeUps).toBe(1)
+      // A round trip after the poll, so a second notification that was still
+      // on its way would have arrived by now.
+      expect(await votesFor(id)).toHaveLength(1)
+      expect(wakeUps).toBe(1)
+    } finally {
+      await listener.unlisten()
+    }
+
+    const [again] = await sql`SELECT id, created_at FROM product_feedback_votes WHERE feedback_id = ${id}`
+    expect(again).toEqual(first)
+    await expect(upvote(card(dialog, FEEDBACK))).toHaveText('1')
+  })
+
+  test('equal counts and equal timestamps still have one fixed order: highest entry id first', async ({ page }) => {
+    await seedMember(2, 1)
+    const lower = await entry('Tied entry that was written first.')
+    const higher = await entry('Tied entry that was written second.')
+    // One statement, so now() is the same instant for both rows.
+    await sql`UPDATE product_feedback SET created_at = (SELECT (now() - interval '1 minute')::text) WHERE id IN (${lower}, ${higher})`
+    await sql`INSERT INTO product_feedback_votes (feedback_id, user_id, org_id) VALUES (${lower}, 2, 1), (${higher}, 2, 1)`
+    const [stamps] = await sql`SELECT COUNT(DISTINCT created_at)::int AS n FROM product_feedback WHERE id IN (${lower}, ${higher})`
+    expect(stamps.n).toBe(1)
+
+    await page.goto('/dashboard')
+    for (const path of ['/api/product-feedback', '/api/product-feedback?sort=votes']) {
+      for (let i = 0; i < 3; i++) {
+        const res = await page.request.get(path)
+        expect(res.status()).toBe(200)
+        const ids = ((await res.json()).feedback as { id: number }[]).map((f) => f.id)
+        expect(ids, path).toEqual([higher, lower])
+      }
+    }
+  })
+
+  test('running the migrations again over a database that already has the votes table leaves one table, one trigger, one unique constraint, and voting still works', async ({ page }) => {
+    await seedMember(2, 1)
+    const kept = await entry('An entry whose vote must survive the second run.')
+    await sql`INSERT INTO product_feedback_votes (feedback_id, user_id, org_id) VALUES (${kept}, 2, 1)`
+
+    // The runner skips files it has recorded, so forget the votes migrations
+    // to make it execute them again over the tables that already exist, the
+    // way a database restored without its bookkeeping row would.
+    await sql`DELETE FROM __custom_migrations WHERE filename LIKE '0072\_%' OR filename LIKE '0076\_%'`
+    await runMigrations()
+    await runMigrations()
+
+    const [tables] = await sql`SELECT COUNT(*)::int AS n FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'product_feedback_votes'`
+    expect(tables.n).toBe(1)
+    const triggers = await sql`SELECT tgname FROM pg_trigger WHERE tgrelid = 'product_feedback_votes'::regclass AND NOT tgisinternal`
+    expect(triggers.map((t) => t.tgname)).toEqual(['trg_product_feedback_votes_changed'])
+    const uniques = await sql`SELECT conname FROM pg_constraint WHERE conrelid = 'product_feedback_votes'::regclass AND contype = 'u'`
+    expect(uniques.map((c) => c.conname)).toEqual(['product_feedback_votes_unique'])
+    // The redundant single-column index is gone after the later migration, and
+    // only the primary key and the unique constraint's index remain.
+    const indexes = await sql`SELECT indexname FROM pg_indexes WHERE schemaname = 'public' AND tablename = 'product_feedback_votes' ORDER BY indexname`
+    expect(indexes.map((i) => i.indexname)).toEqual(['product_feedback_votes_pkey', 'product_feedback_votes_unique'])
+    expect(await votesFor(kept)).toHaveLength(1)
+
+    // Voting still works end to end, and the trigger still wakes dashboards.
+    const id = await entry(FEEDBACK)
+    const dialog = await openBoard(page)
+    const button = upvote(card(dialog, FEEDBACK))
+    await button.click()
+    await expect(button).toHaveText('1')
+    await expect.poll(async () => (await votesFor(id)).length).toBe(1)
   })
 })

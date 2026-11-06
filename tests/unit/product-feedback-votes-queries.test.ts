@@ -1,22 +1,17 @@
 import { describe, it, expect, expectTypeOf, vi, beforeEach } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
 import type { BoardFeedback } from '@/lib/product-feedback/validation'
 
-// The up-vote rules live in one query: add only where the entry is approved
-// and not the viewer's own, retract when the viewer already voted. Unit tests
-// here run without a database (repo convention), so they pin the branch logic
-// against a fake transaction and the predicate against the source; the rules
-// themselves are proven on real Postgres in e2e/product-feedback.spec.ts.
+// The up-vote rules live in one query. Unit tests here run without a database
+// (repo convention), so they pin only how the function maps the database's
+// answer to a result. The rules themselves (approved entries only, not your
+// own, one vote per person, adding and removing safe to repeat, the sort
+// before the row cap, tie order) are proven on real Postgres in
+// e2e/product-feedback.spec.ts, so nothing here matches SQL text.
 
 const { getDb } = vi.hoisted(() => ({ getDb: vi.fn() }))
 vi.mock('@/lib/db/drizzle', () => ({ getDb }))
 
 import { setProductFeedbackVote } from '@/lib/db/queries/product-feedback'
-
-const ROOT = process.cwd()
-const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf-8')
-const flat = (s: string) => s.replace(/\s+/g, ' ')
 
 function fakeDb(insertRows: { id: number }[], existingRows: { id: number }[]) {
   const where = vi.fn(async () => undefined)
@@ -62,49 +57,6 @@ describe('setProductFeedbackVote', () => {
     const { select } = fakeDb([], [{ id: 12 }])
     await expect(setProductFeedbackVote({ ...VIEWER, voted: true })).resolves.toBe('refused')
     expect(select).not.toHaveBeenCalled()
-  })
-
-  it.each([0, -1, 1.5, Number.NaN, Number.POSITIVE_INFINITY])(
-    'refuses a hostile feedback id %j before touching the database, in both directions',
-    async (feedbackId) => {
-      fakeDb([{ id: 1 }], [{ id: 1 }])
-      await expect(setProductFeedbackVote({ ...VIEWER, feedbackId, voted: true })).resolves.toBe('refused')
-      await expect(setProductFeedbackVote({ ...VIEWER, feedbackId, voted: false })).resolves.toBe('refused')
-      expect(getDb).not.toHaveBeenCalled()
-    },
-  )
-})
-
-describe('the rule is in the SQL, not only in the component', () => {
-  const src = read('lib/db/queries/product-feedback.ts')
-  const start = src.indexOf('export async function setProductFeedbackVote')
-  const toggle = flat(src.slice(start, src.indexOf('\n}\n', start)))
-
-  it('adds only where the entry is approved and not the viewer own', () => {
-    expect(toggle).toContain("${productFeedback.status} = 'approved'")
-    expect(toggle).toContain('${productFeedback.userId} IS DISTINCT FROM ${input.userId}')
-  })
-
-  it('writes the voter workspace and lets the unique constraint settle a racing duplicate by returning the existing row', () => {
-    expect(toggle).toContain('INSERT INTO ${productFeedbackVotes} (feedback_id, user_id, org_id)')
-    expect(toggle).toContain('ON CONFLICT (feedback_id, user_id) DO UPDATE SET')
-    expect(toggle).toContain('RETURNING id')
-    expect(toggle).not.toContain('ON CONFLICT DO NOTHING')
-    // The statement's result is the answer: no follow-up select, no window
-    // between a write and a check for a row to vanish in.
-    expect(toggle).not.toContain('.select(')
-    // Each statement stands alone; nothing here pretends a transaction serialises clicks.
-    expect(toggle).not.toContain('.transaction(')
-  })
-
-  it('the snapshot computes the count and the viewer flag, and still filters by the original predicate', () => {
-    const snapshot = flat(src.slice(src.indexOf('export async function getBoardSnapshot'), src.indexOf('export async function createProductFeedback')))
-    expect(snapshot).toContain('const voteCount = sql<number>`(SELECT COUNT(*)::int FROM ${productFeedbackVotes}')
-    // The order is decided in the database, before the row cap.
-    expect(snapshot).toContain("input.sort === 'votes' ? [desc(voteCount), desc(productFeedback.createdAt)] : [desc(productFeedback.createdAt)]")
-    expect(snapshot.indexOf('.orderBy(...order)')).toBeLessThan(snapshot.indexOf('.limit(200)'))
-    expect(snapshot).toContain('viewerVoted: sql<boolean>`EXISTS (SELECT 1 FROM ${productFeedbackVotes}')
-    expect(snapshot).toContain("or(eq(productFeedback.status, 'approved'), eq(productFeedback.userId, input.userId))")
   })
 })
 

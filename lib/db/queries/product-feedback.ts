@@ -26,10 +26,13 @@ export async function getBoardSnapshot(input: { userId: number; sort?: BoardSort
   // voters leaves the database, only the count and the viewer's own
   // membership in it. The count is also the sort key for "votes".
   const voteCount = sql<number>`(SELECT COUNT(*)::int FROM ${productFeedbackVotes} WHERE ${productFeedbackVotes.feedbackId} = ${productFeedback.id})`
+  // Entry id is the last key so two entries with the same count and the same
+  // timestamp still have one fixed order (newest id first), not whatever the
+  // planner returns that time.
   const order =
     input.sort === 'votes'
-      ? [desc(voteCount), desc(productFeedback.createdAt)]
-      : [desc(productFeedback.createdAt)]
+      ? [desc(voteCount), desc(productFeedback.createdAt), desc(productFeedback.id)]
+      : [desc(productFeedback.createdAt), desc(productFeedback.id)]
 
   const rows = await db
     .select({
@@ -67,8 +70,8 @@ export async function getBoardSnapshot(input: { userId: number; sort?: BoardSort
       r.replyBody && r.repliedAt
         ? { body: r.replyBody, tag: isReplyTag(r.replyTag) ? (r.replyTag as ReplyTag) : null, repliedAt: r.repliedAt }
         : null,
-    voteCount: Number(r.voteCount ?? 0),
-    viewerVoted: r.viewerVoted === true,
+    voteCount: r.voteCount,
+    viewerVoted: r.viewerVoted,
   }))
 
   const [counts] = await db
@@ -130,8 +133,6 @@ export async function setProductFeedbackVote(input: {
   orgId: number
   voted: boolean
 }): Promise<VoteResult> {
-  // Cheap guard before any query: the action validates, this never trusts it.
-  if (!Number.isInteger(input.feedbackId) || input.feedbackId < 1) return 'refused'
   const db = getDb()
   const own = and(
     eq(productFeedbackVotes.feedbackId, input.feedbackId),

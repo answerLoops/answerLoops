@@ -15,6 +15,24 @@ const STATUS_NOTE: Record<BoardFeedback['status'], string> = {
 
 type VoteView = { voteCount: number; viewerVoted: boolean }
 
+/** The view after the viewer's vote is set to `voted`; unchanged if it already is. */
+function applyVote(view: VoteView, voted: boolean): VoteView {
+  if (voted === view.viewerVoted) return view
+  return { viewerVoted: voted, voteCount: Math.max(0, view.voteCount + (voted ? 1 : -1)) }
+}
+
+const CHIP_CLASS = 'inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border px-2 text-xs font-semibold tabular-nums'
+
+/** The arrow and the count, shared by the vote button and the author's read-only chip. */
+function ChipFace({ count }: { count: number }) {
+  return (
+    <>
+      <ArrowUpIcon className="h-3.5 w-3.5" />
+      <span>{count}</span>
+    </>
+  )
+}
+
 /**
  * The up arrow with its count. Three layers, newest wins: the optimistic flip
  * while the click is in flight, the action's confirmed answer once it lands,
@@ -23,20 +41,15 @@ type VoteView = { voteCount: number; viewerVoted: boolean }
  * the snapshot OBJECT it was computed against, not to its numbers: the widget
  * rebuilds the whole list on every refetch, so a new `item` reference means
  * the server has spoken — equal numbers or not (another tab may have undone
- * the vote before the refetch landed) — and the memory is dropped for good.
- * A plain re-render of the same snapshot keeps the same reference and the
- * memory with it.
+ * the vote before the refetch landed) — and the old answer is ignored from
+ * then on. A plain re-render of the same snapshot keeps the same reference
+ * and the answer with it.
  */
 function VoteButton({ item, onError }: { item: BoardFeedback; onError: (message: string | null) => void }) {
   const snapshot: VoteView = { voteCount: item.voteCount, viewerVoted: item.viewerVoted }
   const [confirmed, setConfirmed] = useState<{ fromItem: BoardFeedback; view: VoteView } | null>(null)
-  // Adjusting state during render is React's own pattern for "reset when a
-  // prop changes" without an effect; the render is redone with the new state.
-  if (confirmed && confirmed.fromItem !== item) setConfirmed(null)
   const base = confirmed && confirmed.fromItem === item ? confirmed.view : snapshot
-  const [view, setOptimistic] = useOptimistic(base, (cur: VoteView, next: boolean): VoteView =>
-    next === cur.viewerVoted ? cur : { viewerVoted: next, voteCount: Math.max(0, cur.voteCount + (next ? 1 : -1)) },
-  )
+  const [view, setOptimistic] = useOptimistic(base, applyVote)
   const [pending, startTransition] = useTransition()
   // Set the moment a request starts and cleared when it settles, so a second
   // click that lands before React has re-rendered — while `pending` still
@@ -61,10 +74,7 @@ function VoteButton({ item, onError }: { item: BoardFeedback; onError: (message:
           return
         }
         const added = result.state === 'added'
-        setConfirmed({
-          fromItem: item,
-          view: { viewerVoted: added, voteCount: Math.max(0, base.voteCount + (added === base.viewerVoted ? 0 : added ? 1 : -1)) },
-        })
+        setConfirmed({ fromItem: item, view: applyVote(base, added) })
       } catch {
         // A rejected call (network, server down) must not reach React's error
         // boundary — there is none above the card, and an unhandled rejection
@@ -84,14 +94,13 @@ function VoteButton({ item, onError }: { item: BoardFeedback; onError: (message:
       disabled={pending}
       aria-pressed={view.viewerVoted}
       aria-label={`${view.viewerVoted ? 'Remove your upvote' : 'Upvote'}, ${view.voteCount} ${noun}`}
-      className={`inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border px-2 text-xs font-semibold tabular-nums transition ${
+      className={`${CHIP_CLASS} transition ${
         view.viewerVoted
           ? 'border-[#168fa3] bg-[#168fa3]/10 text-[#0e7c8f]'
           : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:text-slate-900'
       } disabled:opacity-70`}
     >
-      <ArrowUpIcon className="h-3.5 w-3.5" />
-      <span>{view.voteCount}</span>
+      <ChipFace count={view.voteCount} />
     </button>
   )
 }
@@ -123,10 +132,9 @@ export function FeedbackCard({ item }: { item: BoardFeedback }) {
           {approved && item.mine && (
             <span
               aria-label={`${item.voteCount} ${item.voteCount === 1 ? 'upvote' : 'upvotes'}`}
-              className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2 text-xs font-semibold tabular-nums text-slate-500"
+              className={`${CHIP_CLASS} border-slate-200 bg-slate-50 text-slate-500`}
             >
-              <ArrowUpIcon className="h-3.5 w-3.5" />
-              <span>{item.voteCount}</span>
+              <ChipFace count={item.voteCount} />
             </span>
           )}
         </div>
