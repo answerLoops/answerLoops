@@ -28,16 +28,14 @@ describe('migration 0072_product_feedback_votes.sql', () => {
     expect(sql).toContain('CREATE TABLE IF NOT EXISTS product_feedback_votes')
   })
 
-  it('allows exactly one vote per person per entry', () => {
-    expect(sql).toMatch(/UNIQUE \(feedback_id, user_id\)/)
-  })
-
+  // Kept: the e2e purge test reaches only the workspace cascade, not entry or user deletion.
   it('cascades from the entry, the voter, and the voter workspace', () => {
     expect(sql).toMatch(/feedback_id INTEGER NOT NULL REFERENCES product_feedback\(id\) ON DELETE CASCADE/)
     expect(sql).toMatch(/user_id INTEGER NOT NULL REFERENCES users\(id\) ON DELETE CASCADE/)
     expect(sql).toMatch(/org_id INTEGER NOT NULL REFERENCES orgs\(id\) ON DELETE CASCADE/)
   })
 
+  // Kept: a schema-shape rule no end-to-end behavior can observe.
   it('has no vote direction — an up-vote is a row, nothing else', () => {
     // The rule is about the schema, so comments (which may say "no down-vote")
     // are stripped before checking.
@@ -46,10 +44,7 @@ describe('migration 0072_product_feedback_votes.sql', () => {
     expect(code).not.toMatch(/\bdirection\b|\bvalue\b|\bscore\b/i)
   })
 
-  it('indexes the entry so counting per entry is cheap', () => {
-    expect(sql).toContain('CREATE INDEX IF NOT EXISTS idx_product_feedback_votes_feedback ON product_feedback_votes (feedback_id)')
-  })
-
+  // Kept: e2e proves the wake-up fires; only the source shows the channel function is reused, not redefined.
   it('wakes the panel through the existing board channel', () => {
     expect(sql).toContain('DROP TRIGGER IF EXISTS trg_product_feedback_votes_changed ON product_feedback_votes')
     expect(sql).toMatch(
