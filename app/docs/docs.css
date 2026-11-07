@@ -12,7 +12,7 @@
 :root {
   /* Marketing palette (components/marketing/marketing-theme.css), so a
      visitor moving from the site into the docs does not see a different
-     product. Light only: the docs have no dark theme. */
+     product. */
   --docs-navy: #082e50;
   --docs-navy-hover: #184566;
   --docs-link: #315e81;
@@ -50,6 +50,50 @@
   --color-fd-idea: var(--accent);
 
   --radius-fd: 10px;
+}
+
+.dark {
+  --docs-navy: #e2e8f0;
+  --docs-navy-hover: #f8fafc;
+  --docs-link: #93c5fd;
+  --docs-teal: #67e8f9;
+  --docs-aqua: #164e63;
+  --docs-aqua-border: #155e75;
+  --docs-border: #334155;
+  --docs-muted: #94a3b8;
+  --docs-soft: #1f2937;
+
+  --color-fd-background: #0b1120;
+  --color-fd-foreground: #f3f4f6;
+  --color-fd-card: #111827;
+  --color-fd-card-foreground: #f3f4f6;
+  --color-fd-popover: #111827;
+  --color-fd-popover-foreground: #f3f4f6;
+  --color-fd-border: #334155;
+  --color-fd-muted: var(--docs-soft);
+  --color-fd-muted-foreground: var(--docs-muted);
+  --color-fd-accent: var(--docs-aqua);
+  --color-fd-accent-foreground: var(--docs-link);
+  --color-fd-primary: #60a5fa;
+  --color-fd-primary-foreground: #0f172a;
+  --color-fd-secondary: #1f2937;
+  --color-fd-secondary-foreground: #f3f4f6;
+  --color-fd-ring: var(--docs-teal);
+
+  --color-fd-warning: #fbbf24;
+  --color-fd-error: #f87171;
+  --color-fd-success: #2dd4bf;
+  --color-fd-info: #67e8f9;
+  --color-fd-idea: #fbbf24;
+}
+
+/* The root layout supplies a light `bg-background` utility to every page.
+   Scope the docs canvas override to the Fumadocs layout so dark mode does not
+   change the dashboard or marketing site. */
+.dark body:has(#nd-docs-layout),
+.dark #nd-docs-layout {
+  background-color: var(--color-fd-background);
+  color: var(--color-fd-foreground);
 }
 
 /* Header: the same pale aqua rule the marketing site carries above its nav. */
@@ -162,6 +206,38 @@ a[data-card] > div:has(> [role='img']) {
 #nd-sidebar a[href='/start-trial']:hover,
 #nd-sidebar a[href='https://dub.sh/start-a-trial']:hover {
   background: var(--docs-navy-hover);
+}
+
+.dark #nd-sidebar a[href='/start-trial'],
+.dark #nd-sidebar a[href='https://dub.sh/start-a-trial'] {
+  background: #60a5fa;
+  color: #0f172a;
+}
+
+.dark #nd-sidebar a[href='/start-trial']:hover,
+.dark #nd-sidebar a[href='https://dub.sh/start-a-trial']:hover {
+  background: #3b82f6;
+}
+
+.dark .docs-integration-logo-generic {
+  background: #ffffff;
+}
+
+.dark .docs-mermaid .messageText,
+.dark .docs-mermaid .labelText,
+.dark .docs-mermaid .loopText,
+.dark .docs-mermaid .noteText {
+  fill: #93c5fd !important;
+}
+
+.dark .docs-mermaid .messageLine0,
+.dark .docs-mermaid .messageLine1,
+.dark .docs-mermaid .signal {
+  stroke: #60a5fa !important;
+}
+
+.dark .docs-logo-mark {
+  filter: brightness(1.8) saturate(1.15);
 }
 
 #nd-sidebar a[href='/login']:active,
