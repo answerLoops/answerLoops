@@ -6,7 +6,7 @@
 
 <h1 align="center">answerLoops</h1>
 
-<p align="center"><strong>Turn your docs into answers for your community.</strong></p>
+<p align="center"><strong>Turn your documentation into answers for your community.</strong></p>
 
 <p align="center">Self-hostable AI support for your community. Source-backed replies, checked by a second AI Agent, and approved by your team before it's sent. Run it on your own infrastructure with your preferred LLM model, connect your own agents or use the hosted app.</p>
 
