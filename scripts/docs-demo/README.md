@@ -58,7 +58,10 @@ What each setting is for:
   Billing page then only says "Self-hosted, no usage limit". Cloud mode needs a
   Stripe key to be set (any non-empty placeholder works because nothing calls
   Stripe) and the four `PLATFORM_AI_*` budgets, otherwise a red "reached this
-  month's AI limit" banner appears on every page.
+  month's AI limit" banner appears on every page. Per-plan answers budgets
+  (`PLATFORM_AI_STANDARD_CHAT_BUDGET_USD`, `PLATFORM_AI_PRO_CHAT_BUDGET_USD`,
+  `PLATFORM_AI_ENTERPRISE_CHAT_BUDGET_USD`) are optional here: a plan without
+  one uses `PLATFORM_AI_PLAN_CHAT_BUDGET_USD`.
 - `MOCK_EXTERNALS=1` swaps AI and chat-platform calls for in-process fakes.
   Under `next dev` it needs no extra flag. If you serve a production build,
   also set `MOCK_EXTERNALS_E2E=1`.
