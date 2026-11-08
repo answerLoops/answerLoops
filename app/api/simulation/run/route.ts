@@ -151,11 +151,15 @@ export async function POST(request: Request) {
         try {
           const simAgent = await buildAgent()
           let kbContext = ''
+          // The same articles the simulated draft is given, so the grading
+          // step checks it against them just as the live pipeline does.
+          let gradingSources: { question: string; answer: string }[] = []
           send({ type: 'step', index: i + 1, total: rows.length, step: 'embedding', ticketId: ticket.id, preview })
           try {
             const vec = await embedText(ticket.content, orgId)
             const articles = await searchArticles(vec, 3, orgId)
             if (articles.length) {
+              gradingSources = articles.map(a => ({ question: a.question, answer: a.answer }))
               kbContext = `\n\nKnowledge base:\n${articles.map(a => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n')}`
             }
           } catch { /* ignore */ }
@@ -166,7 +170,7 @@ export async function POST(request: Request) {
           })
 
           send({ type: 'step', index: i + 1, total: rows.length, step: 'assessing', ticketId: ticket.id, preview })
-          const assessment = await assessAnswer(ticket.content, simAnswer, orgId)
+          const assessment = await assessAnswer(ticket.content, simAnswer, orgId, gradingSources)
           const simWouldDeflect = assessment.confidence >= threshold && assessment.answered_fully
           const actualWouldDeflect = ticket.aiDraftStatus === 'posted'
 

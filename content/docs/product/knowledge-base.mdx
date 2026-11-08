@@ -246,6 +246,12 @@ Every saved resolution, meaning an article written from a ticket, shows when it 
 
 On the **Manage** tab, use **Sort** to switch between **Newest saved first** and **Oldest saved first**, and tick **Saved resolutions only** to hide articles that came from files, pages and synced sources. Sorting oldest first puts the resolutions most likely to be out of date at the top, so you can re-check them and use **Verify again** on the ones that still hold. Both controls apply to the full list. While you are searching, results stay in order of how well they match.
 
+## When documentation changes under a saved resolution
+
+When a connected GitHub repository syncs and some of its documentation was added, rewritten or removed, answerLoops looks for saved resolutions about the same subject. A resolution that is close in meaning to a changed piece of documentation shows a notice such as **Docs related to this answer changed after it was saved (acme/docs, 11/5/2026)**, so you can check whether the answer still holds.
+
+Nothing is hidden or deleted for you. The notice clears when you verify the resolution again or save it again from its ticket. A sync that changes nothing leaves resolutions alone, and so does the first sync of a repository. Related means similar in meaning, not an exact match, so a notice is a prompt to look, and some will turn out to be fine.
+
 ## Verifying an article
 
 An article can be marked as verified: an owner or admin checked it and found the answer still correct. On the **Manage** tab, each article shows where it stands, always in words:

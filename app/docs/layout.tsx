@@ -42,12 +42,6 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
 
   return (
     <RootProvider
-      // The rest of the app has no dark theme yet (docs.css's `.dark` block
-      // just repeats the light values), so the toggle Fumadocs renders by
-      // default changed some chrome but never the page itself — a control
-      // that visibly does something but doesn't actually work. Disabling it
-      // outright until a real dark palette exists beats shipping that.
-      theme={{ enabled: false }}
       search={{
         options: {
           api: '/docs/api/search',
@@ -59,7 +53,7 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
         nav={{
           title: (
             <>
-              <LogoMark size={28} alt="answerLoops" />
+              <LogoMark size={28} alt="answerLoops" className="docs-logo-mark" />
               <span className="font-semibold">answerLoops</span>
               <span className="rounded-md bg-fd-accent px-1.5 py-0.5 text-xs font-medium text-fd-muted-foreground">
                 Docs
@@ -77,12 +71,6 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
         // button, not in the header: the header is for getting in. Fumadocs
         // renders the same footer in the mobile drawer.
         sidebar={{ footer: <DocsSidebarFooter changelogUrl={changelogUrl} /> }}
-        // RootProvider's theme.enabled: false above stops next-themes from
-        // tracking a mode at all, but DocsLayout renders its own toggle
-        // button regardless of that — a separate prop. Without this, the
-        // button stays visible and clicking it does nothing (no theme
-        // context to toggle), which is worse than not having the control.
-        themeSwitch={{ enabled: false }}
         links={[
           // Same entry points as the marketing header, so the docs are not a
           // dead end for someone who arrived from there. Absolute campaign

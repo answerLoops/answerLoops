@@ -55,18 +55,18 @@ export function IntegrationLogo({
     <span
       role="img"
       aria-label={`${label} logo`}
-      className={`inline-flex shrink-0 items-center justify-center rounded-xl border border-fd-border bg-white shadow-sm ${className}`}
+      className={`docs-integration-logo ${key === 'groq' || key === 'agent-api' || key === 'email' || key === 'channels' ? 'docs-integration-logo-generic' : ''} inline-flex shrink-0 items-center justify-center rounded-xl border border-fd-border bg-white shadow-sm ${className}`}
       style={{ width: size, height: size }}
     >
       {key === 'email' || key === 'channels' || key === 'agent-api' ? (
         // Email and "your channels" have no single brand, so they get a plain
         // pictogram instead of borrowing one provider's mark.
         key === 'email' ? (
-          <Mail width={inner} height={inner} className="text-fd-foreground" aria-hidden="true" />
+          <Mail width={inner} height={inner} className="text-black" aria-hidden="true" />
         ) : key === 'agent-api' ? (
-          <Code width={inner} height={inner} className="text-fd-foreground" aria-hidden="true" />
+          <Code width={inner} height={inner} className="text-black" aria-hidden="true" />
         ) : (
-          <MessagesSquare width={inner} height={inner} className="text-fd-foreground" aria-hidden="true" />
+          <MessagesSquare width={inner} height={inner} className="text-black" aria-hidden="true" />
         )
       ) : key === 'slack' ? (
         <svg width={inner} height={inner} viewBox={SLACK_LOGO.viewBox} aria-hidden="true">
@@ -81,7 +81,7 @@ export function IntegrationLogo({
       ) : (
         <span
           aria-hidden="true"
-          className="font-semibold text-fd-foreground"
+          className="font-semibold text-black"
           style={{ fontSize: Math.round(size * 0.42) }}
         >
           {label.charAt(0)}

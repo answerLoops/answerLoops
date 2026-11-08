@@ -30,7 +30,7 @@ You decide how much trust to give the AI. Two settings control it: a **confidenc
     The reply is based on that material.
   </Step>
   <Step title="A separate review scores the draft">
-    A second AI step checks the draft against the question and assigns a **confidence score** from 0 to 1. It also judges whether the draft answers the question fully.
+    A second AI step receives the question, the draft, and the same knowledge-base answers (and, when GitHub is connected, the code the drafter looked at). It checks the draft's specifics against that material and assigns a **confidence score** from 0 to 1. A claim the material does not support pulls the score down. It also judges whether the draft answers the question fully. The reviewer reads a bounded amount of that material, so very long sources are cut off.
   </Step>
   <Step title="Your settings decide what happens next">
     A draft that clears your threshold and fully answers the question is posted automatically when Automatic Deflections is on. Everything else waits for your team in the ticket queue.

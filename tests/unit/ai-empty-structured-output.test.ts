@@ -36,7 +36,7 @@ describe('assessAnswer', () => {
   it('returns the structured assessment when the model produced one', async () => {
     h.generate.mockResolvedValue({ object: { confidence: 0.9, answered_fully: true, reasoning: 'ok' } })
 
-    const a = await assessAnswer('How do I reset?', 'Open settings.', 1)
+    const a = await assessAnswer('How do I reset?', 'Open settings.', 1, [])
 
     expect(a).toEqual({ confidence: 0.9, answered_fully: true, reasoning: 'ok' })
     expect(shouldAutoDeflect(a)).toBe(true)
@@ -45,7 +45,7 @@ describe('assessAnswer', () => {
   it.each([undefined, null])('rejects instead of resolving with %s when the model returned nothing usable', async (empty) => {
     h.generate.mockResolvedValue({ object: empty })
 
-    await expect(assessAnswer('How do I reset?', 'Open settings.', 1)).rejects.toMatchObject({
+    await expect(assessAnswer('How do I reset?', 'Open settings.', 1, [])).rejects.toMatchObject({
       name: 'EmptyAIResponseError',
     })
   })

@@ -22,6 +22,7 @@ import { logger } from '@/lib/logger'
 import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
 import type { AIDraftSkipReason, PriorAnswer, TicketCategory } from '@/types'
 import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
+import { createEvidenceCollector } from '@/lib/ai/assess-evidence'
 import type { Match } from '@/lib/ai/related'
 
 const MOD = 'ai/agent'
@@ -363,6 +364,9 @@ Guidelines:
     // Tools are built per-call (not module-level) because they close over
     // orgId and repoList, both of which vary per ticket — see searchCode/
     // readFile/listFiles in lib/github/tools.ts.
+    // What the code tools return is evidence the draft may rest on, so it is
+    // kept for the grading step alongside the knowledge-base answers.
+    const evidence = createEvidenceCollector()
     const tools = hasCodeSearch
       ? {
           searchCode: createTool({
@@ -372,7 +376,11 @@ Guidelines:
               query: z.string().describe('Search query — use function names, error messages, or keywords'),
               repo: z.string().describe(`Repository in owner/repo format. Available: ${repoList}`),
             }),
-            execute: async (input) => searchCode(input.query, input.repo, orgId),
+            execute: async (input) => {
+              const result = await searchCode(input.query, input.repo, orgId)
+              evidence.recordSearch(input.repo, input.query, result)
+              return result
+            },
           }),
           readFile: createTool({
             id: 'readFile',
@@ -382,7 +390,11 @@ Guidelines:
               repo: z.string().describe(`Repository in owner/repo format. Available: ${repoList}`),
               ref: z.string().optional().describe('Branch name or commit SHA (default: main)'),
             }),
-            execute: async (input) => readFile(input.path, input.repo, orgId, input.ref),
+            execute: async (input) => {
+              const result = await readFile(input.path, input.repo, orgId, input.ref)
+              evidence.recordFile(input.repo, input.path, result)
+              return result
+            },
           }),
           listFiles: createTool({
             id: 'listFiles',
@@ -423,7 +435,10 @@ Guidelines:
 
     let assessment
     try {
-      assessment = await assessAnswer(question, text, orgId)
+      assessment = await assessAnswer(question, text, orgId, [
+        ...priorAnswers.map((p) => ({ question: p.summary, answer: p.answer })),
+        ...evidence.entries(),
+      ])
     } catch (err) {
       logger.error('assessment failed — defaulting to human review', { module: MOD, ticketId, error: err })
       assessment = { confidence: 0, answered_fully: false, reasoning: 'Assessment failed; routed to human review.' }

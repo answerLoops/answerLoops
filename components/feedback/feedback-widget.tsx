@@ -92,9 +92,15 @@ const SORTS: readonly [BoardSort, string][] = [
 export function FeedbackWidget() {
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>('feedback')
-  const [snapshot, setSnapshot] = useState<BoardSnapshot | null>(null)
-  const [sort, setSort] = useState<BoardSort>('newest')
-  // The live refetch reads the current sort without being re-subscribed.
+  // The snapshot and the sort it was fetched with are one value, applied
+  // together, so the highlighted sort button is always the order of the list
+  // on screen. A click that fails leaves both as they were.
+  const [board, setBoard] = useState<{ snapshot: BoardSnapshot; sort: BoardSort } | null>(null)
+  const snapshot = board?.snapshot ?? null
+  const shownSort = board?.sort ?? 'newest'
+  // The sort the person last asked for. The live refetch reads it without
+  // being re-subscribed, and it keeps asking for it after a failed request, so
+  // the next successful load brings the list back in step with the click.
   const sortRef = useRef<BoardSort>('newest')
   const pillRef = useRef<HTMLButtonElement>(null)
   const closeRef = useRef<HTMLButtonElement>(null)
@@ -120,14 +126,14 @@ export function FeedbackWidget() {
     const controller = new AbortController()
     inFlight.current = controller
     const seq = ++requestSeq.current
-    const next = await fetchSnapshot(sortRef.current, controller.signal)
-    if (next && seq === requestSeq.current) setSnapshot(next)
+    const requested = sortRef.current
+    const next = await fetchSnapshot(requested, controller.signal)
+    if (next && seq === requestSeq.current) setBoard({ snapshot: next, sort: requested })
   }, [])
 
   const changeSort = useCallback(
     (next: BoardSort) => {
       sortRef.current = next
-      setSort(next)
       void load()
     },
     [load],
@@ -185,7 +191,6 @@ export function FeedbackWidget() {
 
   const count = snapshot?.approvedCount ?? 0
   const updatesCount = snapshot?.updates.length ?? 0
-  const feedback = snapshot?.feedback ?? []
 
   if (!open) {
     return (
@@ -310,10 +315,10 @@ export function FeedbackWidget() {
                       <button
                         key={id}
                         type="button"
-                        aria-pressed={sort === id}
+                        aria-pressed={shownSort === id}
                         onClick={() => changeSort(id)}
                         className={`h-8 rounded-md px-3 text-xs font-semibold transition sm:h-7 sm:px-2.5 ${
-                          sort === id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
+                          shownSort === id ? 'bg-slate-900 text-white' : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
                         {label}
@@ -322,7 +327,7 @@ export function FeedbackWidget() {
                   </div>
                 </fieldset>
                 <ul className="space-y-3">
-                  {feedback.map((item) => (
+                  {snapshot.feedback.map((item) => (
                     <FeedbackCard key={item.id} item={item} />
                   ))}
                 </ul>

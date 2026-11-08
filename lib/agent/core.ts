@@ -298,12 +298,16 @@ export async function generateAnswerCore(
 
   let text: string
   let groundingContext: { articleId?: number }[] = []
+  // What the draft was written from, handed to the grading step so it can
+  // check the draft against it.
+  let gradingSources: { question: string; answer: string }[] = []
   // One id for this generation, so a repeat records the answer once.
   const answerId = newAnswerId()
   try {
     const vector = await embedText(question, orgId)
     const priorAnswers = await getKBContext(vector, 3, orgId)
     groundingContext = priorAnswers
+    gradingSources = priorAnswers.map((p) => ({ question: p.summary, answer: p.answer }))
     const context = priorAnswers.length
       ? `\n\nPrior resolved answers for similar questions — prefer reusing these. ${REFERENCE_MATERIAL_NOTICE}\n${renderReferenceBlock(priorAnswers.map((p) => ({ question: p.summary, answer: p.answer })))}`
       : ''
@@ -329,7 +333,7 @@ export async function generateAnswerCore(
   await countArticleUsage(orgId, groundingContext)
   await recordAnswerSources({ orgId, answerId, surface: 'agent_api', outcome: 'generated', context: groundingContext })
 
-  const assessment = await assessAnswer(question, text, orgId).catch((e) => {
+  const assessment = await assessAnswer(question, text, orgId, gradingSources).catch((e) => {
     logger.error('generate_answer assessment failed', { module: MOD, orgId, error: e })
     return { confidence: 0, answered_fully: false, reasoning: 'Assessment failed.' }
   })

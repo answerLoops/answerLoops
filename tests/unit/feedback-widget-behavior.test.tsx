@@ -323,8 +323,9 @@ describe('sort', () => {
   it('Most voted asks the server for the votes order and shows what comes back; Newest restores', async () => {
     await openWithThree()
     fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
-    expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('true')
+    // The highlight follows the list on screen, so it moves with the answer.
     await waitFor(() => expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry']))
+    expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('true')
     expect(urls().at(-1)).toBe('/api/product-feedback?sort=votes')
     fireEvent.click(screen.getByRole('button', { name: 'Newest' }))
     await waitFor(() => expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry']))
@@ -382,6 +383,41 @@ describe('sort', () => {
     await act(async () => {})
     expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry'])
     expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('true')
+  })
+
+  it('keeps the highlight on the order being shown when the Most voted request fails', async () => {
+    await openWithThree()
+    fetchMock.mockImplementation(async (url: unknown) =>
+      String(url).includes('sort=votes') ? { ok: false, json: async () => ({}) } : ok(threeEntries()),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
+    await waitFor(() => expect(urls().at(-1)).toBe('/api/product-feedback?sort=votes'))
+    await act(async () => {})
+    expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry'])
+    expect(screen.getByRole('button', { name: 'Newest' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('a rejected Most voted request leaves the highlight alone, and the next live load brings the order and highlight together', async () => {
+    await openWithThree()
+    let failing = true
+    fetchMock.mockImplementation(async (url: unknown) => {
+      if (!String(url).includes('sort=votes')) return ok(threeEntries())
+      if (failing) throw new Error('offline')
+      return ok(byVotes())
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Most voted' }))
+    await act(async () => {})
+    expect(screen.getByRole('button', { name: 'Newest' }).getAttribute('aria-pressed')).toBe('true')
+    expect(bodies()).toEqual(['Newest entry', 'Middle entry', 'Oldest entry'])
+
+    failing = false
+    await act(async () => {
+      live.handler?.('resync')
+    })
+    await waitFor(() => expect(bodies()).toEqual(['Middle entry', 'Newest entry', 'Oldest entry']))
+    expect(screen.getByRole('button', { name: 'Most voted' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Newest' }).getAttribute('aria-pressed')).toBe('false')
   })
 
   it('shows no sort control on an empty board', async () => {
