@@ -10,7 +10,7 @@ import { getDeploymentMode } from '@/lib/billing/plans'
 import { XAI_BASE_URL } from '@/lib/ai/list-models'
 import { createSafeProviderFetch } from '@/lib/ai/safe-provider-fetch'
 import { NoAIProviderConfiguredError } from '@/lib/ai/errors'
-import { getBillingTier, assertBudget, type BudgetCheckOptions } from '@/lib/billing/platform-ai-budget'
+import { getBillingScope, assertBudget, type BudgetCheckOptions } from '@/lib/billing/platform-ai-budget'
 import type { BudgetKind } from '@/lib/ai/errors'
 import type { OrgAIConfig } from '@/lib/db/queries/ai-config'
 import { meterLanguageModel, meterEmbeddingModel, type MeteringTarget } from '@/lib/ai/metering'
@@ -74,11 +74,13 @@ async function meteredPlatformModel<M>(
   meter: (model: M, target: MeteringTarget) => M,
   budgetOptions?: BudgetCheckOptions,
 ): Promise<M> {
-  const tier = await getBillingTier(orgId)
-  if (!tier) throw new NoAIProviderConfiguredError(orgId, undefined, 'no_active_plan')
-  if (budgetOptions) await assertBudget(orgId, kind, tier, budgetOptions)
-  else await assertBudget(orgId, kind, tier)
-  return meter(build(modelId), { orgId, tier, modelId })
+  const scope = await getBillingScope(orgId)
+  if (!scope) throw new NoAIProviderConfiguredError(orgId, undefined, 'no_active_plan')
+  const { tier, planId } = scope
+  // The plan goes with the check and with the metering target, because the
+  // answers budget it is held to is the one for its plan.
+  await assertBudget(orgId, kind, tier, { ...budgetOptions, planId })
+  return meter(build(modelId), { orgId, tier, planId, modelId })
 }
 
 /**

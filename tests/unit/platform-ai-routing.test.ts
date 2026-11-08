@@ -11,6 +11,7 @@ async function load(o: {
   deployment?: string
   cfg?: Record<string, unknown> | null
   tier?: 'trial' | 'plan' | null
+  planId?: 'standard' | 'pro' | 'enterprise' | null
   budgetError?: boolean
   env?: Record<string, string>
 }) {
@@ -29,7 +30,7 @@ async function load(o: {
   const meterEmbeddingModel = vi.fn((m: { modelId: string }) => ({ metered: true, modelId: m.modelId }))
   vi.doMock('@/lib/mock-mode', () => ({ MOCK_EXTERNALS: false }))
   vi.doMock('@/lib/db/queries/ai-config', () => ({ getOrgAIConfig: async () => o.cfg ?? null, orgHasAIKey: async () => false }))
-  vi.doMock('@/lib/billing/platform-ai-budget', () => ({ getBillingTier: async () => o.tier ?? null, assertBudget }))
+  vi.doMock('@/lib/billing/platform-ai-budget', () => ({ getBillingScope: async () => (o.tier ? { tier: o.tier, planId: o.planId ?? null } : null), assertBudget }))
   vi.doMock('@/lib/ai/metering', () => ({ meterLanguageModel, meterEmbeddingModel }))
   vi.doMock('@/lib/ai/embedding-pin', async (orig) => ({
     ...(await orig<typeof import('@/lib/ai/embedding-pin')>()),
@@ -51,8 +52,15 @@ describe('chatModel', () => {
   it.each(['trial', 'plan'] as const)('hosted, no key, %s: platform model for the role, metered', async (tier) => {
     const t = await load({ tier, env: { PLATFORM_AI_FAST_MODEL: 'gpt-5.6-terra' } })
     expect(id(await t.models.chatModel(t.models.DEFAULT_FAST_MODEL, 1))).toBe('gpt-5.6-terra')
-    expect(t.assertBudget).toHaveBeenCalledWith(1, 'chat', tier)
-    expect(t.meterLanguageModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier, modelId: 'gpt-5.6-terra' })
+    expect(t.assertBudget).toHaveBeenCalledWith(1, 'chat', tier, { planId: null })
+    expect(t.meterLanguageModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier, planId: null, modelId: 'gpt-5.6-terra' })
+  })
+
+  it.each(['standard', 'pro', 'enterprise'] as const)('a %s workspace is held to its own plan budget and metered against it', async (planId) => {
+    const t = await load({ tier: 'plan', planId, env: { PLATFORM_AI_FAST_MODEL: 'gpt-5.6-terra' } })
+    await t.models.chatModel(t.models.DEFAULT_FAST_MODEL, 1)
+    expect(t.assertBudget).toHaveBeenCalledWith(1, 'chat', 'plan', { planId })
+    expect(t.meterLanguageModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier: 'plan', planId, modelId: 'gpt-5.6-terra' })
   })
 
   it('a model simulation asked for is ignored for the platform chat model', async () => {
@@ -112,14 +120,14 @@ describe('embeddingModel', () => {
   it('hosted, no key: platform embedding model, metered', async () => {
     const t = await load({ tier: 'trial' })
     await t.models.embeddingModel(t.models.DEFAULT_EMBEDDING_MODEL, 1)
-    expect(t.assertBudget).toHaveBeenCalledWith(1, 'embedding', 'trial', { ownChatProvider: false })
-    expect(t.meterEmbeddingModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier: 'trial', modelId: 'text-embedding-3-small' })
+    expect(t.assertBudget).toHaveBeenCalledWith(1, 'embedding', 'trial', { ownChatProvider: false, planId: null })
+    expect(t.meterEmbeddingModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier: 'trial', planId: null, modelId: 'text-embedding-3-small' })
   })
 
   it('hosted, no key, saved embedding model: still the platform model', async () => {
     const t = await load({ tier: 'plan', cfg: NO_KEY_SAVED, env: { PLATFORM_AI_EMBEDDING_MODEL: 'text-embedding-3-large' } })
     await t.models.embeddingModel(t.models.DEFAULT_EMBEDDING_MODEL, 1)
-    expect(t.meterEmbeddingModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier: 'plan', modelId: 'text-embedding-3-large' })
+    expect(t.meterEmbeddingModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier: 'plan', planId: null, modelId: 'text-embedding-3-large' })
   })
 
   it('own OpenAI key: unmetered', async () => {

@@ -8,12 +8,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 // including simulation. Self-hosted deployments always may use the platform
 // key (it is the self-hoster's own .env).
 
-const { getOrgAIConfig, getBillingTier } = vi.hoisted(() => ({
+const { getOrgAIConfig, getBillingScope } = vi.hoisted(() => ({
   getOrgAIConfig: vi.fn(),
-  getBillingTier: vi.fn(),
+  getBillingScope: vi.fn(),
 }))
 vi.mock('@/lib/db/queries/ai-config', () => ({ getOrgAIConfig }))
-vi.mock('@/lib/billing/platform-ai-budget', () => ({ getBillingTier, assertBudget: vi.fn() }))
+vi.mock('@/lib/billing/platform-ai-budget', () => ({ getBillingScope, assertBudget: vi.fn() }))
 vi.mock('@/lib/ai/embedding-pin', async (orig) => ({
   ...(await orig<typeof import('@/lib/ai/embedding-pin')>()),
   getPinnedModel: async () => null,
@@ -26,7 +26,7 @@ async function models() {
 
 beforeEach(() => {
   getOrgAIConfig.mockReset()
-  getBillingTier.mockReset().mockResolvedValue(null)
+  getBillingScope.mockReset().mockResolvedValue(null)
   delete process.env.DEPLOYMENT_MODE
   delete process.env.MOCK_EXTERNALS
 })
@@ -58,7 +58,7 @@ describe('chatModel on managed cloud', () => {
     const { chatModel } = await models()
 
     await expect(chatModel('gpt-4o', 42)).resolves.toBeTruthy()
-    expect(getBillingTier).not.toHaveBeenCalled()
+    expect(getBillingScope).not.toHaveBeenCalled()
   })
 
   it('does not throw for an openai-compatible provider even with no explicit key (self-hosted proxy case)', async () => {
@@ -84,7 +84,7 @@ describe('chatModel — self-hosted deployments always allow the platform key', 
     const { chatModel } = await models()
 
     await expect(chatModel('gpt-4o', 42)).resolves.toBeTruthy()
-    expect(getBillingTier).not.toHaveBeenCalled()
+    expect(getBillingScope).not.toHaveBeenCalled()
   })
 })
 
