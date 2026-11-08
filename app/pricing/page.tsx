@@ -13,6 +13,7 @@ import {
 import { PageSchema } from '@/components/marketing/page-schema'
 import { resolveNavState } from '@/lib/marketing/nav-state'
 import { PRICING_FAQ } from '@/lib/marketing/pricing'
+import { INCLUDED_AI_SUMMARY } from '@/lib/marketing/plan-summary'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { marketingSiteEnabled } from '@/lib/site'
@@ -162,11 +163,7 @@ export default async function PricingPage({
           <div className="pricing-cost-note mt-8 rounded-xl border p-6">
             <h3>Plan your total cost</h3>
             <p className="mt-2 text-slate-600">
-              Hosted plans include AI usage up to a limit, during your 14-day
-              trial and every month after, so you can start without a provider
-              key. Connect your own provider any time to remove the limit; it
-              then bills that usage directly. This is separate from your plan's
-              monthly answer allowance.
+              {INCLUDED_AI_SUMMARY}
             </p>
             <Link
               className="marketing-text-link mt-4"

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { Source_Sans_3 } from 'next/font/google'
 import { START_HREF, PRICING_HREF } from './nav-shared'
+import { TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
 import type { ReactNode } from 'react'
 import { Nav, Footer, type NavState } from './chrome'
 import './marketing-site.css'
@@ -78,8 +79,7 @@ export function TrialCta({
             Start a 14-day trial
           </Link>
           <p className="marketing-note">
-            No card required. Every feature is free for 14 days, with no
-            obligation.
+            {TRIAL_CTA_NOTE}
           </p>
           <Link className="marketing-text-link" href={PRICING_HREF}>
             View plans and model costs

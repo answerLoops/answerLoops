@@ -8,6 +8,7 @@ import { MarketingPage, TrialCta } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORDERED_PLANS } from '@/lib/billing/plans'
+import { INCLUDED_AI_SUMMARY, TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
 import { GITHUB_SOURCE_URL, marketingSiteEnabled } from '@/lib/site'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { BookOpen, ShieldCheck, MessageCircle, MessagesSquare, FileQuestion, Cloud, Server, Terminal, GraduationCap, Users, Palette, Blocks, Building2 } from 'lucide-react'
@@ -47,7 +48,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Do I need an AI provider account?',
-    a: 'Hosted plans include AI usage up to a limit, during your trial and every month after, so you can start without setting anything up. To remove the limit, connect an account with a supported AI service (like Anthropic or OpenAI) and pay that service directly for the usage, separately from your answerLoops subscription.',
+    a: INCLUDED_AI_SUMMARY,
   },
   {
     q: 'Can I run answerLoops on my own infrastructure?',
@@ -155,7 +156,7 @@ export default function LandingPage() {
               </Link>
             </div>
             <p className="marketing-note">
-              No card required. Every feature is free for 14 days, with no obligation.
+              {TRIAL_CTA_NOTE}
             </p>
           </div>
           <AnswerLoopOverview />
