@@ -3,7 +3,7 @@ import { getDb } from '@/lib/db/drizzle'
 import { getSubscription } from '@/lib/db/queries/billing'
 import { getOrgAIConfig } from '@/lib/db/queries/ai-config'
 import { hasOwnEmbeddingConfig } from '@/lib/ai/embedding-pin'
-import { getDeploymentMode } from '@/lib/billing/plans'
+import { getDeploymentMode, PLANS, type PlanId } from '@/lib/billing/plans'
 import { getBudgetMicros } from '@/lib/billing/platform-ai-budget-config'
 import { PlatformBudgetExhaustedError, type BudgetKind, type BudgetTier } from '@/lib/ai/errors'
 import { getPlatformModel, type PlatformRole } from '@/lib/ai/platform-models'
@@ -43,9 +43,28 @@ export function tierForStatus(status: string | null | undefined): BudgetTier | n
   return null
 }
 
-export async function getBillingTier(orgId: number): Promise<BudgetTier | null> {
+/**
+ * Where a workspace stands for included usage: its tier, and on a paid plan
+ * which plan, since each plan has its own answers budget. The trial has no
+ * plan. A stored plan id that is not one we sell reads as no plan, which sends
+ * budget lookups to the shared paid-plan budget rather than failing.
+ */
+export interface BillingScope {
+  tier: BudgetTier
+  planId: PlanId | null
+}
+
+export async function getBillingScope(orgId: number): Promise<BillingScope | null> {
   const sub = await getSubscription(orgId)
-  return tierForStatus(sub?.status)
+  const tier = tierForStatus(sub?.status)
+  if (!tier) return null
+  const stored = (sub as { planId?: unknown } | null)?.planId
+  const planId = tier === 'plan' && typeof stored === 'string' && Object.hasOwn(PLANS, stored) ? (stored as PlanId) : null
+  return { tier, planId }
+}
+
+export async function getBillingTier(orgId: number): Promise<BudgetTier | null> {
+  return (await getBillingScope(orgId))?.tier ?? null
 }
 
 /**
@@ -75,6 +94,8 @@ export async function getSpendMicros(orgId: number, tier: BudgetTier, kind: Budg
 export interface BudgetCheckOptions {
   /** The workspace runs answers on its own key; shapes the exhausted message. */
   ownChatProvider?: boolean
+  /** The workspace's paid plan, which sets its answers budget. Omitted in the trial. */
+  planId?: PlanId | null
 }
 
 /**
@@ -83,10 +104,11 @@ export interface BudgetCheckOptions {
  * when the budget is reached can overshoot it by roughly one call each.
  */
 export async function assertBudget(orgId: number, kind: BudgetKind, tier: BudgetTier, options: BudgetCheckOptions = {}): Promise<void> {
-  const budget = getBudgetMicros(tier, kind)
-  if (budget <= 0) throw new PlatformBudgetExhaustedError(orgId, kind, tier, options)
+  const { planId, ...errorOptions } = options
+  const budget = getBudgetMicros(tier, kind, planId)
+  if (budget <= 0) throw new PlatformBudgetExhaustedError(orgId, kind, tier, errorOptions)
   const spent = await getSpendMicros(orgId, tier, kind)
-  if (spent >= budget) throw new PlatformBudgetExhaustedError(orgId, kind, tier, options)
+  if (spent >= budget) throw new PlatformBudgetExhaustedError(orgId, kind, tier, errorOptions)
 }
 
 /**
@@ -94,7 +116,14 @@ export async function assertBudget(orgId: number, kind: BudgetKind, tier: Budget
  * the same workspace serialize on Postgres's row lock and sum exactly. Logs a
  * warning when a call pushes spend across 80% or across the budget.
  */
-export async function recordSpend(orgId: number, kind: BudgetKind, tier: BudgetTier, micros: number, now: Date = new Date()): Promise<void> {
+export async function recordSpend(
+  orgId: number,
+  kind: BudgetKind,
+  tier: BudgetTier,
+  micros: number,
+  now: Date = new Date(),
+  planId: PlanId | null = null,
+): Promise<void> {
   if (micros <= 0) return
   let rows: SpentRow[]
   if (tier === 'trial') {
@@ -111,7 +140,7 @@ export async function recordSpend(orgId: number, kind: BudgetKind, tier: BudgetT
     `)) as unknown as SpentRow[]
   }
 
-  const budget = getBudgetMicros(tier, kind)
+  const budget = getBudgetMicros(tier, kind, planId)
   if (budget <= 0) return
   const after = Number(rows[0]?.spent ?? 0)
   const before = after - micros
@@ -165,8 +194,9 @@ export async function getBudgetStatus(orgId: number): Promise<BudgetStatus | nul
   const ownChatProvider = !!(cfg?.chat_api_key || cfg?.chat_provider === 'openai-compatible')
   const embeddingIncluded = !hasOwnEmbeddingConfig(cfg)
   if (ownChatProvider && !embeddingIncluded) return null
-  const tier = await getBillingTier(orgId)
-  if (!tier) return null
+  const scope = await getBillingScope(orgId)
+  if (!scope) return null
+  const { tier, planId } = scope
 
   const rows = tier === 'trial'
     ? ((await getDb().execute(sql`
@@ -180,8 +210,8 @@ export async function getBudgetStatus(orgId: number): Promise<BudgetStatus | nul
   return {
     tier,
     ownChatProvider,
-    chat: ownChatProvider ? NOT_INCLUDED : kindStatus(Number(rows[0]?.chat ?? 0), getBudgetMicros(tier, 'chat')),
-    embedding: embeddingIncluded ? kindStatus(Number(rows[0]?.embedding ?? 0), getBudgetMicros(tier, 'embedding')) : NOT_INCLUDED,
+    chat: ownChatProvider ? NOT_INCLUDED : kindStatus(Number(rows[0]?.chat ?? 0), getBudgetMicros(tier, 'chat', planId)),
+    embedding: embeddingIncluded ? kindStatus(Number(rows[0]?.embedding ?? 0), getBudgetMicros(tier, 'embedding', planId)) : NOT_INCLUDED,
     models: {
       chat: getPlatformModel('chat'),
       fast: getPlatformModel('fast'),
