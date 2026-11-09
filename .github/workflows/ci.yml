@@ -189,4 +189,19 @@ jobs:
           PGPASSWORD: community
         run: psql -h localhost -U community -d community -c "CREATE DATABASE community_test"
 
+      # playwright.config.ts's webServer runs a real `next build` before the
+      # server can answer, and the whole of that has to finish inside the
+      # webServer timeout. Persisting `.next/cache` (the Next.js guide for CI
+      # build caching) turns the common case, where dependencies are the same
+      # and only some source changed, from a cold build into an incremental
+      # one. The fallback key restores the closest cache when the source hash
+      # changed but the lockfile did not.
+      - name: Cache the Next.js build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: .next/cache
+          key: nextjs-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('app/**', 'components/**', 'lib/**', 'content/**', 'drizzle/**', 'public/**', 'next.config.*', 'package.json') }}
+          restore-keys: |
+            nextjs-e2e-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
+
       - run: pnpm test:e2e

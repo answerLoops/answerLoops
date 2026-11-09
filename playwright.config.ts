@@ -97,7 +97,16 @@ export default defineConfig({
   webServer: {
     command: 'node_modules/.bin/next build && node_modules/.bin/next start -p 3100',
     url: BASE_URL,
-    timeout: 180_000,
+    // One limit covers the whole startup: a full `next build`, then `next
+    // start` booting and running migrations from instrumentation.ts. On a cold
+    // CI runner the build alone has taken most of 180s, and the same commit
+    // has both passed and timed out there, so the old limit left no margin.
+    timeout: 420_000,
+    // Piped, not ignored (the default), so the build's own output and timings
+    // land in the test log. A timeout then shows where the time went instead
+    // of only that it ran out.
+    stdout: 'pipe',
+    stderr: 'pipe',
     reuseExistingServer: !process.env.CI,
     env: TEST_ENV,
   },
