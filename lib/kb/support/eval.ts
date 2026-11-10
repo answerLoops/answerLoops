@@ -179,7 +179,27 @@ export interface EvaluationReport {
   tokensPerAnswer: { judgeInput: number; judgeOutput: number; embedding: number } | null
 }
 
-const ratio = (num: number, den: number): number | null => (den === 0 ? null : num / den)
+/** A share, or null when there is nothing to divide by (never a made-up zero). */
+export const ratio = (num: number, den: number): number | null => (den === 0 ? null : num / den)
+
+/**
+ * Precision and recall for each label, from pairs of what the evaluator said
+ * and what a person said. Shared by the dataset evaluation and the shadow run,
+ * so both measure the same way.
+ */
+export function labelMetrics<L extends string>(
+  pairs: ReadonlyArray<{ predicted: string; actual: string }>,
+  labels: readonly L[]
+): Record<L, LabelMetrics> {
+  return Object.fromEntries(
+    labels.map((label) => {
+      const predicted = pairs.filter((p) => p.predicted === label).length
+      const actual = pairs.filter((p) => p.actual === label).length
+      const tp = pairs.filter((p) => p.predicted === label && p.actual === label).length
+      return [label, { predicted, actual, truePositives: tp, precision: ratio(tp, predicted), recall: ratio(tp, actual) }]
+    })
+  ) as Record<L, LabelMetrics>
+}
 
 export interface EvaluationOptions {
   types?: readonly CaseType[]
@@ -267,14 +287,10 @@ export async function evaluateDataset(
     if (result.answer === c.expect.answer) answerAcc.matched++
   }
 
-  const perLabel = Object.fromEntries(
-    JUDGE_LABELS.map((label) => {
-      const predicted = outcomes.filter((o) => o.evaluator === label).length
-      const actual = outcomes.filter((o) => o.human === label).length
-      const tp = outcomes.filter((o) => o.evaluator === label && o.human === label).length
-      return [label, { predicted, actual, truePositives: tp, precision: ratio(tp, predicted), recall: ratio(tp, actual) }]
-    })
-  ) as Record<JudgeLabel, LabelMetrics>
+  const perLabel = labelMetrics(
+    outcomes.map((o) => ({ predicted: o.evaluator, actual: o.human })),
+    JUDGE_LABELS
+  )
 
   const floors = options.floors ?? [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7]
   const floorSweep = floors.map((floor) => {

@@ -316,6 +316,23 @@ Checks use the workspace's own AI provider, or its included AI usage on the same
 
 answerLoops does not keep the question or the answer to check later. There is no queue: if the server restarts before a check runs, that answer stays not assessed. A manual re-assessment is only possible while the inputs still exist, and after the reply they do not, so an answer that was not checked cannot be checked afterwards.
 
+### Results stay hidden until they are measured
+
+Source support runs in shadow mode: results are stored, but no page, report or count shows them to anyone in the workspace. They stay hidden until the method has been measured against people's own judgments on real answers and passes a go/no-go check. No accuracy figure is published until that check passes.
+
+The check works on a sample of stored matches from a workspace that keeps evidence excerpts. A reviewer reads each pair of sentences (one from the answer, one from the article) and labels it without seeing what the automated check said. Only the workspace owner or an approved maintainer may label real excerpts. The go decision needs every one of these:
+
+| Target | Value |
+|---|---|
+| Human-labeled pairs | at least 200 before any decision |
+| Precision of **supporting evidence found**, for matches, articles and answers | at least 90% of what the check calls supporting is confirmed by the reviewer |
+| Supported pairs the check missed | at most 30%: when the check is unsure it may say inconclusive instead |
+| Inconclusive and not assessed | never counted as supporting, and reported on their own |
+| Cost per checked answer | at most $0.003 |
+| Labeling | blind, by the workspace owner or an approved maintainer |
+
+Anything short of every target is a no-go, with what is missing listed. Until a go decision, the similarity threshold behind the check is treated as provisional. See **Source support: running the shadow check (self-hosted)** under [More details](#more-details).
+
 ## More details
 
 <Accordions>
@@ -376,6 +393,15 @@ answerLoops does not keep the question or the answer to check later. There is no
     - **Never stored:** the question, the full answer, the visitor, or anything kept to run a check later.
     - **Who can see it:** owners and admins only.
     - **How long:** the same 90 days as the answer it belongs to.
+  </Accordion>
+  <Accordion title="Source support: running the shadow check (self-hosted)">
+    The check is a command-line tool that reads one workspace's stored results and writes files on the machine it runs on. Nothing it does is shown in the app. Run it only as that workspace's owner or an approved maintainer, with `DATABASE_URL` pointing at the workspace's database.
+
+    1. `pnpm support:shadow sample --org=<workspace-id> --size=<n> --out=<labeling.json>` draws a repeatable sample (pass `--seed=<seed>` to choose it) spread across the kinds of match. It writes two files: the labeling file, with an id and the two sentences for each item and nothing about what the check said, and a separate key file that holds the check's answers and no text. It refuses when the workspace does not keep evidence excerpts, or has fewer stored excerpts than requested, and says how many there are.
+    2. `pnpm support:shadow template --sample=<labeling.json> --out=<labels.json>` writes an empty labels file with the instructions. The reviewer fills in a label for each item (supports, partial, contradicts, none, or inconclusive when the two sentences cannot settle it), their name and role, and confirms they labeled blind. A second reviewer can label in a second column or a separate file.
+    3. `pnpm support:shadow report --labels=<labels.json> --key=<key.json>` compares the labels with the check and prints the labeled sample size, precision and recall for each label, the missed-support rate, abstentions, agreement between two reviewers (percent agreement and Cohen's kappa), the disagreements grouped by kind of answer, and the cost per answer. It ends with GO or NO-GO and what is missing. Add `--json` for the same report as JSON.
+
+    Give the reviewer the labeling file only, and keep the key apart until every label is written. The labeling file holds customer excerpts, so both files are written readable by the current user only; delete them when the check is done. The tool never prints excerpt text. Pairs the check found no evidence for are not stored, so they cannot be sampled, and the missed-support rate covers stored matches only.
   </Accordion>
   <Accordion title="Review queue text retention">
     The text of rejected items is removed, and the text of approved items is removed 90 days after review (the approved article keeps its own copy). The item and its counter stay so a repeated question is still recognised.
