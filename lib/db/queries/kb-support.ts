@@ -86,8 +86,36 @@ function toSettings(row: SettingsRow | undefined): SupportSettings {
 }
 
 export async function getSupportSettings(orgId: number): Promise<SupportSettings> {
+  return (await findSupportSettings(orgId)) ?? { ...DEFAULT_SUPPORT_SETTINGS }
+}
+
+/**
+ * The workspace's switches, or null when it has never changed one (no row).
+ * The runner uses the difference: a workspace that never turned source support
+ * on gets no assessment row at all, and its answers count as not assessed.
+ */
+export async function findSupportSettings(orgId: number): Promise<SupportSettings | null> {
   const [row] = await getDb().select().from(kbSupportSettings).where(eq(kbSupportSettings.orgId, orgId)).limit(1)
-  return toSettings(row)
+  return row ? toSettings(row) : null
+}
+
+/**
+ * How many assessments of the workspace's answers ran (completed or failed)
+ * since a moment, for the daily limit. Skipped ones cost nothing and are not
+ * counted. Uses the (org_id, assessed_at) index.
+ */
+export async function countSupportAssessmentsSince(orgId: number, since: Date): Promise<number> {
+  const [row] = await getDb()
+    .select({ n: sql<number>`count(*)::int` })
+    .from(kbSupportAssessments)
+    .where(
+      and(
+        eq(kbSupportAssessments.orgId, orgId),
+        gte(kbSupportAssessments.assessedAt, since.toISOString()),
+        inArray(kbSupportAssessments.executionState, ['completed', 'failed'])
+      )
+    )
+  return Number(row?.n ?? 0)
 }
 
 /**
