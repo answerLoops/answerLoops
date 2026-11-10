@@ -254,7 +254,7 @@ Category changes what the AI does next:
 - **`how_to`, `documentation`, `general_question`:** answered from your knowledge base. A separate review grades the draft, and it is posted automatically only when confidence is high enough and Automatic Deflections is on. Otherwise it waits for a person.
 - **`bug`, `feature_request`:** never answered from the knowledge base, because the fix or feature does not exist yet, and never graded for confidence. The AI instead works down this list and stops at the first match:
   1. **The same report already exists.** If a very similar earlier ticket exists, it replies that the team is already tracking it, with that ticket's number.
-  2. **A workaround exists.** If the knowledge base has a relevant answer, it posts it clearly labeled as a workaround, not a fix.
+  2. **A workaround exists.** If a knowledge base answer or an earlier resolved ticket describes a concrete way around this specific problem, it posts that clearly labeled as a workaround, not a fix. A check confirms the match first, and text that merely looks similar is not offered.
   3. **Neither.** It acknowledges the report and routes the ticket straight to a person. No generated answer is posted.
 
 <Callout type="info">
