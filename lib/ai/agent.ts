@@ -24,6 +24,7 @@ import { scheduleSourceSupport } from '@/lib/kb/support/runner'
 import type { AIDraftSkipReason, PriorAnswer, TicketCategory } from '@/types'
 import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import { createEvidenceCollector } from '@/lib/ai/assess-evidence'
+import { pickWorkaround } from '@/lib/ai/workaround'
 import type { Match } from '@/lib/ai/related'
 
 const MOD = 'ai/agent'
@@ -269,8 +270,11 @@ export async function runAIAgent(
         return
       }
 
-      if (priorAnswers.length > 0) {
-        const workaround = priorAnswers[0]
+      // A similarity match is not a workaround: it only means the text looks
+      // alike. Only a candidate the judge confirms is offered; otherwise this
+      // falls through to human review below.
+      const workaround = priorAnswers.length > 0 ? await pickWorkaround(question, priorAnswers, orgId) : null
+      if (workaround) {
         const text = `We don't have a fix for this yet, but as a workaround: ${workaround.answer}\n\nThis isn't a resolution — a team member will follow up on the underlying issue.`
         await createNotification(
           'ai_draft_ready',
