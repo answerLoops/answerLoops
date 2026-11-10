@@ -642,6 +642,195 @@ export async function getSupportFlags(articleFindingId: number, orgId: number): 
   return rows.map(toFlag)
 }
 
+// --- shadow run (#446) ------------------------------------------------------
+
+/**
+ * One claim finding of a completed assessment whose two excerpts are still
+ * stored and unexpired, with what the sampler needs to stratify it and the key
+ * needs to score it. No excerpt text: that is read separately, only for the
+ * findings a sample chose.
+ */
+export interface ShadowPoolRow {
+  findingId: number
+  articleFindingId: number
+  assessmentId: number
+  answerId: string
+  surface: string
+  judgeLabel: 'supports' | 'partial' | 'contradicts' | 'inconclusive'
+  articleSummary: 'supporting' | 'no_support' | 'inconclusive'
+  answerSummary: SupportSummary
+  sharedWithCount: number
+  articleFindingsInAnswer: number
+  answerHasContradiction: boolean
+}
+
+export interface ShadowPool {
+  excerptStorageEnabled: boolean
+  candidates: ShadowPoolRow[]
+  population: {
+    assessments: { completed: number; failed: number; skipped: number }
+    answers: Record<SupportSummary, number>
+    articles: Record<'supporting' | 'no_support' | 'inconclusive', number>
+    claimFindings: Record<'supports' | 'partial' | 'contradicts' | 'inconclusive', number>
+  }
+  /** Completed assessments' usage, grouped, for the cost per answer. */
+  usage: Array<{ judgeModel: string | null; judgeInputTokens: number; judgeOutputTokens: number; embeddingTokens: number; count: number }>
+}
+
+/**
+ * Everything the shadow sampler reads for one workspace and one method
+ * version, and nothing from any other workspace. Read-only. The caller is the
+ * workspace owner or an approved maintainer running the shadow CLI; nothing
+ * here is reachable from a request.
+ */
+export async function getShadowPool(
+  orgId: number,
+  version: { methodVersion: number; rubricVersion: number } = { methodVersion: SUPPORT_METHOD.version, rubricVersion: SUPPORT_METHOD.rubric },
+  now: Date = new Date()
+): Promise<ShadowPool> {
+  const db = getDb()
+  const settings = await findSupportSettings(orgId)
+  const forVersion = and(
+    eq(kbSupportAssessments.orgId, orgId),
+    eq(kbSupportAssessments.methodVersion, version.methodVersion),
+    eq(kbSupportAssessments.rubricVersion, version.rubricVersion)
+  )
+
+  const articleCount = sql<number>`(select count(*)::int from kb_support_article_findings f2 where f2.assessment_id = ${kbSupportAssessments.id})`
+  const contradiction = sql<boolean>`exists (
+    select 1 from kb_support_claim_findings c2
+    join kb_support_article_findings f3 on f3.id = c2.article_finding_id
+    where f3.assessment_id = ${kbSupportAssessments.id} and c2.label = 'contradicts')`
+
+  const [candidates, states, articleStates, claimLabels, usage] = await Promise.all([
+    db
+      .select({
+        findingId: kbSupportClaimFindings.id,
+        articleFindingId: kbSupportArticleFindings.id,
+        assessmentId: kbSupportAssessments.id,
+        answerId: kbSupportAssessments.answerId,
+        surface: kbAnswers.surface,
+        judgeLabel: kbSupportClaimFindings.label,
+        articleSummary: kbSupportArticleFindings.summary,
+        answerSummary: kbSupportAssessments.answerSummary,
+        sharedWithCount: sql<number>`cardinality(${kbSupportArticleFindings.sharedWithReferenceIds})::int`,
+        articleFindingsInAnswer: articleCount,
+        answerHasContradiction: contradiction,
+      })
+      .from(kbSupportClaimFindings)
+      .innerJoin(kbSupportArticleFindings, eq(kbSupportArticleFindings.id, kbSupportClaimFindings.articleFindingId))
+      .innerJoin(kbSupportAssessments, eq(kbSupportAssessments.id, kbSupportArticleFindings.assessmentId))
+      .innerJoin(kbAnswers, and(eq(kbAnswers.id, kbSupportAssessments.answerId), eq(kbAnswers.orgId, orgId)))
+      .where(
+        and(
+          forVersion,
+          eq(kbSupportAssessments.executionState, 'completed'),
+          isNotNull(kbSupportClaimFindings.claimExcerpt),
+          isNotNull(kbSupportClaimFindings.passageExcerpt),
+          sql`${kbSupportClaimFindings.evidenceExpiresAt} > ${now.toISOString()}::timestamptz`
+        )
+      )
+      .orderBy(kbSupportClaimFindings.id),
+    db
+      .select({ state: kbSupportAssessments.executionState, summary: kbSupportAssessments.answerSummary, n: sql<number>`count(*)::int` })
+      .from(kbSupportAssessments)
+      .where(forVersion)
+      .groupBy(kbSupportAssessments.executionState, kbSupportAssessments.answerSummary),
+    db
+      .select({ summary: kbSupportArticleFindings.summary, n: sql<number>`count(*)::int` })
+      .from(kbSupportArticleFindings)
+      .innerJoin(kbSupportAssessments, eq(kbSupportAssessments.id, kbSupportArticleFindings.assessmentId))
+      .where(forVersion)
+      .groupBy(kbSupportArticleFindings.summary),
+    db
+      .select({ label: kbSupportClaimFindings.label, n: sql<number>`count(*)::int` })
+      .from(kbSupportClaimFindings)
+      .innerJoin(kbSupportArticleFindings, eq(kbSupportArticleFindings.id, kbSupportClaimFindings.articleFindingId))
+      .innerJoin(kbSupportAssessments, eq(kbSupportAssessments.id, kbSupportArticleFindings.assessmentId))
+      .where(forVersion)
+      .groupBy(kbSupportClaimFindings.label),
+    db
+      .select({
+        judgeModel: kbSupportAssessments.judgeModel,
+        judgeInputTokens: sql<number>`coalesce(${kbSupportAssessments.judgeInputTokens}, 0)::int`,
+        judgeOutputTokens: sql<number>`coalesce(${kbSupportAssessments.judgeOutputTokens}, 0)::int`,
+        embeddingTokens: sql<number>`coalesce(${kbSupportAssessments.embeddingTokens}, 0)::int`,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(kbSupportAssessments)
+      .where(and(forVersion, eq(kbSupportAssessments.executionState, 'completed')))
+      .groupBy(
+        kbSupportAssessments.judgeModel,
+        sql`coalesce(${kbSupportAssessments.judgeInputTokens}, 0)`,
+        sql`coalesce(${kbSupportAssessments.judgeOutputTokens}, 0)`,
+        sql`coalesce(${kbSupportAssessments.embeddingTokens}, 0)`
+      ),
+  ])
+
+  const population: ShadowPool['population'] = {
+    assessments: { completed: 0, failed: 0, skipped: 0 },
+    answers: { supporting: 0, no_support: 0, inconclusive: 0, not_assessed: 0 },
+    articles: { supporting: 0, no_support: 0, inconclusive: 0 },
+    claimFindings: { supports: 0, partial: 0, contradicts: 0, inconclusive: 0 },
+  }
+  for (const s of states) {
+    population.assessments[s.state as keyof ShadowPool['population']['assessments']] += Number(s.n)
+    population.answers[s.summary as SupportSummary] += Number(s.n)
+  }
+  for (const a of articleStates) population.articles[a.summary as keyof ShadowPool['population']['articles']] += Number(a.n)
+  for (const c of claimLabels) population.claimFindings[c.label as keyof ShadowPool['population']['claimFindings']] += Number(c.n)
+
+  return {
+    excerptStorageEnabled: settings?.excerptStorageEnabled ?? false,
+    candidates: candidates.map((c) => ({
+      ...c,
+      judgeLabel: c.judgeLabel as ShadowPoolRow['judgeLabel'],
+      articleSummary: c.articleSummary as ShadowPoolRow['articleSummary'],
+      answerSummary: c.answerSummary as SupportSummary,
+      sharedWithCount: Number(c.sharedWithCount),
+      articleFindingsInAnswer: Number(c.articleFindingsInAnswer),
+      answerHasContradiction: c.answerHasContradiction === true,
+    })),
+    population,
+    usage: usage.map((u) => ({
+      judgeModel: u.judgeModel,
+      judgeInputTokens: Number(u.judgeInputTokens),
+      judgeOutputTokens: Number(u.judgeOutputTokens),
+      embeddingTokens: Number(u.embeddingTokens),
+      count: Number(u.count),
+    })),
+  }
+}
+
+/**
+ * The two excerpts for the claim findings a shadow sample chose, still scoped
+ * to the workspace and still unexpired. A finding from another workspace, or
+ * one whose text expired or was removed, is simply absent from the result.
+ */
+export async function getShadowExcerpts(
+  orgId: number,
+  findingIds: readonly number[],
+  now: Date = new Date()
+): Promise<Map<number, { claim: string; passage: string }>> {
+  const ids = [...new Set(findingIds)].filter((id) => Number.isInteger(id) && id > 0)
+  if (ids.length === 0) return new Map()
+  const rows = await getDb()
+    .select({ id: kbSupportClaimFindings.id, claim: kbSupportClaimFindings.claimExcerpt, passage: kbSupportClaimFindings.passageExcerpt })
+    .from(kbSupportClaimFindings)
+    .innerJoin(kbSupportArticleFindings, eq(kbSupportArticleFindings.id, kbSupportClaimFindings.articleFindingId))
+    .innerJoin(kbSupportAssessments, eq(kbSupportAssessments.id, kbSupportArticleFindings.assessmentId))
+    .where(
+      and(
+        eq(kbSupportAssessments.orgId, orgId),
+        inArray(kbSupportClaimFindings.id, ids),
+        isNotNull(kbSupportClaimFindings.claimExcerpt),
+        isNotNull(kbSupportClaimFindings.passageExcerpt),
+        sql`${kbSupportClaimFindings.evidenceExpiresAt} > ${now.toISOString()}::timestamptz`
+      )
+    )
+  return new Map(rows.map((r) => [r.id, { claim: r.claim!, passage: r.passage! }]))
+}
+
 // --- retention --------------------------------------------------------------
 
 export interface SupportSweepResult {
