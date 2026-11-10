@@ -94,6 +94,7 @@ vi.mock('@/lib/actions/account', () => ({
   deleteAccountAction: vi.fn(),
   getCurrentOrgName: vi.fn(async () => null),
 }))
+vi.mock('@/components/settings/source-support', () => ({ SourceSupportSection: () => null }))
 
 // --- the shared stream, mocked -------------------------------------------
 // happy-dom has no EventSource. Same mock shape as tests/unit/live-events.test.ts

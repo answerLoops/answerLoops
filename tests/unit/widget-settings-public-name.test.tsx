@@ -44,6 +44,7 @@ vi.mock('@/lib/actions/ai-config', () => ({
 vi.mock('@/lib/actions/roi', () => ({ saveROIConfigAction: vi.fn() }))
 vi.mock('@/lib/actions/api-keys', () => ({ createApiKeyAction: vi.fn(), revokeApiKeyAction: vi.fn() }))
 vi.mock('@/lib/actions/account', () => ({ deleteAccountAction: vi.fn(), getCurrentOrgName: vi.fn(async () => null) }))
+vi.mock('@/components/settings/source-support', () => ({ SourceSupportSection: () => null }))
 vi.mock('@/components/billing/widget-branding-upsell', () => ({ WidgetBrandingUpsell: () => null }))
 
 const TOKEN = 'a'.repeat(48)

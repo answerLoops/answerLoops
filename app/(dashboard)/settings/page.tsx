@@ -19,6 +19,7 @@ import { WidgetBrandingUpsell } from '@/components/billing/widget-branding-upsel
 import type { SLAConfig } from '@/types'
 import { subscribeLiveEvents } from '@/lib/live-events'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
+import { SourceSupportSection } from '@/components/settings/source-support'
 
 interface Member {
   membership_id: number
@@ -1598,6 +1599,7 @@ const TABS = [
   { id: 'ai',        label: 'AI Model' },
   { id: 'widget',    label: 'Widget' },
   { id: 'api-keys',  label: 'API Keys' },
+  { id: 'source-support', label: 'Source support' },
   { id: 'danger',    label: 'Danger Zone' },
 ] as const
 
@@ -1717,6 +1719,12 @@ export default function SettingsPage() {
       {activeTab === 'api-keys' && (
         <section>
           <ApiKeysSection />
+        </section>
+      )}
+
+      {activeTab === 'source-support' && (
+        <section>
+          <SourceSupportSection />
         </section>
       )}
 
