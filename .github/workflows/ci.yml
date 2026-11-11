@@ -252,15 +252,39 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
+      # Runner-side apt traffic occasionally fails DNS for minutes at a time.
+      # Without limits each failed attempt spends ~11 minutes inside apt's own
+      # retries before the job dies, and the only recovery is a manual rerun.
+      # Make apt give up on a stalled fetch quickly and retry the whole install
+      # a few times, so a transient network blip no longer fails the e2e job.
+      - name: Configure apt for flaky networks
+        run: |
+          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' \
+            | sudo tee /etc/apt/apt.conf.d/80-ci-network-resilience >/dev/null
+
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
+        timeout-minutes: 15
+        run: |
+          for attempt in 1 2 3; do
+            pnpm exec playwright install --with-deps chromium && exit 0
+            echo "Attempt ${attempt} failed; retrying in 15s"
+            sleep 15
+          done
+          exit 1
 
       # Chromium is cached, but its OS-level shared library deps (from --with-deps)
       # are not — reinstall those on a cache hit without re-downloading the browser.
       - name: Install Playwright OS dependencies
         if: steps.playwright-cache.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
+        timeout-minutes: 15
+        run: |
+          for attempt in 1 2 3; do
+            pnpm exec playwright install-deps chromium && exit 0
+            echo "Attempt ${attempt} failed; retrying in 15s"
+            sleep 15
+          done
+          exit 1
 
       # Must exist before playwright.config.ts's webServer runs `next start` —
       # instrumentation.ts migrates the moment the server boots, and that
