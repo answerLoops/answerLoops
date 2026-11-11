@@ -252,39 +252,49 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
-      # Runner-side apt traffic occasionally fails DNS for minutes at a time.
-      # Without limits each failed attempt spends ~11 minutes inside apt's own
-      # retries before the job dies, and the only recovery is a manual rerun.
-      # Make apt give up on a stalled fetch quickly and retry the whole install
-      # a few times, so a transient network blip no longer fails the e2e job.
-      - name: Configure apt for flaky networks
-        run: |
-          printf 'Acquire::Retries "3";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' \
-            | sudo tee /etc/apt/apt.conf.d/80-ci-network-resilience >/dev/null
-
+      # The browser download comes from Playwright's CDN, not apt, so it is
+      # unaffected by package-mirror outages. OS libraries are installed in the
+      # next step regardless of cache state.
       - name: Install Playwright browsers
         if: steps.playwright-cache.outputs.cache-hit != 'true'
-        timeout-minutes: 15
-        run: |
-          for attempt in 1 2 3; do
-            pnpm exec playwright install --with-deps chromium && exit 0
-            echo "Attempt ${attempt} failed; retrying in 15s"
-            sleep 15
-          done
-          exit 1
+        run: pnpm exec playwright install chromium
 
-      # Chromium is cached, but its OS-level shared library deps (from --with-deps)
-      # are not — reinstall those on a cache hit without re-downloading the browser.
+      # Chromium is cached, but its OS-level dependencies are not, so install
+      # them on every run. They come from apt on the runner, whose package
+      # mirrors are occasionally unreachable for long stretches (DNS failures,
+      # not slowness), and without limits a failed attempt spends ~11 minutes in
+      # apt's own retries before the job dies. Each attempt is therefore bounded
+      # and apt is told to fail fast on a stalled fetch.
+      #
+      # What the job actually needs is a Chromium that can launch. On a mirror
+      # outage the libraries Chromium links against are normally already on the
+      # runner image and only optional font packages are missing, so a failed
+      # install is tolerated only when a real launch check passes. If Chromium
+      # cannot start, the step still fails.
       - name: Install Playwright OS dependencies
-        if: steps.playwright-cache.outputs.cache-hit == 'true'
-        timeout-minutes: 15
+        timeout-minutes: 12
         run: |
-          for attempt in 1 2 3; do
-            pnpm exec playwright install-deps chromium && exit 0
-            echo "Attempt ${attempt} failed; retrying in 15s"
-            sleep 15
+          printf 'Acquire::Retries "2";\nAcquire::http::Timeout "15";\nAcquire::https::Timeout "15";\n' \
+            | sudo tee /etc/apt/apt.conf.d/80-ci-network-resilience >/dev/null
+          installed=false
+          for attempt in 1 2; do
+            if timeout 180 pnpm exec playwright install-deps chromium; then
+              installed=true
+              break
+            fi
+            echo "::warning::Playwright dependency install attempt ${attempt} failed"
+            sleep 10
           done
-          exit 1
+          if [ "$installed" != "true" ]; then
+            echo "::warning::Could not install OS dependencies from apt; verifying Chromium launches without them"
+          fi
+          pnpm exec node -e "
+            const { chromium } = require('@playwright/test');
+            chromium.launch().then((b) => b.close()).then(
+              () => console.log('Chromium launch check passed'),
+              (e) => { console.error('Chromium cannot launch:', e.message); process.exit(1); },
+            );
+          "
 
       # Must exist before playwright.config.ts's webServer runs `next start` —
       # instrumentation.ts migrates the moment the server boots, and that
