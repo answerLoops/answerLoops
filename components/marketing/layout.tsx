@@ -37,14 +37,17 @@ export function PageHero({
   title,
   children,
   aside,
+  compact = false,
 }: {
   eyebrow?: string
   title: string
   children?: ReactNode
   aside?: ReactNode
+  /** A shorter hero, for pages whose main content should show without scrolling. */
+  compact?: boolean
 }) {
   return (
-    <section className="marketing-hero">
+    <section className={`marketing-hero${compact ? ' marketing-hero-compact' : ''}`}>
       <div
         className={`marketing-container${aside ? ' marketing-hero-split' : ''}`}
       >

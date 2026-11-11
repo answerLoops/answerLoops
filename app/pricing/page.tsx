@@ -116,13 +116,13 @@ export default async function PricingPage({
       />
       <PricingStructuredData />
       <PageHero
-        eyebrow="Pricing"
         title="Choose a plan for the number of answers you need"
+        compact
       >
         <p>
-          Every hosted plan includes MCP and REST API access, with a monthly
-          allowance of automated answers. Add teammates without per-seat fees.
-          Choose monthly billing or save 20% with an annual subscription.
+          Every hosted plan includes MCP and REST API access and a monthly
+          allowance of automated answers, with no per-seat fees. Save 20% with
+          annual billing.
         </p>
       </PageHero>
       <section

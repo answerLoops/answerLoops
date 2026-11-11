@@ -33,7 +33,7 @@ export default function BlogIndexPage() {
         path="/blog"
         type="CollectionPage"
       />
-      <PageHero title="Engineering the support layer">
+      <PageHero title="Engineering the support layer" compact>
         <p>
           Architecture notes, integration guides, and benchmarks from the
           team building answerLoops.
