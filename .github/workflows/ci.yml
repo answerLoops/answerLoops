@@ -14,9 +14,14 @@ name: CI
 # first call, not at import), and every route Next.js touches during `next
 # build` is server-rendered on demand rather than statically generated.
 
+# Push runs only on main. A branch with an open PR is already covered by the
+# pull_request event, and running both made every commit execute the whole
+# suite twice (their concurrency groups differ, so neither cancelled the
+# other). Required status checks match on job name, not on event, so the
+# pull_request run still satisfies them.
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
     branches: ['**']
 
@@ -45,8 +50,42 @@ jobs:
 
       - run: node scripts/sync-llms-txt.mjs --check
 
-  test-and-build:
-    name: Test + build
+  # Unit tests and the production build used to run back to back in one job
+  # (about 2.5 minutes each). They are independent, so they now run in
+  # parallel, and the unit tests are sharded across runners. The `test-and-build`
+  # job below keeps the old "Test + build" name as the single required check,
+  # so branch protection does not need to know how the work is divided.
+  unit-tests:
+    name: Unit tests (${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413  # v6.1.0
+        with:
+          version: 11
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm test --shard=${{ matrix.shard }}/3
+
+  build:
+    name: Build
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -67,9 +106,40 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm test
+      # Persist `.next/cache` so an unchanged dependency set rebuilds
+      # incrementally instead of from cold. The fallback key restores the
+      # closest cache when only the source hash changed.
+      - name: Cache the Next.js build cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: .next/cache
+          key: nextjs-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('app/**', 'components/**', 'lib/**', 'content/**', 'drizzle/**', 'public/**', 'next.config.*', 'package.json') }}
+          restore-keys: |
+            nextjs-build-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - run: pnpm build
+
+  test-and-build:
+    name: Test + build
+    # `always()` so this job reports a result even when an upstream job
+    # failed or was cancelled. Without it a failure would leave this required
+    # check "skipped", which branch protection can treat as passing.
+    if: ${{ always() }}
+    needs: [unit-tests, build]
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      - name: Require unit tests and build to pass
+        env:
+          UNIT_TESTS_RESULT: ${{ needs.unit-tests.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          echo "unit-tests: $UNIT_TESTS_RESULT"
+          echo "build: $BUILD_RESULT"
+          if [ "$UNIT_TESTS_RESULT" != "success" ] || [ "$BUILD_RESULT" != "success" ]; then
+            exit 1
+          fi
 
   lint-and-types:
     name: Lint + types
@@ -99,6 +169,18 @@ jobs:
       - run: pnpm exec fumadocs-mdx
 
       - run: pnpm lint
+
+      # tsconfig.json sets `incremental`, so tsc writes tsconfig.tsbuildinfo
+      # (gitignored). Restoring the previous run's file lets tsc re-check only
+      # what changed; tsc validates it against file contents, so a stale cache
+      # costs time, never correctness.
+      - name: Cache the TypeScript incremental build info
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
+        with:
+          path: tsconfig.tsbuildinfo
+          key: tsc-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            tsc-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}-
 
       - run: pnpm typecheck
 
