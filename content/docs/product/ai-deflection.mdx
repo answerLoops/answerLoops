@@ -42,6 +42,10 @@ You decide how much trust to give the AI. Two settings control it: a **confidenc
 We call this **dual-agent review**. The first agent drafts; a separate agent checks that draft before a score is assigned. The score therefore reflects whether the reviewer found the draft supported by the evidence, not how confident the drafting agent was in its own output. See [why we built it this way](/blog/dual-agent-review).
 
 <Callout type="info">
+  When [source support](/docs/product/knowledge-base#source-support) is turned on, a further check runs after the reply has been sent to see whether the supplied articles support what the answer says. It never changes the reply, the confidence score or whether the answer is posted automatically.
+</Callout>
+
+<Callout type="info">
   When a question is not covered by your knowledge base or your team's earlier answers, it is also added to the [Review queue](/docs/product/knowledge-base#review-queue) (Pro and above) so a person can approve a proper answer for next time.
 </Callout>
 

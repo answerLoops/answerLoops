@@ -143,9 +143,12 @@ describe('e2e Next.js build cache (ci.yml test-e2e job)', () => {
     expect(cacheKeysAreValid(job)).toBe(true)
   })
 
-  it('does not add the build cache to any other job', async () => {
+  it('keeps the build cache to test-e2e and the build job, and no other job', async () => {
     const ci = await readText('.github/workflows/ci.yml')
-    expect(nextCacheStepsOutside(ci, 'test-e2e')).toBe(0)
+    // The build job caches its own `.next/cache` on a separate key, so exactly
+    // one cache step may exist outside test-e2e, and it must live in `build`.
+    expect(nextCacheStepsOutside(ci, 'test-e2e')).toBe(1)
+    expect(nextCacheStepIndex(sliceJob(ci, 'build'))).toBeGreaterThan(-1)
   })
 })
 

@@ -20,6 +20,7 @@ import { getIntegration } from '@/lib/db/queries/integrations'
 import { updateTicketAIDraftStatus, getTicketById, recordAnswerLoopsReply } from '@/lib/db/queries/tickets'
 import { logger } from '@/lib/logger'
 import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
+import { scheduleSourceSupport } from '@/lib/kb/support/runner'
 import type { AIDraftSkipReason, PriorAnswer, TicketCategory } from '@/types'
 import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import { createEvidenceCollector } from '@/lib/ai/assess-evidence'
@@ -522,6 +523,12 @@ Guidelines:
       )
       logger.info('routed to human review — draft held for approval, generic ack sent instead', { module: MOD, ticketId, confidence: pct, platform, escalated: !!escalationRoleId, heldByToggleOnly })
     }
+
+    // The draft was recorded as generated above and the reply (or the hold for
+    // review) has gone out, so check how well the supplied articles support it.
+    // Scheduled, never awaited: it runs afterwards and cannot change the draft,
+    // the confidence score or auto-deflection.
+    scheduleSourceSupport({ orgId, answerId, surface: 'ticket', question, answer: text, context: priorAnswers })
 
     // Nothing in the KB or the team's prior answers covered this question, so
     // queue it for a person to turn into an article. Runs after the reply is

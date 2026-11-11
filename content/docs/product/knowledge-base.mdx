@@ -291,6 +291,48 @@ Articles that are live link to their place in the knowledge base. If identical c
 
 On the **Manage** tab, choose **Show recent answers** under an article to see the answers it was supplied to in the last 90 days: where each was given (the website chat widget, a support ticket draft, Discord, or the Agent API), when, whether it was generated or failed, and the article's position in the order. An answer given when the article read differently says **The article has changed since this answer**. Only the metadata is stored, so no question or answer text appears.
 
+## Source support
+
+Source support checks whether the articles supplied to an answer support what the answer says. It splits the answer into short claims and each supplied article into numbered passages, asks a separate AI step which passage (if any) backs each claim, and then confirms every match with an independent similarity check. A match that fails that check is marked inconclusive, never supporting. The result for each article is **supporting evidence found**, **no supporting evidence found**, or **inconclusive**. Textual support is not proof that the answer is correct.
+
+It is **off by default**. An owner or admin turns it on in **Settings → Source support**:
+
+- **Check answers from:** a separate switch for each channel: the website chat widget, support ticket drafts, Discord `/ask`, and the Agent API and MCP. Each channel is checked only while its own switch is on.
+- **Share of answers to check:** the percentage of answers to check. The choice is fixed per answer, so the same answer is always either in or out. Leave it empty to check none.
+- **Most checks per day:** a daily limit for the workspace, counted per UTC day. Checks that ran (finished or failed) count toward it. Leave it empty to check none.
+- **Keep short evidence excerpts:** a separate opt-in, off by default and independent of the switches above. See **Source support: what is stored** under [More details](#more-details).
+
+### It never changes or delays a reply
+
+The check starts only after the reply has been sent, using the question, the answer and the supplied articles while they are still in memory. The reply, its confidence score and [automatic deflection](/docs/product/ai-deflection) are decided before the check starts and never depend on it. If the check fails or runs out of time, the reply is unaffected.
+
+### Answers that were not checked
+
+An answer that was not checked is counted as **not assessed**, never as unsupported. That covers answers from a channel that is switched off, answers outside the share, answers over the daily limit, answers that arrive while too many checks are already running, answers with nothing to check, and checks that failed, ran out of time or were interrupted. Each of these is recorded with its reason. A workspace that has never turned source support on records nothing, and its answers count as not assessed.
+
+Checks use the workspace's own AI provider, or its included AI usage on the same terms as every other AI step. With no provider available, or the included usage used up, the check is recorded as failed and the answer stays not assessed.
+
+### No re-runs after the reply
+
+answerLoops does not keep the question or the answer to check later. There is no queue: if the server restarts before a check runs, that answer stays not assessed. A manual re-assessment is only possible while the inputs still exist, and after the reply they do not, so an answer that was not checked cannot be checked afterwards.
+
+### Results stay hidden until they are measured
+
+Source support runs in shadow mode: results are stored, but no page, report or count shows them to anyone in the workspace. They stay hidden until the method has been measured against people's own judgments on real answers and passes a go/no-go check. No accuracy figure is published until that check passes.
+
+The check works on a sample of stored matches from a workspace that keeps evidence excerpts. A reviewer reads each pair of sentences (one from the answer, one from the article) and labels it without seeing what the automated check said. Only the workspace owner or an approved maintainer may label real excerpts. The go decision needs every one of these:
+
+| Target | Value |
+|---|---|
+| Human-labeled pairs | at least 200 before any decision |
+| Precision of **supporting evidence found**, for matches, articles and answers | at least 90% of what the check calls supporting is confirmed by the reviewer |
+| Supported pairs the check missed | at most 30%: when the check is unsure it may say inconclusive instead |
+| Inconclusive and not assessed | never counted as supporting, and reported on their own |
+| Cost per checked answer | at most $0.003 |
+| Labeling | blind, by the workspace owner or an approved maintainer |
+
+Anything short of every target is a no-go, with what is missing listed. Until a go decision, the similarity threshold behind the check is treated as provisional. See **Source support: running the shadow check (self-hosted)** under [More details](#more-details).
+
 ## More details
 
 <Accordions>
@@ -344,6 +386,22 @@ On the **Manage** tab, choose **Show recent answers** under an article to see th
     - **How long:** 90 days, then it is removed automatically.
     - **Deleting an article** keeps its records with the article shown as deleted and the fingerprint intact, so a trace is never rewritten. **Deleting the workspace** removes everything. Editing an article does not change an existing record, because it holds a fingerprint, not the text.
     - An article counts once per answer however many of its passages matched, and an article from another workspace is never recorded.
+  </Accordion>
+  <Accordion title="Source support: what is stored">
+    - **Always stored for a checked answer:** whether the check finished, failed or was skipped and why, the result for the answer and for each supplied article, the claim and passage numbers behind each match, the model used and the tokens spent. No question or answer text.
+    - **Stored only with Keep short evidence excerpts on:** for each match, one sentence of the answer and one of the article, each under 300 characters. They are removed 90 days after the answer, and turning the setting off deletes every stored excerpt at once. The findings stay.
+    - **Never stored:** the question, the full answer, the visitor, or anything kept to run a check later.
+    - **Who can see it:** owners and admins only.
+    - **How long:** the same 90 days as the answer it belongs to.
+  </Accordion>
+  <Accordion title="Source support: running the shadow check (self-hosted)">
+    The check is a command-line tool that reads one workspace's stored results and writes files on the machine it runs on. Nothing it does is shown in the app. Run it only as that workspace's owner or an approved maintainer, with `DATABASE_URL` pointing at the workspace's database.
+
+    1. `pnpm support:shadow sample --org=<workspace-id> --size=<n> --out=<labeling.json>` draws a repeatable sample (pass `--seed=<seed>` to choose it) spread across the kinds of match. It writes two files: the labeling file, with an id and the two sentences for each item and nothing about what the check said, and a separate key file that holds the check's answers and no text. It refuses when the workspace does not keep evidence excerpts, or has fewer stored excerpts than requested, and says how many there are.
+    2. `pnpm support:shadow template --sample=<labeling.json> --out=<labels.json>` writes an empty labels file with the instructions. The reviewer fills in a label for each item (supports, partial, contradicts, none, or inconclusive when the two sentences cannot settle it), their name and role, and confirms they labeled blind. A second reviewer can label in a second column or a separate file.
+    3. `pnpm support:shadow report --labels=<labels.json> --key=<key.json>` compares the labels with the check and prints the labeled sample size, precision and recall for each label, the missed-support rate, abstentions, agreement between two reviewers (percent agreement and Cohen's kappa), the disagreements grouped by kind of answer, and the cost per answer. It ends with GO or NO-GO and what is missing. Add `--json` for the same report as JSON.
+
+    Give the reviewer the labeling file only, and keep the key apart until every label is written. The labeling file holds customer excerpts, so both files are written readable by the current user only; delete them when the check is done. The tool never prints excerpt text. Pairs the check found no evidence for are not stored, so they cannot be sampled, and the missed-support rate covers stored matches only.
   </Accordion>
   <Accordion title="Review queue text retention">
     The text of rejected items is removed, and the text of approved items is removed 90 days after review (the approved article keeps its own copy). The item and its counter stay so a repeated question is still recognised.

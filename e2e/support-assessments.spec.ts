@@ -5,6 +5,10 @@ import { createArticle, deleteArticle } from '../lib/db/queries/kb'
 import { recordAnswerReferences } from '../lib/db/queries/kb-answers'
 import { hardPurgeOrg } from '../lib/db/queries/orgs'
 import {
+  countSupportAssessmentsSince,
+  findSupportSettings,
+  getShadowExcerpts,
+  getShadowPool,
   getSupportCounts,
   getSupportFlags,
   getSupportForAnswer,
@@ -468,6 +472,165 @@ test.describe('settings', () => {
 
     const cleared = await updateSupportSettings(orgId, { samplingRate: null, dailyLimit: null }, userId)
     expect(cleared).toMatchObject({ samplingRate: null, dailyLimit: null })
+  })
+})
+
+test.describe('the runner\'s queries', () => {
+  test('findSupportSettings tells a workspace with no row from one with everything switched off', async () => {
+    const orgId = await newOrg()
+    const userId = await newUser()
+    expect(await findSupportSettings(orgId)).toBeNull()
+    // Reading the defaults must not create a row.
+    await getSupportSettings(orgId)
+    expect(await findSupportSettings(orgId)).toBeNull()
+    expect(await count('kb_support_settings', sql`org_id = ${orgId}`)).toBe(0)
+
+    await updateSupportSettings(orgId, { widgetEnabled: false }, userId)
+    expect(await findSupportSettings(orgId)).toEqual({
+      widgetEnabled: false,
+      ticketEnabled: false,
+      discordEnabled: false,
+      agentApiEnabled: false,
+      samplingRate: null,
+      dailyLimit: null,
+      excerptStorageEnabled: false,
+    })
+    expect(await findSupportSettings(await newOrg())).toBeNull()
+  })
+
+  test('countSupportAssessmentsSince counts completed and failed runs, not skipped ones, from the moment given, for one workspace', async () => {
+    const orgId = await newOrg()
+    const otherOrg = await newOrg()
+    const a = await newArticle(orgId, RESET)
+    const completed = await newAnswer(orgId, [a.id])
+    const failed = await newAnswer(orgId, [a.id])
+    const skipped = await newAnswer(orgId, [a.id])
+    const yesterday = await newAnswer(orgId, [a.id])
+
+    const empty = (execution: SupportAssessment['execution']): SupportAssessment => ({
+      method: assessmentOf.method,
+      execution,
+      articles: [],
+      answer: 'not_assessed',
+      similarity: { checked: 0, downgraded: 0, unavailable: false, scores: {} },
+      usage: { judgeInputTokens: 0, judgeOutputTokens: 0, embeddingTokens: 0 },
+      judgeModelId: null,
+    })
+    const assessmentOf = await assess([a])
+    expect((await recordSupportAssessment({ orgId, answerId: completed, assessment: assessmentOf })).recorded).toBe(true)
+    expect((await recordSupportAssessment({ orgId, answerId: failed, assessment: empty({ state: 'failed', reason: 'provider_error' }) })).recorded).toBe(true)
+    expect((await recordSupportAssessment({ orgId, answerId: skipped, assessment: empty({ state: 'skipped', reason: 'over_budget' }) })).recorded).toBe(true)
+    const old = await recordSupportAssessment({ orgId, answerId: yesterday, assessment: assessmentOf })
+    await sql`update kb_support_assessments set assessed_at = now() - interval '26 hours' where id = ${(old as { assessmentId: number }).assessmentId}`
+
+    const dayAgo = new Date(Date.now() - 3_600_000)
+    expect(await countSupportAssessmentsSince(orgId, dayAgo)).toBe(2)
+    expect(await countSupportAssessmentsSince(orgId, new Date(Date.now() - 48 * 3_600_000))).toBe(3)
+    expect(await countSupportAssessmentsSince(orgId, new Date(Date.now() + 3_600_000))).toBe(0)
+    // Another workspace's runs never count, and an empty workspace is zero.
+    expect(await countSupportAssessmentsSince(otherOrg, new Date(0))).toBe(0)
+  })
+
+  test('a repeat of every kind of run (completed, failed, skipped) is refused by the key and leaves the daily count alone', async () => {
+    const orgId = await newOrg()
+    const a = await newArticle(orgId, RESET)
+    const answerId = await newAnswer(orgId, [a.id])
+    const skippedAssessment = (await assess([a])) as SupportAssessment
+    const skipped: SupportAssessment = {
+      ...skippedAssessment,
+      execution: { state: 'skipped', reason: 'over_cap' },
+      articles: [],
+      answer: 'not_assessed',
+      usage: { judgeInputTokens: 0, judgeOutputTokens: 0, embeddingTokens: 0 },
+      judgeModelId: null,
+    }
+    const since = new Date(Date.now() - 3_600_000)
+    expect((await recordSupportAssessment({ orgId, answerId, assessment: skipped })).recorded).toBe(true)
+    expect(await countSupportAssessmentsSince(orgId, since)).toBe(0)
+
+    // The runner may race a skipped row and a real one for the same answer; the first stays.
+    expect(await recordSupportAssessment({ orgId, answerId, assessment: skippedAssessment })).toEqual({ recorded: false, reason: 'already_recorded' })
+    expect(await recordSupportAssessment({ orgId, answerId, assessment: skipped })).toEqual({ recorded: false, reason: 'already_recorded' })
+    expect(await count('kb_support_assessments', sql`answer_id = ${answerId}`)).toBe(1)
+    expect(await countSupportAssessmentsSince(orgId, since)).toBe(0)
+  })
+
+  test('concurrent records of the same answer leave exactly one row', async () => {
+    const orgId = await newOrg()
+    const a = await newArticle(orgId, RESET)
+    const answerId = await newAnswer(orgId, [a.id])
+    const assessment = await assess([a])
+    const results = await Promise.all(Array.from({ length: 4 }, () => recordSupportAssessment({ orgId, answerId, assessment })))
+    expect(results.filter((r) => r.recorded)).toHaveLength(1)
+    expect(results.filter((r) => !r.recorded).every((r) => !r.recorded && r.reason === 'already_recorded')).toBe(true)
+    expect(await count('kb_support_assessments', sql`answer_id = ${answerId}`)).toBe(1)
+    expect(await count('kb_support_article_findings', sql`assessment_id in (select id from kb_support_assessments where answer_id = ${answerId})`)).toBe(1)
+  })
+})
+
+test.describe('the shadow run\'s queries', () => {
+  test('the pool holds only this workspace\'s findings with unexpired excerpts, with the metadata the key needs and no text', async () => {
+    const orgId = await newOrg()
+    await updateSupportSettings(orgId, { excerptStorageEnabled: true }, null)
+    const { answerId, assessmentId } = await assessedAnswer(orgId)
+    const other = await newOrg()
+    await updateSupportSettings(other, { excerptStorageEnabled: true }, null)
+    await assessedAnswer(other)
+
+    const pool = await getShadowPool(orgId)
+    expect(pool.excerptStorageEnabled).toBe(true)
+    expect(pool.candidates).toHaveLength(2)
+    for (const c of pool.candidates) {
+      expect(c).toMatchObject({
+        assessmentId,
+        answerId,
+        surface: 'ticket',
+        judgeLabel: 'supports',
+        articleSummary: 'supporting',
+        answerSummary: 'supporting',
+        sharedWithCount: 0,
+        articleFindingsInAnswer: 2,
+        answerHasContradiction: false,
+      })
+      expect(JSON.stringify(c)).not.toMatch(/Forgot password/)
+    }
+    expect(pool.population).toEqual({
+      assessments: { completed: 1, failed: 0, skipped: 0 },
+      answers: { supporting: 1, no_support: 0, inconclusive: 0, not_assessed: 0 },
+      articles: { supporting: 1, no_support: 1, inconclusive: 0 },
+      claimFindings: { supports: 2, partial: 0, contradicts: 0, inconclusive: 0 },
+    })
+    expect(pool.usage).toEqual([{ judgeModel: 'fake-judge', judgeInputTokens: 1500, judgeOutputTokens: 90, embeddingTokens: expect.any(Number), count: 1 }])
+
+    const ids = pool.candidates.map((c) => c.findingId)
+    const excerpts = await getShadowExcerpts(orgId, ids)
+    expect([...excerpts.values()].map((e) => e.claim)).toContain('Choose Forgot password.')
+    // Another workspace cannot read these excerpts, even by id.
+    expect((await getShadowExcerpts(other, ids)).size).toBe(0)
+    // Another method version is a different population.
+    expect((await getShadowPool(orgId, { methodVersion: 99, rubricVersion: 1 })).candidates).toEqual([])
+  })
+
+  test('expired or removed excerpts drop out of the pool, and a workspace with excerpt storage off has none', async () => {
+    const orgId = await newOrg()
+    await updateSupportSettings(orgId, { excerptStorageEnabled: true }, null)
+    const { assessmentId } = await assessedAnswer(orgId)
+    const [first] = await sql`
+      select c.id from kb_support_claim_findings c join kb_support_article_findings f on f.id = c.article_finding_id
+      where f.assessment_id = ${assessmentId} order by c.id limit 1`
+    await sql`update kb_support_claim_findings set evidence_expires_at = now() - interval '1 minute' where id = ${first.id}`
+
+    const pool = await getShadowPool(orgId)
+    expect(pool.candidates.map((c) => c.findingId)).not.toContain(first.id)
+    expect(pool.candidates).toHaveLength(1)
+    expect((await getShadowExcerpts(orgId, [first.id])).size).toBe(0)
+
+    await updateSupportSettings(orgId, { excerptStorageEnabled: false }, null)
+    const off = await getShadowPool(orgId)
+    expect(off.excerptStorageEnabled).toBe(false)
+    expect(off.candidates).toEqual([])
+    // The findings themselves stay and are still counted.
+    expect(off.population.claimFindings.supports).toBe(2)
   })
 })
 

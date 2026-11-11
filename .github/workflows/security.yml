@@ -1,8 +1,10 @@
 name: Security Scan
 
 on:
+  # Push runs only on main (plus the weekly schedule below); branches with an
+  # open PR are covered by pull_request, so scanning both doubled every run.
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
     branches: ['**']
   schedule:

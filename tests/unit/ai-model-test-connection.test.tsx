@@ -31,6 +31,7 @@ vi.mock('@/lib/actions/ai-config', () => ({
 }))
 vi.mock('@/lib/actions/roi', () => ({ saveROIConfigAction: vi.fn() }))
 vi.mock('@/lib/actions/account', () => ({ deleteAccountAction: vi.fn(), getCurrentOrgName: vi.fn(async () => null) }))
+vi.mock('@/components/settings/source-support', () => ({ SourceSupportSection: () => null }))
 
 beforeEach(() => {
   vi.clearAllMocks()

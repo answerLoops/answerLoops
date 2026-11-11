@@ -17,6 +17,8 @@ export const SUPPORT_METHOD = Object.freeze({
    * the human-labeled dataset, and until `npm run support:eval` has been run on
    * the real embedding model and the labels reviewed, `floorCalibrated` stays
    * false and the shadow run (#446) must not treat precision as measured.
+   * It turns true only in a new method version, after `pnpm support:shadow
+   * report` returns GO against the targets in `targets.ts`.
    */
   similarityFloor: 0.3,
   floorCalibrated: false,
