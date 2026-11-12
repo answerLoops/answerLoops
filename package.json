@@ -32,6 +32,7 @@
     "github:backfill-threads": "tsx scripts/backfill-github-comment-threads.ts",
     "docs:seed": "tsx scripts/docs-demo/seed.ts",
     "docs:session": "tsx scripts/docs-demo/session.ts",
+    "demo:open": "tsx scripts/docs-demo/open.ts",
     "docs:shots": "tsx scripts/docs-demo/capture.ts",
     "lint:fix": "oxlint --fix",
     "verify:stripe-prices": "tsx scripts/verify-stripe-prices.ts"
