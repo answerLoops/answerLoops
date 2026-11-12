@@ -5,9 +5,9 @@ import { ComparisonPage } from '@/components/marketing/comparison-page'
 import { marketingSiteEnabled } from '@/lib/site'
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
-  title: 'answerLoops vs Zendesk AI',
+  title: 'Zendesk AI Alternative: answerLoops vs Zendesk AI',
   description:
-    'Compare the scope of the support platform and the total operating cost. Zendesk combines agent seats, plan allowances, and optional add-ons; answerLoops combines a hosted answer allowance with separate model costs, or can be self-hosted.',
+    'Zendesk AI vs answerLoops: compare platform scope and total cost. Zendesk adds seats and add-ons; answerLoops uses a hosted answer allowance.',
   path: '/vs/zendesk-ai',
 })
 export default function Page() {

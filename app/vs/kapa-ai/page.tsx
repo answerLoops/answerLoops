@@ -6,9 +6,9 @@ import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
-  title: 'answerLoops vs Kapa.ai',
+  title: 'Kapa.ai Alternative: answerLoops vs Kapa.ai',
   description:
-    'Kapa.ai is a hosted answer bot for technical documentation, built for Discord, Slack, and a website widget. Compare that to an AI layer covering nine channels including Telegram, Discourse, Circle, and email, with a self-hosted option.',
+    'Kapa.ai vs answerLoops: docs-grounded AI answers on nine channels, including Discourse, Circle and Telegram, with a self-hosted option.',
   path: '/vs/kapa-ai',
 })
 export default function Page() {
