@@ -5,9 +5,9 @@ import { ComparisonPage } from '@/components/marketing/comparison-page'
 import { marketingSiteEnabled } from '@/lib/site'
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
-  title: 'answerLoops vs Pylon',
+  title: 'Pylon Alternative: answerLoops vs Pylon',
   description:
-    'Pylon supports Discord, Telegram, and MCP as well as Slack and Teams. Compare the customer context and operational controls your team needs with answerLoops’ documentation-based workflow and self-hosting option.',
+    'Pylon vs answerLoops: compare customer context and controls with a documentation-grounded workflow you can self-host (AGPL-3.0).',
   path: '/vs/pylon',
 })
 export default function Page() {
