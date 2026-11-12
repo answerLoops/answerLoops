@@ -131,14 +131,18 @@ export default function IntegrationsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="dashboard-tabs mb-7 flex min-w-0 gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2">
-        {STABLE_TABS.map((tab) => renderTab(tab))}
+      <div className="dashboard-tabs mb-7 flex min-w-0 items-stretch gap-3 overflow-x-auto">
+        <div className="flex shrink-0 gap-1 rounded-xl border border-slate-200 bg-white p-2">
+          {STABLE_TABS.map((tab) => renderTab(tab))}
+        </div>
         <div
           role="group"
           aria-label="Beta integrations"
-          className="flex shrink-0 items-center gap-1 border-l border-slate-200 pl-2 ml-1"
+          className="flex shrink-0 items-center gap-1 rounded-xl border-2 border-blue-300 bg-blue-50 p-2"
         >
-          <span className="px-1 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-blue-600">Beta</span>
+          <span className="rounded-full bg-blue-600 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
+            Beta
+          </span>
           {BETA_TABS.map((tab) => renderTab(tab))}
         </div>
       </div>

@@ -14,6 +14,8 @@ const MERGED = {
   'self-hosting/ai-providers': 'product/ai-config',
   'self-hosting/slack-app': 'integrations/slack',
   'self-hosting/telegram-bot': 'integrations/telegram',
+  // Renamed, not merged: Search Console still crawls the old slug.
+  'product/widget': 'product/chat-widget',
 } as const
 
 function mdxFiles(dir: string): string[] {
