@@ -1,0 +1,98 @@
+---
+title: "Discourse API for answer bots: keys, webhooks, rate limits"
+subtitle: API keys, webhooks, replying as a bot account, and staying under the rate limits
+description: A practical walkthrough of the Discourse API for anyone building a bot that reads new topics and posts answers - authentication headers, signed webhooks, creating replies, and the documented rate limits.
+overview: To answer forum questions automatically you need four things from Discourse - an API key tied to a bot account, a way to hear about new posts, a call that creates a reply, and enough headroom under the rate limits. This post walks through each one, using what answerLoops does in production, and links the Discourse documentation behind every limit it mentions.
+author: Nathan Tarbert
+datePublished: "2026-11-12"
+category: Integrations
+coverImage: /blog/discourse-api-answer-bot/opengraph-image
+coverImageAlt: A forum topic sends a signed webhook to a bot, which posts a reply through the Discourse API.
+tags:
+  - community-platforms
+  - webhook-integration
+  - confidence-review
+---
+
+If you searched for "Discourse API", there's a decent chance you're about to build something that watches a forum and writes back: a bot that answers common questions, a triage tool, a summarizer. We built exactly that for answerLoops, so this is the version of the guide we'd have wanted before we started. It covers the four pieces any answer bot needs, and it's honest about the parts Discourse itself documents loosely.
+
+If you'd rather not build it yourself, there's a [ready-made Discourse integration](/docs/integrations/discourse), and an earlier post on [running AI support inside a Discourse forum](/blog/discourse-forum-support) that covers setup from the product side. This one is for people who want to understand, or build, the plumbing.
+
+## 1. Authenticate as a bot, not as you
+
+Discourse expects two headers on every API call: `Api-Key` and `Api-Username`. The key proves you're allowed to call the API, and the username is the account the action is attributed to. Passing credentials in the query string stopped being supported in April 2020, apart from a few endpoints like RSS feeds, so headers are the only route for new code. The [Discourse REST API documentation thread](https://meta.discourse.org/t/discourse-rest-api-documentation/22706) spells this out.
+
+Admin keys are generated at `/admin/api/keys`. Our advice is to create a dedicated account first, something like `answerloops-bot`, and tie the key to that single user. Two reasons:
+
+- Replies show up under a name your community can recognize as automated, rather than under yours.
+- A key locked to one user can't be talked into acting as somebody else.
+
+Give the account enough trust level to post in the categories you care about, or Discourse will reject its replies.
+
+## 2. Hear about new posts: webhooks beat polling
+
+You could poll the forum on a timer and diff what comes back. It works, but you're always either late or wasteful, and every poll counts against your rate limit. Discourse can instead call you. In **Admin → API → Webhooks**, add a webhook, subscribe it to the **Topic Event** and **Post Event** groups, set the content type to `application/json`, and leave TLS verification on.
+
+Every delivery is signed. The `X-Discourse-Event-Signature` header carries `sha256=` followed by an HMAC-SHA256 of the raw request body, computed with the secret you set on the webhook. Verify it before you trust anything in the payload:
+
+```ts
+import crypto from 'crypto'
+
+export function verifyDiscourseSignature(
+  rawBody: string,
+  header: string | null,
+  secret: string
+): boolean {
+  if (!header || !secret) return false
+  const expected =
+    'sha256=' + crypto.createHmac('sha256', secret).update(rawBody, 'utf8').digest('hex')
+  const a = Buffer.from(header)
+  const b = Buffer.from(expected)
+  return a.length === b.length && crypto.timingSafeEqual(a, b)
+}
+```
+
+Two details that bite people. Hash the raw body exactly as it arrived, not a re-serialized copy of the parsed JSON, or the signatures won't match. And compare in constant time, as above, rather than with `===`.
+
+## 3. Reply with one call
+
+Posting an answer is a single request. `POST /posts.json` with the topic and the text:
+
+```bash
+curl -X POST https://forum.example.com/posts.json \
+  -H "Api-Key: <your-api-key>" \
+  -H "Api-Username: answerloops-bot" \
+  -H "Content-Type: application/json" \
+  -d '{"topic_id": 1234, "raw": "Here is what the docs say about that..."}'
+```
+
+`raw` is Markdown, so links and code blocks work. The response includes the new post's id, which is worth storing so you can tell later which posts your bot wrote.
+
+## 4. Stay under the rate limits
+
+Discourse documents its default limits in [a Meta thread on rate limits](https://meta.discourse.org/t/available-settings-for-global-rate-limits-and-throttling/78612). The defaults to plan around:
+
+| Limit | Default |
+| --- | --- |
+| Admin API keys | 60 requests per minute |
+| User API keys | 20 requests per minute, 2,880 per day |
+| Per IP address | 200 requests per minute, 50 per 10 seconds |
+
+Two things to know. The same thread says global limits can't be changed on Discourse's hosted Free, Starter, Pro or Business plans, so design for the defaults if you don't run the server yourself. And if you do get a `429` response, Discourse's guidance is to respect it and slow down rather than retry immediately.
+
+The webhook approach makes this mostly a non-issue. You only call the API when you have something to post, so a busy forum is a handful of requests a minute, not a polling loop. Treat these numbers as defaults, though; a self-hosted forum can change them.
+
+## The mistakes that cost us time
+
+- **The bot answering itself.** Your reply fires a post webhook like any other post. Skip any post whose author is your bot's username, or you'll build a loop.
+- **Replying to a one-word bump.** A "+1" or "thanks" doesn't need an answer. We ignore posts under ten characters.
+- **Assuming every endpoint is documented.** It isn't. The Meta REST API thread says so itself. Start from the official [API reference](https://docs.discourse.org/), and when something's missing, watch what the Discourse web app calls in your browser's network tab.
+- **Posting wrong answers confidently.** The hard part of an answer bot isn't the API, it's knowing when not to answer. We gate every reply on a confidence score and hold low-confidence drafts for a person, which is the part of the [answerLoops workflow](/dual-agent-ai-support) that took longest to get right.
+
+## Sources
+
+- [Discourse REST API documentation](https://meta.discourse.org/t/discourse-rest-api-documentation/22706), Discourse Meta
+- [Available settings for global rate limits and throttling](https://meta.discourse.org/t/available-settings-for-global-rate-limits-and-throttling/78612), Discourse Meta
+- [Discourse API reference](https://docs.discourse.org/)
+
+Want the finished version instead? See [how answerLoops works with Discourse](/discourse-ai-answers), or go straight to the [setup guide](/docs/integrations/discourse).
