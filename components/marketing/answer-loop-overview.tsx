@@ -154,7 +154,10 @@ export function AnswerLoopOverview() {
     if (stage === LOOP_STAGE) return index === 1 ? 'active' : 'done'
     return index === stage ? 'active' : index < stage ? 'done' : 'idle'
   }
-  const exampleShown = (index: number) => !animated || index <= stage
+  // A paused diagram never reaches the later steps, so it shows the whole
+  // chosen example at once. Otherwise picking an example while paused would
+  // only change the first card.
+  const exampleShown = (index: number) => !animated || paused || index <= stage
   const examples = RUNS[run].examples
 
   return (
