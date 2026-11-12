@@ -635,6 +635,50 @@
   font-size: 1.2rem;
   max-width: none;
 }
+/* The avatar sits inside the eyebrow so each step keeps three children for
+   the subgrid rows below. */
+.marketing-workflow-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.marketing-agent-avatar {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--marketing-border);
+  background: var(--marketing-soft);
+  color: var(--marketing-link);
+}
+.marketing-agent-avatar[data-tone='answer'] {
+  border-color: #c8dce1;
+  background: #e7f2f4;
+  color: var(--marketing-accent);
+}
+.marketing-agent-avatar[data-tone='review'] {
+  border-color: var(--marketing-navy);
+  background: var(--marketing-navy);
+  color: #fff;
+}
+.marketing-agent-badge {
+  position: absolute;
+  right: -0.2rem;
+  bottom: -0.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  background: var(--marketing-accent);
+  color: #fff;
+}
 @media (min-width: 768px) {
   .marketing-workflow-step {
     display: grid;

@@ -279,6 +279,40 @@
 .marketing-site .pricing-section {
   background: var(--marketing-soft);
 }
+/* Compact hero (pricing, blog): a short hero and a tight gap below it, so the
+   page's main content shows on the first screen without scrolling. */
+.marketing-site .marketing-hero-compact {
+  padding-block: clamp(2rem, 3.5vw, 2.75rem);
+}
+.marketing-site .marketing-hero-compact h1 {
+  max-width: none;
+  font-size: clamp(2rem, 3.4vw, 2.75rem);
+}
+.marketing-site .marketing-hero-compact .marketing-intro {
+  margin-top: 0.75rem;
+  font-size: 1rem;
+}
+.marketing-site #plans.pricing-section,
+.marketing-site .marketing-hero-compact + .marketing-post-top {
+  padding-top: clamp(1.5rem, 3vw, 2.5rem);
+}
+.marketing-site #plans .pricing-toolbar {
+  margin-bottom: 1.25rem;
+}
+.marketing-site #plans .pricing-toolbar h2 {
+  font-size: clamp(1.5rem, 2.4vw, 1.875rem);
+}
+@media (max-width: 639px) {
+  .marketing-site .marketing-hero-compact {
+    padding-block: 1.5rem;
+  }
+  .marketing-site .marketing-hero-compact h1 {
+    font-size: 1.75rem;
+  }
+  .marketing-site #plans .pricing-toolbar {
+    gap: 0.75rem;
+  }
+}
 .pricing-toolbar {
   gap: 1.5rem;
   margin-bottom: 2rem;
