@@ -97,6 +97,9 @@ const MERGED_DOC_PAGES: Record<string, string> = {
   'self-hosting/ai-providers': 'product/ai-config',
   'self-hosting/slack-app': 'integrations/slack',
   'self-hosting/telegram-bot': 'integrations/telegram',
+  // Renamed when the page was retitled; Search Console still reports the old
+  // URL as a 404.
+  'product/widget': 'product/chat-widget',
 };
 
 // The hand-written API reference page was replaced by a generated,
