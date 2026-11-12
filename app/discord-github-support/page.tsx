@@ -80,6 +80,14 @@ export default async function Page() {
           label: 'GitHub setup',
           href: '/docs/integrations/github',
         },
+        {
+          label: 'Connecting Discord to answerLoops',
+          href: '/blog/discord-community-support',
+        },
+        {
+          label: 'GitHub support for open source maintainers',
+          href: '/blog/github-open-source-support',
+        },
       ]}
       schema={{
         name: 'Answer support questions in Discord and GitHub',

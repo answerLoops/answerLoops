@@ -85,6 +85,10 @@ export default async function Page() {
           label: 'How dual-agent review works',
           href: '/dual-agent-ai-support',
         },
+        {
+          label: 'Answering Circle questions without living in the app',
+          href: '/blog/circle-community-support',
+        },
       ]}
       schema={{
         name: 'Add AI-reviewed answers to your Circle community',
