@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'AI support replies with source review | answerLoops',
   description:
-    'The answer agent retrieves your documentation and drafts a reply. The review agent checks that draft against its sources. Your channel settings decide whether a qualifying answer is sent or held for your team.',
+    'The answerLoops agent writes a reply from your knowledge base. A Review agent checks it against its sources. Replies wait for your team by default, and you can turn on automatic replies for a channel.',
   path: '/agentic-support',
 })
 
@@ -84,7 +84,7 @@ export default async function AgenticSupportPage() {
       schema={{
         name: 'How answerLoops drafts and checks a reply',
         description:
-          'The answer agent retrieves your documentation and drafts a reply. The review agent checks that draft against its sources. Your channel settings decide whether a qualifying answer is sent or held for your team.',
+          'The answerLoops agent writes a reply from your knowledge base. A Review agent checks it against its sources. Replies wait for your team by default, and you can turn on automatic replies for a channel.',
         path: '/agentic-support',
       }}
     >

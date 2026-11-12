@@ -172,9 +172,11 @@ export default function LandingPage() {
               </h2>
             </div>
             <p>
-              Every draft is checked against the knowledge used to write it.
-              Keep replies in your team’s queue for approval, or enable
-              automatic replies for a channel after testing the results.
+              The answerLoops agent writes each answer from your knowledge
+              base, then a Review agent checks it against the same sources.
+              Answers wait for your team’s approval by default. Once you’ve
+              tested the results, you can turn on automatic replies for a
+              channel.
             </p>
           </div>
           <WorkflowDiagram />

@@ -1,22 +1,19 @@
 import { PLANS, TRIAL_DAYS } from '@/lib/billing/plans'
 
 /**
- * The plan numbers the marketing site quotes beside the trial button and in the
- * AI-usage answers. They are read from the plan table rather than typed, so a
- * change to a price or allowance reaches the copy by itself.
+ * Plan copy the marketing site quotes beside the trial button and in the
+ * AI-usage answers. Numbers are read from the plan table rather than typed, so
+ * a change to a trial length or allowance reaches the copy by itself.
  */
 
 const standard = PLANS.standard
 
-export const STANDARD_PRICE_LABEL = `$${standard.priceMonthly / 100}/mo`
-
-// Standard has a hard cap, so deflectionsPerMonth is always a number here.
-export const STANDARD_ANSWERS_LABEL = `${(standard.deflectionsPerMonth ?? 0).toLocaleString('en-US')} answers a month`
-
-/** The line under every "start your trial" button. */
+/**
+ * The line under every "start your trial" button. It stays short on purpose:
+ * prices live on the pricing page, where the plan cards show them on load.
+ */
 export const TRIAL_CTA_NOTE =
-  `No card required. Every feature is free for ${TRIAL_DAYS} days, with no obligation. ` +
-  `Plans start at ${STANDARD_PRICE_LABEL} and include ${STANDARD_ANSWERS_LABEL}.`
+  `No card required. Every feature is free for ${TRIAL_DAYS} days, with no obligation.`
 
 /**
  * What included AI usage covers, in the order a buyer asks: how much, how it
