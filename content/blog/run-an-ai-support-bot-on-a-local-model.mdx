@@ -1,0 +1,185 @@
+---
+title: Run an AI support bot on a local model
+subtitle: We pointed answerLoops at a small open model on a laptop and a real Discourse forum. Here is what worked, what broke, and what it takes to go bigger.
+description: We ran the whole answerLoops pipeline on a local open model and a real Discourse forum. The setup, the numbers, five bugs it found, which models fit which hardware, and how you can try it yourself.
+overview: A hands-on experiment. answerLoops is open source, so we ran it end to end on a 3-billion-parameter model on a 16 GB laptop, wired to a real Discourse forum. This post has the setup, the measured timings, the five bugs the experiment shook out, a table of models with their real download sizes, and honest advice on hardware for the bigger ones.
+author: Nathan Tarbert
+datePublished: "2026-11-13"
+category: Guides
+coverImage: /blog/run-an-ai-support-bot-on-a-local-model/opengraph-image
+coverImageAlt: Bars showing model sizes from 3 billion to 70 billion parameters against a 16 GB laptop's memory.
+tags:
+  - self-hosting
+  - local-models
+  - open-source
+---
+
+answerLoops is open source, which means the question "could this run entirely on my own machine?" has an actual answer. We wanted to find it out properly: no mock mode, no hosted model, a real forum, a small open model, and a laptop.
+
+It mostly worked. It also found five real bugs, ran a laptop out of memory, and taught us what to tell anyone who wants to try a bigger model. This is the whole story, with the numbers.
+
+## What we ran
+
+| Piece | What we used |
+| --- | --- |
+| Machine | Apple M1 Pro, 16 GB of memory, 10 cores |
+| Forum | A real Discourse 2026.11 from the official Docker image, running on `localhost` |
+| Chat model | `llama3.2`, 3.2 billion parameters, 4-bit, 2.0 GB |
+| Embedding model | `mxbai-embed-large`, 334 million parameters, 639 MB |
+| Model server | Docker Model Runner (llama.cpp with Metal), which speaks the OpenAI API |
+| App | answerLoops, run from source with mock mode off |
+
+The point of the exercise: every step a customer's question takes (triage, search, drafting, grading, replying) used a real model and a real forum. Nothing was faked.
+
+## Try it yourself
+
+You need Docker Desktop and a self-hosted answerLoops ([quickstart](/docs/quickstart-self-host)). Then:
+
+```bash
+docker desktop enable model-runner --tcp=12434
+docker model pull ai/llama3.2
+docker model pull ai/mxbai-embed-large
+```
+
+In answerLoops, open **Settings → AI Model** and choose **OpenAI-compatible** for both chat and embeddings:
+
+| Field | Value |
+| --- | --- |
+| Chat model ID | `ai/llama3.2` |
+| Chat base URL | `http://127.0.0.1:12434/engines/v1` |
+| Embedding model | `ai/mxbai-embed-large` |
+| Leave the keys blank | local servers don't need one |
+
+Press **Test connection**. We needed two small workarounds before both lines said OK, and they are worth knowing about. If chat fails with "The provider returned an error", that is the second one below: point the chat base URL at the shim as well.
+
+**Use `127.0.0.1`, not `localhost`.** The app pins the first address a hostname resolves to. `localhost` can resolve to the IPv6 address first, and a model server that only listens on IPv4 refuses it. The error says "could not reach the endpoint", which is misleading when the server is plainly up.
+
+**Your embeddings have to be 1,536 numbers long.** The knowledge base stores 1,536-dimension vectors, and `mxbai-embed-large` produces 1,024. Padding a vector with zeros doesn't change how similar two vectors are, so a tiny shim fixes it. It calls the real embedding model and pads the result. It also adds an empty `annotations` list that Docker's server leaves out of its replies and the AI SDK insists on:
+
+```js
+// shim.mjs  (node shim.mjs, then point both base URLs at http://127.0.0.1:4300/v1)
+import http from 'node:http'
+const UP = 'http://127.0.0.1:12434/engines/v1'
+const EMBED_MODEL = 'ai/mxbai-embed-large'
+const DIM = 1536
+
+http.createServer(async (req, res) => {
+  let body = ''
+  for await (const c of req) body += c
+  const send = (code, obj) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(obj)) }
+  try {
+    if (req.url.startsWith('/v1/models')) return send(200, await (await fetch(`${UP}/models`)).json())
+
+    if (req.url.startsWith('/v1/embeddings')) {
+      const input = JSON.parse(body); delete input.dimensions; input.model = EMBED_MODEL
+      const out = await (await fetch(`${UP}/embeddings`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(input) })).json()
+      for (const d of out.data) d.embedding = d.embedding.concat(new Array(DIM - d.embedding.length).fill(0))
+      return send(200, out)
+    }
+
+    if (req.url.startsWith('/v1/responses')) {
+      const out = await (await fetch(`${UP}/responses`, { method: 'POST', headers: { 'content-type': 'application/json' }, body })).json()
+      for (const o of out.output ?? []) for (const c of o.content ?? []) if (c.type === 'output_text' && !c.annotations) c.annotations = []
+      return send(200, out)
+    }
+    send(404, {})
+  } catch (e) { send(500, { error: { message: String(e) } }) }
+}).listen(4300)
+```
+
+That is the only glue we wrote. If your model server already returns 1,536-dimension vectors, or you use a hosted embedding key for that half, you may not need any of it.
+
+## What happened
+
+We connected a Discourse forum, added one knowledge-base article about recovering an account without access to your email, and had a forum member ask the same thing in different words.
+
+| Step | Result |
+| --- | --- |
+| Connection test, chat and embeddings | Passed, after the two workarounds above |
+| Add a knowledge-base article | Embedded by the local model, stored as a 1,536-dimension vector |
+| Register the webhook on the forum | Worked once we fixed a bug (see below) |
+| Forum delivers a new post | Delivered by Discourse itself, signature verified |
+| Ticket created | Yes |
+| Triage by the model | Failed at first (a bug, below). Passed after the fix |
+| Search finds the right article | Yes: it found the one article we had added |
+| Model drafts an answer | Yes |
+| Save the draft, approve it, reply appears in the forum | **Not finished.** The laptop ran out of memory |
+
+That last row deserves honesty. We did not get one clean end-to-end run on the real model, and the reason is the most useful finding of the whole experiment. We come back to it in the hardware section.
+
+## Five bugs a real forum and a real model found
+
+We had already tested this integration against a stand-in forum and mock AI, and everything passed. The real thing found five problems the stand-ins couldn't.
+
+1. **The "Register webhook" button could never work.** It called an endpoint Discourse doesn't have. The stand-in had invented it. Discourse returns the event types inside the normal webhook list.
+2. **Our docs named API-key scopes that don't exist.** There is no webhook scope, and replying is covered by **topics → write**, not `posts`. The [Discourse docs](/docs/integrations/discourse) now say what is true.
+3. **Discourse refuses webhook URLs that point at a private address** unless you allow the host. It mostly bites people running both on one network. The docs now say so.
+4. **The webhook also subscribed to likes and votes.** Matching on event names picked up `post_liked` and `topic_upvote`, so every like called our endpoint for nothing. It now subscribes to the Topic and Post groups only.
+5. **A wordy model failed triage and the customer got no answer.** The triage schema capped the model's explanation at 400 characters. The small model wrote more, validation threw, and the error took the whole job down with it: no notification and no AI answer, with the ticket stuck on "AI pending". The code's own comment said a triage failure should leave the placeholder and carry on. Now it does, and over-long text is trimmed instead of rejected.
+
+Four of the five were invisible to our stand-in forum. The fifth only showed up because a real model was chattier than a mock ever is. If you take one lesson: test once with the real thing.
+
+## The numbers
+
+We measured the models directly on the laptop, then compared with what the pipeline saw during the run.
+
+| What | Result |
+| --- | --- |
+| Chat model, first call (loading it) | 12.6 s |
+| Chat reply of about 150 words, warm | 9 to 15 s, about 15 to 22 tokens per second |
+| Embedding model, first call (loading it) | 53 s |
+| Embedding a short text, warm | 4.5 to 6.3 s |
+
+During the full run, with the forum, the app, the model server and a browser all open:
+
+| Pipeline step | Time |
+| --- | --- |
+| Triage one question | 39 s |
+| Embed the ticket | 195 s |
+| Draft the answer | 125 s |
+| Laptop load average | 172 (a healthy value here is under 10) |
+| Memory held in compression | about 7 GB, with heavy paging |
+
+Read these as "a busy 16 GB laptop", not as a benchmark. Docker's virtual machine, macOS background jobs and another project's containers were all competing for the same cores and memory while we measured. A dedicated machine would be several times faster. The shape of the result still matters: a 3-billion-parameter model on a shared laptop answers in minutes, not seconds.
+
+## Which models can you run?
+
+Anything that speaks the OpenAI API works: Docker Model Runner, Ollama, LM Studio, vLLM, or a proxy in front of a hosted model. Docker's public catalog alone lists 136 models today. These are real download sizes from its registry, for the 4-bit builds:
+
+| Model | Size | What it is good for |
+| --- | --- | --- |
+| `llama3.2` 1B | 0.8 GB | Smoke tests. Too small for the full pipeline |
+| `llama3.2` 3B | 2.0 GB | What we ran. Fine for drafts you review |
+| `qwen3` 4B | 2.5 GB | Another small instruct model worth a look |
+| `mistral` 7B | 4.4 GB | A reasonable ceiling for a 16 GB machine you also work on |
+| `phi4` 14B | 9.1 GB | Noticeably stronger, but it wants the whole laptop |
+| `gpt-oss` 20B | 11.6 GB | More comfortable with 32 GB of memory |
+| `llama3.3` 70B | 42.5 GB | Server territory: 64 GB or more of memory, or a GPU box |
+
+For embeddings, `embeddinggemma` and `nomic-embed-text-v1.5` are each 0.3 GB, `qwen3-embedding` 0.6B is 0.6 GB, and the one we used, `mxbai-embed-large`, is 0.64 GB. Remember the 1,536-dimension rule, and check the output size of whichever you pick.
+
+## Tips for going bigger
+
+**Memory first, speed second.** A model's file size is roughly the memory it needs, plus a context cache that grows with the length of the conversation, plus everything else on the machine. When the weights don't fit, the system starts paging to disk and everything slows down, often by an order of magnitude or more. That is exactly what we hit: our 3-billion-parameter model fit comfortably on its own, and the trouble began when Docker, a forum and a browser joined it.
+
+**Apple silicon shares one pool.** The chip's memory is both your RAM and your video memory, so a 16 GB laptop has 16 GB for everything. On a PC, what counts is the memory on the graphics card. A model that spills out of a GPU into system RAM crawls.
+
+**Give it a machine of its own.** answerLoops and the model server are separate. Run the model on a box with a decent GPU on your network and point the base URL at it. Self-hosted installs can use `http` and addresses on their own network.
+
+**Bigger models are better at following instructions.** The pipeline asks for structured answers (a category, a score, a short explanation). A 3B model got there, but it classified a password-recovery question as a general question with severity zero. A 7B model or larger should do better. We haven't measured it, so try it and look at the triage the ticket gets.
+
+**Count on several model calls per question.** Triage, embedding, drafting and grading are separate calls, so at least four. On a slow server they queue. That is fine for a review-first setup and painful for live chat.
+
+**Keep a person in the loop.** We left Automatic Deflections off: drafts wait for approval. With a small local model that is the right default, and a low-confidence answer is held back even when auto-answers are on.
+
+**Choose the quantization on purpose.** The same 3B model is 2.0 GB at 4 bits and 6.4 GB at full precision. Four bits is usually the right trade on a laptop.
+
+## What we did not finish
+
+We did not get a clean pass of the last step on the real model: saving the draft, approving it, and watching the reply appear in the forum. The laptop was swapping, and the database writes timed out. The same steps ran cleanly with mock AI and with a manual reply into the real forum, so we know the plumbing works. The missing piece is a real model doing it all on hardware with room to breathe, and we would rather tell you that than paper over it.
+
+## Why this is worth trying
+
+Nothing here needed an account, a key, or a bill. The forum, the model, the database and the app all ran on one laptop, and the code is on [GitHub](https://github.com/answerLoops/answerLoops) under AGPL-3.0. If you want your community's questions answered from your own documentation without sending them anywhere, this is a path that works today. It gets better with every step up in hardware.
+
+If you try it, we would love to hear what you ran, on what, and how long an answer took. The [Ollama guide](/docs/integrations/ollama) and the [AI model docs](/docs/product/ai-config) cover the settings in more detail, and the earlier posts on [running AI support inside a Discourse forum](/blog/discourse-forum-support) and [the Discourse API](/blog/discourse-api-answer-bot) cover the forum side.
