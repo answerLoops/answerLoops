@@ -90,9 +90,11 @@ Every new hosted account gets one 14-day trial with every feature included and n
 - Terms of service: https://answerloops.com/terms
 - answerLoops vs Bettermode: https://answerloops.com/vs/bettermode
 - answerLoops vs Chatbase: https://answerloops.com/vs/chatbase
+- answerLoops vs HelpCrunch: https://answerloops.com/vs/helpcrunch
 - answerLoops vs Intercom Fin: https://answerloops.com/vs/intercom
 - answerLoops vs Kapa.ai: https://answerloops.com/vs/kapa-ai
 - answerLoops vs Khoros Aurora AI: https://answerloops.com/vs/khoros-aurora-ai
+- answerLoops vs Olark: https://answerloops.com/vs/olark
 - answerLoops vs Plain: https://answerloops.com/vs/plain
 - answerLoops vs Pylon: https://answerloops.com/vs/pylon
 - answerLoops vs Zendesk AI: https://answerloops.com/vs/zendesk-ai
