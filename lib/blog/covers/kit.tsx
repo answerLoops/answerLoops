@@ -1,7 +1,8 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { INTEGRATION_MARKS, PLATFORM_TAGS } from './marks'
 
 // Shared pieces for the blog cover art. The 1200 x 630 canvas, the navy base,
-// the logo lockup, the tag, the big headline and the chips live here, so every
+// the logo lockup, the tag and the big headline live here, so every
 // cover looks like one family. Each cover supplies its own accent colour, its
 // own words, and one signature visual built from what its article is about.
 //
@@ -38,29 +39,17 @@ interface PopFrameProps {
   ring?: string
   tag: string
   tagColor?: string
+  /** Slug of the integration this article is about: puts its logo and brand colour on the tag. */
+  mark?: string
   /** One to three lines. Exactly one may be highlighted. */
   headline: HeadlinePart[]
   /** Headline size in px. 80 fits three short lines; use 68 to 72 for longer words. */
   headlineSize?: number
-  /** Up to three short labels shown bottom-left. */
-  chips?: string[]
   /** Text on the highlighted block. Defaults to white; use navy on a light accent. */
   highlightText?: string
   /** The signature visual. Position it absolutely inside x 640..1150, y 60..570. */
   children?: ReactNode
 }
-
-const chipStyle = (i: number): CSSProperties => ({
-  display: 'flex',
-  marginRight: 14,
-  fontSize: 26,
-  fontWeight: 700,
-  padding: '11px 22px',
-  borderRadius: 15,
-  color: i === 0 ? '#062a44' : i === 1 ? pop.white : pop.navy,
-  background: i === 0 ? pop.teal : i === 1 ? 'rgba(255,255,255,0.08)' : pop.white,
-  border: i === 1 ? '3px solid rgba(255,255,255,0.9)' : `3px solid ${i === 0 ? pop.teal : pop.white}`,
-})
 
 export function PopFrame({
   logoSrc,
@@ -69,9 +58,9 @@ export function PopFrame({
   ring = pop.yellow,
   tag,
   tagColor = pop.yellow,
+  mark,
   headline,
   headlineSize = 80,
-  chips = [],
   highlightText = pop.white,
   children,
 }: PopFrameProps) {
@@ -101,13 +90,10 @@ export function PopFrame({
         <span style={{ color: pop.teal }}>Loops</span>
       </div>
 
-      {/* Tag */}
-      <div style={{ position: 'absolute', top: 150, left: 72, display: 'flex', background: tagColor, color: pop.navy, fontSize: 22, fontWeight: 700, letterSpacing: 3, padding: '9px 20px', borderRadius: 999, transform: 'rotate(-2deg)' }}>
-        {tag}
-      </div>
+      <PopTag label={tag} color={tagColor} mark={mark} />
 
       {/* Headline */}
-      <div style={{ position: 'absolute', left: 72, top: 212, display: 'flex', flexDirection: 'column', fontSize: headlineSize, fontWeight: 700, letterSpacing: -4, lineHeight: 1 }}>
+      <div style={{ position: 'absolute', left: 72, top: 240, display: 'flex', flexDirection: 'column', fontSize: headlineSize, fontWeight: 700, letterSpacing: -4, lineHeight: 1 }}>
         {headline.map((part, i) => (
           <div key={i} style={{ display: 'flex', marginTop: i === 0 ? 0 : 12 }}>
             {part.highlight ? (
@@ -121,18 +107,29 @@ export function PopFrame({
         ))}
       </div>
 
-      {/* Chips */}
-      {chips.length > 0 && (
-        <div style={{ position: 'absolute', left: 72, bottom: 50, display: 'flex' }}>
-          {chips.slice(0, 3).map((label, i) => (
-            <div key={label} style={chipStyle(i)}>
-              {label}
-            </div>
-          ))}
+      {children}
+    </div>
+  )
+}
+
+/** The small label above the headline. With a `mark` it carries that platform's logo and brand colour. */
+export function PopTag({ label, color = pop.yellow, mark }: { label: string; color?: string; mark?: string }) {
+  const glyph = mark ? INTEGRATION_MARKS[mark] : undefined
+  const brand = mark ? PLATFORM_TAGS[mark] : undefined
+  return (
+    <div style={{ position: 'absolute', top: 170, left: 72, display: 'flex', alignItems: 'center', transform: 'rotate(-2deg)' }}>
+      {glyph && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 52, height: 52, borderRadius: 15, background: pop.white, marginRight: 12, boxShadow: '0 5px 0 rgba(6,31,56,0.3)' }}>
+          <svg width="34" height="34" viewBox={glyph.viewBox}>
+            {glyph.paths.map((p, i) => (
+              <path key={i} d={p.d} fill={p.fill ?? glyph.color} stroke={p.fill === 'none' ? (p.stroke ?? glyph.color) : undefined} strokeWidth={p.fill === 'none' ? 1.8 : undefined} strokeLinecap="round" />
+            ))}
+          </svg>
         </div>
       )}
-
-      {children}
+      <div style={{ display: 'flex', background: brand?.pill ?? color, color: brand?.text ?? pop.navy, fontSize: 22, fontWeight: 700, letterSpacing: 3, padding: '9px 20px', borderRadius: 999, border: brand?.outline ? '2px solid rgba(255,255,255,0.7)' : '2px solid transparent' }}>
+        {label}
+      </div>
     </div>
   )
 }

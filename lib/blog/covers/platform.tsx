@@ -54,7 +54,6 @@ export function McpSupportCover({ logoSrc }: { logoSrc: string }) {
       tagColor={pop.teal}
       headline={[{ text: 'Agents can' }, { text: 'reach in', highlight: true }]}
       highlightText={pop.navy}
-      chips={['5 tools', 'Scoped keys', 'Review kept']}
     >
       <div
         style={abs(660, 66, {
@@ -116,10 +115,10 @@ export function NotionKnowledgeCover({ logoSrc }: { logoSrc: string }) {
       glow={pop.orange}
       ring={pop.teal}
       tag="NOTION SYNC"
+      mark="notion-knowledge-base-sync"
       headline={[{ text: 'Share a page,' }, { text: 'ship the answer', highlight: true }]}
       headlineSize={66}
       highlightText={pop.navy}
-      chips={['Read-only', 'You choose', 'Publish later']}
     >
       <PopCard left={660} top={80} width={470} rotate={-2} border="3px solid #111" padding="22px 28px 26px 28px">
         <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -167,9 +166,8 @@ export function DualAgentReviewCover({ logoSrc }: { logoSrc: string }) {
       glow={pop.yellow}
       ring={pop.teal}
       tag="DUAL-AGENT REVIEW"
-      headline={[{ text: 'One AI drafts.' }, { text: 'One AI doubts.', highlight: true }]}
-      headlineSize={70}
-      chips={['Drafter', 'Reviewer', '0.8 threshold']}
+      headline={[{ text: 'One AI agent' }, { text: 'drafts.' }, { text: 'One AI agent' }, { text: 'reviews.', highlight: true }]}
+      headlineSize={62}
     >
       <PopCard left={660} top={70} width={470} rotate={-2} padding="18px 26px 22px 26px">
         <div style={{ display: 'flex', fontSize: 22, letterSpacing: 2, color: pop.muted }}>DRAFTER</div>
@@ -214,7 +212,6 @@ export function SupportAnswersKnowledgeCover({ logoSrc }: { logoSrc: string }) {
       headline={[{ text: 'Answer it' }, { text: 'once', highlight: true }, { text: 'keep it' }]}
       headlineSize={72}
       highlightText={pop.navy}
-      chips={['Promote', 'Review', 'Search']}
     >
       <PopCard left={650} top={72} width={400} rotate={-3} padding="18px 24px 22px 24px">
         <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -299,7 +296,6 @@ export function MultiplatformSupportCover({ logoSrc }: { logoSrc: string }) {
       tag="MULTI-CHANNEL"
       headline={[{ text: 'Every channel,' }, { text: 'one inbox', highlight: true }]}
       headlineSize={72}
-      chips={['9 channels', 'One queue', 'One KB']}
     >
       <div style={abs(655, 70, { width: 490, flexWrap: 'wrap' })}>{channels.map(cell)}</div>
       <PopCard left={680} top={392} width={450} rotate={-1.5} border={`4px solid ${pop.orange}`} padding="16px 26px 20px 26px">

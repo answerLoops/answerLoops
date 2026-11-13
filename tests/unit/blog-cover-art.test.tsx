@@ -33,7 +33,7 @@ beforeEach(() => {
 
 
 const COVERS = [
-  ['dual-agent-review', 'One AI drafts.', 'One AI doubts.'],
+  ['dual-agent-review', 'drafts.', 'reviews.'],
   ['mcp-server-for-support', 'Agents can', 'reach in'],
   ['circle-community-support', 'Your members', 'ask once'],
   ['discord-community-support', 'Forum posts', 'become tickets'],
@@ -48,7 +48,44 @@ const COVERS = [
   ['turn-support-answers-into-reusable-knowledge', 'Answer it', 'keep it'],
 ] as const
 
+const INTEGRATION_COVERS = [
+  ['discord-community-support', '#5865f2'],
+  ['slack-no-admin-approval', '#4a154b'],
+  ['telegram-community-support', '#229ed9'],
+  ['google-chat-internal-support', '#34a853'],
+  ['circle-community-support', '#7c3aed'],
+  ['discourse-forum-support', '#e4572e'],
+  ['github-open-source-support', '#24292f'],
+  ['email-support-automation', '#64748b'],
+  ['notion-knowledge-base-sync', '#000000'],
+  ['discourse-api-answer-bot', '#e4572e'],
+] as const
+
 describe('blog cover image route', () => {
+  it.each(INTEGRATION_COVERS)('puts the platform logo and brand colour on the tag of %s', async (slug, brand) => {
+    getPage.mockReturnValue(publishedPost())
+    const { markup } = await renderCover(slug)
+
+    expect(markup).toContain('<svg')
+    expect(markup).toContain('<path')
+    expect(markup).toContain(`background:${brand}`)
+  })
+
+  it('names the local model on the local-model cover', async () => {
+    getPage.mockReturnValue(publishedPost())
+    const { markup } = await renderCover('run-an-ai-support-bot-on-a-local-model')
+
+    expect(markup).toContain('LOCAL MODEL')
+    expect(markup).toContain('on a laptop')
+  })
+
+  it.each(['mcp-server-for-support', 'managing-every-community-platform-from-one-place'])('leaves the tag of %s without a platform logo', async (slug) => {
+    getPage.mockReturnValue(publishedPost())
+    const { markup } = await renderCover(slug)
+
+    expect(markup).not.toContain('<path')
+  })
+
   it.each(COVERS)('draws the bespoke artwork for the published %s post', async (slug, lineOne, lineTwo) => {
     getPage.mockReturnValue(publishedPost())
     const { markup, options } = await renderCover(slug)

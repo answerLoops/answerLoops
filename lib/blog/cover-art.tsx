@@ -2,6 +2,7 @@
 export * from './covers/chat'
 export * from './covers/community'
 export * from './covers/platform'
+import { PopTag } from './covers/kit'
 
 // All covers share the public site's palette and a 1200 × 630 canvas.
 export const BLOG_COVER_SIZE = { width: 1200, height: 630 }
@@ -47,13 +48,10 @@ export function DiscourseApiCover({ logoSrc }: { logoSrc: string }) {
         <span style={{ color: popPalette.teal }}>Loops</span>
       </div>
 
-      {/* Tag */}
-      <div style={{ position: 'absolute', top: 150, left: 72, display: 'flex', background: popPalette.yellow, color: coverPalette.navy, fontSize: 22, fontWeight: 700, letterSpacing: 3, padding: '9px 20px', borderRadius: 999, transform: 'rotate(-2deg)' }}>
-        DEVELOPER GUIDE
-      </div>
+      <PopTag label="DEVELOPER GUIDE" mark="discourse-forum-support" />
 
       {/* Headline */}
-      <div style={{ position: 'absolute', left: 72, top: 206, display: 'flex', flexDirection: 'column', fontSize: 80, fontWeight: 700, letterSpacing: -4, lineHeight: 1 }}>
+      <div style={{ position: 'absolute', left: 72, top: 240, display: 'flex', flexDirection: 'column', fontSize: 80, fontWeight: 700, letterSpacing: -4, lineHeight: 1 }}>
         <div style={{ display: 'flex' }}>Build a</div>
         <div style={{ display: 'flex', marginTop: 12 }}>
           <div style={{ display: 'flex', background: popPalette.orange, borderRadius: 22, padding: '4px 26px 12px 26px', lineHeight: 1, transform: 'rotate(-1.6deg)', boxShadow: '0 10px 0 rgba(6,31,56,0.3)' }}>
@@ -63,12 +61,6 @@ export function DiscourseApiCover({ logoSrc }: { logoSrc: string }) {
         <div style={{ display: 'flex', marginTop: 14 }}>answer bot</div>
       </div>
 
-      {/* Chips */}
-      <div style={{ position: 'absolute', left: 72, bottom: 50, display: 'flex' }}>
-        <div style={{ display: 'flex', marginRight: 14, fontSize: 26, fontWeight: 700, padding: '11px 22px', borderRadius: 15, color: '#062a44', background: popPalette.teal, border: `3px solid ${popPalette.teal}` }}>API keys</div>
-        <div style={{ display: 'flex', marginRight: 14, fontSize: 26, fontWeight: 700, padding: '11px 22px', borderRadius: 15, color: '#ffffff', background: 'rgba(255,255,255,0.08)', border: '3px solid rgba(255,255,255,0.9)' }}>Webhooks</div>
-        <div style={{ display: 'flex', fontSize: 26, fontWeight: 700, padding: '11px 22px', borderRadius: 15, color: coverPalette.navy, background: '#ffffff', border: '3px solid #ffffff' }}>Rate limits</div>
-      </div>
 
       {/* Topic card */}
       <div style={{ position: 'absolute', left: 690, top: 62, width: 430, display: 'flex', flexDirection: 'column', background: '#ffffff', color: coverPalette.navy, borderRadius: 26, padding: '24px 28px', transform: 'rotate(-3deg)', boxShadow: '0 16px 0 rgba(6,31,56,0.28)' }}>
@@ -145,11 +137,9 @@ export function LocalModelCover({ logoSrc }: { logoSrc: string }) {
         <span style={{ color: popPalette.teal }}>Loops</span>
       </div>
 
-      <div style={{ position: 'absolute', top: 150, left: 72, display: 'flex', background: popPalette.yellow, color: coverPalette.navy, fontSize: 22, fontWeight: 700, letterSpacing: 3, padding: '9px 20px', borderRadius: 999, transform: 'rotate(-2deg)' }}>
-        OPEN SOURCE EXPERIMENT
-      </div>
+      <PopTag label="LOCAL MODEL" />
 
-      <div style={{ position: 'absolute', left: 72, top: 212, display: 'flex', flexDirection: 'column', fontSize: 80, fontWeight: 700, letterSpacing: -4, lineHeight: 1 }}>
+      <div style={{ position: 'absolute', left: 72, top: 240, display: 'flex', flexDirection: 'column', fontSize: 80, fontWeight: 700, letterSpacing: -4, lineHeight: 1 }}>
         <div style={{ display: 'flex' }}>Support bot,</div>
         <div style={{ display: 'flex', marginTop: 12 }}>
           <div style={{ display: 'flex', background: popPalette.orange, borderRadius: 22, padding: '4px 26px 12px 26px', lineHeight: 1, transform: 'rotate(-1.6deg)', boxShadow: '0 10px 0 rgba(6,31,56,0.3)' }}>
@@ -158,11 +148,6 @@ export function LocalModelCover({ logoSrc }: { logoSrc: string }) {
         </div>
       </div>
 
-      <div style={{ position: 'absolute', left: 72, bottom: 50, display: 'flex' }}>
-        <div style={{ display: 'flex', marginRight: 14, fontSize: 26, fontWeight: 700, padding: '11px 22px', borderRadius: 15, color: '#062a44', background: popPalette.teal, border: `3px solid ${popPalette.teal}` }}>Local model</div>
-        <div style={{ display: 'flex', marginRight: 14, fontSize: 26, fontWeight: 700, padding: '11px 22px', borderRadius: 15, color: '#ffffff', background: 'rgba(255,255,255,0.08)', border: '3px solid rgba(255,255,255,0.9)' }}>Real forum</div>
-        <div style={{ display: 'flex', fontSize: 26, fontWeight: 700, padding: '11px 22px', borderRadius: 15, color: coverPalette.navy, background: '#ffffff', border: '3px solid #ffffff' }}>AGPL-3.0</div>
-      </div>
 
       {/* Model sizes against a 16 GB laptop */}
       <div style={{ position: 'absolute', left: 700, top: 96, width: 430, display: 'flex', flexDirection: 'column', background: '#ffffff', color: coverPalette.navy, borderRadius: 26, padding: '26px 28px 30px', transform: 'rotate(-2deg)', boxShadow: '0 16px 0 rgba(6,31,56,0.28)' }}>

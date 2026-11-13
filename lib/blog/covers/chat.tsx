@@ -21,9 +21,9 @@ export function DiscordSupportCover({ logoSrc }: { logoSrc: string }) {
       glow={pop.teal}
       ring={pop.yellow}
       tag="DISCORD"
+      mark="discord-community-support"
       headline={[{ text: 'Forum posts' }, { text: 'become tickets', highlight: true }]}
       headlineSize={72}
-      chips={['Text channels', 'Forum threads', 'In-thread replies']}
     >
       {/* forum post */}
       <PopCard left={660} top={90} width={470} rotate={-2} padding="20px 24px">
@@ -79,9 +79,9 @@ export function SlackSupportCover({ logoSrc }: { logoSrc: string }) {
       glow={sky}
       ring={pop.yellow}
       tag="SLACK"
+      mark="slack-no-admin-approval"
       headline={[{ text: 'Skip the' }, { text: 'admin queue', highlight: true }]}
       headlineSize={80}
-      chips={['OAuth', 'Polling mode', 'Bot token only']}
     >
       {/* door one: OAuth, waiting */}
       <PopCard left={650} top={80} width={480} rotate={-2} padding="18px 24px">
@@ -134,9 +134,9 @@ export function TelegramSupportCover({ logoSrc }: { logoSrc: string }) {
       glow={pop.orange}
       ring={pop.yellow}
       tag="TELEGRAM"
+      mark="telegram-community-support"
       headline={[{ text: 'A group chat' }, { text: 'that never sleeps', highlight: true }]}
       headlineSize={70}
-      chips={['Your own bot', 'Auto webhook', 'Tickets']}
     >
       {/* fast chat */}
       <div style={{ ...abs, left: 660, top: 70, width: 400, flexDirection: 'column' }}>
@@ -183,9 +183,9 @@ export function GoogleChatSupportCover({ logoSrc }: { logoSrc: string }) {
       glow={pop.yellow}
       ring={pop.orange}
       tag="GOOGLE CHAT"
+      mark="google-chat-internal-support"
       headline={[{ text: 'Pair a space' }, { text: 'with one code', highlight: true }]}
       headlineSize={72}
-      chips={['No OAuth', 'Shared app', 'IT']}
     >
       {/* code card */}
       <PopCard left={660} top={85} width={470} rotate={-2} padding="18px 24px">

@@ -27,9 +27,9 @@ export function CircleSupportCover({ logoSrc }: { logoSrc: string }) {
       glow="#ff6b9d"
       ring={pop.teal}
       tag="CIRCLE"
+      mark="circle-community-support"
       headline={[{ text: 'Your members' }, { text: 'ask once', highlight: true }]}
       headlineSize={76}
-      chips={['Workflows', 'Spaces', 'Admin token']}
     >
       <PopCard left={680} top={70} width={400} rotate={-4} padding="18px 24px">
         <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -75,11 +75,10 @@ export function DiscourseSupportCover({ logoSrc }: { logoSrc: string }) {
       glow="#e4572e"
       ring={pop.teal}
       tag="DISCOURSE"
-      tagColor={pop.teal}
+      mark="discourse-forum-support"
       highlightText={pop.navy}
       headline={[{ text: 'Same question,' }, { text: 'answered', highlight: true }, { text: 'by the forum' }]}
       headlineSize={72}
-      chips={['Categories', 'Bot account', 'Held drafts']}
     >
       <PopCard left={670} top={64} width={470} rotate={2} padding="14px 20px" radius={22}>
         <div style={{ display: 'flex', fontSize: 22, fontWeight: 700, color: pop.muted, letterSpacing: 2 }}>TOPIC</div>
@@ -123,10 +122,9 @@ export function GitHubSupportCover({ logoSrc }: { logoSrc: string }) {
       glow={purple}
       ring={pop.yellow}
       tag="OPEN SOURCE"
-      tagColor={pop.white}
+      mark="github-open-source-support"
       headline={[{ text: 'Answer it' }, { text: 'once', highlight: true }, { text: 'not twenty' }]}
       headlineSize={72}
-      chips={['Issues', 'Discussions', 'Repo docs']}
     >
       <PopCard left={690} top={70} width={430} rotate={-3} padding="20px 26px">
         <div style={{ display: 'flex', alignItems: 'center' }}>
@@ -178,9 +176,9 @@ export function EmailSupportCover({ logoSrc }: { logoSrc: string }) {
       glow={pop.yellow}
       ring={pop.orange}
       tag="EMAIL"
+      mark="email-support-automation"
       headline={[{ text: 'One inbox,' }, { text: 'one thread', highlight: true }]}
       headlineSize={80}
-      chips={['Inbound MX', 'DKIM', 'Threading']}
     >
       <PopCard left={680} top={70} width={450} rotate={-3} padding="20px 26px">
         <div style={{ display: 'flex', alignItems: 'center' }}>
