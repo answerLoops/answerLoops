@@ -3,7 +3,7 @@ import { getBlogPost } from '@/lib/blog/posts'
 import { SLACK_LOGO } from '@/lib/marketing/slack-logo'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseSupportCover, DualAgentReviewCover, EmailSupportCover, GitHubSupportCover, GoogleChatSupportCover, McpSupportCover, NotionKnowledgeCover, SlackSupportCover, TelegramSupportCover, MultiplatformSupportCover, SupportAnswersKnowledgeCover } from '@/lib/blog/cover-art'
+import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseApiCover, DiscourseSupportCover, DualAgentReviewCover, EmailSupportCover, GitHubSupportCover, GoogleChatSupportCover, McpSupportCover, NotionKnowledgeCover, SlackSupportCover, TelegramSupportCover, MultiplatformSupportCover, SupportAnswersKnowledgeCover } from '@/lib/blog/cover-art'
 
 const COVER_ART = new Map([
   ['dual-agent-review', DualAgentReviewCover],
@@ -11,6 +11,7 @@ const COVER_ART = new Map([
   ['circle-community-support', CircleSupportCover],
   ['discord-community-support', DiscordSupportCover],
   ['discourse-forum-support', DiscourseSupportCover],
+  ['discourse-api-answer-bot', DiscourseApiCover],
   ['email-support-automation', EmailSupportCover],
   ['github-open-source-support', GitHubSupportCover],
   ['google-chat-internal-support', GoogleChatSupportCover],
@@ -20,6 +21,9 @@ const COVER_ART = new Map([
   ['managing-every-community-platform-from-one-place', MultiplatformSupportCover],
   ['turn-support-answers-into-reusable-knowledge', SupportAnswersKnowledgeCover],
 ])
+
+// Covers that are drawn in the bold Geist weight (see the render below).
+const BOLD_COVERS = new Set(['discourse-api-answer-bot'])
 
 // Auto-generated cover art: a post only needs a `coverImage` in its
 // frontmatter if it wants a specific photo/illustration. Without one, this
@@ -153,9 +157,14 @@ export default async function BlogPostOgImage({
   const Cover = COVER_ART.get(slug)
   if (post && Cover) {
     const logo = await readFile(join(process.cwd(), 'public/icon.png'))
+    // Covers that use the bold weight need the font handed over: the image
+    // renderer only ships a regular one. Geist is the site's own typeface.
+    const fonts = BOLD_COVERS.has(slug)
+      ? [{ name: 'Geist', data: await readFile(join(process.cwd(), 'lib/marketing/fonts/Geist-Bold.ttf')), weight: 700 as const, style: 'normal' as const }]
+      : undefined
     return new ImageResponse(
       <Cover logoSrc={`data:image/png;base64,${logo.toString('base64')}`} />,
-      size,
+      { ...size, fonts },
     )
   }
   const title = post?.data.title ?? 'answerLoops'
