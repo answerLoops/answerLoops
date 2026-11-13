@@ -23,9 +23,6 @@ const COVER_ART = new Map([
   ['turn-support-answers-into-reusable-knowledge', SupportAnswersKnowledgeCover],
 ])
 
-// Covers that are drawn in the bold Geist weight (see the render below).
-const BOLD_COVERS = new Set(['discourse-api-answer-bot', 'run-an-ai-support-bot-on-a-local-model'])
-
 // Auto-generated cover art: a post only needs a `coverImage` in its
 // frontmatter if it wants a specific photo/illustration. Without one, this
 // route renders a title+category card so publishing a new SEO post never
@@ -158,11 +155,9 @@ export default async function BlogPostOgImage({
   const Cover = COVER_ART.get(slug)
   if (post && Cover) {
     const logo = await readFile(join(process.cwd(), 'public/icon.png'))
-    // Covers that use the bold weight need the font handed over: the image
+    // Every cover is drawn in bold Geist, so hand the font over: the image
     // renderer only ships a regular one. Geist is the site's own typeface.
-    const fonts = BOLD_COVERS.has(slug)
-      ? [{ name: 'Geist', data: await readFile(join(process.cwd(), 'lib/marketing/fonts/Geist-Bold.ttf')), weight: 700 as const, style: 'normal' as const }]
-      : undefined
+    const fonts = [{ name: 'Geist', data: await readFile(join(process.cwd(), 'lib/marketing/fonts/Geist-Bold.ttf')), weight: 700 as const, style: 'normal' as const }]
     return new ImageResponse(
       <Cover logoSrc={`data:image/png;base64,${logo.toString('base64')}`} />,
       { ...size, fonts },
