@@ -2,15 +2,17 @@ import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
 import { chatModel, DEFAULT_FAST_MODEL } from '@/lib/ai/models'
 import { EmptyAIResponseError } from '@/lib/ai/errors'
+import { boundText, REASONING_MAX_CHARS, SUMMARY_MAX_CHARS } from '@/lib/ai/bounded-text'
 import { z } from 'zod'
 import type { TriageResult } from '@/types'
 
 const TriageSchema = z.object({
   category: z.enum(['bug', 'feature_request', 'documentation', 'how_to', 'general_question']),
   severity_score: z.number().min(0).max(1),
-  summary: z.string().max(200),
+  // No max(); trimmed in code (see bounded-text.ts).
+  summary: z.string().describe(`One sentence, at most ${SUMMARY_MAX_CHARS} characters.`),
   suggested_priority: z.enum(['critical', 'high', 'medium', 'low']),
-  reasoning: z.string().max(400),
+  reasoning: z.string().describe(`One or two short sentences, at most ${REASONING_MAX_CHARS} characters.`),
 })
 
 export async function triageMessage(content: string, orgId?: number): Promise<TriageResult> {
@@ -59,8 +61,8 @@ ${content}
   return {
     category: object.category,
     severity_score: object.severity_score,
-    summary: object.summary,
+    summary: boundText(object.summary, SUMMARY_MAX_CHARS),
     suggested_priority: object.suggested_priority,
-    reasoning: object.reasoning,
+    reasoning: boundText(object.reasoning, REASONING_MAX_CHARS),
   }
 }
