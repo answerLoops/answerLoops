@@ -1,3 +1,4 @@
+import { boundText, REASONING_MAX_CHARS } from '@/lib/ai/bounded-text'
 import { Agent } from '@mastra/core/agent'
 import type { MastraModelConfig } from '@mastra/core/llm'
 import { chatModel, DEFAULT_FAST_MODEL } from '@/lib/ai/models'
@@ -14,7 +15,8 @@ export const AUTO_DEFLECT_THRESHOLD = 0.8
 const AssessmentSchema = z.object({
   confidence: z.number().min(0).max(1),
   answered_fully: z.boolean(),
-  reasoning: z.string().max(400),
+  // No max(); trimmed in code.
+  reasoning: z.string().describe(`One or two sentences, at most ${REASONING_MAX_CHARS} characters.`),
 })
 
 interface AnswerAssessment {
@@ -107,7 +109,7 @@ export async function assessAnswer(
   // review) runs instead of an undefined assessment reaching shouldAutoDeflect.
   if (!object) throw new EmptyAIResponseError('assessment')
 
-  return object
+  return { ...object, reasoning: boundText(object.reasoning, REASONING_MAX_CHARS) }
 }
 
 // `threshold` defaults to the platform-wide constant but callers pass the

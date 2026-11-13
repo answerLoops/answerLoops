@@ -37,21 +37,23 @@ describe('lib/ingest/pipeline.ts — ticket creation never depends on AI', () =>
     expect(body).toContain('ticket = await createTicket(')
   })
 
-  it('runBackgroundEnrichment catches NoAIProviderConfiguredError around the triage call and leaves the ticket on its placeholder rather than rethrowing', () => {
+  it('runBackgroundEnrichment catches triage failures, and treats a missing provider as an expected warning that leaves the ticket on its placeholder', () => {
     const s = src()
     const fnStart = s.indexOf('export async function runBackgroundEnrichment')
     const body = s.slice(fnStart)
     const triageCallIdx = body.indexOf('triageMessage(content, orgId)')
-    const catchIdx = body.indexOf('if (!(err instanceof NoAIProviderConfiguredError)) throw err')
+    const providerIdx = body.indexOf('if (err instanceof NoAIProviderConfiguredError)')
 
     expect(triageCallIdx).toBeGreaterThan(-1)
-    expect(catchIdx).toBeGreaterThan(triageCallIdx)
+    expect(providerIdx).toBeGreaterThan(triageCallIdx)
+    expect(body).toContain('no AI provider configured — leaving ticket untriaged')
   })
 
-  it('rethrows any other error from the triage call instead of masking it', () => {
+  it('does not rethrow any other triage error: it logs it and carries on, so a failed classification cannot cost the customer their answer', () => {
     const s = src()
-    const catchIdx = s.indexOf('if (!(err instanceof NoAIProviderConfiguredError)) throw err')
-    expect(catchIdx).toBeGreaterThan(-1)
+    // Behaviour is in pipeline-triage-failure.test.ts; this stops the rethrow coming back.
+    expect(s).not.toContain('if (!(err instanceof NoAIProviderConfiguredError)) throw err')
+    expect(s).toContain('triage failed — continuing with the placeholder triage')
   })
 })
 

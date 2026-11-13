@@ -18,7 +18,8 @@ const CANDIDATE_ANSWER_CHAR_LIMIT = 3_000
 
 const JudgementSchema = z.object({
   match: z.number().int().nullable(),
-  reasoning: z.string().max(400),
+  // No max(); only the match is used.
+  reasoning: z.string(),
 })
 
 export function buildWorkaroundPrompt(report: string, candidates: PriorAnswer[]): string {
