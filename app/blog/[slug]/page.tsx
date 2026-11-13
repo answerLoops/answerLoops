@@ -101,6 +101,7 @@ export default async function BlogPostPage({
 
   return (
     <MarketingPage>
+      <div className="marketing-post-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }}
@@ -175,6 +176,7 @@ export default async function BlogPostPage({
           </a>
         </div>
       </section>
+      </div>
       <TrialCta />
     </MarketingPage>
   )
