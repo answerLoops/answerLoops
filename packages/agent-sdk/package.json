@@ -45,8 +45,8 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "tsup": "^8.3.5",
-    "typescript": "^5.7.3"
+    "tsup": "^9.0.0",
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=18"
