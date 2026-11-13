@@ -241,14 +241,14 @@ export async function runBackgroundEnrichment(
         module: MOD, orgId, ticketId, category, priority, severity: triage.severity_score, durationMs: Date.now() - t0,
       })
     } catch (err) {
-      // A missing provider is expected and permanent for this org — the
-      // ticket keeps its placeholder triage, same as before this refactor.
-      // Any other error (a transient LLM failure withRetry couldn't recover
-      // from) is unexpected; it's logged by the outer catch below and the
-      // ticket is left with its placeholder rather than blocking the rest
-      // of enrichment.
-      if (!(err instanceof NoAIProviderConfiguredError)) throw err
-      logger.warn('no AI provider configured — leaving ticket untriaged', { module: MOD, orgId, ticketId })
+      // Keep the placeholder triage and carry on, so the notification and the
+      // AI answer still happen. A missing provider is expected; anything else
+      // gets logged as an error.
+      if (err instanceof NoAIProviderConfiguredError) {
+        logger.warn('no AI provider configured — leaving ticket untriaged', { module: MOD, orgId, ticketId })
+      } else {
+        logger.error('triage failed — continuing with the placeholder triage', { module: MOD, orgId, ticketId, error: err })
+      }
     }
 
     await createNotification(
