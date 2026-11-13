@@ -6,9 +6,9 @@ import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
-  title: 'answerLoops vs Khoros Aurora AI',
+  title: 'Khoros Aurora AI Alternative: answerLoops vs Khoros',
   description:
-    'Khoros Aurora AI layers grounded answers, moderation, and workflow automation onto the Khoros enterprise community platform. Compare that to an AI layer that connects to the chat platforms your community already uses.',
+    'Khoros Aurora AI vs answerLoops: grounded answers and workflow on the Khoros platform, or AI inside the chat tools your community uses.',
   path: '/vs/khoros-aurora-ai',
 })
 export default function Page() {
