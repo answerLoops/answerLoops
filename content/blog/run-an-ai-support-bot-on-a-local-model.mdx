@@ -48,7 +48,7 @@ In answerLoops, open **Settings → AI Model** and choose **OpenAI-compatible** 
 | Chat model ID | `ai/llama3.2` |
 | Chat base URL | `http://127.0.0.1:12434/engines/v1` |
 | Embedding model | `ai/mxbai-embed-large` |
-| Leave the keys blank | local servers don't need one |
+| API keys | Leave blank: local servers don't need one |
 
 Press **Test connection**. We needed two small workarounds before both lines said OK, and they are worth knowing about. If chat fails with "The provider returned an error", that is the second one below: point the chat base URL at the shim as well.
 

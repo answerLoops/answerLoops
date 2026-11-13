@@ -16,6 +16,15 @@ import { marketingSiteEnabled, MARKETING_URL } from '@/lib/site'
 // arrives as a static image object. fumadocs-ui's default `img` only hands
 // that to next/image inside the docs shell's framework provider, which the
 // blog doesn't have; without this the src is stringified to "[object Object]".
+// Wrapped so a wide table scrolls inside the article instead of the page.
+function BlogTable(props: React.ComponentProps<'table'>) {
+  return (
+    <div className="marketing-post-table">
+      <table {...props} />
+    </div>
+  )
+}
+
 function BlogImage({ src, alt = '', ...props }: React.ComponentProps<'img'>) {
   return (
     <Image
@@ -125,7 +134,7 @@ export default async function BlogPostPage({
           */}
           <p className="marketing-post-overview">{overview}</p>
           <article className="space-y-6">
-            <MDXContent components={getMDXComponents({ img: BlogImage })} />
+            <MDXContent components={getMDXComponents({ img: BlogImage, table: BlogTable })} />
           </article>
         </div>
       </section>
