@@ -50,6 +50,13 @@ jobs:
           # interpolating it would let it alter the command being run.
           PR_TITLE: ${{ github.event.pull_request.title }}
           PR_BODY: ${{ github.event.pull_request.body }}
+          # Who wrote the PR and who triggered this run. Used only to decide
+          # whether the body is Dependabot's generated release-note text; see
+          # scripts/disclosure-body-policy.mjs.
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          PR_AUTHOR_TYPE: ${{ github.event.pull_request.user.type }}
+          PR_ACTION: ${{ github.event.action }}
+          PR_ACTOR: ${{ github.actor }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node scripts/ci-disclosure-check.mjs

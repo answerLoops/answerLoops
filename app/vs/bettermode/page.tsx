@@ -6,9 +6,9 @@ import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
-  title: 'answerLoops vs Bettermode',
+  title: 'Bettermode AI Alternative: answerLoops vs Bettermode',
   description:
-    'Bettermode is a hosted community platform with AI search available on its Growth plan and up. Compare that to an AI layer that connects to the chat platforms your community already uses.',
+    'Bettermode AI search needs its Growth plan. answerLoops adds AI answers to Discord, Slack and more, so your community stays where it is.',
   path: '/vs/bettermode',
 })
 export default function Page() {
