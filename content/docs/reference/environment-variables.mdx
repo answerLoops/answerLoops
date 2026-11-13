@@ -32,7 +32,7 @@ Set variables in your `.env` file (local) or in your hosting provider's environm
 |---|---|
 | `DATABASE_URL` | **Required.** PostgreSQL connection string, e.g. `postgresql://<user>:<password>@<host>:5432/<database>` |
 | `DIRECT_DATABASE_URL` | Optional. Non-pooled connection string used only for `LISTEN`/`NOTIFY` (configuration hot-reload, live team and dashboard updates). Needed whenever `DATABASE_URL` points at a pooled connection (a provider's pooled endpoint, PgBouncer, etc.); otherwise it falls back to `DATABASE_URL` |
-| `AUTH_SECRET` | **Required.** Random 32-byte secret for the Auth.js v5 session and for channel connect flows. Generate with `openssl rand -hex 32` |
+| `AUTH_SECRET` | **Required.** Random 32-byte secret for the Auth.js v5 session and for channel connect flows. Generate with `openssl rand -hex 32`. In production (`NODE_ENV=production`) the server refuses to start if it is missing, shorter than 32 characters, or still a placeholder value |
 | `AUTH_URL` | **Required.** Full public URL of your deployment, e.g. `https://answerloops.com`. Used for sign-in callbacks and links in emails |
 | `ENCRYPTION_KEY` | **Required in production** (`NODE_ENV=production`). 32-byte hex key used to encrypt stored credentials at rest. Generate with `openssl rand -hex 32` |
 
