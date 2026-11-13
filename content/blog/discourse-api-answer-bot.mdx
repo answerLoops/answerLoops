@@ -29,9 +29,13 @@ Admin keys are generated at `/admin/api/keys`. Our advice is to create a dedicat
 
 Give the account enough trust level to post in the categories you care about, or Discourse will reject its replies.
 
+If you choose a granular key, the scope that lets a bot post replies is **topics → write**. Discourse has no granular scope for webhooks: only an admin account can manage them, so a bot running as a regular user can't create its own webhook. Add it yourself in the Discourse admin, as described next.
+
 ## 2. Hear about new posts: webhooks beat polling
 
 You could poll the forum on a timer and diff what comes back. It works, but you're always either late or wasteful, and every poll counts against your rate limit. Discourse can instead call you. In **Admin → API → Webhooks**, add a webhook, subscribe it to the **Topic Event** and **Post Event** groups, set the content type to `application/json`, and leave TLS verification on.
+
+One catch if your forum and your bot run on the same private network: Discourse refuses a webhook URL that resolves to a private address, such as `localhost` or a `192.168.x.x` host, until you add that host to the **allowed internal hosts** site setting. A public `https://` URL needs no change.
 
 Every delivery is signed. The `X-Discourse-Event-Signature` header carries `sha256=` followed by an HMAC-SHA256 of the raw request body, computed with the secret you set on the webhook. Verify it before you trust anything in the payload:
 
