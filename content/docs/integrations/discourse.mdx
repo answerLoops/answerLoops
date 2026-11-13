@@ -50,9 +50,13 @@ In Discourse, create (or pick) a dedicated account for answerLoops to post as �
 Go to **Admin → API → New API Key**:
 
 - **User Level:** *Single User*, set to the bot account from step 1 (or *All Users* if you prefer)
-- **Scope:** *Granular* is fine — the integration needs `web_hooks` (read/write), `posts` (write), and `categories` (read). *Global* also works.
+- **Scope:** *Granular*, with **topics → write** ticked. That is the scope that lets the bot post replies, and it is all answerLoops needs to answer. *Global* also works, but gives the key far more access than it needs.
 
 Copy the key — Discourse only shows it once.
+
+<Note>
+  Discourse has no granular scope for webhooks, so a granular key cannot set one up. That is why step 4 adds the webhook by hand.
+</Note>
 
 ### 3. Connect in answerLoops
 
@@ -71,14 +75,32 @@ Click **Update** to save.
   A category's numeric ID is in its URL: `/c/support/6` is category `6`. It's also shown on the category's settings page.
 </Tip>
 
-### 4. Register the webhook
+### 4. Add the webhook in Discourse
 
-After saving, click **Register webhook** on the Discourse card. answerLoops calls your forum's admin API to create (or update) a webhook that points at `/api/discourse/webhook`, subscribed to topic and post events, signed with a per-organization secret.
+After saving, the Discourse card shows a **Payload URL** and a **Secret**. In Discourse go to **Admin → API → Webhooks → New Webhook** and enter:
 
-If your Discourse instance blocks admin API webhook management, the card also shows the **Payload URL** and **Secret** so you can add the webhook by hand in **Admin → API → Webhooks** — subscribe it to the **Topic Event** and **Post Event** groups, set **Content type** to `application/json`, and leave **Check TLS certificate** on.
+| Field | Value |
+| --- | --- |
+| Payload URL | The URL shown on the card |
+| Content type | `application/json` |
+| Secret | The secret shown on the card |
+| Select events | The **Topic Event** and **Post Event** groups |
+| Categories | Optional: only the categories you watch |
+| Check TLS certificate | On, for an `https://` URL |
+| Active | On |
+
+Save it. Discourse can send a test ping from the webhook's own page.
 
 <Note>
-  Re-register (or update the manual webhook's URL) any time your app's public URL (`AUTH_URL`) changes.
+  The card also has a **Register webhook** button that does this for you. It only works when the **Bot username** is an admin account: Discourse hides its webhook admin pages from every other user, even when the key is Global. The regular bot user recommended in step 1 can't use it, so add the webhook by hand as above.
+</Note>
+
+<Note>
+  If Discourse and answerLoops run on the same private network, Discourse refuses a payload URL that resolves to a private address. Add the answerLoops host to Discourse's **allowed internal hosts** site setting (**Admin → All site settings**), or use a public `https://` URL.
+</Note>
+
+<Note>
+  Update the webhook's URL any time your app's public URL (`AUTH_URL`) changes.
 </Note>
 
 ### 5. Set an escalation user (optional)
@@ -101,16 +123,19 @@ Discourse is configured entirely per-organization through the Settings UI. There
 
 <AccordionGroup>
   <Accordion title="Webhook calls return 401">
-    Every inbound webhook is verified two ways: the `X-Discourse-Instance` header must match the site URL you saved, and the payload's `X-Discourse-Event-Signature` must be a valid HMAC of the body under the secret answerLoops generated. A 401 means one of those drifted — re-save the integration to mint a fresh secret, then click **Register webhook** again (or update the secret on the manual webhook).
+    Every inbound webhook is verified two ways: the `X-Discourse-Instance` header must match the site URL you saved, and the payload's `X-Discourse-Event-Signature` must be a valid HMAC of the body under the secret answerLoops generated. A 401 means one of those drifted — re-save the integration to mint a fresh secret, then update the secret on your Discourse webhook (or click **Register webhook** if your bot is an admin account).
   </Accordion>
   <Accordion title="Register webhook fails with a 502">
-    Registration needs the API key to be able to read and write `web_hooks`. If the key is scoped *Granular* without the `web_hooks` scope, or scoped to a non-admin single user, Discourse refuses the call. Recreate the key with the `web_hooks` scope (or a *Global* key) and try again — or add the webhook manually using the URL and secret shown on the card.
+    Discourse only lets an admin account manage webhooks. When the **Bot username** is a regular user, Discourse answers as if the webhook pages don't exist, whether the key is granular or Global, and there is no granular scope for webhooks. Add the webhook by hand as described in step 4 — it takes a minute and always works.
+  </Accordion>
+  <Accordion title="Discourse says the payload URL is blocked or internal">
+    Discourse refuses a webhook whose URL resolves to a private address, such as `localhost` or a `192.168.x.x` host. Add the answerLoops host to Discourse's **allowed internal hosts** site setting (**Admin → All site settings**), or point the webhook at a public `https://` URL.
   </Accordion>
   <Accordion title="New topics aren't creating tickets">
     Check the webhook is **Active** in **Admin → API → Webhooks** and that its recent deliveries show `200`. If you set **Watched category IDs**, a topic in any other category is ignored on purpose — clear the field to watch everything. Posts shorter than 10 characters and posts by the bot user itself are also skipped.
   </Accordion>
   <Accordion title="The bot's replies are rejected by Discourse">
-    The API key must be allowed to post as the **Bot username** you configured. A *Single User* key is locked to that one account — make sure it's the same username. The bot account also needs enough trust level to reply in the target category.
+    The API key must be allowed to post as the **Bot username** you configured. A *Single User* key is locked to that one account — make sure it's the same username. A granular key also needs **topics → write**; without it Discourse refuses the reply. The bot account also needs enough trust level to reply in the target category.
   </Accordion>
   <Accordion title="Answers post twice or loop">
     answerLoops skips any post whose author matches the configured **Bot username**, so its own replies never re-enter the pipeline. If you see a loop, the bot username in Settings doesn't exactly match the account the API key posts as — fix the username and re-save.

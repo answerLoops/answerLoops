@@ -130,14 +130,14 @@ export function DiscourseIntegrationCard() {
         {connected && !editing && (
           <div className="rounded-md bg-orange-50 border border-orange-100 p-3 space-y-2">
             <p className="text-xs text-orange-700">
-              Register the webhook so Discourse starts delivering new topics and posts.
+              Add the webhook so Discourse starts delivering new topics and posts. The button only works when the bot username is an admin account; otherwise add it by hand.
             </p>
             <Button type="button" size="sm" variant="secondary" disabled={registering} onClick={handleRegisterWebhook}>
               {registering ? 'Registering…' : 'Register webhook'}
             </Button>
             {webhookInfo && (
               <div className="pt-1 text-xs text-orange-700/90 space-y-2">
-                <p className="font-medium">Or add it manually in Discourse → Admin → API → Webhooks:</p>
+                <p className="font-medium">Add it by hand in Discourse → Admin → API → Webhooks:</p>
                 <div>
                   <p className="text-orange-700/70">Payload URL</p>
                   <p className="font-mono break-all select-all text-orange-900">{webhookInfo.url}</p>

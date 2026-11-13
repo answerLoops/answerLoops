@@ -30,9 +30,9 @@ That last part matters because Automatic Deflections is off by default here, sam
 There's no OAuth screen and no shared platform app for Discourse — you create the connection from your own admin panel, which means you're not waiting on approval from anyone but yourself:
 
 1. Create a bot account in Discourse (something like `answerloops-bot`) with Trust Level 1 or higher.
-2. Generate an API key under **Admin → API → New API Key**, scoped to that bot account with `web_hooks`, `posts`, and `categories` access (a Global key also works).
+2. Generate an API key under **Admin → API → New API Key**, scoped to that bot account with the **topics → write** scope, which is what lets it post replies (a Global key also works, but gives the key more access than it needs).
 3. Paste your forum URL, the key, the bot username, and optionally a comma-separated list of category IDs into **Integrations → Discourse**.
-4. Click **Register webhook** and answerLoops creates the webhook on your forum for you. If your instance restricts webhook management through the API, you get the payload URL and secret to add it by hand instead.
+4. Add the webhook in Discourse under **Admin → API → Webhooks**, using the payload URL and secret the Discourse card shows you. Discourse only lets admin accounts manage webhooks, so answerLoops can't create it for a regular bot user.
 
 A category's ID is right there in the URL — `/c/support/6` is category `6` — so there's no digging through settings to find it.
 
