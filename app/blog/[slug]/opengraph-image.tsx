@@ -3,7 +3,7 @@ import { getBlogPost } from '@/lib/blog/posts'
 import { SLACK_LOGO } from '@/lib/marketing/slack-logo'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseApiCover, DiscourseSupportCover, DualAgentReviewCover, EmailSupportCover, GitHubSupportCover, GoogleChatSupportCover, McpSupportCover, NotionKnowledgeCover, SlackSupportCover, TelegramSupportCover, MultiplatformSupportCover, SupportAnswersKnowledgeCover } from '@/lib/blog/cover-art'
+import { BLOG_COVER_SIZE, CircleSupportCover, DiscordSupportCover, DiscourseApiCover, DiscourseSupportCover, LocalModelCover, DualAgentReviewCover, EmailSupportCover, GitHubSupportCover, GoogleChatSupportCover, McpSupportCover, NotionKnowledgeCover, SlackSupportCover, TelegramSupportCover, MultiplatformSupportCover, SupportAnswersKnowledgeCover } from '@/lib/blog/cover-art'
 
 const COVER_ART = new Map([
   ['dual-agent-review', DualAgentReviewCover],
@@ -12,6 +12,7 @@ const COVER_ART = new Map([
   ['discord-community-support', DiscordSupportCover],
   ['discourse-forum-support', DiscourseSupportCover],
   ['discourse-api-answer-bot', DiscourseApiCover],
+  ['run-an-ai-support-bot-on-a-local-model', LocalModelCover],
   ['email-support-automation', EmailSupportCover],
   ['github-open-source-support', GitHubSupportCover],
   ['google-chat-internal-support', GoogleChatSupportCover],
@@ -23,7 +24,7 @@ const COVER_ART = new Map([
 ])
 
 // Covers that are drawn in the bold Geist weight (see the render below).
-const BOLD_COVERS = new Set(['discourse-api-answer-bot'])
+const BOLD_COVERS = new Set(['discourse-api-answer-bot', 'run-an-ai-support-bot-on-a-local-model'])
 
 // Auto-generated cover art: a post only needs a `coverImage` in its
 // frontmatter if it wants a specific photo/illustration. Without one, this
