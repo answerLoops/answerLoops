@@ -13,7 +13,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
-import { assertLocalDatabaseUrl } from './guard'
+import { assertLocalDatabaseUrl, assertLocalEnvironment } from './guard'
 import { DEMO_ORG_SLUG, DEMO_OWNER_EMAIL } from './constants'
 
 const SESSION_COOKIE = 'authjs.session-token'
@@ -21,6 +21,7 @@ const MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 export const STORAGE_STATE_PATH = path.join(__dirname, '.tmp', 'storage-state.json')
 
 async function main() {
+  assertLocalEnvironment()
   assertLocalDatabaseUrl(process.env.DATABASE_URL)
   const authSecret = process.env.AUTH_SECRET
   if (!authSecret) {
@@ -82,7 +83,10 @@ async function main() {
   process.exit(0)
 }
 
-main().catch((err) => {
-  console.error(err instanceof Error ? err.message : err)
-  process.exit(1)
-})
+// Only when run directly, so open.ts can import STORAGE_STATE_PATH from here.
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(err instanceof Error ? err.message : err)
+    process.exit(1)
+  })
+}
