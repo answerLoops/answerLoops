@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'Compare answerLoops',
   description:
-    'Compare answerLoops with Intercom Fin, Khoros Aurora AI, Bettermode, Kapa.ai, Chatbase, Plain, Pylon, and Zendesk AI.',
+    'Compare answerLoops with Intercom Fin, Khoros Aurora AI, Bettermode, Kapa.ai, Chatbase, HelpCrunch, Olark, Plain, Pylon, and Zendesk AI.',
   path: '/alternatives',
 })
 const COMPARISONS = [
@@ -46,6 +46,18 @@ const COMPARISONS = [
     name: 'Chatbase',
     summary:
       'Chatbase offers AI agents for chat, email, and voice, with a helpdesk for AI and human conversations.',
+  },
+  {
+    slug: 'helpcrunch',
+    name: 'HelpCrunch',
+    summary:
+      'HelpCrunch bundles live chat, a shared inbox, chatbots, a help center, and email tools in one customer messaging product.',
+  },
+  {
+    slug: 'olark',
+    name: 'Olark',
+    summary:
+      'Olark is website live chat with an AI agent that learns from your site and hands off to your human team.',
   },
   {
     slug: 'plain',
