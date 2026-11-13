@@ -52,9 +52,9 @@ export function VsCover({ logoSrc, competitor, compares }: VsCoverProps) {
 
       {/* Brand */}
       <div style={{ position: 'absolute', top: 44, left: 72, display: 'flex', alignItems: 'center', fontSize: 34, fontWeight: 700, letterSpacing: -1 }}>
-        {/* Image generation requires a plain image with explicit dimensions. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 64, height: 64, borderRadius: 18, background: '#ffffff', marginRight: 14 }}>
+          {/* Image generation requires a plain image with explicit dimensions. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={logoSrc} alt="" width={46} height={46} />
         </div>
         <span>answer</span>
