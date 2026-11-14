@@ -14,23 +14,23 @@ type Step = {
 // agents at a glance.
 const STEPS: Step[] = [
   {
-    label: '01 / Receive',
-    title: 'Keep the conversation attached',
-    body: 'A question becomes a help ticket with its channel and original message.',
+    label: '01 / Question',
+    title: 'A question is asked in your community',
+    body: 'A member posts a question in your Discord, Slack, Discourse, or another connected community channel. answerLoops picks it up and saves it as a ticket, with the full conversation attached.',
     tone: 'channel',
     avatar: <MessageSquare size={24} strokeWidth={1.8} />,
   },
   {
     label: '02 / answerLoops agent',
-    title: 'Write the answer from your knowledge base',
-    body: 'The answerLoops agent finds the relevant articles in your knowledge base and writes a reply that cites them.',
+    title: 'The answerLoops agent writes an answer from your docs',
+    body: 'It searches your knowledge base for the articles that cover the question and writes a reply that cites them.',
     tone: 'answer',
     avatar: <BotMessageSquare size={28} strokeWidth={1.8} />,
   },
   {
     label: '03 / Review agent',
-    title: 'A Review agent checks the answer',
-    body: 'A separate Review agent checks the answer against those sources and scores its confidence. Then the answer takes one of the two paths below.',
+    title: 'A second agent verifies the answer',
+    body: 'A separate Review agent checks the reply against those same articles and scores how confident it is that the answer is correct. Then the answer goes one of two ways.',
     tone: 'review',
     avatar: (
       <>
@@ -66,17 +66,18 @@ export function WorkflowDiagram() {
       </ol>
       <div className="marketing-workflow-outcomes">
         <div>
-          <h3>Team review (default)</h3>
+          <h3>Your team approves it (default)</h3>
           <p>
-            Every answer waits in your team’s queue. Approve it, edit it, or
-            write your own before anything is posted.
+            Nothing is posted until someone on your team approves it. Approve
+            the answer, edit it, or write your own.
           </p>
         </div>
         <div>
-          <h3>Automatic reply (optional)</h3>
+          <h3>It posts automatically (optional)</h3>
           <p>
-            Off until you turn it on for a channel. Then answers that pass the
-            review with high confidence post on their own.
+            Off until you turn it on for a channel. Then only answers the
+            Review agent is confident in post on their own. The rest still go
+            to your team.
           </p>
         </div>
       </div>

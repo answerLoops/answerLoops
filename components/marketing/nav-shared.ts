@@ -54,5 +54,7 @@ export const DASHBOARD_HREF = process.env.NEXT_PUBLIC_APP_URL
 
 export const CTA_CLASS =
   'inline-flex min-h-10 items-center justify-center whitespace-nowrap rounded-lg bg-[#082e50] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#184566] sm:px-4'
+// Outlined rather than a bare text link, so returning users find the way back
+// in as quickly as new visitors find the trial.
 export const SECONDARY_CTA_CLASS =
-  'hidden min-h-10 items-center whitespace-nowrap px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-700 sm:inline-flex'
+  'hidden min-h-10 items-center justify-center whitespace-nowrap rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-[#082e50] hover:bg-slate-50 hover:text-[#082e50] sm:inline-flex'
