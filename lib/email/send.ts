@@ -375,14 +375,24 @@ export async function sendProductFeedbackNotification(input: {
   body: string
   anonymous: boolean
 }): Promise<void> {
-  if (MOCK_EXTERNALS || !process.env.RESEND_API_KEY) return
+  if (MOCK_EXTERNALS) return
+  if (!process.env.RESEND_API_KEY) {
+    logger.warn('Feedback alert skipped: RESEND_API_KEY is not set', { module: 'email' })
+    return
+  }
 
   const to = process.env.FEEDBACK_NOTIFY_EMAIL?.trim() || FEEDBACK_NOTIFY_DEFAULT
   const preview = input.body.length > 60 ? `${input.body.slice(0, 60)}…` : input.body
 
   try {
-    await client().emails.send({
-      from: from(),
+    // The Resend SDK reports API failures (unverified sender, bad `from`, rate
+    // limit) as `{ error }` on the result rather than throwing, so the catch
+    // below never sees them. Read it explicitly or a rejected send is silent.
+    // The feedback text is deliberately not logged.
+    const { error } = await client().emails.send({
+      // Same fallback as the other operator-facing senders. `from()`'s default
+      // is a placeholder domain that the provider would reject.
+      from: process.env.RESEND_FROM ?? FEEDBACK_NOTIFY_DEFAULT,
       to: [to],
       subject: `New product feedback: ${preview.replace(/\s+/g, ' ')}`,
       text: `New product feedback${input.anonymous ? ' (posted anonymously)' : ''}:\n\n${input.body}\n\nIt is waiting for review before it appears on the board.`,
@@ -399,10 +409,15 @@ export async function sendProductFeedbackNotification(input: {
         </div>
       `,
     })
+    if (error) {
+      logger.error('Feedback alert rejected by Resend', {
+        module: 'email',
+        resendError: error.name,
+        resendMessage: error.message,
+      })
+    }
   } catch (err) {
-    console.error('[email] product feedback notification failed', {
-      error: err instanceof Error ? err.message : String(err),
-    })
+    logger.error('Feedback alert failed', { module: 'email', error: err })
   }
 }
 

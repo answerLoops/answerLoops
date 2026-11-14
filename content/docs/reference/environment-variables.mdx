@@ -151,7 +151,7 @@ Callback URL to register: `https://<your-domain>/api/auth/callback/google`
 | `GMAIL_REDIRECT_URI` | Optional. Override for the Gmail OAuth callback URL (defaults to `<app-url>/api/email/gmail/callback`) |
 | `OUTLOOK_CLIENT_ID` / `OUTLOOK_CLIENT_SECRET` | Optional. Microsoft Entra app registration for the "Connect Outlook" send-only integration. Without it that feature is unavailable |
 | `OUTLOOK_REDIRECT_URI` | Optional. Override for the Outlook OAuth callback URL (defaults to `<app-url>/api/email/outlook/callback`) |
-| `FEEDBACK_NOTIFY_EMAIL` | Optional. Where to send an alert when someone posts product feedback. Defaults to `hello@answerloops.com`; set your own address on a self-hosted install |
+| `FEEDBACK_NOTIFY_EMAIL` | **Managed service only.** Where to send an alert when someone posts product feedback. Defaults to `hello@answerloops.com`. Self-hosted installs have no feedback board, so they never send this alert |
 
 ### Per-workspace integrations (no environment variable)
 
