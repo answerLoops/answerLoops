@@ -46,7 +46,7 @@ export default async function AgenticSupportPage() {
         },
         {
           title: 'Reply in the original conversation',
-          body: 'Connect Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and your website widget.',
+          body: 'Connect Discord, Slack, Discourse, Circle, GitHub, Telegram, email, and Google Chat. The website widget is separate: it answers visitors right away from your published articles.',
           details: [
             'See incoming tickets in one queue.',
             'Enable automatic replies per channel.',

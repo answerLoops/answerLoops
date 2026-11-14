@@ -66,11 +66,6 @@
 .channel-band p { color: #40566c; }
 .marketing-site .marketing-section { background: #fff; }
 .marketing-site #features { background: var(--marketing-aqua); }
-.capability-grid { border-radius: 12px; border-color: #cddfdf; }
-.capability-card { background: #fff; }
-.capability-top > svg,
-.deployment-symbol { color: #168396; }
-.capability-detail { background: var(--marketing-aqua); border: 1px solid #d4e5e5; }
 .marketing-workflow-outcomes > div:first-child { background: #e7f2f4; border-color: #c8dce1; }
 .marketing-workflow-outcomes > div:last-child { background: #f7efdf; border-color: #e8dcc7; }
 .marketing-site .mcp-section { background: #e5ebf2; color: var(--marketing-navy); border-block: 1px solid #d5dde7; }
@@ -88,8 +83,6 @@
 .terminal-bar,
 .terminal-endpoint,
 .terminal-foot { border-color: #375875; }
-.marketing-site .marketing-section:has(.deployment-grid) { background: var(--marketing-sand); }
-.deployment-grid article { background: #fff; border-color: #e5dac6; border-radius: 12px; }
 .marketing-card { box-shadow: none; border-radius: 12px; }
 .marketing-cta { background: #dceff0; color: var(--marketing-navy); border-color: #c4dfe2; }
 .marketing-cta p { color: #40566c; }
@@ -468,21 +461,6 @@
   }
 }
 
-.marketing-site .hero-positioning {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-.hero-positioning-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  flex-shrink: 0;
-  border-radius: 50%;
-  background: var(--marketing-accent);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--marketing-accent) 12%, transparent), 0 0 10px color-mix(in srgb, var(--marketing-accent) 35%, transparent);
-}
-
 .marketing-site {
   font-family: var(--font-marketing-sans), ui-sans-serif, system-ui, sans-serif;
   --font-sans: var(--font-marketing-sans);
@@ -494,18 +472,8 @@
   font-size: 0.875rem;
   font-weight: 600;
 }
-.marketing-site :is(.channel-band, .capability-detail) { font-family: inherit; }
+.marketing-site .channel-band { font-family: inherit; }
 
-.marketing-site #features .capability-grid {
-  gap: 1.25rem;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-}
-.marketing-site #features .capability-card {
-  border: 1px solid var(--marketing-border);
-  border-radius: 10px;
-}
 .marketing-site .audience-icon > svg {
   color: var(--marketing-accent);
 }
