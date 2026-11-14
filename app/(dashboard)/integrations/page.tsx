@@ -21,8 +21,8 @@ const TABS = [
   { id: 'telegram',    label: 'Telegram',    beta: false },
   { id: 'github',      label: 'GitHub',      beta: false },
   { id: 'notion',      label: 'Notion',      beta: false },
+  { id: 'discourse',   label: 'Discourse',   beta: false },
   { id: 'google-chat', label: 'Google Chat', beta: true },
-  { id: 'discourse',   label: 'Discourse',   beta: true },
   { id: 'circle',      label: 'Circle',      beta: true },
   { id: 'email',       label: 'Email',       beta: true },
 ] as const
