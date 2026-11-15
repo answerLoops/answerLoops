@@ -487,9 +487,9 @@ function runWidgetScript(opts: { origin: string | null | 'throw'; widgetId?: str
 describe('public/widget.js: the iframe URL carries no caller-supplied origin', () => {
   const src = () => readFileAt('public/widget.js')
 
-  it('puts only the token in the URL', () => {
+  it('puts only the resolved token in the URL', () => {
     const s = src()
-    expect(s).toContain("iframe.src = baseUrl + '/widget/' + widgetId;")
+    expect(s).toContain("iframe.src = baseUrl + '/widget/' + panelToken;")
   })
 
   it('sends no parent parameter, keeping Referer the only origin signal', () => {

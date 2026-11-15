@@ -1,4 +1,5 @@
 import type { PlanId } from '@/lib/billing/plans'
+import { INCLUDED_AI_SUMMARY } from '@/lib/marketing/plan-summary'
 
 export function formatPrice(cents: number): string {
   return new Intl.NumberFormat('en-US', {
@@ -65,7 +66,7 @@ export const PRICING_FAQ = [
   },
   {
     q: 'Are AI model costs included?',
-    a: 'Hosted plans include AI usage up to a limit that resets each month. To remove the limit, connect your AI provider account; your provider then bills model usage directly, including the calls used for drafting, review, and knowledge search. answerLoops does not add a markup. Supported provider accounts work on every plan; custom model endpoints require Enterprise or self-hosting.',
+    a: `${INCLUDED_AI_SUMMARY} Your provider then bills model usage directly, including the calls used for drafting, review, and knowledge search, and answerLoops does not add a markup. Supported provider accounts work on every plan; custom model endpoints require Enterprise or self-hosting.`,
   },
   {
     q: 'Can I change or cancel my plan?',

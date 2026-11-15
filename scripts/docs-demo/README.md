@@ -14,6 +14,11 @@ Files:
 - `session.ts`: mints a session cookie for the demo owner and writes a
   Playwright storage state to `scripts/docs-demo/.tmp/storage-state.json`
   (gitignored).
+- `open.ts` (`pnpm demo:open`): runs `session.ts`, then opens a browser already
+  signed in as the demo owner. See "Browse the demo as the owner" below.
+
+All three also refuse to run in production mode (`NODE_ENV=production`) or when
+a hosting-platform variable such as `RAILWAY_ENVIRONMENT` is set.
 
 ## 1. Start a throwaway database
 
@@ -58,7 +63,10 @@ What each setting is for:
   Billing page then only says "Self-hosted, no usage limit". Cloud mode needs a
   Stripe key to be set (any non-empty placeholder works because nothing calls
   Stripe) and the four `PLATFORM_AI_*` budgets, otherwise a red "reached this
-  month's AI limit" banner appears on every page.
+  month's AI limit" banner appears on every page. Per-plan answers budgets
+  (`PLATFORM_AI_STANDARD_CHAT_BUDGET_USD`, `PLATFORM_AI_PRO_CHAT_BUDGET_USD`,
+  `PLATFORM_AI_ENTERPRISE_CHAT_BUDGET_USD`) are optional here: a plan without
+  one uses `PLATFORM_AI_PLAN_CHAT_BUDGET_USD`.
 - `MOCK_EXTERNALS=1` swaps AI and chat-platform calls for in-process fakes.
   Under `next dev` it needs no extra flag. If you serve a production build,
   also set `MOCK_EXTERNALS_E2E=1`.
@@ -85,6 +93,21 @@ const context = await browser.newContext({
 
 Run `pnpm docs:session` again if the owner row is ever removed. The cookie is
 valid for seven days and is bound to `localhost`.
+
+## Browse the demo as the owner
+
+With the database seeded and the app running (steps 1 to 3), one command opens a
+Chrome window already signed in as the demo owner, with no Google sign-in:
+
+```bash
+DATABASE_URL=$DATABASE_URL AUTH_SECRET=<same-value-as-the-app> pnpm demo:open
+pnpm demo:open /integrations      # or any other page
+```
+
+It opens `http://localhost:3112` by default; set `DOCS_BASE_URL` for another
+local port. It only works against a local app started with the same
+`AUTH_SECRET`: a session minted with that value is not accepted by any other
+deployment. Nothing for this lives in the app itself.
 
 ## Screenshots
 

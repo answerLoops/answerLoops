@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent, act, waitFor, cleanup, renderHook } from '@testing-library/react'
 
 vi.mock('@/lib/live-events', () => ({ subscribeLiveEvents: () => () => {} }))
-vi.mock('@/lib/actions/product-feedback', () => ({ submitProductFeedbackAction: vi.fn() }))
+vi.mock('@/lib/actions/product-feedback', () => ({ submitProductFeedbackAction: vi.fn(), voteProductFeedbackAction: vi.fn() }))
 
 import { useVisualViewport } from '@/components/feedback/use-visual-viewport'
 import { FeedbackWidget } from '@/components/feedback/feedback-widget'

@@ -155,7 +155,7 @@ export function AnimatedChat() {
           <div className="demo-answer demo-enter">
             <div className="demo-message-meta">
               <MessageSquare size={17} />
-              <strong>Answer agent</strong>
+              <strong>answerLoops agent</strong>
               <span>Draft</span>
             </div>
             <p>{channel.answer}</p>

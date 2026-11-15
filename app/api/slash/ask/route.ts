@@ -13,6 +13,7 @@ import { rateLimitShared } from '@/lib/ratelimit'
 import { getBearerToken, matchesPlatformBotSecret } from '@/lib/http/bearer-auth'
 import { logger } from '@/lib/logger'
 import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
+import { scheduleSourceSupport, type SupportContextEntry } from '@/lib/kb/support/runner'
 
 const MOD = 'api/slash/ask'
 const RATE_LIMIT_WINDOW_MS = 60_000
@@ -64,10 +65,13 @@ export async function POST(request: Request) {
   // Embed question → KB semantic search for context
   let kbContext = ''
   let kbArticleIds: { articleId: number }[] = []
+  // The same articles with their text, held only in memory for the source-support check.
+  let kbSupplied: SupportContextEntry[] = []
   try {
     const vector = await embedText(question, orgId)
     const kbResults = await searchArticles(vector, 3, orgId)
     kbArticleIds = kbResults.map((a) => ({ articleId: a.id }))
+    kbSupplied = kbResults.map((a) => ({ articleId: a.id, summary: a.question, answer: a.answer }))
     if (kbResults.length) {
       kbContext = `\n\nKnowledge base:\n${kbResults.map((a) => `Q: "${a.question}"\nA: ${a.answer}`).join('\n\n')}`
     }
@@ -97,6 +101,8 @@ If you cite a KB article, reference the question it answered. If you don't know,
 
     await countArticleUsage(orgId, kbArticleIds)
     await recordAnswerSources({ orgId, answerId, surface: 'discord', outcome: 'generated', context: kbArticleIds })
+    // Scheduled, never awaited: runs once the response has finished and cannot change it.
+    scheduleSourceSupport({ orgId, answerId, surface: 'discord', question, answer: text, context: kbSupplied })
 
     logger.info('slash /ask answered', { module: MOD, orgId })
     return Response.json({ answer: text })

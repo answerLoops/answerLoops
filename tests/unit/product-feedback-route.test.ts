@@ -10,6 +10,7 @@ vi.mock('@/lib/db/queries/product-feedback', () => ({ getBoardSnapshot }))
 import { GET } from '@/app/api/product-feedback/route'
 
 const SNAPSHOT = { feedback: [], updates: [] }
+const req = (query = '') => new Request(`http://localhost/api/product-feedback${query}`)
 
 describe('GET /api/product-feedback', () => {
   beforeEach(() => {
@@ -23,7 +24,7 @@ describe('GET /api/product-feedback', () => {
 
   it('404s when the flag is off, without touching auth or the database', async () => {
     vi.stubEnv('FEEDBACK_WIDGET_ENABLED', '')
-    const res = await GET()
+    const res = await GET(req())
     expect(res.status).toBe(404)
     expect(auth).not.toHaveBeenCalled()
     expect(getBoardSnapshot).not.toHaveBeenCalled()
@@ -32,7 +33,7 @@ describe('GET /api/product-feedback', () => {
   it('requires a signed-in user: 401 without a session, before any query', async () => {
     vi.stubEnv('FEEDBACK_WIDGET_ENABLED', 'true')
     auth.mockResolvedValue(null)
-    const res = await GET()
+    const res = await GET(req())
     expect(res.status).toBe(401)
     expect(getBoardSnapshot).not.toHaveBeenCalled()
   })
@@ -40,17 +41,35 @@ describe('GET /api/product-feedback', () => {
   it.each(['abc', '0', '-3', '1.5', ''])('401s a session whose user id is %j', async (id) => {
     vi.stubEnv('FEEDBACK_WIDGET_ENABLED', 'true')
     auth.mockResolvedValue({ user: { id } })
-    const res = await GET()
+    const res = await GET(req())
     expect(res.status).toBe(401)
     expect(getBoardSnapshot).not.toHaveBeenCalled()
   })
 
   it('returns the viewer-scoped snapshot, uncached, for a signed-in user', async () => {
     vi.stubEnv('FEEDBACK_WIDGET_ENABLED', '1')
-    const res = await GET()
+    const res = await GET(req())
     expect(res.status).toBe(200)
     expect(res.headers.get('Cache-Control')).toBe('no-store')
     expect(await res.json()).toEqual(SNAPSHOT)
-    expect(getBoardSnapshot).toHaveBeenCalledWith({ userId: 42 })
+    expect(getBoardSnapshot).toHaveBeenCalledWith({ userId: 42, sort: 'newest' })
+  })
+})
+
+describe('sort', () => {
+  beforeEach(() => {
+    vi.stubEnv('FEEDBACK_WIDGET_ENABLED', '1')
+  })
+
+  it('asks the database for the votes order when the panel does', async () => {
+    const res = await GET(req('?sort=votes'))
+    expect(res.status).toBe(200)
+    expect(getBoardSnapshot).toHaveBeenCalledWith({ userId: 42, sort: 'votes' })
+  })
+
+  it.each(['?sort=oldest', '?sort=votes%27%3B--', '?sort=', '?sort=VOTES'])('falls back to newest for %s rather than passing it through', async (query) => {
+    const res = await GET(req(query))
+    expect(res.status).toBe(200)
+    expect(getBoardSnapshot).toHaveBeenCalledWith({ userId: 42, sort: 'newest' })
   })
 })

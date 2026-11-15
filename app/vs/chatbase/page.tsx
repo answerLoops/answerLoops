@@ -6,9 +6,9 @@ import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
-  title: 'answerLoops vs Chatbase',
+  title: 'Chatbase Alternative: answerLoops vs Chatbase',
   description:
-    'Chatbase now covers more than a website widget. Compare its customer-service channels and agent configuration with answerLoops’ community ticket workflow and self-hosting option.',
+    'Chatbase vs answerLoops: compare channels, agent setup, and community ticket workflow. answerLoops can also be self-hosted (AGPL-3.0).',
   path: '/vs/chatbase',
 })
 export default function Page() {

@@ -64,3 +64,46 @@ export function assertLocalDatabaseUrl(url: string | undefined | null, label = '
     )
   }
 }
+
+// Variables a hosting platform sets on its own machines. None of them is ever
+// present on a developer's computer, so seeing one means this is not a local
+// run, whatever the database URL says.
+const HOSTING_ENV_MARKERS = [
+  'RAILWAY_ENVIRONMENT',
+  'RAILWAY_PROJECT_ID',
+  'RAILWAY_SERVICE_ID',
+  'VERCEL',
+  'VERCEL_ENV',
+  'FLY_APP_NAME',
+  'RENDER',
+  'K_SERVICE',
+  'DYNO',
+  'KUBERNETES_SERVICE_HOST',
+] as const
+
+export type EnvironmentCheck = { ok: true } | { ok: false; reason: string }
+
+/**
+ * Whether this process looks like a developer's own machine. The demo scripts
+ * mint sessions and rewrite a workspace, so they refuse to run in production
+ * mode or on a hosting platform even if a local-looking database URL is set.
+ */
+export function checkLocalEnvironment(env: Record<string, string | undefined> = process.env): EnvironmentCheck {
+  if (env.NODE_ENV === 'production') {
+    return { ok: false, reason: 'NODE_ENV is "production"' }
+  }
+  const marker = HOSTING_ENV_MARKERS.find((name) => !!env[name]?.trim())
+  if (marker) return { ok: false, reason: `${marker} is set, which means this is a hosted environment` }
+  return { ok: true }
+}
+
+/** Throws unless this looks like a local development machine. */
+export function assertLocalEnvironment(env: Record<string, string | undefined> = process.env): void {
+  const result = checkLocalEnvironment(env)
+  if (!result.ok) {
+    throw new Error(
+      `Refusing to run the docs demo tooling: ${result.reason}. ` +
+        'It may only run on a local development machine.'
+    )
+  }
+}

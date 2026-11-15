@@ -38,7 +38,7 @@ describe('meterLanguageModel', () => {
     })
     await generateText({ model: meterLanguageModel(inner, target), prompt: 'q' })
     expect(recordSpend).toHaveBeenCalledTimes(1)
-    expect(recordSpend).toHaveBeenCalledWith(9, 'chat', 'plan', costMicros('gpt-5.6-luna', { input: 1000, cachedInput: 200, output: 50 }))
+    expect(recordSpend).toHaveBeenCalledWith(9, 'chat', 'plan', costMicros('gpt-5.6-luna', { input: 1000, cachedInput: 200, output: 50 }), expect.any(Date), null)
   })
 
   it('records a stream once, when its finish part arrives', async () => {
@@ -57,7 +57,7 @@ describe('meterLanguageModel', () => {
     const r = streamText({ model: meterLanguageModel(inner, target), prompt: 'q' })
     await r.consumeStream()
     expect(recordSpend).toHaveBeenCalledTimes(1)
-    expect(recordSpend).toHaveBeenCalledWith(9, 'chat', 'plan', costMicros('gpt-5.6-luna', { input: 10, cachedInput: 0, output: 5 }))
+    expect(recordSpend).toHaveBeenCalledWith(9, 'chat', 'plan', costMicros('gpt-5.6-luna', { input: 10, cachedInput: 0, output: 5 }), expect.any(Date), null)
   })
 
   // The provider bills tokens produced before an abort or an error, so a
@@ -115,7 +115,7 @@ describe('meterLanguageModel', () => {
     const r = streamText({ model: meterLanguageModel(inner, target), prompt: 'q' })
     await r.consumeStream()
     expect(recordSpend).toHaveBeenCalledTimes(1)
-    expect(recordSpend).toHaveBeenCalledWith(9, 'chat', 'plan', costMicros('gpt-5.6-luna', { input: 10, cachedInput: 0, output: 5 }))
+    expect(recordSpend).toHaveBeenCalledWith(9, 'chat', 'plan', costMicros('gpt-5.6-luna', { input: 10, cachedInput: 0, output: 5 }), expect.any(Date), null)
   })
 
   it('estimates from text length when usage is missing, and warns', async () => {
@@ -145,7 +145,7 @@ describe('meterEmbeddingModel', () => {
   it('records the reported embedding tokens', async () => {
     const inner = new MockEmbeddingModelV3({ doEmbed: async () => ({ embeddings: [[0.1]], usage: { tokens: 123 }, warnings: [] }) })
     await embed({ model: meterEmbeddingModel(inner, embTarget), value: 'hello' })
-    expect(recordSpend).toHaveBeenCalledWith(9, 'embedding', 'trial', costMicros('text-embedding-3-small', { input: 123, cachedInput: 0, output: 0 }))
+    expect(recordSpend).toHaveBeenCalledWith(9, 'embedding', 'trial', costMicros('text-embedding-3-small', { input: 123, cachedInput: 0, output: 0 }), expect.any(Date), null)
   })
 
   it('estimates when usage is missing', async () => {

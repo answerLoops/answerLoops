@@ -173,6 +173,11 @@ const AGREED_PLATFORM_AI_VARS = [
   'PLATFORM_AI_TRIAL_EMBEDDING_BUDGET_USD',
   'PLATFORM_AI_PLAN_CHAT_BUDGET_USD',
   'PLATFORM_AI_PLAN_EMBEDDING_BUDGET_USD',
+  // One chat budget per paid plan. The paid-plan variable above is the fallback
+  // for a plan whose own variable is not set yet.
+  'PLATFORM_AI_STANDARD_CHAT_BUDGET_USD',
+  'PLATFORM_AI_PRO_CHAT_BUDGET_USD',
+  'PLATFORM_AI_ENTERPRISE_CHAT_BUDGET_USD',
   'PLATFORM_AI_CHAT_MODEL',
   'PLATFORM_AI_FAST_MODEL',
   'PLATFORM_AI_EMBEDDING_MODEL',
@@ -183,12 +188,12 @@ describe('PLATFORM_AI_* env vars', () => {
     SOURCE_FILES.flatMap((f) => [...read(f).matchAll(/\bPLATFORM_AI_[A-Z0-9_]+/g)].map((m) => m[0])),
   )
 
-  it('source references only the seven agreed names', () => {
+  it('source references only the ten agreed names', () => {
     const unknown = [...referenced].filter((v) => !AGREED_PLATFORM_AI_VARS.includes(v))
     expect(unknown).toEqual([])
   })
 
-  it('all seven agreed names are actually read somewhere under lib/', () => {
+  it('all ten agreed names are actually read somewhere under lib/', () => {
     const libRefs = new Set(
       walk('lib').flatMap((f) => [...read(f).matchAll(/\bPLATFORM_AI_[A-Z0-9_]+/g)].map((m) => m[0])),
     )

@@ -153,6 +153,36 @@ describe('settings', () => {
     expect(DEFAULT_SUPPORT_SETTINGS.widgetEnabled).toBe(false)
     expect(Object.isFrozen(DEFAULT_SUPPORT_SETTINGS)).toBe(true)
   })
+
+  it('findSupportSettings tells a workspace with no row (null) apart from one with every switch off', async () => {
+    const { findSupportSettings } = await queries()
+    expect(await findSupportSettings(3)).toBeNull()
+    respond = (c) => (c.sql.startsWith('select') ? [rowOf(kbSupportSettings, { org_id: 3, widget_enabled: 0, ticket_enabled: 0, discord_enabled: 0, agent_api_enabled: 0, excerpt_storage_enabled: 0 })] : [])
+    expect(await findSupportSettings(3)).toMatchObject({ widgetEnabled: false, samplingRate: null, dailyLimit: null })
+    expect(calls.every((c) => c.params.includes(3))).toBe(true)
+  })
+})
+
+describe('countSupportAssessmentsSince', () => {
+  it('counts only completed and failed runs for the workspace since the moment given, and nothing is written', async () => {
+    respond = () => [[7]]
+    const { countSupportAssessmentsSince } = await queries()
+    const since = new Date('2026-11-09T00:00:00.000Z')
+    expect(await countSupportAssessmentsSince(3, since)).toBe(7)
+    const [call] = calls
+    expect(call.sql).toMatch(/from "kb_support_assessments"/)
+    expect(call.sql).toMatch(/"kb_support_assessments"\."org_id" = \$\d+/)
+    expect(call.sql).toMatch(/"kb_support_assessments"\."assessed_at" >= \$\d+/)
+    expect(call.sql).toMatch(/"kb_support_assessments"\."execution_state" in \(\$\d+, \$\d+\)/)
+    expect(call.params).toEqual(expect.arrayContaining([3, since.toISOString(), 'completed', 'failed']))
+    expect(call.params).not.toContain('skipped')
+    expect(writes()).toHaveLength(0)
+  })
+
+  it('reads an empty result as zero', async () => {
+    const { countSupportAssessmentsSince } = await queries()
+    expect(await countSupportAssessmentsSince(3, new Date())).toBe(0)
+  })
 })
 
 describe('recordSupportAssessment', () => {

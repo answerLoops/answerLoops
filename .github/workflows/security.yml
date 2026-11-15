@@ -1,8 +1,10 @@
 name: Security Scan
 
 on:
+  # Push runs only on main (plus the weekly schedule below); branches with an
+  # open PR are covered by pull_request, so scanning both doubled every run.
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
     branches: ['**']
   schedule:
@@ -37,7 +39,7 @@ jobs:
       # Nothing gitignored exists in a CI checkout, so unlike the local hook
       # this sees exactly the files the repository actually contains.
       - name: Run Trivy (secrets)
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87  # master 2026-07-01
+        uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec  # master 2026-07-01
         with:
           scan-type: fs
           scan-ref: .
@@ -47,7 +49,7 @@ jobs:
           skip-dirs: .pnpm-store,node_modules/.cache
 
       - name: Run Trivy (filesystem scan)
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87  # master 2026-07-01
+        uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec  # master 2026-07-01
         with:
           scan-type: fs
           scan-ref: .
@@ -115,6 +117,74 @@ jobs:
           done
           echo "::warning::pnpm audit could not reach the npm advisory registry after 3 attempts — relying on the Trivy dependency scan for this run"
           exit 0
+
+  snyk:
+    name: Snyk — open source dependencies
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      # Pull requests from forks do not receive repository secrets, so there is
+      # no token to authenticate with. Skip with a notice instead of failing:
+      # Trivy and pnpm audit above still gate those PRs.
+      - name: Check for Snyk token
+        id: token
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}  # zizmor: ignore[secrets-outside-env] repo-level secret, read-only scan, no deploy environment exists
+        run: |
+          if [ -z "$SNYK_TOKEN" ]; then
+            echo "::notice::SNYK_TOKEN is not available for this run (fork PR or secret not set); skipping Snyk."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Snyk CLI
+        if: steps.token.outputs.present == 'true'
+        uses: snyk/actions/setup@9adf32b1121593767fc3c057af55b55db032dc04  # v1.0.0
+
+      # --exclude=security-tools skips .github/security-tools/requirements.txt: Snyk
+      # resolves Python projects by reading installed packages, this job does not
+      # install them, and Trivy and Dependabot already cover that file.
+      #
+      # Snapshot to the private Snyk dashboard first, so the findings are there
+      # even when the gate below fails. Only pushes to the default branch upload:
+      # a pull request snapshot would replace the baseline with unmerged code.
+      - name: Snyk monitor (private dashboard)
+        if: steps.token.outputs.present == 'true' && github.event_name != 'pull_request'
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}  # zizmor: ignore[secrets-outside-env] repo-level secret, read-only scan, no deploy environment exists
+        run: snyk monitor --all-projects --exclude=security-tools
+
+      # The gate keeps working but its findings are not printed: this is a
+      # public repository and the job log is public, so stdout (where `snyk
+      # test` writes every finding) is discarded and the details are read in
+      # the Snyk dashboard. stderr stays visible, so a CLI or auth failure still
+      # explains itself. --fail-on=upgradable mirrors Trivy's ignore-unfixed:
+      # only fail when a fix exists, so an advisory with no patched release does
+      # not block every PR.
+      - name: Snyk test (open source dependencies, output withheld)
+        if: steps.token.outputs.present == 'true'
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}  # zizmor: ignore[secrets-outside-env] repo-level secret, read-only scan, no deploy environment exists
+        run: |
+          set +e
+          snyk test --all-projects --exclude=security-tools --severity-threshold=high --fail-on=upgradable > /dev/null
+          code=$?
+          if [ "$code" -eq 0 ]; then
+            echo "Snyk found no high severity dependency issues with an available fix."
+          elif [ "$code" -eq 1 ]; then
+            echo "::error::Snyk found high severity dependency issues with an available fix. Details are in the Snyk dashboard, not in this log."
+          else
+            echo "::error::Snyk could not complete (exit code $code)."
+          fi
+          exit "$code"
 
   semgrep:
     name: Semgrep SAST

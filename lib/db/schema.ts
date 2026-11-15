@@ -28,6 +28,11 @@ export const orgs = pgTable('orgs', {
   onboardedAt: text('onboarded_at'),
   widgetToken: text('widget_token').unique(),
   widgetTokenExpiresAt: text('widget_token_expires_at'),
+  // Stable public identifier the embed snippet can carry instead of the token,
+  // so rotating the token does not break live embeds. NULL until an owner picks
+  // one. Shape is enforced by lib/widget/slug.ts at every write; uniqueness by
+  // the partial unique index in migration 0073 (NULLs are not compared).
+  widgetSlug: text('widget_slug'),
   // Newline-separated hostnames the widget may be embedded on. NULL or empty
   // means unrestricted, which is the pre-existing behaviour and stays the
   // default so adding this column cannot break a live embed.
@@ -270,6 +275,10 @@ export const githubRepos = pgTable('github_repos', {
   monitoredEvents: text('monitored_events').notNull().default('both'),
   kbEnabled: integer('kb_enabled').notNull().default(0),
   kbLastSynced: text('kb_last_synced'),
+  // Commit the last repo files sync read, so a reviewer can tell which version
+  // of the docs the knowledge was built from. NULL for syncs that ran before
+  // this column existed (migration 0074).
+  kbSyncedCommit: text('kb_synced_commit'),
   kbChunkCount: integer('kb_chunk_count').notNull().default(0),
   // Automatic Deflections for this repo — same meaning/default as
   // integrations.autoDeflectEnabled, but GitHub has no integrations row
@@ -507,6 +516,11 @@ export const kbArticles = pgTable(
     verifiedBy: integer('verified_by').references(() => users.id, { onDelete: 'set null' }),
     verifiedContentHash: text('verified_content_hash'),
     verificationNote: text('verification_note'),
+    // Set on a saved resolution when a repo sync changed documentation related
+    // to it (migration 0075). The notice shows only while this is later than
+    // updated_at and verified_at (lib/kb/docs-change.ts), so it needs no clearing.
+    docsChangedAt: text('docs_changed_at'),
+    docsChangedSource: text('docs_changed_source'),
     createdAt: text('created_at').notNull().default(now),
     updatedAt: text('updated_at').notNull().default(now),
   },
@@ -1115,6 +1129,31 @@ export const productFeedback = pgTable(
     index('idx_product_feedback_status').on(t.status, t.createdAt),
     index('idx_product_feedback_user').on(t.userId),
   ]
+)
+
+// Up-votes on feedback-board entries (migration 0072). One row per person per
+// entry — the unique constraint is the "one vote" rule. org_id is the VOTER's
+// workspace so hardPurgeOrg can remove the votes a deleted workspace cast, not
+// only the votes on its own entries. No direction column: the board has no
+// down-vote. Counts are computed at read time in getBoardSnapshot.
+export const productFeedbackVotes = pgTable(
+  'product_feedback_votes',
+  {
+    id: serial('id').primaryKey(),
+    feedbackId: integer('feedback_id')
+      .notNull()
+      .references(() => productFeedback.id, { onDelete: 'cascade' }),
+    userId: integer('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    orgId: integer('org_id')
+      .notNull()
+      .references(() => orgs.id, { onDelete: 'cascade' }),
+    createdAt: text('created_at').notNull().default(now),
+  },
+  // The unique index leads with feedback_id, so it also serves every lookup by
+  // entry alone; a separate index on that column would only add a write per vote.
+  (t) => [unique('product_feedback_votes_unique').on(t.feedbackId, t.userId)]
 )
 
 // Operator-authored "what's new" feed, the widget's Updates tab.

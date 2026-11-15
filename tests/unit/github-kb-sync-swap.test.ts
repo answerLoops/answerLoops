@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 const h = vi.hoisted(() => ({
   getInstallationOctokit: vi.fn(),
+  getCommit: vi.fn(),
   getTree: vi.fn(),
   getContent: vi.fn(),
   getKBSourceByFilename: vi.fn(),
@@ -65,9 +66,10 @@ beforeEach(() => {
   vi.clearAllMocks()
   vi.resetModules()
   h.getInstallationOctokit.mockResolvedValue({
-    rest: { git: { getTree: h.getTree }, repos: { getContent: h.getContent } },
+    rest: { git: { getTree: h.getTree }, repos: { getContent: h.getContent, getCommit: h.getCommit } },
     auth: async () => ({ token: 'tok' }),
   })
+  h.getCommit.mockResolvedValue({ data: { sha: 'a'.repeat(40) } })
   h.getTree.mockResolvedValue({ data: { tree: [{ type: 'blob', path: 'docs/guide.md' }] } })
   h.getContent.mockResolvedValue({ data: { type: 'file', content: Buffer.from('# Guide').toString('base64') } })
   h.chunkMarkdown.mockReturnValue([{ question: 'Q1', answer: 'A1' }, { question: 'Q2', answer: 'A2' }])
@@ -103,7 +105,7 @@ describe('syncRepoToKB — staged rebuild', () => {
     expect(h.createKBSource).toHaveBeenCalledWith(expect.objectContaining({ filename: STAGING, published: 0 }))
     expect(h.createArticleFromSource).toHaveBeenCalledWith(expect.objectContaining({ sourceId: 200, published: 0 }), 7)
     expect(h.swapKBSource).toHaveBeenCalledTimes(1)
-    expect(h.swapKBSource).toHaveBeenCalledWith({ orgId: 7, newSourceId: 200, targetFilename: LIVE, published: 1 })
+    expect(h.swapKBSource).toHaveBeenCalledWith({ orgId: 7, newSourceId: 200, targetFilename: LIVE, published: 1, flagRelatedResolutions: true })
     // chunk count is recorded before the swap
     expect(h.updateKBSourceChunkCount.mock.invocationCallOrder[0]).toBeLessThan(h.swapKBSource.mock.invocationCallOrder[0])
   })
@@ -175,7 +177,7 @@ describe('syncDiscussionsToKB — staged rebuild', () => {
     expect(created).toBe(1)
     expect(h.createKBSource).toHaveBeenCalledWith(expect.objectContaining({ filename: STAGING_DISC, published: 0 }))
     expect(h.createArticleFromSource).toHaveBeenCalledWith(expect.objectContaining({ sourcePage: 3, published: 0 }), 7)
-    expect(h.swapKBSource).toHaveBeenCalledWith({ orgId: 7, newSourceId: 200, targetFilename: LIVE_DISC, published: 1 })
+    expect(h.swapKBSource).toHaveBeenCalledWith({ orgId: 7, newSourceId: 200, targetFilename: LIVE_DISC, published: 1, flagRelatedResolutions: true })
     for (const call of h.deleteKBSourcesByFilename.mock.calls) expect(call[1]).toBe(STAGING_DISC)
   })
 

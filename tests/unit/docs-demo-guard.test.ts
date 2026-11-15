@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { assertLocalDatabaseUrl, checkLocalDatabaseUrl } from '@/scripts/docs-demo/guard'
+import { readFile } from 'node:fs/promises'
+import path from 'node:path'
+import {
+  assertLocalDatabaseUrl,
+  assertLocalEnvironment,
+  checkLocalDatabaseUrl,
+  checkLocalEnvironment,
+} from '@/scripts/docs-demo/guard'
+import { resolveBaseUrl, resolveStartPath } from '@/scripts/docs-demo/open'
 
 /**
  * The docs demo seed wipes and re-creates a workspace, so the only thing
@@ -72,5 +80,96 @@ describe('assertLocalDatabaseUrl', () => {
     expect(message).toContain('DIRECT_DATABASE_URL')
     expect(message).toContain('Refusing')
     expect(message).not.toContain('PASSWORD_SENTINEL')
+  })
+})
+
+describe('checkLocalEnvironment', () => {
+  it('accepts a normal development machine', () => {
+    expect(checkLocalEnvironment({ NODE_ENV: 'development' }).ok).toBe(true)
+    expect(checkLocalEnvironment({}).ok).toBe(true)
+    expect(checkLocalEnvironment({ NODE_ENV: 'test' }).ok).toBe(true)
+  })
+
+  it('refuses production mode', () => {
+    expect(checkLocalEnvironment({ NODE_ENV: 'production' }).ok).toBe(false)
+  })
+
+  it.each([
+    'RAILWAY_ENVIRONMENT',
+    'RAILWAY_PROJECT_ID',
+    'RAILWAY_SERVICE_ID',
+    'VERCEL',
+    'VERCEL_ENV',
+    'FLY_APP_NAME',
+    'RENDER',
+    'K_SERVICE',
+    'DYNO',
+    'KUBERNETES_SERVICE_HOST',
+  ])('refuses a hosted environment marked by %s', (name) => {
+    const result = checkLocalEnvironment({ NODE_ENV: 'development', [name]: 'x' })
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.reason).toContain(name)
+  })
+
+  it('ignores a blank marker value', () => {
+    expect(checkLocalEnvironment({ RAILWAY_ENVIRONMENT: '  ' }).ok).toBe(true)
+  })
+
+  it('throws from the assert form with a clear message', () => {
+    expect(() => assertLocalEnvironment({ NODE_ENV: 'production' })).toThrow(/local development machine/)
+  })
+})
+
+describe('demo:open helpers', () => {
+  it.each([
+    [undefined, '/dashboard'],
+    ['/integrations', '/integrations'],
+    ['/tickets/3', '/tickets/3'],
+    ['/integrations?tab=circle', '/integrations?tab=circle'],
+    ['//evil.example', '/dashboard'],
+    ['https://evil.example/x', '/dashboard'],
+    ['javascript:alert(1)', '/dashboard'],
+    ['integrations', '/dashboard'],
+  ])('resolves %j to %j', (arg, expected) => {
+    expect(resolveStartPath(arg)).toBe(expected)
+  })
+
+  it('opens only a local app', () => {
+    expect(resolveBaseUrl(undefined).origin).toBe('http://localhost:3112')
+    expect(resolveBaseUrl('http://localhost:3000/').origin).toBe('http://localhost:3000')
+    expect(resolveBaseUrl('http://127.0.0.1:3112').hostname).toBe('127.0.0.1')
+  })
+
+  it.each([
+    'https://app.answerloops.com',
+    'http://localhost.example.net',
+    'http://example.com',
+    'http://localhost@evil.example',
+  ])('refuses %s', (url) => {
+    expect(() => resolveBaseUrl(url)).toThrow(/local app/)
+  })
+})
+
+describe('demo tooling stays outside the app', () => {
+  const read = (file: string) => readFile(path.join(process.cwd(), file), 'utf8')
+
+  it('guards every script that writes data or mints a session', async () => {
+    for (const file of ['seed.ts', 'session.ts', 'open.ts']) {
+      const source = await read(`scripts/docs-demo/${file}`)
+      expect(source, file).toContain('assertLocalEnvironment()')
+      expect(source, file).toContain('assertLocalDatabaseUrl(')
+    }
+  })
+
+  it('adds no mock or credentials sign-in to the app', async () => {
+    const auth = await read('auth.ts')
+    expect(auth).not.toMatch(/Credentials/i)
+    expect(auth).not.toMatch(/docs-demo|demo:open|mock.?login/i)
+  })
+
+  it('is never imported by application code', async () => {
+    for (const file of ['auth.ts', 'instrumentation.ts', 'next.config.ts', 'lib/auth/providers.ts']) {
+      expect(await read(file), file).not.toContain('scripts/docs-demo')
+    }
   })
 })

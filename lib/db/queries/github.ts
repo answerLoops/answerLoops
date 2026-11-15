@@ -14,6 +14,7 @@ function toRepo(row: typeof githubRepos.$inferSelect): GitHubRepo {
     monitored_events: row.monitoredEvents,
     kb_enabled: row.kbEnabled as 0 | 1,
     kb_last_synced: row.kbLastSynced ?? null,
+    kb_synced_commit: row.kbSyncedCommit ?? null,
     kb_chunk_count: row.kbChunkCount,
     auto_deflect_enabled: row.autoDeflectEnabled as 0 | 1,
     added_at: row.addedAt,
@@ -97,6 +98,7 @@ export async function updateRepoSettings(
     monitoredEvents?: string
     kbEnabled?: number
     kbLastSynced?: string
+    kbSyncedCommit?: string
     kbChunkCount?: number
     autoDeflectEnabled?: number
   }
@@ -107,6 +109,7 @@ export async function updateRepoSettings(
       ...(settings.monitoredEvents !== undefined && { monitoredEvents: settings.monitoredEvents }),
       ...(settings.kbEnabled !== undefined && { kbEnabled: settings.kbEnabled }),
       ...(settings.kbLastSynced !== undefined && { kbLastSynced: settings.kbLastSynced }),
+      ...(settings.kbSyncedCommit !== undefined && { kbSyncedCommit: settings.kbSyncedCommit }),
       ...(settings.kbChunkCount !== undefined && { kbChunkCount: settings.kbChunkCount }),
       ...(settings.autoDeflectEnabled !== undefined && { autoDeflectEnabled: settings.autoDeflectEnabled }),
     })

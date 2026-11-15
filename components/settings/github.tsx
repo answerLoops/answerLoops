@@ -1,5 +1,6 @@
 'use client'
 
+import { RepoSyncStatus } from '@/components/kb/repo-sync-status'
 import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import type { GitHubRepo } from '@/types'
@@ -190,15 +191,14 @@ export function GitHubIntegrationCard() {
                     </div>
 
                     {repo.kb_enabled === 1 && (
-                      <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-2">
-                        <p className="text-xs text-gray-500">
-                          {repo.kb_chunk_count > 0
-                            ? `${repo.kb_chunk_count} chunks · last synced ${repo.kb_last_synced ? new Date(repo.kb_last_synced).toLocaleDateString() : 'never'}`
-                            : 'Not yet synced'}
+                      <div className="flex items-center justify-between gap-3 bg-gray-50 rounded-md px-3 py-2">
+                        <p className="min-w-0 text-xs text-gray-500">
+                          <RepoSyncStatus repo={repo} />
                         </p>
                         <Button
                           size="sm"
                           variant="secondary"
+                          className="shrink-0 whitespace-nowrap"
                           onClick={() => syncKB(repo.id)}
                           disabled={syncingId === repo.id}
                         >

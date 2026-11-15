@@ -51,7 +51,7 @@ describe('support workflow animation', () => {
     expect(
       screen.queryByText('Retrieved from the knowledge base'),
     ).not.toBeInTheDocument()
-    expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
+    expect(screen.queryByText('answerLoops agent')).not.toBeInTheDocument()
     expect(screen.queryByText('Review agent')).not.toBeInTheDocument()
     expect(
       screen.queryByText('Reply sent to #dev-support'),
@@ -64,12 +64,12 @@ describe('support workflow animation', () => {
     advance(1)
     expect(screen.getByText('Retrieved from the knowledge base')).toBeVisible()
     expect(screen.getByText('Retrieving sources')).toBeVisible()
-    expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
+    expect(screen.queryByText('answerLoops agent')).not.toBeInTheDocument()
 
     advance(1999)
-    expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
+    expect(screen.queryByText('answerLoops agent')).not.toBeInTheDocument()
     advance(1)
-    expect(screen.getByText('Answer agent')).toBeVisible()
+    expect(screen.getByText('answerLoops agent')).toBeVisible()
     expect(screen.getByText('Drafting answer')).toBeVisible()
     expect(screen.queryByText('Review agent')).not.toBeInTheDocument()
 
@@ -167,7 +167,7 @@ describe('support workflow animation', () => {
     advance(1000)
     fireEvent.click(screen.getByRole('button', { name: 'Circle' }))
     expect(screen.getByText('Question received')).toBeVisible()
-    expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
+    expect(screen.queryByText('answerLoops agent')).not.toBeInTheDocument()
     expect(screen.queryByText(/Our webhook retries/)).not.toBeInTheDocument()
     advance(1499)
     expect(screen.queryByText('Retrieved from the knowledge base')).not.toBeInTheDocument()
@@ -181,7 +181,7 @@ describe('support workflow animation', () => {
     advance(2000)
     fireEvent.click(screen.getByRole('button', { name: 'Discord' }))
     expect(screen.getByText('Question received')).toBeVisible()
-    expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
+    expect(screen.queryByText('answerLoops agent')).not.toBeInTheDocument()
     advance(1500)
     expect(screen.getByText('Retrieving sources')).toBeVisible()
   })
@@ -207,13 +207,13 @@ describe('support workflow animation', () => {
     )
     advance(20000)
     expect(screen.getByText('Retrieving sources')).toBeVisible()
-    expect(screen.queryByText('Answer agent')).not.toBeInTheDocument()
+    expect(screen.queryByText('answerLoops agent')).not.toBeInTheDocument()
 
     fireEvent.click(
       screen.getByRole('button', { name: 'Play example animation' }),
     )
     advance(2000)
-    expect(screen.getByText('Answer agent')).toBeVisible()
+    expect(screen.getByText('answerLoops agent')).toBeVisible()
     expect(
       screen.getByRole('button', { name: 'Pause example animation' }),
     ).toBeVisible()
@@ -222,7 +222,7 @@ describe('support workflow animation', () => {
   it('shows the completed example without autoplay controls when reduced motion is preferred', () => {
     setReducedMotion(true)
     render(<AnimatedChat />)
-    expect(screen.getByText('Answer agent')).toBeVisible()
+    expect(screen.getByText('answerLoops agent')).toBeVisible()
     expect(screen.getByText('Review agent')).toBeVisible()
     expect(screen.getByText('Reply sent to #dev-support')).toBeVisible()
     expect(screen.queryByRole('button', { name: /example animation/ })).not.toBeInTheDocument()

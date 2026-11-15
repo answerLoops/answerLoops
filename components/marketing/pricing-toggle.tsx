@@ -61,15 +61,16 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
                   : 'border-slate-200'
               }`}
             >
-              <div className="mb-4 min-h-6">
-                {highlighted && (
-                  <span className="rounded bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-800">
-                    Recommended
-                  </span>
-                )}
-              </div>
+              {/* The badge sits on the card's top edge rather than in its own
+                  row, so no card spends height on it and the prices stay on
+                  the first screen. */}
+              {highlighted && (
+                <span className="pricing-plan-badge absolute -top-3 left-6 rounded bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-800">
+                  Recommended
+                </span>
+              )}
               <h3>{plan.name}</h3>
-              <p className="mt-2 min-h-16 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-slate-600 lg:min-h-16">
                 {copy.description}
               </p>
               <div className="pricing-amount mt-5">

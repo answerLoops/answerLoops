@@ -72,7 +72,7 @@ export function Mermaid({ chart, caption }: { chart: string; caption: string }) 
           <div
             role="img"
             aria-label={caption}
-            className="flex justify-center [&>svg]:h-auto [&>svg]:max-w-full"
+            className="docs-mermaid flex justify-center [&>svg]:h-auto [&>svg]:max-w-full"
             dangerouslySetInnerHTML={{ __html: svg }}
           />
         ) : (

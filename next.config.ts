@@ -37,6 +37,18 @@ const frameBlockingHeaders = [
   { key: 'Content-Security-Policy', value: `${resourcePolicy}; frame-ancestors 'none'` },
 ]
 
+// The homepage is the one marketing page that may be previewed in a live
+// iframe on buildhop.io. Same resource policy as every other route; only the
+// frame-ancestors directive widens, from 'none' to self plus BuildHop. No
+// X-Frame-Options here: it cannot express an allow-list, and a DENY would
+// block the preview in browsers that still honour it.
+const buildhopPreviewHeaders = [
+  {
+    key: 'Content-Security-Policy',
+    value: `${resourcePolicy}; frame-ancestors 'self' https://buildhop.io https://www.buildhop.io`,
+  },
+]
+
 const baseSecurityHeaders = [
   // Prevent MIME-type sniffing — browser must honour declared Content-Type
   { key: 'X-Content-Type-Options', value: 'nosniff' },
@@ -85,6 +97,9 @@ const MERGED_DOC_PAGES: Record<string, string> = {
   'self-hosting/ai-providers': 'product/ai-config',
   'self-hosting/slack-app': 'integrations/slack',
   'self-hosting/telegram-bot': 'integrations/telegram',
+  // Renamed when the page was retitled; Search Console still reports the old
+  // URL as a 404.
+  'product/widget': 'product/chat-widget',
 };
 
 // The hand-written API reference page was replaced by a generated,
@@ -106,10 +121,18 @@ const withMDX = createMDX();
 const nextConfig: NextConfig = {
   async headers() {
     return [
-      // Everything except /widget/* keeps the frame-blocking headers.
+      // Everything except /widget/* and the homepage keeps the frame-blocking
+      // headers. '.+' (not '.*') needs at least one character after the
+      // slash, so the pattern cannot match '/' — Next merges matching rules,
+      // so the exclusion has to live in the pattern, not in rule order.
       {
-        source: '/((?!widget/).*)',
+        source: '/((?!widget/).+)',
         headers: securityHeaders,
+      },
+      // Homepage: framable by this site and BuildHop only (see above).
+      {
+        source: '/',
+        headers: [...buildhopPreviewHeaders, ...baseSecurityHeaders],
       },
       // /widget/[widgetToken] exists solely to be iframed — by public/widget.js
       // on this site and on every customer site that embeds the snippet. The

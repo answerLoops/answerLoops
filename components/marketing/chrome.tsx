@@ -163,9 +163,6 @@ export function Footer() {
               answerLoops helps your team answer community questions using
               the documentation and resolutions you already maintain.
             </p>
-            <p className="mt-3 text-sm text-slate-600">
-              Use our hosted service or run it yourself.
-            </p>
             <Link
               href={GITHUB_SOURCE_URL}
               target="_blank"

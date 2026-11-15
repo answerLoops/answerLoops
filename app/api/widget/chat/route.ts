@@ -14,6 +14,7 @@ import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/refere
 import { getKBContext } from '@/lib/db/queries/kb'
 import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
 import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
+import { scheduleSourceSupport } from '@/lib/kb/support/runner'
 import { getOrgByWidgetToken } from '@/lib/db/queries/widgets'
 import { getWidgetChatMemory } from '@/lib/ai/memory'
 import { rateLimitShared } from '@/lib/ratelimit'
@@ -493,6 +494,16 @@ If no article below covers the question, answer from general knowledge and don't
       })
       await countArticleUsage(org.id, allContext)
       await recordAnswerSources({ orgId: org.id, answerId, surface: 'widget', outcome: 'generated', context: allContext })
+      // Scheduled, never awaited: assesses how well the supplied articles
+      // support this reply once the response has finished, and cannot change it.
+      scheduleSourceSupport({
+        orgId: org.id,
+        answerId,
+        surface: 'widget',
+        question: query,
+        answer: typeof event?.text === 'string' ? event.text : '',
+        context: allContext,
+      })
       // No article matched, so whatever was just said came from general
       // knowledge. Queue the question (never the visitor's identity) for a
       // person to review before anything like it is treated as a KB answer.

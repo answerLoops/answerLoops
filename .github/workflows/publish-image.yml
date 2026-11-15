@@ -63,7 +63,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -89,7 +89,7 @@ jobs:
       # image is not less serious for carrying a lower rule severity, and this
       # is the last point at which it can still be caught.
       - name: Refuse to publish an image containing secrets
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87 # master 2026-07-01
+        uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec # master 2026-07-01
         with:
           scan-type: image
           image-ref: scan-candidate:${{ matrix.suffix }}
@@ -108,7 +108,7 @@ jobs:
       #
       # The secret scan above is deliberately NOT scoped: it stays whole-image.
       - name: Refuse to publish known-vulnerable dependencies
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87 # master 2026-07-01
+        uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec # master 2026-07-01
         with:
           scan-type: image
           image-ref: scan-candidate:${{ matrix.suffix }}
@@ -118,6 +118,44 @@ jobs:
           skip-dirs: /usr/local/lib/node_modules
           format: table
           exit-code: '1'
+
+      # Snyk Container. Pull requests and forks never reach this workflow (it
+      # runs on a published release or a manual dispatch), but a dispatch from a
+      # branch without the secret would otherwise fail, so skip with a notice.
+      - name: Check for Snyk token
+        id: snyk
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}  # zizmor: ignore[secrets-outside-env] repo-level secret, read-only scan, no deploy environment exists
+        run: |
+          if [ -z "$SNYK_TOKEN" ]; then
+            echo "::notice::SNYK_TOKEN is not set; skipping Snyk Container."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install Snyk CLI
+        if: steps.snyk.outputs.present == 'true'
+        uses: snyk/actions/setup@9adf32b1121593767fc3c057af55b55db032dc04  # v1.0.0
+
+      # Uploads a snapshot of the image to the private Snyk dashboard so new
+      # advisories against an already-shipped image alert by email without
+      # another CI run. The findings stay in that dashboard, not in these
+      # public logs, which is why this uses monitor and not test: test prints
+      # every finding. Not a gate either: the base image ships packages this
+      # repository cannot patch from a lockfile, and the Trivy steps above
+      # already block on what the repository does control. Failing to upload
+      # must not block a release.
+      - name: Snyk Container monitor
+        if: steps.snyk.outputs.present == 'true'
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}  # zizmor: ignore[secrets-outside-env] repo-level secret, read-only scan, no deploy environment exists
+          SUFFIX: ${{ matrix.suffix }}
+        run: >
+          snyk container monitor "scan-candidate:${SUFFIX}"
+          --file=Dockerfile
+          --project-name="answerloops-image-${SUFFIX}"
 
       # Pushed by digest rather than tag: the tags belong on the manifest that
       # merges both architectures, not on either half of it.
@@ -165,7 +203,7 @@ jobs:
 
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+      - uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}

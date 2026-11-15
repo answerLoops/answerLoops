@@ -12,17 +12,23 @@ import { EmailIntegrationCard } from '@/components/settings/email'
 import { GitHubIntegrationCard } from '@/components/settings/github'
 import { NotionIntegrationCard } from '@/components/settings/notion'
 
+// Tabs marked `beta` are grouped under a "Beta" label in the tab bar: they are
+// available but have seen little real-world use, so they are not presented
+// alongside the established channels.
 const TABS = [
-  { id: 'discord',     label: 'Discord' },
-  { id: 'slack',       label: 'Slack' },
-  { id: 'google-chat', label: 'Google Chat' },
-  { id: 'telegram',    label: 'Telegram' },
-  { id: 'discourse',   label: 'Discourse' },
-  { id: 'circle',      label: 'Circle' },
-  { id: 'email',       label: 'Email' },
-  { id: 'github',      label: 'GitHub' },
-  { id: 'notion',      label: 'Notion' },
+  { id: 'discord',     label: 'Discord',     beta: false },
+  { id: 'slack',       label: 'Slack',       beta: false },
+  { id: 'telegram',    label: 'Telegram',    beta: false },
+  { id: 'github',      label: 'GitHub',      beta: false },
+  { id: 'notion',      label: 'Notion',      beta: false },
+  { id: 'discourse',   label: 'Discourse',   beta: false },
+  { id: 'google-chat', label: 'Google Chat', beta: true },
+  { id: 'circle',      label: 'Circle',      beta: true },
+  { id: 'email',       label: 'Email',       beta: true },
 ] as const
+
+const STABLE_TABS = TABS.filter((tab) => !tab.beta)
+const BETA_TABS = TABS.filter((tab) => tab.beta)
 
 type TabId = (typeof TABS)[number]['id']
 
@@ -90,6 +96,29 @@ export default function IntegrationsPage() {
       .catch(() => {})
   }, [])
 
+  const renderTab = (tab: (typeof TABS)[number]) => (
+    <button
+      key={tab.id}
+      onClick={() => setTab(tab.id)}
+      className={[
+        'shrink-0 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+        activeTab === tab.id
+          ? 'bg-[#082e50] text-white shadow-none'
+          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
+      ].join(' ')}
+    >
+      <span className="inline-flex items-center gap-1.5">
+        {tab.label}
+        {deflectionDots[tab.id] != null && (
+          <span
+            className={`h-1.5 w-1.5 rounded-full ${deflectionDots[tab.id] ? 'bg-emerald-500' : 'bg-red-500'}`}
+            title={`Automatic Deflections: ${deflectionDots[tab.id] ? 'On' : 'Off'}`}
+          />
+        )}
+      </span>
+    </button>
+  )
+
   return (
     <div className="dashboard-page max-w-6xl">
       <div className="mb-6">
@@ -102,29 +131,20 @@ export default function IntegrationsPage() {
       </div>
 
       {/* Tab bar */}
-      <div className="dashboard-tabs mb-7 flex min-w-0 gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2">
-        {TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setTab(tab.id)}
-            className={[
-              'shrink-0 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-              activeTab === tab.id
-                ? 'bg-[#082e50] text-white shadow-none'
-                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
-            ].join(' ')}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              {tab.label}
-              {deflectionDots[tab.id] != null && (
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${deflectionDots[tab.id] ? 'bg-emerald-500' : 'bg-red-500'}`}
-                  title={`Automatic Deflections: ${deflectionDots[tab.id] ? 'On' : 'Off'}`}
-                />
-              )}
-            </span>
-          </button>
-        ))}
+      <div className="dashboard-tabs mb-7 flex min-w-0 items-stretch gap-3 overflow-x-auto">
+        <div className="flex shrink-0 gap-1 rounded-xl border border-slate-200 bg-white p-2">
+          {STABLE_TABS.map((tab) => renderTab(tab))}
+        </div>
+        <div
+          role="group"
+          aria-label="Beta integrations"
+          className="flex shrink-0 items-center gap-1 rounded-xl border-2 border-blue-300 bg-blue-50 p-2"
+        >
+          <span className="rounded-full bg-blue-600 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
+            Beta
+          </span>
+          {BETA_TABS.map((tab) => renderTab(tab))}
+        </div>
       </div>
 
       {/* Tab panels */}

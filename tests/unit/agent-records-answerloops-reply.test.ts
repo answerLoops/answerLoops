@@ -15,6 +15,7 @@ const h = vi.hoisted(() => ({
   getTicketById: vi.fn(async (id: number): Promise<Record<string, unknown> | null> => (id === 9 ? { org_ticket_number: 3 } : { ai_draft_status: 'pending' })),
   getIntegration: vi.fn(async (): Promise<Record<string, unknown> | null> => ({ escalation_role_id: 'R1', auto_deflect_enabled: 1 })),
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  pickWorkaround: vi.fn(async (_q: string, c: { summary: string; answer: string }[], _o: number): Promise<{ summary: string; answer: string } | null> => c[0] ?? null),
 }))
 
 vi.mock('@mastra/core/agent', () => ({ Agent: class {} }))
@@ -39,6 +40,7 @@ vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: vi.fn(async
 vi.mock('@/lib/kb/review-capture', () => ({ captureUnansweredQuestion: vi.fn() }))
 vi.mock('@/lib/db/queries/integrations', () => ({ getIntegration: h.getIntegration }))
 vi.mock('@/lib/logger', () => ({ logger: h.logger }))
+vi.mock('@/lib/ai/workaround', () => ({ pickWorkaround: h.pickWorkaround }))
 vi.mock('@/lib/kb/usage', () => ({ countArticleUsage: vi.fn(), newAnswerId: () => '2f1c9a7e-6b1d-4e0a-9a52-0c3d1a7b8e44', recordAnswerSources: vi.fn() }))
 
 import { runAIAgent } from '@/lib/ai/agent'
@@ -65,6 +67,7 @@ beforeEach(() => {
   h.postReply.mockResolvedValue('posted-1')
   h.recordAnswerLoopsReply.mockResolvedValue(true)
   h.getIntegration.mockResolvedValue({ escalation_role_id: 'R1', auto_deflect_enabled: 1 })
+  h.pickWorkaround.mockImplementation(async (_q, c) => c[0] ?? null)
 })
 
 describe('runAIAgent keeps what it posted in the ticket conversation', () => {
@@ -96,6 +99,21 @@ describe('runAIAgent keeps what it posted in the ticket conversation', () => {
     expect(text).toContain('as a workaround: Use the reset link.')
     expect(text).not.toContain('React 👍')
     expect(String(h.postReply.mock.calls[0][1])).toContain('React 👍')
+  })
+
+  it('never posts a knowledge-base match the judge does not confirm as a workaround', async () => {
+    h.pickWorkaround.mockResolvedValue(null)
+    await run({ category: 'bug', prior: [{ summary: 'Roadmap', answer: '- [ ] Build a critique flow' }] })
+    expect(h.pickWorkaround).toHaveBeenCalledWith('Please add a changelog link', [{ summary: 'Roadmap', answer: '- [ ] Build a critique flow' }], 1)
+    const text = String(h.recordAnswerLoopsReply.mock.calls[0][1])
+    expect(text).not.toContain('workaround')
+    expect(text).not.toContain('critique flow')
+    expect(text).toMatch(/^Thanks for the report — we don't have this tracked yet\./)
+  })
+
+  it('does not call the judge when there are no knowledge-base matches', async () => {
+    await run({ category: 'bug' })
+    expect(h.pickWorkaround).not.toHaveBeenCalled()
   })
 
   it('records nothing when Automatic Deflections is off, since nothing was posted', async () => {

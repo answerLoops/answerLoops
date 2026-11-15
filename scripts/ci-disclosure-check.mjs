@@ -26,6 +26,7 @@
 
 import { execSync } from 'node:child_process'
 import { scanText, match, EXEMPT_FILES, ALLOW_MARKER } from './check-disclosure.mjs'
+import { shouldScanPrBody } from './disclosure-body-policy.mjs'
 
 const base = process.env.BASE_SHA
 const head = process.env.HEAD_SHA
@@ -64,11 +65,24 @@ function addedLines() {
   return out
 }
 
+// A Dependabot PR body is the upstream project's release notes, copied
+// verbatim. See scripts/disclosure-body-policy.mjs for why that one case is
+// exempt and why the title and added lines never are.
+const scanBody = shouldScanPrBody({
+  author: process.env.PR_AUTHOR,
+  authorType: process.env.PR_AUTHOR_TYPE,
+  action: process.env.PR_ACTION,
+  actor: process.env.PR_ACTOR,
+})
+if (!scanBody) {
+  console.log('PR body not scanned: it is generated release-note text on a Dependabot PR.')
+}
+
 const findings = [
   // No marker escape hatch on these two: they are public the moment the PR is
   // opened, and GitHub keeps their edit history, so there is nothing to walk back.
   ...scanText(process.env.PR_TITLE, 'PR title', { honorMarker: false }),
-  ...scanText(process.env.PR_BODY, 'PR body', { honorMarker: false }),
+  ...(scanBody ? scanText(process.env.PR_BODY, 'PR body', { honorMarker: false }) : []),
   ...addedLines(),
 ]
 

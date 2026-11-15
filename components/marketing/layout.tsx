@@ -1,6 +1,8 @@
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { Source_Sans_3 } from 'next/font/google'
 import { START_HREF, PRICING_HREF } from './nav-shared'
+import { TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
 import type { ReactNode } from 'react'
 import { Nav, Footer, type NavState } from './chrome'
 import './marketing-site.css'
@@ -36,14 +38,17 @@ export function PageHero({
   title,
   children,
   aside,
+  compact = false,
 }: {
   eyebrow?: string
   title: string
   children?: ReactNode
   aside?: ReactNode
+  /** A shorter hero, for pages whose main content should show without scrolling. */
+  compact?: boolean
 }) {
   return (
-    <section className="marketing-hero">
+    <section className={`marketing-hero${compact ? ' marketing-hero-compact' : ''}`}>
       <div
         className={`marketing-container${aside ? ' marketing-hero-split' : ''}`}
       >
@@ -74,12 +79,12 @@ export function TrialCta({
           <p>{description}</p>
         </div>
         <div>
-          <Link className="marketing-button" href={START_HREF}>
-            Start a 14-day trial
+          <Link className="marketing-button marketing-button-hero" href={START_HREF}>
+            Start your free trial
+            <ArrowRight size={18} strokeWidth={2.25} aria-hidden="true" />
           </Link>
           <p className="marketing-note">
-            No card required. Every feature is free for 14 days, with no
-            obligation.
+            {TRIAL_CTA_NOTE}
           </p>
           <Link className="marketing-text-link" href={PRICING_HREF}>
             View plans and model costs

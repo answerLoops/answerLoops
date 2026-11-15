@@ -16,6 +16,11 @@ interface ComparisonPageProps {
   bestFor: { us: string; them: string }
   slug?: string
   source: string
+  /**
+   * Date line shown under the summary. Defaults to the date the original
+   * comparisons were reviewed; pass `null` to leave the date out.
+   */
+  reviewedOn?: string | null
 }
 export function ComparisonPage({
   competitor,
@@ -25,6 +30,7 @@ export function ComparisonPage({
   bestFor,
   slug: providedSlug,
   source,
+  reviewedOn = 'September 11, 2026',
 }: ComparisonPageProps) {
   const slug = providedSlug ?? competitor.toLowerCase()
   return (
@@ -49,7 +55,7 @@ export function ComparisonPage({
         <div className="marketing-container">
           <p className="max-w-3xl">{competitorSummary}</p>
           <p className="marketing-meta">
-            Reviewed September 11, 2026 against{' '}
+            {reviewedOn ? `Reviewed ${reviewedOn} against ` : 'Based on '}
             <a className="marketing-text-link" href={source}>
               {competitor}’s published product information
             </a>

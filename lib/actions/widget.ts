@@ -8,6 +8,8 @@ import {
   getWidgetAllowedOrigins,
   getWidgetLeadCaptureMode,
   setWidgetLeadCaptureMode,
+  getWidgetSlug,
+  setWidgetSlug,
 } from '@/lib/db/queries/widgets'
 import { parseAllowedOrigins } from '@/lib/widget/origin'
 import { isWidgetLeadCaptureMode, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
@@ -25,6 +27,8 @@ interface WidgetTokenResult {
   /** Whether the viewer may rotate the token or change the allowlist. */
   canManage?: boolean
   leadCaptureMode?: WidgetLeadCaptureMode
+  /** The public slug the embed snippet can use instead of the token, if set. */
+  slug?: string | null
   error?: string
 }
 
@@ -40,8 +44,10 @@ export async function getWidgetTokenAction(): Promise<WidgetTokenResult> {
   const info = await ensureWidgetToken(access.orgId)
   const allowedOrigins = await getWidgetAllowedOrigins(access.orgId)
   const leadCaptureMode = await getWidgetLeadCaptureMode(access.orgId)
+  const slug = await getWidgetSlug(access.orgId)
   return {
     token: info.token,
+    slug,
     expiresAt: info.expiresAt,
     allowedOrigins: allowedOrigins ?? '',
     leadCaptureMode,
@@ -108,4 +114,30 @@ export async function saveWidgetLeadCaptureModeAction(
 
   await setWidgetLeadCaptureMode(access.orgId, mode)
   return { mode }
+}
+
+interface WidgetSlugResult {
+  slug?: string | null
+  error?: string
+}
+
+/**
+ * Sets the public slug the embed snippet carries instead of the token, or
+ * clears it when the field is empty. Clearing it breaks every embed that uses
+ * the slug, the same class of change as rotating the token, so it gets the same
+ * owner/admin gate.
+ */
+export async function saveWidgetSlugAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<WidgetSlugResult> {
+  const access = await requireOrgAccess(WIDGET_ADMIN_ROLES)
+  if (!access.ok) return { error: access.error }
+
+  const raw = formData.get('slug')
+  if (typeof raw !== 'string') return { error: 'Invalid input' }
+
+  const result = await setWidgetSlug(access.orgId, raw.trim() === '' ? null : raw)
+  if (!result.ok) return { error: result.error }
+  return { slug: result.slug }
 }

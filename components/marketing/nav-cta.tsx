@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import {
   type NavState,
   CTA_CLASS,
@@ -118,13 +119,19 @@ export function NavCta({
       <Link href={SIGNIN_HREF} className={SECONDARY_CTA_CLASS}>
         {SIGNIN_LABEL}
       </Link>
-      <Link href={START_HREF} className={CTA_CLASS}>
+      <Link href={START_HREF} className={`${CTA_CLASS} group gap-1.5`}>
         <span
           className="!text-white"
           style={{ color: '#fff', WebkitTextFillColor: '#fff' }}
         >
           {START_LABEL}
         </span>
+        <ArrowRight
+          size={15}
+          strokeWidth={2.25}
+          aria-hidden="true"
+          className="text-white transition-transform group-hover:translate-x-0.5"
+        />
       </Link>
     </>
   )

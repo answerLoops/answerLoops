@@ -48,7 +48,7 @@ Monthly subscriptions: Standard $49 with 500 automated answers and a hard cap; P
 
 Annual subscriptions: Standard $468 per year ($39 monthly equivalent), Pro $1,428 ($119 equivalent), Enterprise $4,788 ($399 equivalent).
 
-Every new hosted account gets one 14-day trial with every feature included and no card required; continuing afterwards means choosing a paid plan and adding a card. AI usage is included without a provider key, up to a limit, during the trial and each calendar month on paid plans, with separate limits for answers and knowledge-base processing. Connecting your own provider removes the limit for what it handles (an OpenAI key covers answers and knowledge-base processing; other providers cover answers, plus an OpenAI embedding key for the knowledge base); that model usage is billed by your provider. Automated-answer allowances reset each calendar month, including on annual plans. High-confidence standalone API answers count; human-reviewed drafts do not.
+Every new hosted account gets one 14-day trial with every feature included and no card required; continuing afterwards means choosing a paid plan and adding a card. AI usage is included without a provider key, up to a limit, during the trial and each calendar month on paid plans, with separate limits for answers and knowledge-base processing. The included answers amount depends on the plan: Standard covers roughly 500 answers a month and higher plans include more, separate from each plan's automated-answer allowance. Connecting your own provider removes the limit for what it handles (an OpenAI key covers answers and knowledge-base processing; other providers cover answers, plus an OpenAI embedding key for the knowledge base); that model usage is billed by your provider. Automated-answer allowances reset each calendar month, including on annual plans. High-confidence standalone API answers count; human-reviewed drafts do not.
 
 ## Integrations
 
@@ -90,9 +90,11 @@ Every new hosted account gets one 14-day trial with every feature included and n
 - Terms of service: https://answerloops.com/terms
 - answerLoops vs Bettermode: https://answerloops.com/vs/bettermode
 - answerLoops vs Chatbase: https://answerloops.com/vs/chatbase
+- answerLoops vs HelpCrunch: https://answerloops.com/vs/helpcrunch
 - answerLoops vs Intercom Fin: https://answerloops.com/vs/intercom
 - answerLoops vs Kapa.ai: https://answerloops.com/vs/kapa-ai
 - answerLoops vs Khoros Aurora AI: https://answerloops.com/vs/khoros-aurora-ai
+- answerLoops vs Olark: https://answerloops.com/vs/olark
 - answerLoops vs Plain: https://answerloops.com/vs/plain
 - answerLoops vs Pylon: https://answerloops.com/vs/pylon
 - answerLoops vs Zendesk AI: https://answerloops.com/vs/zendesk-ai

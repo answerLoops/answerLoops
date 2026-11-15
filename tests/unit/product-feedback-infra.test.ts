@@ -130,7 +130,7 @@ describe('no usage tracking exists', () => {
   it('the widget makes no request other than reading the board', () => {
     const src = read('components/feedback/feedback-widget.tsx')
     expect(src.match(/fetch\(/g)).toHaveLength(1)
-    expect(src).toContain("fetch('/api/product-feedback'")
+    expect(src).toContain("const SNAPSHOT_PATH = '/api/product-feedback'")
     expect(src).not.toMatch(/sendBeacon|setInterval|visibilitychange|pagehide/)
   })
 })

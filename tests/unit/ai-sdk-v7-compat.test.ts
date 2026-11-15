@@ -83,7 +83,7 @@ describe('installed ai SDK accepts the metering middleware', () => {
     const res = await generateText({ model: wrapped, prompt: 'q' })
     expect(res.text).toBe('hi')
     expect(recordSpend).toHaveBeenCalledTimes(1)
-    expect(recordSpend).toHaveBeenCalledWith(3, 'chat', 'plan', expect.any(Number))
+    expect(recordSpend).toHaveBeenCalledWith(3, 'chat', 'plan', expect.any(Number), expect.any(Date), null)
   })
 
   it('wrapEmbeddingModel returns a v4 model that still meters a call', async () => {
@@ -93,6 +93,6 @@ describe('installed ai SDK accepts the metering middleware', () => {
     expect(typeof wrapped.doEmbed).toBe('function')
     await embed({ model: wrapped, value: 'hello' })
     expect(recordSpend).toHaveBeenCalledTimes(1)
-    expect(recordSpend).toHaveBeenCalledWith(3, 'embedding', 'plan', expect.any(Number))
+    expect(recordSpend).toHaveBeenCalledWith(3, 'embedding', 'plan', expect.any(Number), expect.any(Date), null)
   })
 })

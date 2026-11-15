@@ -1,10 +1,12 @@
 'use client'
 
+import { RepoSyncStatus } from '@/components/kb/repo-sync-status'
 import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import type { KBArticle, KBSearchResult, KBSource, GitHubRepo } from '@/types'
+import { describeAge, isResolution, sortBySaved, type ArticleSortOrder } from '@/lib/kb/resolution-age'
 import { ingestUrlAction } from '@/lib/actions/ingest-url'
 import type { IngestUrlResult } from '@/lib/actions/ingest-url'
 import { runKbSync } from '@/lib/kb/sync-client'
@@ -288,9 +290,7 @@ function GitHubKBSection({ onSynced }: { onSynced: () => void }) {
             <div className="min-w-0">
               <p className="text-sm font-medium text-gray-800 font-mono break-all">{repo.owner}/{repo.repo}</p>
               <p className="text-xs text-gray-400">
-                {repo.kb_chunk_count > 0
-                  ? `${repo.kb_chunk_count} chunks · last synced ${repo.kb_last_synced ? new Date(repo.kb_last_synced).toLocaleDateString() : 'never'}`
-                  : 'Not yet synced'}
+                <RepoSyncStatus repo={repo} />
               </p>
             </div>
             <Button
@@ -530,6 +530,35 @@ function UrlIngestSection({ onImported }: { onImported: () => void }) {
   )
 }
 
+// When a saved resolution was last saved, so reviewers can spot the ones old
+// enough to be worth re-checking.
+function ResolutionSavedLine({ updatedAt }: { updatedAt: string }) {
+  const date = new Date(updatedAt)
+  if (Number.isNaN(date.getTime())) return null
+  const age = describeAge(updatedAt)
+  return (
+    <p className="mt-1 text-xs text-gray-500">
+      Saved <time dateTime={updatedAt}>{date.toLocaleDateString()}</time>
+      {age && <> · {age}</>}
+    </p>
+  )
+}
+
+// Shown on a saved resolution while documentation related to it has changed
+// since it was last saved or verified. Verifying it again, or saving it again,
+// clears the notice.
+function RelatedDocsNotice({ change }: { change: { at: string; source: string } }) {
+  const date = new Date(change.at)
+  if (Number.isNaN(date.getTime())) return null
+  return (
+    <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 break-words">
+      Docs related to this answer changed after it was saved ({change.source},{' '}
+      <time dateTime={change.at}>{date.toLocaleDateString()}</time>). Check it still holds, then use{' '}
+      <span className="font-medium">Verify again</span> to clear this.
+    </p>
+  )
+}
+
 function ArticlesList({
   articles,
   onDeleted,
@@ -641,6 +670,8 @@ function ArticlesList({
                   From ticket #{a.source_ticket_number} →
                 </Link>
               )}
+              {isResolution(a) && <ResolutionSavedLine updatedAt={a.updated_at} />}
+              {a.related_docs_changed && <RelatedDocsNotice change={a.related_docs_changed} />}
               {a.verification && (
                 <ArticleVerificationControl articleId={a.id} verification={a.verification} onVerified={onVerified} />
               )}
@@ -737,6 +768,8 @@ export default function KBPage() {
   const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(true)
   const [sourcesKey, setSourcesKey] = useState(0)
+  const [sortOrder, setSortOrder] = useState<ArticleSortOrder>('newest')
+  const [resolutionsOnly, setResolutionsOnly] = useState(false)
 
   async function loadAll() {
     setLoading(true)
@@ -763,6 +796,12 @@ export default function KBPage() {
       })
     return () => { cancelled = true }
   }, [])
+
+  // Sorting and the resolutions filter apply to the plain list only. Search
+  // results keep the order of their match score.
+  const visibleArticles = query.trim()
+    ? articles
+    : sortBySaved(resolutionsOnly ? articles.filter(isResolution) : articles, sortOrder)
 
   const [searchError, setSearchError] = useState<string | null>(null)
   const [searchDegraded, setSearchDegraded] = useState(false)
@@ -908,7 +947,39 @@ export default function KBPage() {
           No articles yet. Upload a file, import from a URL, or promote a resolved ticket from its detail page.
         </p>
       ) : (
-        <ArticlesList articles={articles} onDeleted={loadAll} onVerified={loadAll} />
+        <>
+          {!query.trim() && (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-1">
+              <label className="flex items-center gap-2 text-xs text-gray-500">
+                Sort
+                <select
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value as ArticleSortOrder)}
+                  className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700 sm:py-1"
+                >
+                  <option value="newest">Newest saved first</option>
+                  <option value="oldest">Oldest saved first</option>
+                </select>
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 py-2 text-xs text-gray-500 sm:py-0">
+                <input
+                  type="checkbox"
+                  checked={resolutionsOnly}
+                  onChange={(e) => setResolutionsOnly(e.target.checked)}
+                  className="h-3.5 w-3.5 rounded border-gray-300 accent-brand-600"
+                />
+                Saved resolutions only
+              </label>
+            </div>
+          )}
+          {visibleArticles.length === 0 ? (
+            <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
+              No saved resolutions yet. Promote a resolved ticket from its detail page to add one.
+            </p>
+          ) : (
+            <ArticlesList articles={visibleArticles} onDeleted={loadAll} onVerified={loadAll} />
+          )}
+        </>
       )}
         </>
       )}

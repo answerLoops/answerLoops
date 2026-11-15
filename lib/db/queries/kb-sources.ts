@@ -1,7 +1,11 @@
 import { eq, ne, and, desc, sql, inArray } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbSources, kbArticles } from '../schema'
+import { changedChunkIds, MAX_CHANGED_CHUNKS, RELATED_DOCS_SIMILARITY } from '@/lib/kb/docs-change'
+import { logger } from '@/lib/logger'
 import type { KBSource } from '@/types'
+
+const MOD = 'db/kb-sources'
 
 function toSource(row: typeof kbSources.$inferSelect): KBSource {
   return {
@@ -149,6 +153,12 @@ export async function swapKBSource(input: {
   newSourceId: number
   targetFilename: string
   published: 0 | 1
+  /**
+   * Flag saved resolutions whose subject matter overlaps documentation this swap
+   * changed (lib/kb/docs-change.ts). Only for syncs of documentation; imports
+   * of other kinds leave resolutions alone.
+   */
+  flagRelatedResolutions?: boolean
 }): Promise<void> {
   const ts = new Date().toISOString()
   await getDb().transaction(async (tx) => {
@@ -162,6 +172,8 @@ export async function swapKBSource(input: {
     if (replacement.length === 0) {
       throw new Error('Replacement source no longer exists; the existing source was left in place.')
     }
+    // Before the old source is deleted, while both copies of the docs exist.
+    if (input.flagRelatedResolutions) await flagResolutionsNearChangedDocs(tx, input, ts)
     await tx
       .delete(kbSources)
       .where(
@@ -180,4 +192,79 @@ export async function swapKBSource(input: {
       .set({ published: input.published, updatedAt: ts })
       .where(and(eq(kbArticles.sourceId, input.newSourceId), eq(kbArticles.orgId, input.orgId)))
   })
+}
+
+type Tx = Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0]
+
+/**
+ * Marks saved resolutions (articles written from a ticket) that are close to a
+ * chunk this swap adds, changes or removes, so a reviewer can re-check them.
+ * Compares the replacement with the source it replaces by content, so a sync
+ * that rewrote nothing flags nothing, and the first sync of a source (nothing
+ * to compare against) flags nothing either.
+ *
+ * Runs inside a savepoint: a failure here is logged and never fails the sync
+ * or rolls back the swap.
+ */
+async function flagResolutionsNearChangedDocs(
+  tx: Tx,
+  input: { orgId: number; newSourceId: number; targetFilename: string },
+  ts: string
+): Promise<void> {
+  try {
+    await tx.transaction(async (sp) => {
+      const columns = { id: kbArticles.id, question: kbArticles.question, answer: kbArticles.answer }
+      const previous = await sp
+        .select(columns)
+        .from(kbArticles)
+        .where(
+          and(
+            eq(kbArticles.orgId, input.orgId),
+            inArray(
+              kbArticles.sourceId,
+              sp
+                .select({ id: kbSources.id })
+                .from(kbSources)
+                .where(
+                  and(
+                    eq(kbSources.orgId, input.orgId),
+                    eq(kbSources.filename, input.targetFilename),
+                    ne(kbSources.id, input.newSourceId)
+                  )
+                )
+            )
+          )
+        )
+      if (previous.length === 0) return
+
+      const next = await sp
+        .select(columns)
+        .from(kbArticles)
+        .where(and(eq(kbArticles.orgId, input.orgId), eq(kbArticles.sourceId, input.newSourceId)))
+
+      const changed = changedChunkIds(previous, next).slice(0, MAX_CHANGED_CHUNKS)
+      if (changed.length === 0) return
+
+      // Only rows on the workspace's pinned embedding model, so two models never
+      // meet in one similarity score (lib/ai/embedding-pin.ts). updated_at is
+      // left alone: it is when the answer was last saved, not when docs moved.
+      await sp.execute(sql`
+        UPDATE kb_articles AS r
+        SET docs_changed_at = ${ts}, docs_changed_source = ${input.targetFilename}
+        WHERE r.org_id = ${input.orgId}
+          AND r.source_ticket_id IS NOT NULL
+          AND r.embedding_vec IS NOT NULL
+          AND r.model = (SELECT embedding_model_in_use FROM orgs WHERE id = ${input.orgId})
+          AND EXISTS (
+            SELECT 1 FROM kb_articles AS c
+            WHERE c.id IN (${sql.join(changed.map((id) => sql`${id}`), sql`, `)})
+              AND c.embedding_vec IS NOT NULL
+              AND c.model = r.model
+              AND (c.embedding_vec <=> r.embedding_vec) <= ${1 - RELATED_DOCS_SIMILARITY}
+          )
+      `)
+    })
+  } catch (err) {
+    logger.warn('could not flag resolutions near changed docs', { module: MOD, orgId: input.orgId, error: err })
+  }
 }

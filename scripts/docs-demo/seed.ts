@@ -20,7 +20,7 @@
  */
 
 import crypto from 'node:crypto'
-import { assertLocalDatabaseUrl } from './guard'
+import { assertLocalDatabaseUrl, assertLocalEnvironment } from './guard'
 import { DEMO_ORG_SLUG, DEMO_OWNER_EMAIL, DEMO_PROVIDER } from './constants'
 import { KB_ARTICLES, KB_SOURCE_META, type KbSourceKey } from './content-kb'
 import { ANSWERED_TOPICS, GAP_TOPICS, ISSUE_TOPICS } from './content-tickets'
@@ -743,6 +743,7 @@ async function wipeDemoWorkspace(orgId: number) {
 // ---------------------------------------------------------------------------
 
 async function main() {
+  assertLocalEnvironment()
   assertLocalDatabaseUrl(process.env.DATABASE_URL)
   if (process.env.DIRECT_DATABASE_URL) assertLocalDatabaseUrl(process.env.DIRECT_DATABASE_URL, 'DIRECT_DATABASE_URL')
 

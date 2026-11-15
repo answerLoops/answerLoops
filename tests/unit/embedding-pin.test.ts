@@ -21,7 +21,7 @@ async function load(o: {
   const ensurePin = vi.fn(async (_orgId: number, m: string) => m)
   const meterEmbeddingModel = vi.fn((m: { modelId: string }, t: { modelId: string }) => ({ metered: true, modelId: m.modelId, target: t }))
   const warn = vi.fn()
-  const getBillingTier = vi.fn(async () => (o.tier === undefined ? 'plan' : o.tier))
+  const getBillingScope = vi.fn(async () => { const tier = o.tier === undefined ? 'plan' : o.tier; return tier ? { tier, planId: null } : null })
   const assertBudget = vi.fn(async (orgId: number, kind: 'chat' | 'embedding', tier: 'trial' | 'plan') => {
     if (o.budgetError) {
       const { PlatformBudgetExhaustedError } = await import('@/lib/ai/errors')
@@ -30,7 +30,7 @@ async function load(o: {
   })
   vi.doMock('@/lib/mock-mode', () => ({ MOCK_EXTERNALS: false }))
   vi.doMock('@/lib/db/queries/ai-config', () => ({ getOrgAIConfig: async () => o.cfg ?? null, orgHasAIKey: async () => false }))
-  vi.doMock('@/lib/billing/platform-ai-budget', () => ({ getBillingTier, assertBudget }))
+  vi.doMock('@/lib/billing/platform-ai-budget', () => ({ getBillingScope, assertBudget }))
   vi.doMock('@/lib/ai/metering', () => ({ meterLanguageModel: vi.fn(), meterEmbeddingModel }))
   const platformEmbedding = vi.fn((id: string) => ({ modelId: id, platform: true }))
   vi.doMock('@/lib/ai/platform-models', async (orig) => ({
@@ -43,7 +43,7 @@ async function load(o: {
     getPinnedModel: async () => o.pin ?? null,
     ensurePin,
   }))
-  return { models: await import('@/lib/ai/models'), ensurePin, meterEmbeddingModel, warn, getBillingTier, assertBudget, platformEmbedding }
+  return { models: await import('@/lib/ai/models'), ensurePin, meterEmbeddingModel, warn, getBillingScope, assertBudget, platformEmbedding }
 }
 
 const OWN_ADA = {
@@ -80,7 +80,7 @@ describe('resolveEmbedding', () => {
     const t = await load({ pin: 'text-embedding-3-small', env: { PLATFORM_AI_EMBEDDING_MODEL: 'text-embedding-3-large' } })
     expect((await t.models.resolveEmbedding('text-embedding-3-small', 1)).modelId).toBe('text-embedding-3-small')
     expect(t.assertBudget).toHaveBeenCalledWith(1, 'embedding', 'plan', expect.anything())
-    expect(t.meterEmbeddingModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier: 'plan', modelId: 'text-embedding-3-small' })
+    expect(t.meterEmbeddingModel).toHaveBeenCalledWith(expect.anything(), { orgId: 1, tier: 'plan', planId: null, modelId: 'text-embedding-3-small' })
   })
 
   it('pending re-embed on the platform with the budget used up: refused, never served free', async () => {
@@ -92,7 +92,7 @@ describe('resolveEmbedding', () => {
     const t = await load({ pin: 'text-embedding-3-small', cfg: OWN_ADA, tier: null })
     expect((await t.models.resolveEmbedding('text-embedding-3-small', 1)).modelId).toBe('text-embedding-3-small')
     expect(t.meterEmbeddingModel).not.toHaveBeenCalled()
-    expect(t.getBillingTier).not.toHaveBeenCalled()
+    expect(t.getBillingScope).not.toHaveBeenCalled()
     expect(t.assertBudget).not.toHaveBeenCalled()
     expect(t.platformEmbedding).not.toHaveBeenCalled()
   })

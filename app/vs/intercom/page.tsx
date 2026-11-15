@@ -6,9 +6,9 @@ import { marketingSiteEnabled } from '@/lib/site'
 
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
-  title: 'answerLoops vs Intercom Fin',
+  title: 'Intercom Fin Alternative: answerLoops vs Intercom Fin',
   description:
-    'Intercom Fin and answerLoops both offer AI answers and human follow-up. Compare the channels you need, the helpdesk you already use, and whether you want to operate the application yourself.',
+    'Intercom Fin vs answerLoops: compare channels, the helpdesk you already use, and whether you want to run it yourself (AGPL-3.0).',
   path: '/vs/intercom',
 })
 export default function Page() {

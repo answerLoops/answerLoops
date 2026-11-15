@@ -2,6 +2,7 @@ import { wrapEmbeddingModel, wrapLanguageModel } from 'ai'
 import { costMicros, type TokenUsage } from '@/lib/ai/pricing'
 import { recordSpend } from '@/lib/billing/platform-ai-budget'
 import type { BudgetKind, BudgetTier } from '@/lib/ai/errors'
+import type { PlanId } from '@/lib/billing/plans'
 import { logger } from '@/lib/logger'
 
 const MOD = 'ai/metering'
@@ -21,6 +22,8 @@ type ProviderUsage = GenerateResult['usage']
 export interface MeteringTarget {
   orgId: number
   tier: BudgetTier
+  /** The workspace's paid plan, null in the trial; sets which answers budget the spend counts against. */
+  planId?: PlanId | null
   modelId: string
 }
 
@@ -49,7 +52,7 @@ function record(target: MeteringTarget, kind: BudgetKind, usage: TokenUsage): vo
     logger.error('failed to price platform AI call', { module: MOD, orgId: target.orgId, kind, modelId: target.modelId, error })
     return
   }
-  recordSpend(target.orgId, kind, target.tier, micros).catch((error) => {
+  recordSpend(target.orgId, kind, target.tier, micros, new Date(), target.planId ?? null).catch((error) => {
     logger.error('failed to record platform AI spend', { module: MOD, orgId: target.orgId, kind, error })
   })
 }

@@ -95,7 +95,7 @@ describe('triageMessage over HTTP', () => {
 describe('assessAnswer over HTTP', () => {
   const grade = async (tag: string) => {
     const { assessAnswer } = await import('@/lib/ai/assess')
-    return assessAnswer(`${tag} how do I reset?`, 'Open settings.', 1)
+    return assessAnswer(`${tag} how do I reset?`, 'Open settings.', 1, [])
   }
 
   it('parses a valid reply', async () => {

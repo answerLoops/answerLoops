@@ -7,6 +7,7 @@ import { contentHash } from '@/lib/kb/revision'
 import { dropExactDuplicates } from '@/lib/kb/duplicates'
 import { DuplicateArticleError, findExactDuplicate } from './kb-duplicates'
 import { toVerification, VERIFICATION_NOTE_MAX } from '@/lib/kb/verification'
+import { relatedDocsChange } from '@/lib/kb/docs-change'
 import type { KBArticle, KBSearchResult, PriorAnswer } from '@/types'
 
 export const KB_MATCH_THRESHOLD = 0.45
@@ -186,6 +187,7 @@ export async function listArticles(publishedOnly = true, orgId: number): Promise
     ...toArticle(r.article),
     source_ticket_number: r.sourceTicketNumber ?? null,
     verification: toVerification(r.article, r.verifierName ?? r.verifierEmail ?? null),
+    related_docs_changed: relatedDocsChange(r.article),
   }))
 }
 

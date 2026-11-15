@@ -58,6 +58,7 @@ vi.mock('@/lib/actions/account', () => ({
   deleteAccountAction: vi.fn(),
   getCurrentOrgName: vi.fn(async () => null),
 }))
+vi.mock('@/components/settings/source-support', () => ({ SourceSupportSection: () => null }))
 
 function mockFetchSequence(aiConfig: unknown, usageStatus: unknown) {
   global.fetch = vi.fn((url: string) => {

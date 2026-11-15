@@ -120,6 +120,8 @@ export interface GitHubRepo {
   monitored_events: string
   kb_enabled: 0 | 1
   kb_last_synced: string | null
+  /** Full sha of the commit the last repo files sync read; null before the first sync. */
+  kb_synced_commit: string | null
   kb_chunk_count: number
   auto_deflect_enabled: 0 | 1
   added_at: string
@@ -201,6 +203,8 @@ export interface KBArticle {
   verification?: ArticleVerification
   /** Present on the article list: whether this viewer (owner or admin) may see the answers it was supplied to. */
   can_view_answers?: boolean
+  /** A saved resolution only: documentation related to it changed after it was last saved and verified. */
+  related_docs_changed?: { at: string; source: string } | null
 }
 
 export type KBArticleEventType =

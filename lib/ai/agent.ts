@@ -20,8 +20,11 @@ import { getIntegration } from '@/lib/db/queries/integrations'
 import { updateTicketAIDraftStatus, getTicketById, recordAnswerLoopsReply } from '@/lib/db/queries/tickets'
 import { logger } from '@/lib/logger'
 import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
+import { scheduleSourceSupport } from '@/lib/kb/support/runner'
 import type { AIDraftSkipReason, PriorAnswer, TicketCategory } from '@/types'
 import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
+import { createEvidenceCollector } from '@/lib/ai/assess-evidence'
+import { pickWorkaround } from '@/lib/ai/workaround'
 import type { Match } from '@/lib/ai/related'
 
 const MOD = 'ai/agent'
@@ -267,8 +270,11 @@ export async function runAIAgent(
         return
       }
 
-      if (priorAnswers.length > 0) {
-        const workaround = priorAnswers[0]
+      // A similarity match is not a workaround: it only means the text looks
+      // alike. Only a candidate the judge confirms is offered; otherwise this
+      // falls through to human review below.
+      const workaround = priorAnswers.length > 0 ? await pickWorkaround(question, priorAnswers, orgId) : null
+      if (workaround) {
         const text = `We don't have a fix for this yet, but as a workaround: ${workaround.answer}\n\nThis isn't a resolution — a team member will follow up on the underlying issue.`
         await createNotification(
           'ai_draft_ready',
@@ -363,6 +369,9 @@ Guidelines:
     // Tools are built per-call (not module-level) because they close over
     // orgId and repoList, both of which vary per ticket — see searchCode/
     // readFile/listFiles in lib/github/tools.ts.
+    // What the code tools return is evidence the draft may rest on, so it is
+    // kept for the grading step alongside the knowledge-base answers.
+    const evidence = createEvidenceCollector()
     const tools = hasCodeSearch
       ? {
           searchCode: createTool({
@@ -372,7 +381,11 @@ Guidelines:
               query: z.string().describe('Search query — use function names, error messages, or keywords'),
               repo: z.string().describe(`Repository in owner/repo format. Available: ${repoList}`),
             }),
-            execute: async (input) => searchCode(input.query, input.repo, orgId),
+            execute: async (input) => {
+              const result = await searchCode(input.query, input.repo, orgId)
+              evidence.recordSearch(input.repo, input.query, result)
+              return result
+            },
           }),
           readFile: createTool({
             id: 'readFile',
@@ -382,7 +395,11 @@ Guidelines:
               repo: z.string().describe(`Repository in owner/repo format. Available: ${repoList}`),
               ref: z.string().optional().describe('Branch name or commit SHA (default: main)'),
             }),
-            execute: async (input) => readFile(input.path, input.repo, orgId, input.ref),
+            execute: async (input) => {
+              const result = await readFile(input.path, input.repo, orgId, input.ref)
+              evidence.recordFile(input.repo, input.path, result)
+              return result
+            },
           }),
           listFiles: createTool({
             id: 'listFiles',
@@ -423,7 +440,10 @@ Guidelines:
 
     let assessment
     try {
-      assessment = await assessAnswer(question, text, orgId)
+      assessment = await assessAnswer(question, text, orgId, [
+        ...priorAnswers.map((p) => ({ question: p.summary, answer: p.answer })),
+        ...evidence.entries(),
+      ])
     } catch (err) {
       logger.error('assessment failed — defaulting to human review', { module: MOD, ticketId, error: err })
       assessment = { confidence: 0, answered_fully: false, reasoning: 'Assessment failed; routed to human review.' }
@@ -503,6 +523,12 @@ Guidelines:
       )
       logger.info('routed to human review — draft held for approval, generic ack sent instead', { module: MOD, ticketId, confidence: pct, platform, escalated: !!escalationRoleId, heldByToggleOnly })
     }
+
+    // The draft was recorded as generated above and the reply (or the hold for
+    // review) has gone out, so check how well the supplied articles support it.
+    // Scheduled, never awaited: it runs afterwards and cannot change the draft,
+    // the confidence score or auto-deflection.
+    scheduleSourceSupport({ orgId, answerId, surface: 'ticket', question, answer: text, context: priorAnswers })
 
     // Nothing in the KB or the team's prior answers covered this question, so
     // queue it for a person to turn into an article. Runs after the reply is

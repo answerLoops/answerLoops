@@ -189,6 +189,32 @@ describe('answer loop overview', () => {
     expect(stepStates()).toEqual(['done', 'active', 'idle', 'idle'])
   })
 
+  it('shows the whole example while paused, including after picking a run', () => {
+    render(<AnswerLoopOverview />)
+    expect(examplesShown()).toEqual(['true', 'false', 'false', 'false'])
+
+    fireEvent.click(screen.getByRole('button', { name: 'Pause diagram animation' }))
+    expect(examplesShown()).toEqual(['true', 'true', 'true', 'true'])
+    expect(screen.getByText('Posted with 2 cited sources')).toBeVisible()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Docs don’t cover it' }))
+    expect(pressedRun()).toEqual(['Docs don’t cover it'])
+    expect(examplesShown()).toEqual(['true', 'true', 'true', 'true'])
+    expect(
+      document.querySelectorAll('.loop-example[aria-hidden="true"]'),
+    ).toHaveLength(0)
+    expect(screen.getByText('No article covers key rotation')).toBeVisible()
+    expect(screen.getByText('Held back and sent to your team')).toBeVisible()
+    advance(10000)
+    expect(stepStates()).toEqual(['active', 'idle', 'idle', 'idle'])
+
+    // Playing again goes back to revealing one step at a time.
+    fireEvent.click(screen.getByRole('button', { name: 'Play diagram animation' }))
+    expect(examplesShown()).toEqual(['true', 'false', 'false', 'false'])
+    advance(2000)
+    expect(examplesShown()).toEqual(['true', 'true', 'false', 'false'])
+  })
+
   it('does not advance while the tab is hidden', () => {
     vi.spyOn(document, 'hidden', 'get').mockReturnValue(true)
     render(<AnswerLoopOverview />)

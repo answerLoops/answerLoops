@@ -81,6 +81,10 @@ export default async function Page() {
           label: 'Hosted plans',
           href: PRICING_HREF,
         },
+        {
+          label: 'GitHub support for open source maintainers',
+          href: '/blog/github-open-source-support',
+        },
       ]}
       schema={{
         name: 'Support your project across community channels',

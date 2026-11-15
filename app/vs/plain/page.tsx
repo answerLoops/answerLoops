@@ -5,9 +5,9 @@ import { ComparisonPage } from '@/components/marketing/comparison-page'
 import { marketingSiteEnabled } from '@/lib/site'
 export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
-  title: 'answerLoops vs Plain',
+  title: 'Plain Alternative: answerLoops vs Plain',
   description:
-    'Both products support community channels and AI-assisted support. Evaluate the workflow and deployment requirements rather than assuming Plain is limited to Slack or human-written replies.',
+    'Plain vs answerLoops: both support community channels and AI-assisted replies. Compare workflow and deployment, including self-hosting.',
   path: '/vs/plain',
 })
 export default function Page() {
