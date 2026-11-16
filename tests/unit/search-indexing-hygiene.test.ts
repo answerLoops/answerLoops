@@ -45,6 +45,30 @@ describe('robots.txt on the hosted site', () => {
   })
 })
 
+describe('robots.txt keeps crawlers off the docs search endpoint only', () => {
+  it('disallows /docs/api/ but not the Agent API reference or the docs themselves', async () => {
+    process.env.DEPLOYMENT_MODE = 'cloud'
+    const { GET } = await import('@/app/robots.txt/route')
+    const text = await (await GET()).text()
+    const disallowed = text.split('\n').filter((l) => l.startsWith('Disallow:'))
+    expect(disallowed).toContain('Disallow: /docs/api/')
+    expect(disallowed).not.toContain('Disallow: /docs')
+    expect(disallowed).not.toContain('Disallow: /docs/')
+    expect(disallowed.some((l) => l.includes('/docs/reference'))).toBe(false)
+  })
+
+  it('points at a route that still exists, so the rule is not left behind if it moves', () => {
+    expect(fs.existsSync('app/docs/api/search/route.ts')).toBe(true)
+  })
+
+  it('offers a self-hosted install no sitemap and disallows everything, as before', async () => {
+    process.env.DEPLOYMENT_MODE = 'self-hosted'
+    const { GET } = await import('@/app/robots.txt/route')
+    const text = await (await GET()).text()
+    expect(text).toBe('User-agent: *\nDisallow: /\n')
+  })
+})
+
 describe('terms step legal links', () => {
   it('hands the form the marketing origin only on the hosted deployment', () => {
     const src = fs.readFileSync('app/accept-terms/page.tsx', 'utf-8')
