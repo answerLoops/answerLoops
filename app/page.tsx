@@ -1,6 +1,10 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { START_HREF, PRICING_HREF } from '@/components/marketing/nav-shared'
+import {
+  START_HREF,
+  PRICING_HREF,
+  TALK_TO_US_HREF,
+} from '@/components/marketing/nav-shared'
 import { redirect } from 'next/navigation'
 import { AnswerLoopOverview } from '@/components/marketing/answer-loop-overview'
 import { VerifiedAnswerMock, VerifiedAnswerSteps } from '@/components/marketing/verified-answer-mock'
@@ -10,6 +14,7 @@ import { MarketingPage, TrialCta } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORDERED_PLANS } from '@/lib/billing/plans'
+import { isCustomPriced } from '@/lib/marketing/pricing'
 import { INCLUDED_AI_SUMMARY, TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
 import { marketingSiteEnabled } from '@/lib/site'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
@@ -83,13 +88,14 @@ export default function LandingPage() {
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     provider: { '@id': ORGANIZATION_ID },
-    offers: ORDERED_PLANS.map((p) => ({
+    // Custom-priced plans have no public price, so they have no offer here.
+    offers: ORDERED_PLANS.filter((p) => !isCustomPriced(p.id)).map((p) => ({
       '@type': 'Offer',
       name: p.name,
       price: (p.priceMonthly / 100).toString(),
       priceCurrency: 'USD',
       description:
-        'Monthly subscription with a 14-day trial. Model usage is billed separately by your provider.',
+        'Monthly subscription with a 14-day trial. AI usage is included up to a limit; connect your own provider to remove it.',
     })),
   }
   return (
@@ -334,12 +340,12 @@ export default function LandingPage() {
           <div>
             <h2>Need a custom setup?</h2>
             <p>
-              Custom model endpoints, migration from another support tool, or
+              Local or custom models, migration from another support tool, or
               onboarding help for a larger team.
             </p>
           </div>
           <div className="sales-strip-actions">
-            <a href="https://dub.sh/talk-to-us" className="marketing-button">
+            <a href={TALK_TO_US_HREF} className="marketing-button">
               Talk to us
             </a>
             <Link

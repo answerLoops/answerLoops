@@ -30,7 +30,7 @@ export default function Page() {
         },
         {
           feature: 'Hosted billing',
-          us: 'Monthly or annual plan; automated-answer allowances vary by tier. Model usage is billed separately.',
+          us: 'Monthly or annual plan; automated-answer allowances vary by tier. AI usage is included up to a limit.',
           them: 'Agent seats, selected add-ons, and AI resolutions beyond the plan allowance contribute to cost.',
         },
         {

@@ -196,12 +196,13 @@ describe('the signup entry point carries the chosen plan', () => {
 
   it('states plainly that no card is needed for the trial', () => {
     // The single sentence most likely to decide whether someone signs up, so it
-    // belongs on the pricing card and on the sign-up page.
+    // belongs on the pricing page and on the sign-up page. The pricing page
+    // states it once, in the trial FAQ, rather than under every plan's button.
     const pricing = fs.readFileSync(
-      path.join(process.cwd(), 'components/marketing/pricing-toggle.tsx'),
+      path.join(process.cwd(), 'lib/marketing/pricing.ts'),
       'utf-8',
     )
-    expect(pricing).toMatch(/No card required/)
+    expect(pricing).toMatch(/No card is required/)
 
     const login = fs.readFileSync(path.join(process.cwd(), 'app/login/page.tsx'), 'utf-8')
     expect(login).toMatch(/no card required/i)
