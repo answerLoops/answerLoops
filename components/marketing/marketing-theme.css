@@ -322,7 +322,14 @@
   margin-top: 0.75rem;
   font-size: 1rem;
 }
-.marketing-site #plans.pricing-section,
+/* --post-top-space is defined on .marketing-post-top (blog). The pricing
+   section is not one, so it needs its own copy of the variable; without it
+   the padding below resolves to 0 and the hero sits flush against the
+   "Hosted plans" row. */
+.marketing-site #plans.pricing-section {
+  --post-top-space: clamp(1.5rem, 3vw, 2.5rem);
+  padding-top: var(--post-top-space);
+}
 .marketing-site .marketing-hero-compact + .marketing-post-top {
   padding-top: var(--post-top-space);
 }
