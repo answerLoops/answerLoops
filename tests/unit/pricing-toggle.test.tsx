@@ -113,21 +113,19 @@ describe('PricingToggle', () => {
       screen.getByRole('region', { name: 'Enterprise plan' }),
     )
     expect(
-      standard.getByText('500 automated answers/month'),
+      standard.getByText('500 estimated AI replies/month'),
     ).toBeInTheDocument()
     expect(
-      standard.getByText('Automatic replies pause at the limit.'),
-    ).toBeInTheDocument()
-    expect(pro.getByText('3,000 automated answers/month')).toBeInTheDocument()
-    expect(
-      pro.getByText('Then $5 per additional block of 100.'),
+      standard.getByText('Replies pause at the limit. Pro includes 3,000.'),
     ).toBeInTheDocument()
     expect(
-      enterprise.getByText('Unlimited automated answers'),
+      pro.getByText('3,000 estimated AI replies/month'),
     ).toBeInTheDocument()
     expect(
-      enterprise.getByText('No automated-answer overage charges.'),
+      pro.getByText('Then $5 per additional 100 replies.'),
     ).toBeInTheDocument()
+    expect(enterprise.getByText('Unlimited AI replies')).toBeInTheDocument()
+    expect(enterprise.getByText('No overage charges.')).toBeInTheDocument()
     expect(pro.getByText('Recommended')).toBeInTheDocument()
     expect(standard.queryByText('Recommended')).not.toBeInTheDocument()
     expect(enterprise.queryByText('Recommended')).not.toBeInTheDocument()

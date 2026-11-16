@@ -89,7 +89,7 @@ export default function LandingPage() {
       price: (p.priceMonthly / 100).toString(),
       priceCurrency: 'USD',
       description:
-        'Monthly subscription with a 14-day trial. Model usage is billed separately by your provider.',
+        'Monthly subscription with a 14-day trial. AI usage is included up to a limit; connect your own provider to remove it.',
     })),
   }
   return (

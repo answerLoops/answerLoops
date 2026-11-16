@@ -16,12 +16,7 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
   return (
     <>
       <div className="pricing-toolbar mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2>Hosted plans</h2>
-          <p className="mt-2 text-sm text-slate-600">
-            No per-seat fees. Model usage is billed separately.
-          </p>
-        </div>
+        <h2>Hosted plans</h2>
         <div className="pricing-billing-control flex flex-wrap items-center gap-3 text-sm">
           <span>Monthly</span>
           <button
@@ -47,9 +42,10 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
         </div>
       </div>
       <div className="pricing-plans grid gap-5 lg:grid-cols-3">
-        {plans.map((plan) => {
+        {plans.map((plan, index) => {
           const highlighted = plan.id === HIGHLIGHTED_PLAN_ID
           const copy = PLAN_COPY[plan.id]
+          const nextPlan = plans[index + 1]
           return (
             <div
               key={plan.id}
@@ -88,19 +84,25 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
               </p>
               <p className="mt-5 border-t border-slate-200 pt-5 font-semibold">
                 {plan.deflectionsPerMonth === null
-                  ? 'Unlimited automated answers'
+                  ? 'Unlimited AI replies'
                   : `${plan.deflectionsPerMonth.toLocaleString(
                       'en-US',
-                    )} automated answers/month`}
+                    )} estimated AI replies/month`}
               </p>
               <p className="mt-1 min-h-12 text-sm text-slate-600">
                 {plan.overageRatePer100Cents !== null
                   ? `Then ${formatPrice(
                       plan.overageRatePer100Cents,
-                    )} per additional block of 100.`
+                    )} per additional 100 replies.`
                   : plan.deflectionsPerMonth === null
-                  ? 'No automated-answer overage charges.'
-                  : 'Automatic replies pause at the limit.'}
+                  ? 'No overage charges.'
+                  : nextPlan
+                  ? `Replies pause at the limit. ${nextPlan.name} includes ${
+                      nextPlan.deflectionsPerMonth === null
+                        ? 'unlimited'
+                        : nextPlan.deflectionsPerMonth.toLocaleString('en-US')
+                    }.`
+                  : 'Replies pause at the limit.'}
               </p>
               <Link
                 href={START_HREF}
