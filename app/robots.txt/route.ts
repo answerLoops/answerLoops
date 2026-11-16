@@ -25,6 +25,13 @@ const APP_ROUTES = [
 // one gets a 404 that Search Console reports against the site.
 const EDGE_PATHS = ['/cdn-cgi/']
 
+// The docs search box calls this endpoint (app/docs/api/search). It returns
+// JSON, never a page, and Search Console reports it as crawled but not
+// indexed. The root-relative `/api/` rule above does not cover it, and the
+// Agent API reference pages live under /docs/reference/api/, so this does not
+// hide any documentation.
+const NON_PAGE_PATHS = ['/docs/api/']
+
 // Content Signals (https://contentsignals.org, co-authored by Cloudflare)
 // separates crawl access from reuse permission: a bot can already be allowed
 // to fetch a page via Allow/Disallow above while this states what it may do
@@ -54,6 +61,7 @@ function buildRobotsTxt(): string {
     'Allow: /',
     ...APP_ROUTES.map((route) => `Disallow: ${route}`),
     ...EDGE_PATHS.map((route) => `Disallow: ${route}`),
+    ...NON_PAGE_PATHS.map((route) => `Disallow: ${route}`),
     `Content-Signal: ${CONTENT_SIGNAL}`,
     '',
     `Sitemap: ${MARKETING_URL}/sitemap.xml`,
