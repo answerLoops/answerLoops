@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { START_HREF } from './nav-shared'
+import { START_HREF, TALK_TO_US_HREF } from './nav-shared'
 import {
   ANNUAL_DISCOUNT_PCT,
   annualMonthlyPrice,
@@ -10,7 +10,11 @@ import {
   TRIAL_DAYS,
   type Plan,
 } from '@/lib/billing/plans'
-import { formatPrice, PLAN_COPY } from '@/lib/marketing/pricing'
+import {
+  formatPrice,
+  isCustomPriced,
+  PLAN_COPY,
+} from '@/lib/marketing/pricing'
 export function PricingToggle({ plans }: { plans: Plan[] }) {
   const [annual, setAnnual] = useState(true)
   return (
@@ -46,6 +50,7 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
           const highlighted = plan.id === HIGHLIGHTED_PLAN_ID
           const copy = PLAN_COPY[plan.id]
           const nextPlan = plans[index + 1]
+          const customPriced = isCustomPriced(plan.id)
           return (
             <div
               key={plan.id}
@@ -66,22 +71,43 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
                 </span>
               )}
               <h3>{plan.name}</h3>
-              <p className="mt-2 text-sm text-slate-600 lg:min-h-16">
+              {/* Reserve room for three lines at lg, where the cards are
+                  narrowest, and two from xl up, so the trial buttons line up
+                  across the three cards at every width. */}
+              <p className="mt-2 text-sm text-slate-600 lg:min-h-20 xl:min-h-16">
                 {copy.description}
               </p>
-              <div className="pricing-amount mt-5">
-                <span className="text-4xl font-semibold tracking-tight">
-                  {formatPrice(
-                    annual ? annualMonthlyPrice(plan) : plan.priceMonthly,
-                  )}
-                </span>
-                <span className="ml-1 text-sm text-slate-600">/month</span>
-              </div>
-              <p className="mt-2 text-sm text-slate-600">
-                {annual
-                  ? `${formatPrice(annualTotalPrice(plan))} billed annually`
-                  : 'Billed monthly'}
-              </p>
+              {customPriced ? (
+                <>
+                  <div className="pricing-amount mt-5">
+                    <span className="text-4xl font-semibold tracking-tight">
+                      Custom
+                    </span>
+                    {/* A real space, not just a margin, so the words read as
+                        "Custom pricing" to screen readers and crawlers. */}{' '}
+                    <span className="text-sm text-slate-600">pricing</span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Tailored to your needs.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="pricing-amount mt-5">
+                    <span className="text-4xl font-semibold tracking-tight">
+                      {formatPrice(
+                        annual ? annualMonthlyPrice(plan) : plan.priceMonthly,
+                      )}
+                    </span>
+                    <span className="ml-1 text-sm text-slate-600">/month</span>
+                  </div>
+                  <p className="mt-2 text-sm text-slate-600">
+                    {annual
+                      ? `${formatPrice(annualTotalPrice(plan))} billed annually`
+                      : 'Billed monthly'}
+                  </p>
+                </>
+              )}
               <p className="mt-5 border-t border-slate-200 pt-5 font-semibold">
                 {plan.deflectionsPerMonth === null
                   ? 'Unlimited AI replies'
@@ -89,7 +115,11 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
                       'en-US',
                     )} estimated AI replies/month`}
               </p>
-              <p className="mt-1 min-h-12 text-sm text-slate-600">
+              {/* Space is only reserved while the cards sit side by side, so
+                  their buttons line up: two lines at lg, where the Standard
+                  line wraps, and one from xl up where every line fits. Stacked
+                  cards need none. */}
+              <p className="mt-1 text-sm text-slate-600 lg:min-h-12 xl:min-h-6">
                 {plan.overageRatePer100Cents !== null
                   ? `Then ${formatPrice(
                       plan.overageRatePer100Cents,
@@ -104,19 +134,26 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
                     }.`
                   : 'Replies pause at the limit.'}
               </p>
-              <Link
-                href={START_HREF}
-                className={`marketing-button mt-5 ${
-                  highlighted ? '' : 'marketing-button-secondary'
-                }`}
-              >
-                Start {TRIAL_DAYS}-day free trial
-              </Link>
-              <p className="mt-3 text-xs leading-relaxed text-slate-600">
-                No card required and no obligation. Every feature is included
-                for {TRIAL_DAYS} days, and you only add a card if you decide to
-                continue.
-              </p>
+              {customPriced ? (
+                /* No self-serve checkout for a custom-priced plan; the one
+                    action is a conversation. The trial includes every feature
+                    whichever card starts it, so nothing is lost by this. */
+                <a
+                  href={TALK_TO_US_HREF}
+                  className="marketing-button marketing-button-secondary mt-5"
+                >
+                  Talk to us
+                </a>
+              ) : (
+                <Link
+                  href={START_HREF}
+                  className={`marketing-button mt-5 ${
+                    highlighted ? '' : 'marketing-button-secondary'
+                  }`}
+                >
+                  Start {TRIAL_DAYS}-day free trial
+                </Link>
+              )}
               <ul className="mt-6 space-y-3 border-t border-slate-200 pt-5 text-sm text-slate-600">
                 {copy.features.map((feature) => (
                   <li key={feature} className="flex gap-2">

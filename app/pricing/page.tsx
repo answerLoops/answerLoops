@@ -12,7 +12,7 @@ import {
 } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { resolveNavState } from '@/lib/marketing/nav-state'
-import { PRICING_FAQ } from '@/lib/marketing/pricing'
+import { isCustomPriced, PRICING_FAQ } from '@/lib/marketing/pricing'
 import { INCLUDED_AI_SUMMARY } from '@/lib/marketing/plan-summary'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
@@ -44,7 +44,9 @@ function PricingStructuredData() {
         availability: 'https://schema.org/InStock',
         description: 'Open-source platform running on your own infrastructure.',
       },
-      ...ORDERED_PLANS.map((plan) => ({
+      // Custom-priced plans have no public price, so they have no offer here:
+      // structured data must match what the page shows.
+      ...ORDERED_PLANS.filter((plan) => !isCustomPriced(plan.id)).map((plan) => ({
         '@type': 'Offer',
         name: plan.name,
         price: (plan.priceMonthly / 100).toString(),

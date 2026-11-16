@@ -22,7 +22,7 @@ const IN_EVERY_PLAN = [
   'Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, and Google Chat',
   'Website chat widget with lead capture',
   'Knowledge base from files, URLs, GitHub, and Notion',
-  'Supported AI provider accounts',
+  'Bring your own AI provider',
   'MCP server and REST Agent API',
   'Multi-language AI responses',
   'CSV export',
@@ -104,7 +104,7 @@ const GROUPS: Group[] = [
     title: 'Added in Enterprise',
     rows: [
       {
-        feature: 'Custom model endpoints',
+        feature: 'Local and custom models (Ollama, vLLM, any compatible endpoint)',
         standard: false,
         pro: false,
         enterprise: true,

@@ -21,6 +21,9 @@ export const SIGNIN_HREF = process.env.NEXT_PUBLIC_APP_URL
 export const START_HREF = process.env.NEXT_PUBLIC_APP_URL
   ? 'https://dub.sh/start-a-trial'
   : '/start-trial'
+// Booking link for "Talk to us" buttons. There is no local equivalent, so it
+// is the same address in every environment.
+export const TALK_TO_US_HREF = 'https://dub.sh/talk-to-us'
 export const PRICING_HREF = process.env.NEXT_PUBLIC_APP_URL
   ? 'https://dub.sh/pricing-page'
   : '/pricing'
