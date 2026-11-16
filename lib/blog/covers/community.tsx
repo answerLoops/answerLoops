@@ -123,7 +123,7 @@ export function GitHubSupportCover({ logoSrc }: { logoSrc: string }) {
       ring={pop.yellow}
       tag="OPEN SOURCE"
       mark="github-open-source-support"
-      headline={[{ text: 'Answer it' }, { text: 'once', highlight: true }, { text: 'not twenty' }]}
+      headline={[{ text: 'Answer it' }, { text: 'once', highlight: true }, { text: 'for everyone' }]}
       headlineSize={72}
     >
       <PopCard left={690} top={70} width={430} rotate={-3} padding="20px 26px">

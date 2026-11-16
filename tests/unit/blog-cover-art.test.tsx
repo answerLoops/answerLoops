@@ -39,7 +39,7 @@ const COVERS = [
   ['discord-community-support', 'Forum posts', 'become tickets'],
   ['discourse-forum-support', 'Same question,', 'answered'],
   ['email-support-automation', 'One inbox,', 'one thread'],
-  ['github-open-source-support', 'Answer it', 'not twenty'],
+  ['github-open-source-support', 'Answer it', 'for everyone'],
   ['google-chat-internal-support', 'Pair a space', 'with one code'],
   ['notion-knowledge-base-sync', 'Share a page,', 'ship the answer'],
   ['slack-no-admin-approval', 'Skip the', 'admin queue'],
