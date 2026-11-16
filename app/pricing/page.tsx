@@ -12,7 +12,7 @@ import {
 } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { resolveNavState } from '@/lib/marketing/nav-state'
-import { PRICING_FAQ } from '@/lib/marketing/pricing'
+import { isCustomPriced, PRICING_FAQ } from '@/lib/marketing/pricing'
 import { INCLUDED_AI_SUMMARY } from '@/lib/marketing/plan-summary'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
@@ -44,7 +44,9 @@ function PricingStructuredData() {
         availability: 'https://schema.org/InStock',
         description: 'Open-source platform running on your own infrastructure.',
       },
-      ...ORDERED_PLANS.map((plan) => ({
+      // Custom-priced plans have no public price, so they have no offer here:
+      // structured data must match what the page shows.
+      ...ORDERED_PLANS.filter((plan) => !isCustomPriced(plan.id)).map((plan) => ({
         '@type': 'Offer',
         name: plan.name,
         price: (plan.priceMonthly / 100).toString(),
@@ -120,8 +122,8 @@ export default async function PricingPage({
         compact
       >
         <p>
-          Every hosted plan includes MCP and REST API access and a monthly
-          allowance of automated answers, with no per-seat fees. Save 20% with
+          No seats to count and no model account to set up. Every plan
+          includes an AI usage budget that renews each month. Save 20% with
           annual billing.
         </p>
       </PageHero>
@@ -181,8 +183,8 @@ export default async function PricingPage({
         <div className="marketing-container">
           <h2>Compare features and limits</h2>
           <p className="marketing-lead">
-            Every plan includes the knowledge base, support queue, website
-            widget, and MCP and REST API access.
+            The table shows where the plans differ. Everything listed under
+            it is included in every plan.
           </p>
           <PricingComparisonTable />
           <p className="marketing-note">
