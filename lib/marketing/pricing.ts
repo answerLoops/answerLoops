@@ -9,17 +9,29 @@ export function formatPrice(cents: number): string {
     maximumFractionDigits: 2,
   }).format(cents / 100)
 }
+/**
+ * Plans with no public price. Marketing shows "Custom pricing" and a Talk to us
+ * button instead of a price and a trial button, and leaves them out of the
+ * price data published for search engines and AI crawlers. Billing is not
+ * affected: the plan keeps its Stripe prices in lib/billing/plans.ts.
+ */
+export const CUSTOM_PRICED_PLAN_IDS: readonly PlanId[] = ['enterprise']
+
+export function isCustomPriced(id: PlanId): boolean {
+  return CUSTOM_PRICED_PLAN_IDS.includes(id)
+}
+
 export const PLAN_COPY: Record<
   PlanId,
   { description: string; features: string[] }
 > = {
   standard: {
     description:
-      'For teams organizing community support and reviewing AI replies.',
+      'Answer repeat questions automatically on every channel, from your own docs.',
     features: [
       'All support channels and website widget',
       'Knowledge imports and ticket review',
-      'Your choice of supported AI provider',
+      'Bring your own AI provider',
       'MCP and REST API access',
       'CSV exports',
       'Email support',
@@ -27,7 +39,7 @@ export const PLAN_COPY: Record<
   },
   pro: {
     description:
-      'For teams adding customer feedback, routing, and model evaluation.',
+      'Improve answer quality: spot knowledge gaps, test changes, and route hard questions.',
     features: [
       'Everything in Standard',
       'Customer satisfaction ratings',
@@ -40,10 +52,10 @@ export const PLAN_COPY: Record<
   },
   enterprise: {
     description:
-      'For larger support volumes and custom deployment requirements.',
+      'For large volumes: local models, unlimited retention, and hands-on migration.',
     features: [
       'Everything in Pro',
-      'Custom model endpoints',
+      'Bring local or custom models, like Ollama or vLLM',
       'Unlimited data retention',
       'Migration assistance',
       'SLA tracking and breach alerts',

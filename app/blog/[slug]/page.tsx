@@ -5,6 +5,7 @@ import Image, { type ImageProps } from 'next/image'
 import { notFound } from 'next/navigation'
 import { MarketingPage, PageHero, TrialCta } from '@/components/marketing/layout'
 import { NewsletterForm } from '@/components/marketing/newsletter-form'
+import { TALK_TO_US_HREF } from '@/components/marketing/nav-shared'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORGANIZATION_ID, WEBSITE_ID } from '@/lib/site-identity'
 import { getBlogPost, getRelatedPosts, formatPostDate } from '@/lib/blog/posts'
@@ -171,7 +172,7 @@ export default async function BlogPostPage({
             If you have any questions, meet with us. We&apos;d be glad to
             answer them.
           </p>
-          <a className="marketing-button" href="https://dub.sh/talk-to-us">
+          <a className="marketing-button" href={TALK_TO_US_HREF}>
             Book a call
           </a>
         </div>

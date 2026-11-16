@@ -322,9 +322,97 @@
   margin-top: 0.75rem;
   font-size: 1rem;
 }
-.marketing-site #plans.pricing-section,
+/* --post-top-space is defined on .marketing-post-top (blog). The pricing
+   section is not one, so it needs its own copy of the variable; without it
+   the padding below resolves to 0 and the hero sits flush against the
+   "Hosted plans" row. */
+.marketing-site #plans.pricing-section {
+  --post-top-space: clamp(1.5rem, 3vw, 2.5rem);
+  padding-top: var(--post-top-space);
+}
 .marketing-site .marketing-hero-compact + .marketing-post-top {
   padding-top: var(--post-top-space);
+}
+/* The plans section and the comparison section that follows each carry the
+   default 4.5rem of vertical padding, which stacks to about 9rem of empty
+   space between the cost note and the next heading. Halve the seam. */
+.marketing-site #plans.pricing-section {
+  padding-bottom: clamp(1.75rem, 3.5vw, 2.5rem);
+}
+.marketing-site #plans.pricing-section + .marketing-section {
+  padding-top: clamp(1.75rem, 3.5vw, 2.5rem);
+}
+/* The "Recommended" pill straddles the card's top edge. Its light fill is
+   close to both the card's teal top border and the page background, so give
+   it its own border to keep the edge visible. */
+.marketing-site .pricing-plan-badge {
+  border: 1px solid #7fbcc5;
+}
+/* Plan comparison. Scoped to .pricing-compare because .marketing-table is
+   shared with the /vs comparison pages. Only rows that differ between plans
+   are in the table; check marks and dashes replace the words "Included" and
+   "Not included" so the eye can scan a column. */
+.marketing-site .pricing-compare th,
+.marketing-site .pricing-compare td {
+  padding: 0.75rem 1.25rem;
+  vertical-align: middle;
+}
+.marketing-site .pricing-compare td {
+  color: var(--marketing-ink);
+}
+.marketing-site .pricing-compare thead th {
+  font-size: 0.9375rem;
+}
+.marketing-site .pricing-compare tbody th[scope='row'] {
+  font-weight: 500;
+}
+.marketing-site .pricing-compare .pricing-compare-group th {
+  padding-block: 0.5rem;
+  background: var(--marketing-aqua);
+  color: var(--marketing-navy);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.marketing-site .pricing-compare thead th.pricing-compare-pro {
+  background: #cfe6ea;
+}
+.marketing-site .pricing-compare tbody td.pricing-compare-pro {
+  background: #f3f9fa;
+  font-weight: 600;
+}
+.marketing-site .pricing-compare-yes {
+  display: inline-flex;
+  color: var(--marketing-accent);
+}
+.marketing-site .pricing-compare-no {
+  color: #9aa6b4;
+}
+.marketing-site .pricing-compare-included {
+  margin-top: 2rem;
+}
+.marketing-site .pricing-compare-included h3 {
+  font-size: 1.25rem;
+}
+.marketing-site .pricing-compare-included ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 0.75rem 2rem;
+  margin: 1rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+.marketing-site .pricing-compare-included li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  color: var(--marketing-ink);
+  font-size: 0.9375rem;
+}
+.marketing-site .pricing-compare-included li .pricing-compare-yes {
+  flex-shrink: 0;
+  margin-top: 0.1rem;
 }
 .marketing-site #plans .pricing-toolbar {
   margin-bottom: 1.25rem;
