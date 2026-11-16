@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { Source_Sans_3 } from 'next/font/google'
 import { START_HREF, PRICING_HREF } from './nav-shared'
 import { TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
@@ -78,8 +79,9 @@ export function TrialCta({
           <p>{description}</p>
         </div>
         <div>
-          <Link className="marketing-button" href={START_HREF}>
-            Start a 14-day trial
+          <Link className="marketing-button marketing-button-hero" href={START_HREF}>
+            Start your free trial
+            <ArrowRight size={18} strokeWidth={2.25} aria-hidden="true" />
           </Link>
           <p className="marketing-note">
             {TRIAL_CTA_NOTE}

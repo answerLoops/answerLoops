@@ -1,8 +1,15 @@
 import { defineConfig, devices } from '@playwright/test'
 import path from 'path'
+import { randomBytes } from 'crypto'
+
+// The e2e server is a production build, which refuses a short or placeholder
+// auth secret, so the suite generates a real random one for each run. `??=`
+// keeps one value for the whole run: Playwright re-evaluates this file in its
+// worker processes, which inherit the value the main process set.
+process.env.E2E_AUTH_SECRET ??= randomBytes(32).toString('hex')
 
 process.env.MOCK_EXTERNALS = '1'
-process.env.AUTH_SECRET = 'test-auth-secret'
+process.env.AUTH_SECRET = process.env.E2E_AUTH_SECRET
 process.env.BOT_SECRET = 'test-bot-secret'
 
 const PORT = 3100
@@ -63,7 +70,7 @@ export const TEST_ENV = {
   // (lib/mock-mode.ts). This opts the e2e server in explicitly.
   MOCK_EXTERNALS_E2E: '1',
   BOT_SECRET: 'test-bot-secret',
-  AUTH_SECRET: 'test-auth-secret',
+  AUTH_SECRET: process.env.E2E_AUTH_SECRET,
   AUTH_URL: BASE_URL,
   // The login page only offers a sign-in method whose credentials are set, so
   // the e2e server needs a configured one for the button to render. Never used

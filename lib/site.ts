@@ -17,6 +17,8 @@ export const GITHUB_SOURCE_URL = 'https://git.new/answerloops-github'
 
 export const GITHUB_ISSUES_URL = `${GITHUB_URL}/issues`
 
+export const X_URL = 'https://x.com/answerLoops'
+
 /**
  * The app's own origin, on a deployment that splits the marketing site and
  * the product onto separate subdomains — or null when there is only one

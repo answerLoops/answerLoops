@@ -21,7 +21,7 @@ const STEPS = [
   {
     icon: MessageSquare,
     title: 'Question arrives',
-    body: 'From your community or website chat',
+    body: 'From one of your community channels',
   },
   {
     icon: FileText,

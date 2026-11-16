@@ -81,7 +81,7 @@ Database migrations run automatically when the app starts, so there is no separa
 Before going live, confirm these in your production `.env`:
 
 - [ ] `AUTH_URL` is your public address, for example `https://app.yourdomain.com`
-- [ ] `AUTH_SECRET` is a new random value, not the one from development
+- [ ] `AUTH_SECRET` is a new random value of at least 32 characters (`openssl rand -hex 32`), not the one from development
 - [ ] `ENCRYPTION_KEY` is a new random value, not the one from development
 - [ ] `DATABASE_URL` points at your production database (plus `DIRECT_DATABASE_URL` if that connection goes through a pooler)
 - [ ] The Google redirect URI is `https://<your-domain>/api/auth/callback/google` (see [OAuth setup](/docs/self-hosting/oauth))
