@@ -120,8 +120,8 @@ export default async function PricingPage({
         compact
       >
         <p>
-          Every hosted plan includes MCP and REST API access and a monthly
-          allowance of automated answers, with no per-seat fees. Save 20% with
+          No seats to count and no model account to set up. Every plan
+          includes an AI usage budget that renews each month. Save 20% with
           annual billing.
         </p>
       </PageHero>
@@ -181,8 +181,8 @@ export default async function PricingPage({
         <div className="marketing-container">
           <h2>Compare features and limits</h2>
           <p className="marketing-lead">
-            Every plan includes the knowledge base, support queue, website
-            widget, and MCP and REST API access.
+            The table shows where the plans differ. Everything listed under
+            it is included in every plan.
           </p>
           <PricingComparisonTable />
           <p className="marketing-note">
