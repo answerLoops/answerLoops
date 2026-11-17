@@ -23,5 +23,5 @@ export const TRIAL_CTA_NOTE =
 export const INCLUDED_AI_SUMMARY =
   `Hosted plans include AI usage, during your trial and every month after, so you can start without setting anything up. ` +
   `The included amount depends on your plan: Standard covers roughly ${(standard.deflectionsPerMonth ?? 0).toLocaleString('en-US')} answers a month, and higher plans include more. ` +
-  `It is separate from your plan's answer allowance, so a plan can reach its included AI usage before its allowance. ` +
+  `It is separate from your plan's AI reply allowance, so a plan can reach its included AI usage before its allowance. ` +
   `To remove the limit, connect an account with a supported AI service (like Anthropic or OpenAI) and pay that service directly for the usage, separately from your answerLoops subscription.`
