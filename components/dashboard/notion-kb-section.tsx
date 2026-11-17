@@ -30,6 +30,7 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   const [syncElapsed, setSyncElapsed] = useState(0)
   const [togglingPublish, setTogglingPublish] = useState(false)
   const [confirmingPublish, setConfirmingPublish] = useState(false)
+  const confirmPanelRef = useRef<HTMLFieldSetElement>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [truncated, setTruncated] = useState(false)
 
@@ -38,6 +39,17 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
     const t = setInterval(() => setSyncElapsed((s) => s + 1), 1000)
     return () => clearInterval(t)
   }, [syncing])
+
+  // While the publish prompt is open: put focus on Cancel (the safe choice) and
+  // let Escape dismiss it. Listening on the document rather than the panel keeps
+  // Escape working wherever focus has moved to.
+  useEffect(() => {
+    if (!confirmingPublish) return
+    confirmPanelRef.current?.querySelector('button')?.focus()
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setConfirmingPublish(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [confirmingPublish])
 
   const applyState = useCallback((state: NotionKbState) => {
     setConnected(!!state.conn.connection)
@@ -219,11 +231,10 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
       </div>
 
       {confirmingPublish && (
-        <div
-          role="group"
+        <fieldset
+          ref={confirmPanelRef}
           aria-label="Confirm publishing to the website widget"
-          onKeyDown={(e) => { if (e.key === 'Escape') setConfirmingPublish(false) }}
-          className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3 space-y-2"
+          className="min-w-0 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 space-y-2"
         >
           <p className="text-sm font-medium text-amber-900">Publish to your website widget?</p>
           <p className="text-xs text-amber-800 break-words">
@@ -232,14 +243,14 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
             uses your widget. Check which pages are shared in Notion before you publish.
           </p>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="secondary" onClick={() => setConfirmingPublish(false)} autoFocus>
+            <Button size="sm" variant="secondary" onClick={() => setConfirmingPublish(false)}>
               Cancel
             </Button>
             <Button size="sm" onClick={() => setPublished(1)} disabled={togglingPublish}>
               Yes, publish
             </Button>
           </div>
-        </div>
+        </fieldset>
       )}
     </div>
   )
