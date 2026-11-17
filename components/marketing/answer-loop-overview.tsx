@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import {
   Check,
   CircleAlert,
@@ -13,8 +12,10 @@ import {
   Send,
   ShieldCheck,
 } from 'lucide-react'
-import { IntegrationIcon } from '@/components/marketing/integration-icon'
-import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
+import { SupportedChannels } from './supported-channels'
+//import { IntegrationIcon } from '@/components/marketing/integration-icon'
+//import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
+//import Link from 'next/link'
 
 // Same steps and wording as the README overview diagram.
 const STEPS = [
@@ -236,24 +237,16 @@ export function AnswerLoopOverview() {
           Save useful resolutions as knowledge
         </span>
       </div>
-
+      
+      //issue 372 supported channel
       <div
         id="integrations"
         className="loop-channels scroll-mt-20"
         aria-label="Supported channels"
       >
-        <p>answerLoops supports your community</p>
-        <ul>
-          {MARKETED_CHANNELS.map(({ name, href, color }) => (
-            <li key={href}>
-              <Link href={href}>
-                <IntegrationIcon name={name} color={color} />
-                <span>{name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <SupportedChannels variant="linked" />
       </div>
+
     </figure>
   )
 }

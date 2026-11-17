@@ -18,7 +18,7 @@
 </p>
 
 <p align="center">
-  <img src="./.github/readme/overview.svg" alt="A question becomes a source-backed draft, checked by a second AI Agent, then approved by your team or sent automatically when enabled. Useful resolutions become knowledge. Works with Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and website chat." width="100%" />
+  <img src="./.github/readme/overview.svg" alt="A question becomes a source-backed draft, checked by a second AI Agent, then approved by your team or sent automatically when enabled. Useful resolutions become knowledge.  Works with Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, Google Chat, and a website widget." width="100%" />
 </p>
 
 <div align="center">
@@ -36,7 +36,7 @@
 
 Your docs already cover setup, troubleshooting, and the questions people ask frequently. answerLoops puts that knowledge to work where the conversation happens.
 
-- **Integrations.** Discord, Slack, Discourse, Circle, GitHub, Telegram, Google Chat, email, and website chat.
+- **Integrations.** Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, Google Chat, and a website widget.
 - **Knowledge.** Import your documentation, files, GitHub repositories, and Notion pages. Every reply comes with its sources attached.
 - **Review.** A second AI Agent checks each draft against its sources. Your team approves it, or you turn on auto-reply for questions that pass.
 - **Tickets.** One shared inbox for every channel, with triage, SLAs, human escalation, CSAT, and analytics.
@@ -93,7 +93,7 @@ This installs two Claude Code skills, one to set up a new instance and one to op
 | | answerLoops | Chatwoot | Zammad | Kapa.ai |
 | --- | --- | --- | --- | --- |
 | **License (self-hosted)** | AGPL-3.0 | AGPL-3.0 | AGPL-3.0 | No public self-hosted option |
-| **Community channels** | Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, website widget | Website chat, email, WhatsApp, Telegram, Facebook, Instagram, Slack, SMS — no Discord | Email, chat, phone, WhatsApp, Facebook, Telegram — no Discord or Slack | Discord, Slack, website widget — no Telegram, Discourse, Circle, or email |
+| **Community channels** | Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, Google Chat, Website widget | Website chat, email, WhatsApp, Telegram, Facebook, Instagram, Slack, SMS — no Discord | Email, chat, phone, WhatsApp, Facebook, Telegram — no Discord or Slack | Discord, Slack, website widget — no Telegram, Discourse, Circle, or email |
 | **AI in the self-hosted tier** | Dual-agent draft-and-review pipeline included, no per-call metering | BYOK AI assistant, gated to paid/Enterprise tiers | Paid add-on even when self-hosted — €0.03 per AI call | Not applicable — hosted only |
 
 Sources: [Chatwoot](https://www.chatwoot.com/pricing/self-hosted-plans), [Zammad](https://zammad.com/en/product/artificial-intelligence), [Kapa.ai](https://docs.kapa.ai/overview/showcase).
