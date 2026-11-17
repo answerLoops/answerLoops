@@ -29,6 +29,7 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   const [syncLabel, setSyncLabel] = useState<string>('Syncing…')
   const [syncElapsed, setSyncElapsed] = useState(0)
   const [togglingPublish, setTogglingPublish] = useState(false)
+  const [confirmingPublish, setConfirmingPublish] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [truncated, setTruncated] = useState(false)
 
@@ -112,9 +113,9 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
     setTimeout(() => setToast(null), 5000)
   }
 
-  const togglePublish = async () => {
+  const setPublished = async (next: 0 | 1) => {
     if (!source) return
-    const next = source.published === 1 ? 0 : 1
+    setConfirmingPublish(false)
     setTogglingPublish(true)
     try {
       const res = await fetch(`/api/kb/sources/${source.id}`, {
@@ -132,6 +133,15 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
       setTogglingPublish(false)
       setTimeout(() => setToast(null), 4000)
     }
+  }
+
+  // Taking the content off the widget is always safe, so it happens at once.
+  // Putting it on the widget asks first: the import covers everything the
+  // Notion integration can see, not a page the person picked.
+  const onPublishButton = () => {
+    if (!source) return
+    if (source.published === 1) setPublished(0)
+    else setConfirmingPublish(true)
   }
 
   if (connected === null) return null // still loading
@@ -199,14 +209,38 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
           <Button
             size="sm"
             variant="secondary"
-            onClick={togglePublish}
-            disabled={!source || togglingPublish}
+            onClick={onPublishButton}
+            disabled={!source || togglingPublish || confirmingPublish}
             title={!source ? 'Run a sync first' : undefined}
           >
             {togglingPublish ? '…' : source?.published === 1 ? 'Unpublish' : 'Publish to widget'}
           </Button>
         </div>
       </div>
+
+      {confirmingPublish && (
+        <div
+          role="group"
+          aria-label="Confirm publishing to the website widget"
+          onKeyDown={(e) => { if (e.key === 'Escape') setConfirmingPublish(false) }}
+          className="rounded-md border border-amber-200 bg-amber-50 px-3 py-3 space-y-2"
+        >
+          <p className="text-sm font-medium text-amber-900">Publish to your website widget?</p>
+          <p className="text-xs text-amber-800 break-words">
+            {chunkCount > 0 ? `${chunkCount} chunk${chunkCount === 1 ? '' : 's'} will go live. ` : ''}
+            Every page and database shared with your Notion integration becomes available to answer anyone who
+            uses your widget. Check which pages are shared in Notion before you publish.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setConfirmingPublish(false)} autoFocus>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={() => setPublished(1)} disabled={togglingPublish}>
+              Yes, publish
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
