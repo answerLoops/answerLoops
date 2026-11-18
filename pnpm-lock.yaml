@@ -150,8 +150,8 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
       react-markdown:
-        specifier: 8.0.7
-        version: 8.0.7(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2)
+        specifier: 9.0.2
+        version: 9.0.2(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2)
       resend:
         specifier: ^6.32.1
         version: 6.32.1
@@ -6758,6 +6758,12 @@ packages:
     peerDependencies:
       '@types/react': '>=16'
       react: '>=16'
+
+  react-markdown@9.0.2:
+    resolution: {integrity: sha512-98UgODUv+Mqls+xD53jqFIs/kZK8QIoCBvtzb1tRbWZH7n4FSp8IP6Z7/UcRIKmVZ/Q1zO1SXfjnaksG5Jf2SQ==}
+    peerDependencies:
+      '@types/react': '>=18'
+      react: '>=18'
 
   react-remove-scroll-bar@2.3.8:
     resolution: {integrity: sha512-9r+yi9+mgU33AKcj6IbT9oRCO78WriSj6t/cF8DWBZJ9aOGPOTEDvdUDz1FwKim7QXWwmHqtdHnRJfhAxEG46Q==}
@@ -14853,6 +14859,23 @@ snapshots:
       unified: 10.1.2
       unist-util-visit: 4.1.2
       vfile: 5.3.7
+    transitivePeerDependencies:
+      - supports-color
+
+  react-markdown@9.0.2(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2):
+    dependencies:
+      '@types/hast': 3.0.5
+      '@types/react': 19.3.0
+      devlop: 1.1.0
+      hast-util-to-jsx-runtime: 2.3.6(supports-color@10.2.2)
+      html-url-attributes: 3.0.1
+      mdast-util-to-hast: 13.2.1
+      react: 19.3.0
+      remark-parse: 11.0.0(supports-color@10.2.2)
+      remark-rehype: 11.1.2
+      unified: 11.0.5
+      unist-util-visit: 5.1.0
+      vfile: 6.0.3
     transitivePeerDependencies:
       - supports-color
 

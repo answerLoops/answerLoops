@@ -1,5 +1,6 @@
 
-import ReactMarkdown from 'react-markdown'
+import Image from 'next/image'
+import ReactMarkdown, { type Components } from 'react-markdown'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 import type { SourcePlatform } from '@/types'
 
@@ -14,8 +15,40 @@ function isSafeExternalUrl(value: string | undefined): value is string {
   }
 }
 
-// Renders ticket/reply content, turning any `[Attachment: name] — url` lines
-// into clickable links. GitHub messages additionally support safe Markdown.
+// Keep Markdown renderers outside TicketContent to avoid recreating
+// component definitions on every render.
+const markdownComponents: Components = {
+  a: ({ href, children }) =>
+    isSafeExternalUrl(href) ? (
+      <a
+        href={href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 underline break-all hover:text-blue-800"
+      >
+        {children}
+      </a>
+    ) : (
+      <>{children}</>
+    ),
+
+  img: ({ src, alt }) =>
+    isSafeExternalUrl(src) ? (
+      <Image
+        src={src}
+        alt={alt ?? ''}
+        width={1200}
+        height={800}
+        unoptimized
+        className="block max-w-full h-auto rounded"
+      />
+    ) : (
+      <>{alt}</>
+    ),
+}
+
+// Renders ticket/reply content, turning any [Attachment: name] — url
+// lines into clickable links. GitHub messages additionally support safe Markdown.
 export function TicketContent({
   content,
   className,
@@ -32,34 +65,7 @@ export function TicketContent({
       {text &&
         (sourcePlatform === 'github' ? (
           <div className="text-sm text-gray-800 break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-            <ReactMarkdown
-              components={{
-                a: ({ href, children }) =>
-                  isSafeExternalUrl(href) ? (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline break-all hover:text-blue-800"
-                    >
-                      {children}
-                    </a>
-                  ) : (
-                    <>{children}</>
-                  ),
-                img: ({ src, alt }) =>
-                  isSafeExternalUrl(src) ? (
-                    <img
-                      src={src}
-                      alt={alt ?? ''}
-                      loading="lazy"
-                      className="block max-w-full h-auto rounded"
-                    />
-                  ) : (
-                    <>{alt}</>
-                  ),
-              }}
-            >
+            <ReactMarkdown components={markdownComponents}>
               {text}
             </ReactMarkdown>
           </div>

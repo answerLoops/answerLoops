@@ -75,7 +75,7 @@
     "postgres": "^3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
-    "react-markdown": "8.0.7",
+    "react-markdown": "9.0.2",
     "resend": "^6.32.1",
     "stripe": "^23.0.0",
     "web-push": "^3.6.7",
