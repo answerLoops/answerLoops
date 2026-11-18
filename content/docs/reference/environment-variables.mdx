@@ -202,7 +202,7 @@ npx web-push generate-vapid-keys
 | Variable | Description |
 |---|---|
 | `CLOUDFLARE_WEB_ANALYTICS` | Optional. Set to `true` to allow Cloudflare Web Analytics on pages. Read when the config loads, so set it where the build runs |
-| `NEXT_PUBLIC_DOCS_WIDGET_TOKEN` | Optional. Embeds a chat widget token on the built-in `/docs` pages. Local or dev use; the widget does not render without it |
+| `SITE_CHAT_WIDGET_ID` | Optional. The public name or token of a workspace's chat widget, shown as a chat assistant on the built-in `/docs` pages and on the marketing site's home and pricing pages. Read when each page is requested, so it needs no rebuild. Nothing renders without it; leave it unset on a self-hosted install |
 | `ALLOW_PRIVATE_OUTBOUND_URLS` | Development only. Set to `true` to let outbound fetches reach private addresses; ignored when `NODE_ENV=production` |
 | `MOCK_EXTERNALS` | Test suites only. Replaces external services with in-process fakes; a production process refuses to run with it set |
 
