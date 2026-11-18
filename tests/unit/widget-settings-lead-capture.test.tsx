@@ -28,6 +28,8 @@ vi.mock('@/lib/actions/widget', () => ({
   regenerateWidgetTokenAction: vi.fn(),
   saveWidgetOriginsAction: vi.fn(),
   saveWidgetLeadCaptureModeAction: h.saveWidgetLeadCaptureModeAction,
+  saveWidgetAnswerScopeAction: vi.fn(),
+  saveWidgetGuidanceAction: vi.fn(),
 }))
 vi.mock('@/lib/actions/sla', () => ({ updateSLAAction: vi.fn() }))
 vi.mock('@/lib/actions/invitations', () => ({
@@ -66,6 +68,34 @@ async function renderWidgetSection() {
   return utils
 }
 
+describe('WidgetSection: what the widget answers from', () => {
+  it('starts from the saved scope and note once the token has loaded', async () => {
+    h.getWidgetTokenAction.mockResolvedValue({
+      ...baseToken,
+      leadCaptureMode: 'off',
+      answerScope: 'general',
+      guidance: 'Be warm.',
+    })
+    await renderWidgetSection()
+    expect((screen.getByLabelText('What the widget answers from') as HTMLSelectElement).value).toBe('general')
+    expect((screen.getByLabelText('Guidance for the widget') as HTMLTextAreaElement).value).toBe('Be warm.')
+  })
+
+  it('shows a member the saved settings as text, with no controls', async () => {
+    h.getWidgetTokenAction.mockResolvedValue({
+      ...baseToken,
+      canManage: false,
+      leadCaptureMode: 'off',
+      answerScope: 'knowledge-base-only',
+      guidance: null,
+    })
+    await renderWidgetSection()
+    expect(screen.queryByLabelText('What the widget answers from')).toBeNull()
+    expect(screen.getByText(/Only from my knowledge base\. Only owners and admins can change this\./)).toBeTruthy()
+    expect(screen.getByText(/No guidance set\./)).toBeTruthy()
+  })
+})
+
 describe('WidgetSection: Ask for an email', () => {
   it('shows the org\'s current lead-capture mode, selected in the dropdown', async () => {
     h.getWidgetTokenAction.mockResolvedValue({ ...baseToken, leadCaptureMode: 'up-front' })
@@ -79,7 +109,7 @@ describe('WidgetSection: Ask for an email', () => {
     h.getWidgetTokenAction.mockResolvedValue({ ...baseToken, leadCaptureMode: undefined })
     await renderWidgetSection()
 
-    const select = screen.getByRole('combobox') as HTMLSelectElement
+    const select = screen.getByRole('combobox', { name: 'Ask for an email' }) as HTMLSelectElement
     expect(select.value).toBe('on-failure')
   })
 
@@ -88,7 +118,7 @@ describe('WidgetSection: Ask for an email', () => {
     h.saveWidgetLeadCaptureModeAction.mockResolvedValue({ mode: 'off' })
     await renderWidgetSection()
 
-    const select = screen.getByRole('combobox') as HTMLSelectElement
+    const select = screen.getByRole('combobox', { name: 'Ask for an email' }) as HTMLSelectElement
     const user = userEvent.setup()
     await act(async () => {
       await user.selectOptions(select, 'off')
@@ -105,7 +135,7 @@ describe('WidgetSection: Ask for an email', () => {
     h.saveWidgetLeadCaptureModeAction.mockResolvedValue({ error: 'You do not have permission to do that.' })
     await renderWidgetSection()
 
-    const select = screen.getByRole('combobox') as HTMLSelectElement
+    const select = screen.getByRole('combobox', { name: 'Ask for an email' }) as HTMLSelectElement
     const user = userEvent.setup()
     await act(async () => {
       await user.selectOptions(select, 'off')

@@ -52,6 +52,16 @@ export const orgs = pgTable('orgs', {
   // default, so it must match what they already had (the old hardcoded gate)
   // rather than silently switching their widget's behaviour.
   widgetLeadCaptureMode: text('widget_lead_capture_mode').notNull().default('up-front'),
+  // What the widget may answer from: 'general' (knowledge base, then general
+  // knowledge) or 'knowledge-base-only'. Validated against WIDGET_ANSWER_SCOPES
+  // in lib/widget/answer-scope.ts at every write; like the other text-enum
+  // columns here there is no DB-level CHECK, so the app layer keeps it honest.
+  // Defaults to 'general' so an existing workspace's widget does not change.
+  widgetAnswerScope: text('widget_answer_scope').notNull().default('general'),
+  // The owner's optional note on tone and next steps, added to the widget's
+  // instructions. NULL means none. Cleaned and length-limited by
+  // normalizeWidgetGuidance before it is stored.
+  widgetGuidance: text('widget_guidance'),
   roiMinutesPerTicket: integer('roi_minutes_per_ticket'),
   roiStaffHourlyRate: integer('roi_staff_hourly_rate'),
   // Set the moment an owner confirms account deletion. NULL means active.

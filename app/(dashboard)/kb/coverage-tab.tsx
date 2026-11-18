@@ -170,7 +170,7 @@ function QuestionTester() {
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2" role="status">
           <p className="text-xs font-medium text-amber-800">Not covered — no article is a close enough match.</p>
           <p className="mt-0.5 text-xs text-amber-700">
-            The assistant would answer this from general knowledge, which can be wrong. Add or edit an article to cover it.
+            The assistant would answer this from general knowledge, which can be wrong, or say it doesn't know if your widget answers only from your knowledge base. Add or edit an article to cover it.
           </p>
         </div>
       )}
@@ -224,7 +224,7 @@ export function CoverageTab() {
       <div className="rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3">
         <p className="text-sm text-slate-700">
           Your chat assistant answers from the articles listed here. If a question doesn&apos;t match any of them
-          closely enough, it answers from general knowledge instead, and that answer can be wrong. Anything marked
+          closely enough, it answers from general knowledge instead, and that answer can be wrong, unless your widget is set to answer only from your knowledge base, in which case it says it doesn&apos;t have that. Anything marked
           Unpublished (for example internal documents you keep private) or Not searchable is <strong>not</strong> used by the assistant.
         </p>
       </div>
