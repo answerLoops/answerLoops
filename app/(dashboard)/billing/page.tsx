@@ -18,7 +18,7 @@ interface BillingData {
 
 const PLAN_FEATURES: Record<string, string[]> = {
   standard: [
-    '500 AI replies/mo',
+    '500 estimated AI replies/mo',
     'Knowledge base (URL import)',
     'Discord + Slack integration',
     'Widget with lead capture',
@@ -28,7 +28,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
     'Email support',
   ],
   pro: [
-    '3,000 AI replies/mo, then $5 per 100',
+    '3,000 estimated AI replies/mo, then $5 per 100',
     'Everything in Standard',
     'CSAT scoring',
     'Human escalation routing',

@@ -355,7 +355,7 @@ export function EmbeddedCheckoutPanel({
                 <div className="mt-3 text-xs text-slate-600">
                   {p.deflectionsPerMonth === null
                     ? 'Unlimited AI replies'
-                    : `${p.deflectionsPerMonth.toLocaleString()} AI replies/mo`}
+                    : `${p.deflectionsPerMonth.toLocaleString()} estimated AI replies/mo`}
                 </div>
               </button>
             )

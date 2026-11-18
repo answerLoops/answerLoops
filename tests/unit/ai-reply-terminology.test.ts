@@ -58,6 +58,12 @@ describe('the monthly allowance is called AI replies', () => {
     })
   }
 
+  it('the terms define an AI reply and no longer define a deflection', () => {
+    const terms = read('app/terms/page.tsx')
+    expect(terms).toContain('&ldquo;AI reply&rdquo;')
+    expect(terms).not.toMatch(/deflection/i)
+  })
+
   it('keeps the error code for API callers, which is a contract, not copy', () => {
     expect(read('lib/agent/openapi-spec.ts')).toContain("'deflection_limit_reached'")
   })
@@ -92,3 +98,24 @@ describe('what counts toward the allowance is stated plainly', () => {
     }
   })
 })
+
+describe('every stated plan allowance says estimated, as the pricing cards do', () => {
+  const cases: [string, RegExp][] = [
+    ['app/(dashboard)/billing/page.tsx', /500 estimated AI replies\/mo/],
+    ['app/(dashboard)/billing/page.tsx', /3,000 estimated AI replies\/mo/],
+    ['components/billing/embedded-checkout-panel.tsx', /estimated AI replies\/mo/],
+    ['content/docs/reference/billing-plans.mdx', /500 estimated AI replies a month/],
+    ['content/docs/reference/billing-plans.mdx', /3,000 estimated AI replies a month/],
+    ['content/docs/reference/billing-plans.mdx', /Estimated AI replies\/mo/],
+    ['content/docs/product/billing.mdx', /Included estimated AI replies per month/],
+    ['content/docs/quickstart-cloud.mdx', /Estimated AI replies per month/],
+    ['components/marketing/pricing-toggle.tsx', /estimated AI replies\/month/],
+    ['components/marketing/pricing-comparison-table.tsx', /Estimated AI replies \/ month/],
+  ]
+  for (const [file, pattern] of cases) {
+    it(`${file} matches ${pattern}`, () => {
+      expect(read(file)).toMatch(pattern)
+    })
+  }
+})
+
