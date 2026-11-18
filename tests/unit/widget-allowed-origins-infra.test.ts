@@ -332,10 +332,10 @@ describe('lib/db/queries/widgets: compiled SQL', () => {
     const { getOrgByWidgetToken } = await queries()
     // Positional row, in select order: id, name, widget_token,
     // widget_token_expires_at, widget_allowed_origins,
-    // widget_lead_capture_mode, plan_id.
+    // widget_lead_capture_mode, widget_answer_scope, widget_guidance, plan_id.
     rowsFor.push({
       match: 'select',
-      rows: [[7, 'Acme', 'tok-abc', null, 'example.com', 'on-failure', 'pro']],
+      rows: [[7, 'Acme', 'tok-abc', null, 'example.com', 'on-failure', 'general', null, 'pro']],
     })
 
     const org = await getOrgByWidgetToken('tok-abc')
@@ -358,6 +358,8 @@ describe('lib/db/queries/widgets: compiled SQL', () => {
       plan_id: 'pro',
       widget_allowed_origins: 'example.com',
       widget_lead_capture_mode: 'on-failure',
+      widget_answer_scope: 'general',
+      widget_guidance: null,
     })
   })
 
