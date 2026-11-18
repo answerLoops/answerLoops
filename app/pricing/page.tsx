@@ -110,7 +110,7 @@ export default async function PricingPage({
   const navState = await resolveNavState()
   if (resume === '1' && navState === 'active') redirect('/dashboard')
   return (
-    <MarketingPage navState={navState}>
+    <MarketingPage navState={navState} chat>
       <PageSchema
         name="answerLoops pricing"
         description={metadata.description!}
