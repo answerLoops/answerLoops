@@ -13,7 +13,7 @@ import {
 import { PageSchema } from '@/components/marketing/page-schema'
 import { resolveNavState } from '@/lib/marketing/nav-state'
 import { isCustomPriced, PRICING_FAQ } from '@/lib/marketing/pricing'
-import { INCLUDED_AI_SUMMARY } from '@/lib/marketing/plan-summary'
+import { INCLUDED_AI_POINTS } from '@/lib/marketing/plan-summary'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { marketingSiteEnabled } from '@/lib/site'
@@ -123,8 +123,8 @@ export default async function PricingPage({
       >
         <p>
           No seats to count and no model account to set up. Every plan
-          includes an AI usage budget that renews each month. Save 20% with
-          annual billing.
+          includes AI usage that renews each month. Save 20% with annual
+          billing.
         </p>
       </PageHero>
       <section
@@ -164,9 +164,11 @@ export default async function PricingPage({
           <PricingToggle plans={ORDERED_PLANS} />
           <div className="pricing-cost-note mt-8 rounded-xl border p-6">
             <h3>Plan your total cost</h3>
-            <p className="mt-2 text-slate-600">
-              {INCLUDED_AI_SUMMARY}
-            </p>
+            {INCLUDED_AI_POINTS.map((point) => (
+              <p key={point} className="mt-3 text-slate-600">
+                {point}
+              </p>
+            ))}
             <Link
               className="marketing-text-link mt-4"
               href="/docs/product/ai-config"
