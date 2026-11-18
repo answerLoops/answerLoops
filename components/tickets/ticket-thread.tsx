@@ -1,7 +1,7 @@
 import { TicketContent } from '@/components/tickets/ticket-content'
 import { LocalDate } from '@/components/ui/local-date'
 import { buildTicketThread, threadRoleLabel, type ThreadEntryRole } from '@/lib/tickets/thread'
-import type { TicketReply } from '@/types'
+import type { SourcePlatform, TicketReply } from '@/types'
 
 const ROLE_STYLE: Record<ThreadEntryRole, string> = {
   customer: 'bg-amber-50 text-amber-700',
@@ -11,7 +11,7 @@ const ROLE_STYLE: Record<ThreadEntryRole, string> = {
 }
 
 // The conversation after the opening message, in order, for every channel.
-export function TicketThread({ replies }: { replies: TicketReply[] }) {
+export function TicketThread({ replies, sourcePlatform = 'discord' }: { replies: TicketReply[]; sourcePlatform?: SourcePlatform }) {
   const entries = buildTicketThread(replies)
   if (entries.length === 0) return null
 
@@ -37,7 +37,7 @@ export function TicketThread({ replies }: { replies: TicketReply[] }) {
               <span className="text-xs text-gray-400"><LocalDate iso={entry.createdAt} time /></span>
             </div>
             <div className="break-words">
-              <TicketContent content={entry.content} />
+              <TicketContent content={entry.content} sourcePlatform={sourcePlatform} />
             </div>
           </li>
         ))}
