@@ -8,5 +8,5 @@ export const size = VS_COVER_SIZE
 export const contentType = 'image/png'
 
 export default function Image() {
-  return renderVsCover('Intercom Fin', ['Channels', 'Answer workflow', 'Deployment'])
+  return renderVsCover('Intercom Fin', ['Channels', 'Cost', 'Answer review'])
 }
