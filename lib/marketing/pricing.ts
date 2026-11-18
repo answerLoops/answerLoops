@@ -66,7 +66,7 @@ export const PLAN_COPY: Record<
 export const PRICING_FAQ = [
   {
     q: 'What counts toward my AI reply allowance?',
-    a: 'Automated replies count as deflections. Answers generated through MCP or the REST API also count when they meet the confidence requirement. Drafts sent for human review do not count as automated replies. Your allowance renews each calendar month, including on annual subscriptions.',
+    a: 'An AI reply is an answer answerLoops posts on its own, with confidence above your threshold and no person stepping in. Answers generated through MCP or the REST API count too when they meet the confidence requirement. Drafts held for your team to review do not count, including ones a team member later approves or edits. Your allowance renews each calendar month, including on annual subscriptions.',
   },
   {
     q: 'What happens at the monthly limit?',
@@ -86,6 +86,6 @@ export const PRICING_FAQ = [
   },
   {
     q: 'What does self-hosting cost?',
-    a: 'The software is available under AGPL-3.0 without a hosted subscription or deflection limit. You cover infrastructure and model costs and operate the deployment. Contact us separately if you need migration assistance or a support agreement.',
+    a: 'The software is available under AGPL-3.0 without a hosted subscription or AI reply limit. You cover infrastructure and model costs and operate the deployment. Contact us separately if you need migration assistance or a support agreement.',
   },
 ]

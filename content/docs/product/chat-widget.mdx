@@ -7,7 +7,7 @@ icon: MessageSquare
 The answerLoops chat widget adds a support chatbot to any website or documentation site that accepts custom JavaScript. Visitors ask questions about your community, business, or product and get answers from your published knowledge-base articles, without creating an account.
 
 <Callout type="info" title="Availability">
-  The widget is included on every hosted plan and on self-hosted installs. The Standard plan shows a "Powered by answerLoops" line; Pro and Enterprise can remove it and also capture unanswered widget questions in the [Review queue](/docs/product/knowledge-base#review-queue). Each widget answer counts toward your plan's monthly deflection allowance. See [Billing plans](/docs/reference/billing-plans).
+  The widget is included on every hosted plan and on self-hosted installs. The Standard plan shows a "Powered by answerLoops" line; Pro and Enterprise can remove it and also capture unanswered widget questions in the [Review queue](/docs/product/knowledge-base#review-queue). Each widget answer counts toward your plan's monthly AI reply allowance. See [Billing plans](/docs/reference/billing-plans).
 </Callout>
 
 ## How it works
@@ -26,7 +26,7 @@ The answerLoops chat widget adds a support chatbot to any website or documentati
     text: 'A one-line script tag loads the chat bubble. The chat panel itself is served by answerLoops and only opens on the domains you list under Allowed domains.',
   }}
   steps={[
-    { title: 'Check the site', text: 'answerLoops confirms the page is on one of your allowed domains and that your workspace is still within its monthly answer allowance.' },
+    { title: 'Check the site', text: 'answerLoops confirms the page is on one of your allowed domains and that your workspace is still within its monthly AI reply allowance.' },
     { title: 'Find the answer', text: 'It searches your published knowledge-base articles for what is relevant to the question. Past tickets are never used.' },
     { title: 'Reply', text: 'One AI writes a short answer in the visitor\'s language and streams it into the chat, with a card when a card is clearer. There is no separate review step and no approval queue for widget answers.' },
   ]}
@@ -300,7 +300,7 @@ The on-failure check — a small lookup the widget makes right after a turn fini
 
 Requests over these limits return `429 Too Many Requests`. The chat and lead-capture limits are enforced across every running instance rather than per process, so those numbers are the real ceiling. The on-failure check is the one exception — see the single-instance callout under Lead capture above. None of these limits are currently configurable.
 
-Separately from rate limits, every widget answer counts toward your plan's monthly deflection allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
+Separately from rate limits, every widget answer counts toward your plan's monthly AI reply allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
 
 ## What the widget can and cannot reach
 

@@ -4,7 +4,7 @@ description: Configure answer review and automatic replies for connected channel
 icon: Bot
 ---
 
-When someone asks a question in a connected channel, answerLoops drafts an answer from your knowledge base, has a second AI check that draft, and then either posts it for you or holds it for your team. An answer that resolves a question without a person stepping in is called a **deflection**, and you will see that word on the dashboard and in [Analytics](/docs/product/analytics).
+When someone asks a question in a connected channel, answerLoops drafts an answer from your knowledge base, has a second AI check that draft, and then either posts it for you or holds it for your team. An answer that resolves a question without a person stepping in is an **AI reply** when it goes out on its own. Plans include a monthly allowance of them. The same answers are called *deflections* in [Analytics](/docs/product/analytics) and on the dashboard, and **Automatic Deflections** is the setting that lets them post.
 
 You decide how much trust to give the AI. Two settings control it: a **confidence threshold** (how sure the reviewer must be) and **Automatic Deflections** (whether qualifying answers are posted for you at all).
 
@@ -69,7 +69,7 @@ You set the threshold per channel in its settings. GitHub repositories always us
 Drafts that do not qualify stay in the ticket queue for your team, and [human escalation routing](/docs/product/escalation) can notify the right person on eligible plans. The setting also governs the automated replies for bug reports and feature requests described in [Tickets](/docs/product/tickets#how-the-ai-handles-each-category).
 
 <Callout type="warn">
-  Your plan includes a monthly allowance of automatic answers. On a plan with a hard limit, once it is used up, qualifying drafts go to your team instead of posting. See [Billing](/docs/product/billing).
+  Your plan includes a monthly allowance of AI replies. Drafts held for your team do not count toward it. On a plan with a hard limit, once the allowance is used up, qualifying drafts go to your team instead of posting. See [Billing](/docs/product/billing).
 </Callout>
 
 ### Change the setting

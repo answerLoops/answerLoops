@@ -70,10 +70,10 @@ workspace's `*.answerloops.com` URL.
   the response already carries the draft/review state — no need to poll
   `get_tickets` immediately after.
 - **Metering:** `generate_answer` counts against the workspace's monthly
-  deflection allowance (high-confidence calls) and a separate, looser
-  per-call ceiling (5× the deflection allowance) that exists so a caller
+  AI reply allowance (high-confidence calls) and a separate, looser
+  per-call ceiling (5× the AI reply allowance) that exists so a caller
   whose questions consistently score low confidence doesn't get an unlimited
-  free ride. Both are unlimited on self-hosted and unlimited-deflection
+  free ride. Both are unlimited on self-hosted and unlimited-AI-reply
   plans. Hitting either returns an error naming which one — don't retry
   blindly on that error, surface it to the user.
 

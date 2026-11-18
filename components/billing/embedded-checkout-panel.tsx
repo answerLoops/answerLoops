@@ -354,8 +354,8 @@ export function EmbeddedCheckoutPanel({
                 )}
                 <div className="mt-3 text-xs text-slate-600">
                   {p.deflectionsPerMonth === null
-                    ? 'Unlimited deflections'
-                    : `${p.deflectionsPerMonth.toLocaleString()} deflections/mo`}
+                    ? 'Unlimited AI replies'
+                    : `${p.deflectionsPerMonth.toLocaleString()} AI replies/mo`}
                 </div>
               </button>
             )
@@ -395,8 +395,8 @@ export function EmbeddedCheckoutPanel({
               a: 'Yes, from Settings → Billing. Upgrades apply immediately; downgrades take effect at the end of the period you already paid for.',
             },
             {
-              q: 'What counts as a deflection?',
-              a: 'One question the AI answered automatically with enough confidence that no human stepped in. Questions routed to a person never count, even when the AI drafted the reply.',
+              q: 'What counts as an AI reply?',
+              a: 'One answer the AI posted on its own, with enough confidence that no person stepped in. Drafts held for your team never count, even when the AI wrote them.',
             },
             {
               q: 'How do I cancel?',
