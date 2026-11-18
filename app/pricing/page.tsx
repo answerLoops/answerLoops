@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'Community support software pricing | answerLoops',
   description:
-    'Compare Standard, Pro, and Enterprise plans. See exact monthly and annual prices, automated-answer allowances, model costs, and trial terms.',
+    'Compare Standard, Pro, and Enterprise plans. See monthly and annual prices, included AI replies, model costs, and trial terms.',
   path: '/pricing',
 })
 function PricingStructuredData() {
@@ -34,7 +34,7 @@ function PricingStructuredData() {
     url: 'https://answerloops.com/pricing',
     provider: { '@id': ORGANIZATION_ID },
     description:
-      'Hosted support plans with included automated answers and a 14-day trial.',
+      'Hosted support plans with included AI replies and a 14-day trial.',
     offers: [
       {
         '@type': 'Offer',
@@ -60,8 +60,8 @@ function PricingStructuredData() {
         },
         description:
           plan.deflectionsPerMonth === null
-            ? 'Unlimited deflections per month with a 14-day hosted trial.'
-            : `${plan.deflectionsPerMonth.toLocaleString()} deflections per month with a 14-day hosted trial.`,
+            ? 'Unlimited AI replies per month with a 14-day hosted trial.'
+            : `${plan.deflectionsPerMonth.toLocaleString()} estimated AI replies per month with a 14-day hosted trial.`,
       })),
     ],
   }

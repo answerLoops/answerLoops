@@ -21,7 +21,7 @@ export const API_SCOPES = {
   'faq:read': 'Read the latest generated FAQ digest',
   'tickets:read': 'List support tickets',
   'tickets:write': 'Open support tickets on behalf of a user',
-  'answers:write': 'Generate grounded answers (counts against the deflection limit)',
+  'answers:write': 'Generate grounded answers (counts against the AI reply limit)',
 } as const
 
 export type ApiScope = keyof typeof API_SCOPES

@@ -42,7 +42,7 @@ export default function Page() {
         },
         {
           feature: 'How you pay',
-          us: 'Hosted plans with an answer allowance, plus the cost of the AI model you connect. See the pricing page for current numbers.',
+          us: 'Hosted plans with an AI reply allowance, plus the cost of the AI model you connect. See the pricing page for current numbers.',
           them: 'Olark lists its AI agent at $400 a month billed annually with one human seat included, extra seats at $29 each, and says there are no token costs. Human-only live chat is listed at $29 per agent per month.',
         },
         {

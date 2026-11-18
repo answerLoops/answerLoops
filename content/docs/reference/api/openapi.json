@@ -29,7 +29,7 @@
       "description": "Open support tickets on behalf of a user"
     },
     "answers:write": {
-      "description": "Generate grounded answers (counts against the deflection limit)"
+      "description": "Generate grounded answers (counts against the AI reply limit)"
     }
   },
   "components": {
@@ -57,7 +57,7 @@
                   "deflection_limit_reached",
                   "call_limit_reached"
                 ],
-                "description": "Present on 429 responses; distinguishes the per-minute rate limit (retry after `Retry-After` seconds) from the monthly deflection quota and the monthly call-attempt quota (both need a plan upgrade or the next billing cycle, not a retry). Absent on other error statuses."
+                "description": "Present on 429 responses; distinguishes the per-minute rate limit (retry after `Retry-After` seconds) from the monthly AI reply quota and the monthly call-attempt quota (both need a plan upgrade or the next billing cycle, not a retry). Absent on other error statuses."
               }
             },
             "required": [
@@ -623,7 +623,7 @@
             ]
           }
         ],
-        "description": "Counts against the org's monthly deflection limit — if the limit is reached, returns 429 instead of generating for free. Only high-confidence generations count toward that limit.",
+        "description": "Counts against the org's monthly AI reply limit — if the limit is reached, returns 429 instead of generating for free. Only high-confidence generations count toward that limit.",
         "requestBody": {
           "required": true,
           "content": {
@@ -717,7 +717,7 @@
             "$ref": "#/components/responses/PayloadTooLarge"
           },
           "429": {
-            "description": "Rate limit exceeded, monthly deflection limit reached, or monthly call limit reached — see `error.code`",
+            "description": "Rate limit exceeded, monthly AI reply limit reached, or monthly call limit reached — see `error.code`",
             "headers": {
               "RateLimit-Limit": {
                 "$ref": "#/components/headers/RateLimit-Limit"

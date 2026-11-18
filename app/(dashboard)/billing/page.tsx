@@ -18,7 +18,7 @@ interface BillingData {
 
 const PLAN_FEATURES: Record<string, string[]> = {
   standard: [
-    '500 AI deflections/mo',
+    '500 estimated AI replies/mo',
     'Knowledge base (URL import)',
     'Discord + Slack integration',
     'Widget with lead capture',
@@ -28,7 +28,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
     'Email support',
   ],
   pro: [
-    '3,000 AI deflections/mo, then $5 per 100',
+    '3,000 estimated AI replies/mo, then $5 per 100',
     'Everything in Standard',
     'CSAT scoring',
     'Human escalation routing',
@@ -38,7 +38,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
     'Priority support',
   ],
   enterprise: [
-    'Unlimited AI deflections',
+    'Unlimited AI replies',
     'Everything in Pro',
     'Custom AI model config',
     'Unlimited data retention',
@@ -87,7 +87,7 @@ function TrialExpiredBanner({ onUpgrade, pending }: { onUpgrade: (planId: string
   return (
     <div className="rounded-xl border-2 border-red-200 bg-red-50 p-6 text-center space-y-3">
       <p className="text-sm font-semibold text-red-800">Your trial has ended</p>
-      <p className="text-xs text-red-700">Choose a plan below and add a card to resume AI deflections and full access.</p>
+      <p className="text-xs text-red-700">Choose a plan below and add a card to resume AI replies and full access.</p>
       <button
         onClick={() => onUpgrade('standard')}
         disabled={pending}
@@ -117,12 +117,12 @@ function LimitWarningBanner({ planId, onUpgrade, pending }: { planId: string; on
         <div className="mt-0.5 h-2 w-2 rounded-full flex-shrink-0 bg-amber-500" />
         <div>
           <p className="text-sm font-semibold text-amber-800">
-            {softCap ? 'Approaching your included deflections' : 'Approaching your deflection limit'}
+            {softCap ? 'Approaching your included AI replies' : 'Approaching your AI reply limit'}
           </p>
           <p className="mt-0.5 text-xs text-amber-700">
             {softCap
-              ? "You've used over 80% of this month's included deflections. Answers keep going out past the limit — usage beyond it is billed at $5 per 100."
-              : "You've used over 80% of this month's deflections. Upgrade now to avoid interruption."}
+              ? "You've used over 80% of this month's included AI replies. Answers keep going out past the limit — usage beyond it is billed at $5 per 100."
+              : "You've used over 80% of this month's AI replies. Upgrade now to avoid interruption."}
           </p>
         </div>
       </div>
@@ -184,13 +184,13 @@ function UsageBar({ used, limit, planId, currentPeriodEnd, cancelAtPeriodEnd, st
       {limit === null ? (
         <div className="flex items-end gap-1.5">
           <span className="text-3xl font-bold text-gray-900">{used.toLocaleString()}</span>
-          <span className="text-sm text-gray-500 mb-1">deflections · unlimited plan</span>
+          <span className="text-sm text-gray-500 mb-1">AI replies · unlimited plan</span>
         </div>
       ) : (
         <>
           <div className="flex items-end gap-1.5 mb-3">
             <span className={`text-3xl font-bold ${over ? (softCap ? 'text-amber-600' : 'text-red-600') : 'text-gray-900'}`}>{used.toLocaleString()}</span>
-            <span className="text-sm text-gray-500 mb-1">/ {limit.toLocaleString()} deflections</span>
+            <span className="text-sm text-gray-500 mb-1">/ {limit.toLocaleString()} AI replies</span>
           </div>
           <div className="h-2.5 w-full rounded-full bg-gray-100 overflow-hidden">
             <div
@@ -382,7 +382,7 @@ export default function BillingPage() {
             <div className="rounded-xl border border-gray-200 bg-white p-5">
               <p className="text-sm font-medium text-gray-900">Self-hosted — no usage limit</p>
               <p className="text-xs text-gray-500 mt-1">
-                This deployment isn&apos;t connected to answerLoops billing, so there&apos;s no plan or deflection cap to manage —
+                This deployment isn&apos;t connected to answerLoops billing, so there&apos;s no plan or AI reply cap to manage —
                 you&apos;re running your own instance against your own AI, database, and hosting costs.
               </p>
             </div>
