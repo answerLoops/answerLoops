@@ -98,4 +98,37 @@ describe('TicketContent', () => {
     expect(screen.getByText('**This should remain literal Markdown**')).toBeInTheDocument()
     expect(screen.queryByText('This should remain literal Markdown')).not.toBeInTheDocument()
   })
+
+  it('renders GitHub tables', () => {
+    render(
+      <TicketContent
+        sourcePlatform="github"
+        content={'| A | B |\n| - | - |\n| 1 | 2 |'}
+      />
+    )
+
+    expect(screen.getByRole('table')).toBeInTheDocument()
+  })
+
+  it('renders GitHub task lists as checkboxes', () => {
+    render(
+      <TicketContent
+        sourcePlatform="github"
+        content={'- [x] done\n- [ ] todo'}
+      />
+    )
+
+    expect(screen.getAllByRole('checkbox')).toHaveLength(2)
+  })
+
+  it('does not render images with unsafe protocols', () => {
+    const { container } = render(
+      <TicketContent
+        sourcePlatform="github"
+        content="![Unsafe image](javascript:alert%281%29)"
+      />
+    )
+
+    expect(container.querySelector('img')).toBeNull()
+  })
 })
