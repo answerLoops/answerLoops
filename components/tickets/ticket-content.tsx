@@ -1,4 +1,3 @@
-
 import Image from 'next/image'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
