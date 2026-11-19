@@ -152,6 +152,9 @@ importers:
       react-markdown:
         specifier: 9.0.3
         version: 9.0.3(@types/react@19.3.0)(react@19.3.0)(supports-color@10.2.2)
+      remark-gfm:
+        specifier: 4.0.1
+        version: 4.0.1(supports-color@10.2.2)
       resend:
         specifier: ^6.32.1
         version: 6.32.1
