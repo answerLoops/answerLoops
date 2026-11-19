@@ -65,21 +65,21 @@ describe('IntegrationsPage beta grouping', () => {
     vi.stubGlobal('fetch', vi.fn(() => Promise.resolve({ ok: true, json: async () => [] })))
   })
 
-  it('groups Google Chat, Discourse, Circle and Email under a Beta label', () => {
+  it('groups Google Chat, Circle and Email under a Beta label', () => {
     render(<IntegrationsPage />)
 
     const beta = screen.getByRole('group', { name: 'Beta integrations' })
     expect(within(beta).getByText('Beta')).toBeTruthy()
-    for (const label of ['Google Chat', 'Discourse', 'Circle', 'Email']) {
+    for (const label of ['Google Chat', 'Circle', 'Email']) {
       expect(within(beta).getByRole('button', { name: label })).toBeTruthy()
     }
   })
 
-  it('keeps the established channels and Notion outside the Beta group', () => {
+  it('keeps the established channels, Notion and Discourse outside the Beta group', () => {
     render(<IntegrationsPage />)
 
     const beta = screen.getByRole('group', { name: 'Beta integrations' })
-    for (const label of ['Discord', 'Slack', 'Telegram', 'GitHub', 'Notion']) {
+    for (const label of ['Discord', 'Slack', 'Telegram', 'GitHub', 'Notion', 'Discourse']) {
       const button = screen.getByRole('button', { name: label })
       expect(beta.contains(button), `${label} should not be in the Beta group`).toBe(false)
     }

@@ -8,11 +8,19 @@ import {
   getWidgetAllowedOrigins,
   getWidgetLeadCaptureMode,
   setWidgetLeadCaptureMode,
+  getWidgetAnswerSettings,
+  setWidgetAnswerScope,
+  setWidgetGuidance,
   getWidgetSlug,
   setWidgetSlug,
 } from '@/lib/db/queries/widgets'
 import { parseAllowedOrigins } from '@/lib/widget/origin'
 import { isWidgetLeadCaptureMode, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
+import {
+  isWidgetAnswerScope,
+  normalizeWidgetGuidance,
+  type WidgetAnswerScope,
+} from '@/lib/widget/answer-scope'
 
 // Restricting where the widget may be embedded, and rotating the token that
 // makes it work, are both configuration that breaks live embeds when set
@@ -27,6 +35,10 @@ interface WidgetTokenResult {
   /** Whether the viewer may rotate the token or change the allowlist. */
   canManage?: boolean
   leadCaptureMode?: WidgetLeadCaptureMode
+  /** What the widget may answer from. See lib/widget/answer-scope.ts. */
+  answerScope?: WidgetAnswerScope
+  /** The owner's note on tone and next steps, or null. */
+  guidance?: string | null
   /** The public slug the embed snippet can use instead of the token, if set. */
   slug?: string | null
   error?: string
@@ -44,6 +56,7 @@ export async function getWidgetTokenAction(): Promise<WidgetTokenResult> {
   const info = await ensureWidgetToken(access.orgId)
   const allowedOrigins = await getWidgetAllowedOrigins(access.orgId)
   const leadCaptureMode = await getWidgetLeadCaptureMode(access.orgId)
+  const answerSettings = await getWidgetAnswerSettings(access.orgId)
   const slug = await getWidgetSlug(access.orgId)
   return {
     token: info.token,
@@ -51,6 +64,8 @@ export async function getWidgetTokenAction(): Promise<WidgetTokenResult> {
     expiresAt: info.expiresAt,
     allowedOrigins: allowedOrigins ?? '',
     leadCaptureMode,
+    answerScope: answerSettings.answerScope,
+    guidance: answerSettings.guidance,
     canManage: (WIDGET_ADMIN_ROLES as readonly string[]).includes(access.role),
   }
 }
@@ -114,6 +129,56 @@ export async function saveWidgetLeadCaptureModeAction(
 
   await setWidgetLeadCaptureMode(access.orgId, mode)
   return { mode }
+}
+
+interface WidgetAnswerScopeResult {
+  scope?: WidgetAnswerScope
+  error?: string
+}
+
+/**
+ * Changes what the widget may answer from. It decides what the widget tells
+ * a visitor in the workspace's name, so it gets the owner/admin gate like the
+ * other widget settings. Server actions can be called directly, so the role is
+ * checked here and the value is validated here, not trusted from the form.
+ */
+export async function saveWidgetAnswerScopeAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<WidgetAnswerScopeResult> {
+  const access = await requireOrgAccess(WIDGET_ADMIN_ROLES)
+  if (!access.ok) return { error: access.error }
+
+  const scope = formData.get('scope')
+  if (!isWidgetAnswerScope(scope)) return { error: 'Invalid answer scope' }
+
+  await setWidgetAnswerScope(access.orgId, scope)
+  return { scope }
+}
+
+interface WidgetGuidanceResult {
+  guidance?: string | null
+  error?: string
+}
+
+/**
+ * Saves the note on tone and next steps that is added to the widget's
+ * instructions. The same gate and the same direct-call caution as above; the
+ * note is cleaned and length-limited before it is stored, and what is returned
+ * is exactly what was stored, so the form shows what will be used.
+ */
+export async function saveWidgetGuidanceAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<WidgetGuidanceResult> {
+  const access = await requireOrgAccess(WIDGET_ADMIN_ROLES)
+  if (!access.ok) return { error: access.error }
+
+  const result = normalizeWidgetGuidance(formData.get('guidance'))
+  if (!result.ok) return { error: result.error }
+
+  await setWidgetGuidance(access.orgId, result.value)
+  return { guidance: result.value }
 }
 
 interface WidgetSlugResult {

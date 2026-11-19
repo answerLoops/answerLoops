@@ -32,7 +32,7 @@ Set variables in your `.env` file (local) or in your hosting provider's environm
 |---|---|
 | `DATABASE_URL` | **Required.** PostgreSQL connection string, e.g. `postgresql://<user>:<password>@<host>:5432/<database>` |
 | `DIRECT_DATABASE_URL` | Optional. Non-pooled connection string used only for `LISTEN`/`NOTIFY` (configuration hot-reload, live team and dashboard updates). Needed whenever `DATABASE_URL` points at a pooled connection (a provider's pooled endpoint, PgBouncer, etc.); otherwise it falls back to `DATABASE_URL` |
-| `AUTH_SECRET` | **Required.** Random 32-byte secret for the Auth.js v5 session and for channel connect flows. Generate with `openssl rand -hex 32` |
+| `AUTH_SECRET` | **Required.** Random 32-byte secret for the Auth.js v5 session and for channel connect flows. Generate with `openssl rand -hex 32`. In production (`NODE_ENV=production`) the server refuses to start if it is missing, shorter than 32 characters, or still a placeholder value |
 | `AUTH_URL` | **Required.** Full public URL of your deployment, e.g. `https://answerloops.com`. Used for sign-in callbacks and links in emails |
 | `ENCRYPTION_KEY` | **Required in production** (`NODE_ENV=production`). 32-byte hex key used to encrypt stored credentials at rest. Generate with `openssl rand -hex 32` |
 
@@ -151,7 +151,7 @@ Callback URL to register: `https://<your-domain>/api/auth/callback/google`
 | `GMAIL_REDIRECT_URI` | Optional. Override for the Gmail OAuth callback URL (defaults to `<app-url>/api/email/gmail/callback`) |
 | `OUTLOOK_CLIENT_ID` / `OUTLOOK_CLIENT_SECRET` | Optional. Microsoft Entra app registration for the "Connect Outlook" send-only integration. Without it that feature is unavailable |
 | `OUTLOOK_REDIRECT_URI` | Optional. Override for the Outlook OAuth callback URL (defaults to `<app-url>/api/email/outlook/callback`) |
-| `FEEDBACK_NOTIFY_EMAIL` | Optional. Where to send an alert when someone posts product feedback. Defaults to `hello@answerloops.com`; set your own address on a self-hosted install |
+| `FEEDBACK_NOTIFY_EMAIL` | **Managed service only.** Where to send an alert when someone posts product feedback. Defaults to `hello@answerloops.com`. Self-hosted installs have no feedback board, so they never send this alert |
 
 ### Per-workspace integrations (no environment variable)
 
@@ -202,7 +202,7 @@ npx web-push generate-vapid-keys
 | Variable | Description |
 |---|---|
 | `CLOUDFLARE_WEB_ANALYTICS` | Optional. Set to `true` to allow Cloudflare Web Analytics on pages. Read when the config loads, so set it where the build runs |
-| `NEXT_PUBLIC_DOCS_WIDGET_TOKEN` | Optional. Embeds a chat widget token on the built-in `/docs` pages. Local or dev use; the widget does not render without it |
+| `SITE_CHAT_WIDGET_ID` | Optional. The public name or token of a workspace's chat widget, shown as a chat assistant on the built-in `/docs` pages and on the marketing site's home and pricing pages. Read when each page is requested, so it needs no rebuild. Nothing renders without it; leave it unset on a self-hosted install |
 | `ALLOW_PRIVATE_OUTBOUND_URLS` | Development only. Set to `true` to let outbound fetches reach private addresses; ignored when `NODE_ENV=production` |
 | `MOCK_EXTERNALS` | Test suites only. Replaces external services with in-process fakes; a production process refuses to run with it set |
 

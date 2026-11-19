@@ -9,17 +9,29 @@ export function formatPrice(cents: number): string {
     maximumFractionDigits: 2,
   }).format(cents / 100)
 }
+/**
+ * Plans with no public price. Marketing shows "Custom pricing" and a Talk to us
+ * button instead of a price and a trial button, and leaves them out of the
+ * price data published for search engines and AI crawlers. Billing is not
+ * affected: the plan keeps its Stripe prices in lib/billing/plans.ts.
+ */
+export const CUSTOM_PRICED_PLAN_IDS: readonly PlanId[] = ['enterprise']
+
+export function isCustomPriced(id: PlanId): boolean {
+  return CUSTOM_PRICED_PLAN_IDS.includes(id)
+}
+
 export const PLAN_COPY: Record<
   PlanId,
   { description: string; features: string[] }
 > = {
   standard: {
     description:
-      'For teams organizing community support and reviewing AI replies.',
+      'Answer repeat questions automatically on every channel, from your own docs.',
     features: [
       'All support channels and website widget',
       'Knowledge imports and ticket review',
-      'Your choice of supported AI provider',
+      'Bring your own AI provider',
       'MCP and REST API access',
       'CSV exports',
       'Email support',
@@ -27,7 +39,7 @@ export const PLAN_COPY: Record<
   },
   pro: {
     description:
-      'For teams adding customer feedback, routing, and model evaluation.',
+      'Improve answer quality: spot knowledge gaps, test changes, and route hard questions.',
     features: [
       'Everything in Standard',
       'Customer satisfaction ratings',
@@ -40,10 +52,10 @@ export const PLAN_COPY: Record<
   },
   enterprise: {
     description:
-      'For larger support volumes and custom deployment requirements.',
+      'For large volumes: local models, unlimited retention, and hands-on migration.',
     features: [
       'Everything in Pro',
-      'Custom model endpoints',
+      'Bring local or custom models, like Ollama or vLLM',
       'Unlimited data retention',
       'Migration assistance',
       'SLA tracking and breach alerts',
@@ -53,12 +65,12 @@ export const PLAN_COPY: Record<
 }
 export const PRICING_FAQ = [
   {
-    q: 'What counts toward my answer allowance?',
-    a: 'Automated replies count as deflections. Answers generated through MCP or the REST API also count when they meet the confidence requirement. Drafts sent for human review do not count as automated replies. Your allowance renews each calendar month, including on annual subscriptions.',
+    q: 'What counts toward my AI reply allowance?',
+    a: 'An AI reply is an answer answerLoops posts on its own, with confidence above your threshold and no person stepping in. Answers generated through MCP or the REST API count too when they meet the confidence requirement. Drafts held for your team to review do not count, including ones a team member later approves or edits. Your allowance renews each calendar month, including on annual subscriptions.',
   },
   {
     q: 'What happens at the monthly limit?',
-    a: 'Standard pauses automatic answering at 500 answers; new questions remain available for your team. Pro includes 3,000 answers and continues beyond that at $5 per additional block of 100, rounded up. Enterprise has no automated-answer limit.',
+    a: 'Standard pauses automatic replies at 500; new questions remain available for your team. Pro includes 3,000 and continues beyond that at $5 per additional block of 100, rounded up. Enterprise has no reply limit.',
   },
   {
     q: 'What does the trial include?',
@@ -74,6 +86,6 @@ export const PRICING_FAQ = [
   },
   {
     q: 'What does self-hosting cost?',
-    a: 'The software is available under AGPL-3.0 without a hosted subscription or deflection limit. You cover infrastructure and model costs and operate the deployment. Contact us separately if you need migration assistance or a support agreement.',
+    a: 'The software is available under AGPL-3.0 without a hosted subscription or AI reply limit. You cover infrastructure and model costs and operate the deployment. Contact us separately if you need migration assistance or a support agreement.',
   },
 ]

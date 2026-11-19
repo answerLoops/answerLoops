@@ -14,9 +14,9 @@ describe('plan summary copy', () => {
   })
 
   it('says included AI usage is separate from the plan allowance and scales with the plan', () => {
-    expect(INCLUDED_AI_SUMMARY).toMatch(/separate from your plan/i)
+    expect(INCLUDED_AI_SUMMARY).toMatch(/separately from this usage/i)
     expect(INCLUDED_AI_SUMMARY).toMatch(/higher plans include more/i)
-    expect(INCLUDED_AI_SUMMARY).toContain(`${PLANS.standard.deflectionsPerMonth!.toLocaleString('en-US')} answers`)
+    expect(INCLUDED_AI_SUMMARY).toContain(`roughly ${PLANS.standard.deflectionsPerMonth!.toLocaleString('en-US')} a month`)
   })
 
   it('does not promise any figure for Pro or Enterprise included AI, which have no measured number', () => {

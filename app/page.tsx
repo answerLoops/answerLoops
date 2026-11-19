@@ -1,17 +1,24 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { START_HREF, PRICING_HREF } from '@/components/marketing/nav-shared'
+import {
+  START_HREF,
+  PRICING_HREF,
+  TALK_TO_US_HREF,
+} from '@/components/marketing/nav-shared'
 import { redirect } from 'next/navigation'
 import { AnswerLoopOverview } from '@/components/marketing/answer-loop-overview'
-import { WorkflowDiagram } from '@/components/marketing/workflow-diagram'
+import { VerifiedAnswerMock, VerifiedAnswerSteps } from '@/components/marketing/verified-answer-mock'
+import { WebsiteChatMock, WebsiteChatSteps } from '@/components/marketing/website-chat-diagram'
+import { FeatureShowcase } from '@/components/marketing/feature-showcase'
 import { MarketingPage, TrialCta } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { ORDERED_PLANS } from '@/lib/billing/plans'
+import { isCustomPriced } from '@/lib/marketing/pricing'
 import { INCLUDED_AI_SUMMARY, TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
-import { GITHUB_SOURCE_URL, marketingSiteEnabled } from '@/lib/site'
+import { marketingSiteEnabled } from '@/lib/site'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
-import { BookOpen, ShieldCheck, MessageCircle, MessagesSquare, FileQuestion, Cloud, Server, Terminal, GraduationCap, Users, Palette, Blocks, Building2 } from 'lucide-react'
+import { ArrowRight, MessageCircle, Terminal, GraduationCap, Users, Palette, Blocks, Building2 } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 const PAGE_TITLE = 'AI community support from your docs | answerLoops'
@@ -51,14 +58,6 @@ const FAQ_ITEMS = [
     a: INCLUDED_AI_SUMMARY,
   },
   {
-    q: 'Can I run answerLoops on my own infrastructure?',
-    a: 'Yes. The source is available under AGPL-3.0. You operate the application and storage, configure the connected services, and cover your infrastructure and model costs.',
-  },
-  {
-    q: 'Is answerLoops a good self-hosted AI support tool?',
-    a: 'It’s one self-hosted option worth evaluating: AGPL-3.0, no subscription fee, a dual-agent draft-and-review pipeline included by default, and one workspace covering Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and your website widget. Compare it against other self-hosted options before deciding.',
-  },
-  {
     q: 'Can I add the chat widget to my website or docs?',
     a: 'Yes. Add the embed snippet to any website or documentation platform that supports custom JavaScript, and configure its allowed domains in Settings. The widget answers from published knowledge-base articles, and visitors do not need an account.',
   },
@@ -68,7 +67,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How do I onboard an AI agent? (optional)',
-    a: 'Start with the agent onboarding guide and connect your AI agent to your answerLoops workspace. Agents that support skills can use answerloops-operate for guided setup. Other compatible AI tools can connect through MCP or the REST API. Create an API key in Settings → API Keys and choose what your agent can access. For self-hosting, the answerloops-setup skill guides compatible agents through installation.',
+    a: 'Start with the agent onboarding guide and connect your AI agent to your answerLoops workspace. Agents that support skills can use answerloops-operate for guided setup. Other compatible AI tools can connect through MCP or the REST API. Create an API key in Settings → API Keys and choose what your agent can access.',
   },
   {
     q: 'Can my own AI agents use answerLoops? (optional)',
@@ -89,17 +88,18 @@ export default function LandingPage() {
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     provider: { '@id': ORGANIZATION_ID },
-    offers: ORDERED_PLANS.map((p) => ({
+    // Custom-priced plans have no public price, so they have no offer here.
+    offers: ORDERED_PLANS.filter((p) => !isCustomPriced(p.id)).map((p) => ({
       '@type': 'Offer',
       name: p.name,
       price: (p.priceMonthly / 100).toString(),
       priceCurrency: 'USD',
       description:
-        'Monthly subscription with a 14-day trial. Model usage is billed separately by your provider.',
+        'Monthly subscription with a 14-day trial. AI usage is included up to a limit; connect your own provider to remove it.',
     })),
   }
   return (
-    <MarketingPage>
+    <MarketingPage chat>
       <PageSchema
         name={PAGE_TITLE}
         description={metadata.description!}
@@ -126,33 +126,22 @@ export default function LandingPage() {
       <section className="marketing-home-hero">
         <div className="marketing-container marketing-home-grid home-hero-stacked">
           <div className="home-hero-copy">
-            <p className="marketing-eyebrow hero-positioning">
-              <span className="hero-positioning-dot" aria-hidden="true" />
-              Faster answers. More time to create.
-            </p>
             <h1>
               AI community support from your docs
             </h1>
+            {/* One sentence on purpose: the overview below shows the steps and
+                the channel row, so the intro only states the outcome. */}
             <p className="marketing-intro">
-              answerLoops turns your docs into answers wherever your community
-              asks. One AI drafts the reply, a second AI checks it against your
-              docs before it goes out — across Discord, Slack, Discourse,
-              Circle, and more.
+              Every reply in your community channels is drafted from your docs
+              and checked by a second AI.
             </p>
             <div className="marketing-actions">
               <Link
                 href={START_HREF}
                 className="marketing-button marketing-button-hero"
               >
-                Try answerLoops for 14 days
-              </Link>
-              <Link
-                href="https://dub.sh/onboard-agent-skills"
-                className="marketing-button marketing-button-secondary"
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Onboard your AI agent
+                Start your free trial
+                <ArrowRight size={18} strokeWidth={2.25} aria-hidden="true" />
               </Link>
             </div>
             <p className="marketing-note">
@@ -162,32 +151,9 @@ export default function LandingPage() {
           <AnswerLoopOverview />
         </div>
       </section>
-      <section id="how-it-works" className="marketing-section scroll-mt-20">
-        <div className="marketing-container">
-          <div className="marketing-section-heading">
-            <div>
-              <p className="marketing-eyebrow">How replies work</p>
-              <h2>
-                Check the answer before it reaches your community
-              </h2>
-            </div>
-            <p>
-              The answerLoops agent writes each answer from your knowledge
-              base, then a Review agent checks it against the same sources.
-              Answers wait for your team’s approval by default. Once you’ve
-              tested the results, you can turn on automatic replies for a
-              channel.
-            </p>
-          </div>
-          <WorkflowDiagram />
-          <Link className="marketing-text-link mt-6" href="/support-workflow">
-            See the reply settings
-          </Link>
-        </div>
-      </section>
-      <section id="website-chat" className="marketing-section marketing-soft scroll-mt-20">
-        <div className="marketing-container marketing-section-heading">
-          <div>
+      <section id="website-chat" className="marketing-section scroll-mt-20">
+        <div className="marketing-container chat-section">
+          <div className="chat-section-copy">
             <p className="marketing-eyebrow flex items-center gap-3">
               <MessageCircle
                 size={24}
@@ -198,23 +164,60 @@ export default function LandingPage() {
               Website chat widget
             </p>
             <h2>Add a support chatbot to any website or documentation site</h2>
-          </div>
-          <div>
-            <p>
-              Give visitors a place to ask questions while they read your site.
-              The answerLoops chat widget answers from the knowledge-base articles
-              you publish, whether you run a community, a business website, or
-              product documentation.
+            <p className="chat-section-lead">
+              Visitors get answers from the articles you publish, right on the
+              page they’re reading. Paste one snippet into your site and choose
+              which domains it runs on.
             </p>
-            <p className="mt-4">
-              Copy the embed snippet from Settings, add it to your website, and
-              list the domains where it should appear. Your site needs to allow
-              custom JavaScript; visitors don’t need an answerLoops account.
-            </p>
-            <Link href="/docs/product/chat-widget" className="marketing-text-link mt-4">
+            <WebsiteChatSteps />
+            <Link href="/docs/product/chat-widget" className="marketing-text-link">
               Install the website chat widget
             </Link>
           </div>
+          <WebsiteChatMock />
+        </div>
+      </section>
+      <section id="how-it-works" className="marketing-section marketing-soft scroll-mt-20">
+        <div className="marketing-container chat-section chat-section-flip">
+          <div className="chat-section-copy">
+            <h2>Answers are verified before they reach your community</h2>
+            <p className="chat-section-lead">
+              Every answer is written from your docs, then checked against them
+              by a second AI agent before anyone sees it.
+            </p>
+            <VerifiedAnswerSteps />
+            <Link className="marketing-text-link" href="/support-workflow">
+              See the reply settings
+            </Link>
+          </div>
+          <VerifiedAnswerMock />
+        </div>
+      </section>
+      <section id="features" className="marketing-section scroll-mt-20">
+        <div className="marketing-container">
+          <div className="marketing-section-heading">
+            <div>
+              <p className="marketing-eyebrow">Inside the workspace</p>
+              <h2>Everything your team needs to run community support</h2>
+            </div>
+            <p>
+              One workspace for every channel, from the first question to the
+              article that answers the next one.
+            </p>
+          </div>
+          <FeatureShowcase />
+        </div>
+      </section>
+      <section className="mid-cta" aria-labelledby="mid-cta-title">
+        <div className="marketing-container mid-cta-inner">
+          <div>
+            <h2 id="mid-cta-title">Try it with your own community</h2>
+            <p>{TRIAL_CTA_NOTE}</p>
+          </div>
+          <Link href={START_HREF} className="marketing-button marketing-button-hero">
+            Start your free trial
+            <ArrowRight size={18} strokeWidth={2.25} aria-hidden="true" />
+          </Link>
         </div>
       </section>
       <section className="mcp-section" aria-labelledby="mcp-title">
@@ -277,156 +280,14 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-      <section id="features" className="marketing-section scroll-mt-20">
+      <section id="who-its-for" className="marketing-section audience-section scroll-mt-20">
         <div className="marketing-container">
-          <div className="marketing-section-heading">
-            <div>
-              <p className="marketing-eyebrow">
-                Managing community support
-              </p>
-              <h2>
-                Manage your knowledge base and community support in one place.
-              </h2>
-            </div>
+          <div className="audience-heading">
+            <h2>Support for any community</h2>
             <p>
-              Good answers depend on your knowledge base. Keep track of the
-              sources you import, the replies your team sends, and the questions
-              your docs don’t cover yet.
+              If your members ask the same questions and you have docs that
+              answer them, answerLoops fits.
             </p>
-          </div>
-          <div className="capability-grid">
-            {[
-              {
-                icon: BookOpen,
-                title: 'Import any documentation you already have',
-                body: 'Import docs, files, GitHub repositories, and Notion pages. Save useful resolutions so the next answer starts with what your team already knows.',
-                href: '/docs/product/knowledge-base',
-                label: 'Knowledge sources',
-              },
-              {
-                icon: ShieldCheck,
-                title: 'Choose which community channels can reply automatically',
-                body: 'Start with team approval. Enable automatic answers per channel when you’re ready. Questions below your confidence threshold stay with your team.',
-                href: '/docs/product/ai-deflection',
-                label: 'Answer review',
-              },
-              {
-                icon: MessagesSquare,
-                title: 'Reply in the original conversation',
-                body: 'Review the question, draft, and source conversation in one ticket. Reply back to the original channel without losing the context.',
-                href: '/docs/product/tickets',
-                label: 'Support workspace',
-              },
-              {
-                icon: FileQuestion,
-                title: 'Expose community knowledge gaps',
-                body: 'Use unanswered topics and customer ratings to decide what to document next. Knowledge-gap reports are included on Pro and Enterprise.',
-                href: '/docs/product/knowledge-gaps',
-                label: 'Knowledge gaps',
-              },
-            ].map(
-              ({ icon: Icon, title, body, href, label }) => (
-                <article className="capability-card" key={title}>
-                  <div className="capability-top">
-                    <Icon size={25} strokeWidth={1.4} aria-hidden="true" />
-                  </div>
-                  <h3>{title}</h3>
-                  <p>{body}</p>
-                  <Link
-                    href={href}
-                    className="marketing-text-link"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    {label}
-                  </Link>
-                </article>
-              ),
-            )}
-          </div>
-        </div>
-      </section>
-      <section className="marketing-section marketing-soft deployment-section">
-        <div className="marketing-container">
-          <div className="marketing-section-heading hosting-heading">
-            <div>
-              <p className="marketing-eyebrow">Hosting</p>
-              <h2>
-                Choose how you host answerLoops
-              </h2>
-            </div>
-            <p>
-              Use our hosted service or operate the open-source application on
-              your own infrastructure. Connect your preferred supported model
-              provider.
-            </p>
-          </div>
-          <div className="deployment-grid">
-            <article>
-              <div className="hosting-option-heading">
-              <span className="deployment-symbol">
-                <Cloud size={28} aria-hidden="true" />
-              </span>
-              <h3>Managed hosting</h3>
-              </div>
-              <p>
-                Start with a hosted workspace. Connect your knowledge and
-                channels, then review your first answers.
-              </p>
-              <Link href={PRICING_HREF} className="marketing-button marketing-button-secondary">
-                Explore hosted plans
-              </Link>
-            </article>
-            <article>
-              <div className="hosting-option-heading">
-              <span className="deployment-symbol">
-                <Server size={28} aria-hidden="true" />
-              </span>
-              <h3>Self-hosted</h3>
-              </div>
-              <p>
-                Deploy the AGPL-3.0 source. Manage your application, storage,
-                updates, and connected services.
-              </p>
-              <Link
-                href="/self-hosted-ai-support"
-                className="marketing-button marketing-button-secondary"
-              >
-                Explore self-hosting
-              </Link>
-            </article>
-          </div>
-          <div className="enterprise-line hosting-enterprise">
-            <div className="hosting-enterprise-copy">
-              <h3>Need help with your deployment?</h3>
-            <p>
-              Custom model endpoints, migration assistance, or deployment
-              requirements.
-            </p>
-            </div>
-            <div className="hosting-enterprise-actions">
-            <a
-              href="https://dub.sh/talk-to-us"
-              className="marketing-button"
-            >
-              Talk to us
-            </a>
-            <a
-              href={GITHUB_SOURCE_URL}
-              className="marketing-button marketing-button-secondary"
-            >
-              View source
-            </a>
-            </div>
-          </div>
-        </div>
-      </section>
-      <section id="who-its-for" className="marketing-section scroll-mt-20">
-        <div className="marketing-container">
-          <div className="marketing-section-heading marketing-section-heading-center">
-            <h2>
-              Support for any community
-            </h2>
           </div>
           <div className="audience-grid">
             {[
@@ -463,12 +324,36 @@ export default function LandingPage() {
             ].map(({ icon: Icon, title, body }) => (
               <article className="audience-card" key={title}>
                 <span className="audience-icon">
-                  <Icon size={20} strokeWidth={1.6} aria-hidden="true" />
+                  <Icon size={18} strokeWidth={1.75} aria-hidden="true" />
                 </span>
-                <h3>{title}</h3>
-                <p>{body}</p>
+                <div>
+                  <h3>{title}</h3>
+                  <p>{body}</p>
+                </div>
               </article>
             ))}
+          </div>
+        </div>
+      </section>
+      <section className="marketing-section sales-strip-section">
+        <div className="marketing-container sales-strip">
+          <div>
+            <h2>Need a custom setup?</h2>
+            <p>
+              Local or custom models, migration from another support tool, or
+              onboarding help for a larger team.
+            </p>
+          </div>
+          <div className="sales-strip-actions">
+            <a href={TALK_TO_US_HREF} className="marketing-button">
+              Talk to us
+            </a>
+            <Link
+              href={PRICING_HREF}
+              className="marketing-button marketing-button-secondary"
+            >
+              Compare plans
+            </Link>
           </div>
         </div>
       </section>

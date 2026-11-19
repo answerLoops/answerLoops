@@ -335,14 +335,14 @@ export default function TermsOfServicePage() {
               until canceled.
             </p>
             <p>
-              A &ldquo;deflection&rdquo; is an automated answer counted toward
+              An &ldquo;AI reply&rdquo; is an automated answer counted toward
               your plan allowance. This includes qualifying channel replies and
               high-confidence standalone answers generated through the MCP or
               Agent API. Drafts routed for human review do not count. Allowances
               reset each calendar month, including on annual subscriptions.
               Standard pauses automated answering at 500; Pro includes 3,000 and
               charges $5 per additional block of 100, rounded up; Enterprise has
-              no deflection cap. The plan terms shown at checkout or in an
+              no AI reply cap. The plan terms shown at checkout or in an
               applicable order form control your purchase.
             </p>
             <p>

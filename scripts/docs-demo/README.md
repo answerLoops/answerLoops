@@ -14,6 +14,11 @@ Files:
 - `session.ts`: mints a session cookie for the demo owner and writes a
   Playwright storage state to `scripts/docs-demo/.tmp/storage-state.json`
   (gitignored).
+- `open.ts` (`pnpm demo:open`): runs `session.ts`, then opens a browser already
+  signed in as the demo owner. See "Browse the demo as the owner" below.
+
+All three also refuse to run in production mode (`NODE_ENV=production`) or when
+a hosting-platform variable such as `RAILWAY_ENVIRONMENT` is set.
 
 ## 1. Start a throwaway database
 
@@ -88,6 +93,21 @@ const context = await browser.newContext({
 
 Run `pnpm docs:session` again if the owner row is ever removed. The cookie is
 valid for seven days and is bound to `localhost`.
+
+## Browse the demo as the owner
+
+With the database seeded and the app running (steps 1 to 3), one command opens a
+Chrome window already signed in as the demo owner, with no Google sign-in:
+
+```bash
+DATABASE_URL=$DATABASE_URL AUTH_SECRET=<same-value-as-the-app> pnpm demo:open
+pnpm demo:open /integrations      # or any other page
+```
+
+It opens `http://localhost:3112` by default; set `DOCS_BASE_URL` for another
+local port. It only works against a local app started with the same
+`AUTH_SECRET`: a session minted with that value is not accepted by any other
+deployment. Nothing for this lives in the app itself.
 
 ## Screenshots
 

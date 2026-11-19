@@ -7,6 +7,8 @@ import { updateSLAAction } from '@/lib/actions/sla'
 import { sendInviteAction, revokeInviteAction, removeMemberAction, transferOwnershipAction } from '@/lib/actions/invitations'
 import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAction, saveWidgetLeadCaptureModeAction, saveWidgetSlugAction } from '@/lib/actions/widget'
 import type { WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
+import type { WidgetAnswerScope } from '@/lib/widget/answer-scope'
+import { WidgetAnswersSettings } from '@/components/settings/widget-answers'
 import { saveAIConfigAction, clearAIConfigAction, testAIConfigAction, listModelsAction, includedEmbeddingsAvailableAction } from '@/lib/actions/ai-config'
 import type { AIConnectionResult } from '@/lib/ai/test-connection'
 import type { BudgetStatus } from '@/lib/billing/platform-ai-budget'
@@ -886,6 +888,8 @@ export function WidgetSection() {
   const [leadCaptureMode, setLeadCaptureMode] = useState<WidgetLeadCaptureMode>('on-failure')
   const [savingLeadCaptureMode, setSavingLeadCaptureMode] = useState(false)
   const [leadCaptureMsg, setLeadCaptureMsg] = useState<string | null>(null)
+  const [answerScope, setAnswerScope] = useState<WidgetAnswerScope>('knowledge-base-only')
+  const [guidance, setGuidance] = useState<string | null>(null)
   // The saved slug is what the snippet carries; the draft is what's in the box.
   const [slug, setSlug] = useState<string | null>(null)
   const [slugDraft, setSlugDraft] = useState('')
@@ -963,6 +967,8 @@ export function WidgetSection() {
           setOrigins(result.allowedOrigins ?? '')
           setSavedOrigins(result.allowedOrigins ?? '')
           if (result.leadCaptureMode) setLeadCaptureMode(result.leadCaptureMode)
+          if (result.answerScope) setAnswerScope(result.answerScope)
+          setGuidance(result.guidance ?? null)
           setSlug(result.slug ?? null)
           setSlugDraft(result.slug ?? '')
         }
@@ -1172,6 +1178,7 @@ export function WidgetSection() {
                   value={leadCaptureMode}
                   onChange={(e) => changeLeadCaptureMode(e.target.value as WidgetLeadCaptureMode)}
                   disabled={savingLeadCaptureMode}
+                  aria-label="Ask for an email"
                   className="w-full rounded border border-gray-200 px-2 py-1.5 text-xs text-gray-700 bg-white sm:w-auto"
                 >
                   <option value="on-failure">Only if it can&apos;t help — after an unanswered question</option>
@@ -1191,6 +1198,15 @@ export function WidgetSection() {
               </p>
             )}
           </div>
+
+          {/* Keyed on what was loaded so the controls start from the saved
+              values: the section renders before the token request returns. */}
+          <WidgetAnswersSettings
+            key={`${answerScope}:${guidance ?? ''}`}
+            canManage={canManage}
+            initialScope={answerScope}
+            initialGuidance={guidance}
+          />
         </div>
       )}
     </div>

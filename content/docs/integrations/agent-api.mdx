@@ -148,7 +148,7 @@ curl -X POST -H "Authorization: Bearer al_live_..." -H "Content-Type: applicatio
   https://your-instance.example.com/api/v1/agent/answers
 ```
 
-`question` is required (max 2000 characters). Two limits apply before anything is generated: the organization's monthly deflection allowance (which only high-confidence generations count against — the same standard a ticket has to clear to auto-deflect on any other channel), and a ceiling on total `generate_answer` calls per month at 5× that allowance, which counts every call regardless of confidence. Hitting either returns `429` with a message naming which one.
+`question` is required (max 2000 characters). Two limits apply before anything is generated: the organization's monthly AI reply allowance (which only high-confidence generations count against — the same standard a ticket has to clear to be answered automatically on any other channel), and a ceiling on total `generate_answer` calls per month at 5× that allowance, which counts every call regardless of confidence. Hitting either returns `429` with a message naming which one.
 
 ```json
 { "answer": "...", "confidence": 91, "answered_fully": true, "high_confidence": true }

@@ -4,7 +4,7 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { PricingToggle } from '@/components/marketing/pricing-toggle'
 import { ORDERED_PLANS } from '@/lib/billing/plans'
-import { START_HREF } from '@/components/marketing/nav-shared'
+import { START_HREF, TALK_TO_US_HREF } from '@/components/marketing/nav-shared'
 
 const prices = [
   {
@@ -21,16 +21,36 @@ const prices = [
     annualTotal: '$1,428',
     monthly: '$149',
   },
-  {
-    name: 'Enterprise',
-    id: 'enterprise',
-    annualMonthly: '$399',
-    annualTotal: '$4,788',
-    monthly: '$499',
-  },
 ]
 
+// Enterprise has no public price, so it is not in the list above. These are
+// its amounts in lib/billing/plans.ts, which must never appear on the page.
+const ENTERPRISE_AMOUNTS = ['$499', '$399', '$4,788']
+
 describe('PricingToggle', () => {
+  it('shows Custom pricing and a Talk to us button on Enterprise instead of a price and a trial', async () => {
+    const user = userEvent.setup()
+    const { container } = render(<PricingToggle plans={ORDERED_PLANS} />)
+    const enterprise = within(
+      screen.getByRole('region', { name: 'Enterprise plan' }),
+    )
+    expect(enterprise.getByText('Custom')).toBeInTheDocument()
+    expect(enterprise.getByText('pricing')).toBeInTheDocument()
+    expect(
+      enterprise.getByRole('link', { name: 'Talk to us' }),
+    ).toHaveAttribute('href', TALK_TO_US_HREF)
+    expect(
+      enterprise.queryByRole('link', { name: /free trial/i }),
+    ).not.toBeInTheDocument()
+    // Neither billing interval brings the price back anywhere on the page.
+    for (let pass = 0; pass < 2; pass += 1) {
+      for (const amount of ENTERPRISE_AMOUNTS) {
+        expect(container).not.toHaveTextContent(amount)
+      }
+      await user.click(screen.getByRole('switch', { name: 'Use annual billing' }))
+    }
+  })
+
   it('shows the monthly equivalent and full annual charge for each plan by default', () => {
     render(<PricingToggle plans={ORDERED_PLANS} />)
     expect(
@@ -52,9 +72,9 @@ describe('PricingToggle', () => {
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
       ).toHaveAttribute('href', START_HREF)
-      expect(card.getByText(/No card required/)).toHaveTextContent(
-        'Every feature is included for 14 days',
-      )
+      // The trial terms are stated once, in the FAQ. They are not repeated
+      // under every plan's button.
+      expect(card.queryByText(/No card required/)).not.toBeInTheDocument()
     }
   })
 
@@ -79,9 +99,9 @@ describe('PricingToggle', () => {
       expect(
         card.getByRole('link', { name: 'Start 14-day free trial' }),
       ).toHaveAttribute('href', START_HREF)
-      expect(card.getByText(/No card required/)).toHaveTextContent(
-        'Every feature is included for 14 days',
-      )
+      // The trial terms are stated once, in the FAQ. They are not repeated
+      // under every plan's button.
+      expect(card.queryByText(/No card required/)).not.toBeInTheDocument()
     }
     await user.click(toggle)
     expect(toggle).toBeChecked()
@@ -113,23 +133,36 @@ describe('PricingToggle', () => {
       screen.getByRole('region', { name: 'Enterprise plan' }),
     )
     expect(
-      standard.getByText('500 automated answers/month'),
+      standard.getByText('500 estimated AI replies/month'),
     ).toBeInTheDocument()
     expect(
-      standard.getByText('Automatic replies pause at the limit.'),
-    ).toBeInTheDocument()
-    expect(pro.getByText('3,000 automated answers/month')).toBeInTheDocument()
-    expect(
-      pro.getByText('Then $5 per additional block of 100.'),
+      standard.getByText('Replies pause at the limit. Pro includes 3,000.'),
     ).toBeInTheDocument()
     expect(
-      enterprise.getByText('Unlimited automated answers'),
+      pro.getByText('3,000 estimated AI replies/month'),
     ).toBeInTheDocument()
     expect(
-      enterprise.getByText('No automated-answer overage charges.'),
+      pro.getByText('Then $5 per additional 100 replies.'),
     ).toBeInTheDocument()
+    expect(enterprise.getByText('Unlimited AI replies')).toBeInTheDocument()
+    expect(enterprise.getByText('No overage charges.')).toBeInTheDocument()
     expect(pro.getByText('Recommended')).toBeInTheDocument()
     expect(standard.queryByText('Recommended')).not.toBeInTheDocument()
     expect(enterprise.queryByText('Recommended')).not.toBeInTheDocument()
+  })
+
+  it('offers a Talk to us link on the Enterprise plan only', () => {
+    render(<PricingToggle plans={ORDERED_PLANS} />)
+    const enterprise = within(
+      screen.getByRole('region', { name: 'Enterprise plan' }),
+    )
+    expect(
+      enterprise.getByRole('link', { name: 'Talk to us' }),
+    ).toHaveAttribute('href', TALK_TO_US_HREF)
+    for (const name of ['Standard plan', 'Pro plan']) {
+      const card = within(screen.getByRole('region', { name }))
+      expect(card.queryByRole('link', { name: 'Talk to us' })).toBeNull()
+    }
+    expect(screen.getAllByRole('link', { name: 'Talk to us' })).toHaveLength(1)
   })
 })

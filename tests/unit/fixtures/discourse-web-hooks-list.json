@@ -1,0 +1,225 @@
+{
+  "_comment": "Captured from a real Discourse 2026.11.0 (GET /admin/api/web_hooks.json), trimmed to the groups answerLoops reads or must ignore. The secret is redacted.",
+  "web_hooks": [
+    {
+      "id": 1,
+      "payload_url": "http://host.docker.internal:3111/api/discourse/webhook",
+      "content_type": 1,
+      "last_delivery_status": 3,
+      "secret": "<webhook-secret>",
+      "wildcard_web_hook": false,
+      "verify_certificate": true,
+      "active": true,
+      "category_ids": [
+        5
+      ],
+      "tags": [],
+      "group_ids": [],
+      "web_hook_event_types": [
+        {
+          "id": 101,
+          "name": "topic_created",
+          "group": "topic"
+        },
+        {
+          "id": 102,
+          "name": "topic_revised",
+          "group": "topic"
+        },
+        {
+          "id": 103,
+          "name": "topic_edited",
+          "group": "topic"
+        },
+        {
+          "id": 104,
+          "name": "topic_destroyed",
+          "group": "topic"
+        },
+        {
+          "id": 105,
+          "name": "topic_recovered",
+          "group": "topic"
+        },
+        {
+          "id": 201,
+          "name": "post_created",
+          "group": "post"
+        },
+        {
+          "id": 202,
+          "name": "post_edited",
+          "group": "post"
+        },
+        {
+          "id": 203,
+          "name": "post_destroyed",
+          "group": "post"
+        },
+        {
+          "id": 204,
+          "name": "post_recovered",
+          "group": "post"
+        }
+      ]
+    }
+  ],
+  "extras": {
+    "grouped_event_types": {
+      "topic": [
+        {
+          "id": 101,
+          "name": "topic_created",
+          "group": "topic"
+        },
+        {
+          "id": 102,
+          "name": "topic_revised",
+          "group": "topic"
+        },
+        {
+          "id": 103,
+          "name": "topic_edited",
+          "group": "topic"
+        },
+        {
+          "id": 104,
+          "name": "topic_destroyed",
+          "group": "topic"
+        },
+        {
+          "id": 105,
+          "name": "topic_recovered",
+          "group": "topic"
+        }
+      ],
+      "post": [
+        {
+          "id": 201,
+          "name": "post_created",
+          "group": "post"
+        },
+        {
+          "id": 202,
+          "name": "post_edited",
+          "group": "post"
+        },
+        {
+          "id": 203,
+          "name": "post_destroyed",
+          "group": "post"
+        },
+        {
+          "id": 204,
+          "name": "post_recovered",
+          "group": "post"
+        }
+      ],
+      "user": [
+        {
+          "id": 301,
+          "name": "user_logged_in",
+          "group": "user"
+        },
+        {
+          "id": 302,
+          "name": "user_logged_out",
+          "group": "user"
+        },
+        {
+          "id": 303,
+          "name": "user_confirmed_email",
+          "group": "user"
+        },
+        {
+          "id": 304,
+          "name": "user_created",
+          "group": "user"
+        },
+        {
+          "id": 305,
+          "name": "user_approved",
+          "group": "user"
+        },
+        {
+          "id": 306,
+          "name": "user_updated",
+          "group": "user"
+        },
+        {
+          "id": 307,
+          "name": "user_destroyed",
+          "group": "user"
+        },
+        {
+          "id": 308,
+          "name": "user_suspended",
+          "group": "user"
+        },
+        {
+          "id": 309,
+          "name": "user_unsuspended",
+          "group": "user"
+        },
+        {
+          "id": 310,
+          "name": "user_anonymized",
+          "group": "user"
+        }
+      ],
+      "like": [
+        {
+          "id": 1501,
+          "name": "post_liked",
+          "group": "like"
+        }
+      ],
+      "voting": [
+        {
+          "id": 1701,
+          "name": "topic_upvote",
+          "group": "voting"
+        },
+        {
+          "id": 1702,
+          "name": "topic_unvote",
+          "group": "voting"
+        }
+      ]
+    },
+    "default_event_types": [
+      {
+        "id": 201,
+        "name": "post_created",
+        "group": "post"
+      },
+      {
+        "id": 202,
+        "name": "post_edited",
+        "group": "post"
+      },
+      {
+        "id": 203,
+        "name": "post_destroyed",
+        "group": "post"
+      },
+      {
+        "id": 204,
+        "name": "post_recovered",
+        "group": "post"
+      }
+    ],
+    "content_types": [
+      {
+        "id": 1,
+        "name": "application/json"
+      },
+      {
+        "id": 2,
+        "name": "application/x-www-form-urlencoded"
+      }
+    ]
+  },
+  "total_rows_web_hooks": 1,
+  "load_more_web_hooks": "/admin/api/web_hooks.json?limit=50&offset=50"
+}

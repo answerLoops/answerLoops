@@ -7,6 +7,7 @@ const LLMS_PATH = path.join(ROOT, 'public/llms.txt')
 const SITEMAP_PATH = path.join(ROOT, 'app/sitemap.ts')
 const INTEGRATIONS_PATH = path.join(ROOT, 'content/docs/integrations/meta.json')
 const PLANS_PATH = path.join(ROOT, 'lib/billing/plans.ts')
+const MARKETING_PRICING_PATH = path.join(ROOT, 'lib/marketing/pricing.ts')
 const INTRODUCTION_PATH = path.join(ROOT, 'content/docs/introduction.mdx')
 const DOCS_DIR = path.join(ROOT, 'content/docs')
 const APP_DIR = path.join(ROOT, 'app')
@@ -30,9 +31,11 @@ const LABELS = {
   '/terms': 'Terms of service',
   '/vs/bettermode': 'answerLoops vs Bettermode',
   '/vs/chatbase': 'answerLoops vs Chatbase',
+  '/vs/helpcrunch': 'answerLoops vs HelpCrunch',
   '/vs/intercom': 'answerLoops vs Intercom Fin',
   '/vs/kapa-ai': 'answerLoops vs Kapa.ai',
   '/vs/khoros-aurora-ai': 'answerLoops vs Khoros Aurora AI',
+  '/vs/olark': 'answerLoops vs Olark',
   '/vs/plain': 'answerLoops vs Plain',
   '/vs/pylon': 'answerLoops vs Pylon',
   '/vs/zendesk-ai': 'answerLoops vs Zendesk AI',
@@ -179,9 +182,19 @@ export function extractPlanFacts(plansSource) {
   return { trialDays, plans }
 }
 
+/**
+ * The plans marketing shows as "Custom pricing", read from
+ * CUSTOM_PRICED_PLAN_IDS in lib/marketing/pricing.ts so there is one list.
+ */
+export function extractCustomPricedPlans(marketingSource) {
+  const match = marketingSource.match(/CUSTOM_PRICED_PLAN_IDS[^=]*=\s*\[([^\]]*)\]/)
+  if (!match) throw new Error('Could not read CUSTOM_PRICED_PLAN_IDS from lib/marketing/pricing.ts')
+  return [...match[1].matchAll(/'([^']+)'/g)].map((m) => m[1])
+}
+
 const usd = (n) => `$${n.toLocaleString('en-US')}`
 
-export function checkPricing(llmsText, plansSource) {
+export function checkPricing(llmsText, plansSource, customPriced = []) {
   const text = section(llmsText, 'Pricing')
   if (!text) return ['llms.txt has no "## Pricing" section']
   const { trialDays, plans } = extractPlanFacts(plansSource)
@@ -191,7 +204,16 @@ export function checkPricing(llmsText, plansSource) {
     if (!text.includes(needle)) errors.push(`Pricing: expected "${needle}" (${why})`)
   }
 
-  for (const plan of Object.values(plans)) {
+  for (const [id, plan] of Object.entries(plans)) {
+    if (customPriced.includes(id)) {
+      // No public price: llms.txt must say so, and none of this plan's amounts
+      // are allowed, so a price creeping back in is flagged as stale below.
+      expectIn(`${plan.name} has custom pricing`, `${plan.name} is custom-priced`)
+      if (plan.quota === null) {
+        expectIn(`${plan.name} has custom pricing with unlimited`, `${plan.name} has no answer cap`)
+      }
+      continue
+    }
     expectIn(`${plan.name} ${usd(plan.monthly)}`, `${plan.name} monthly price`)
     expectIn(`${plan.name} ${usd(plan.annualTotal)}`, `${plan.name} annual total`)
     expectIn(`(${usd(plan.annualEquivalent)} `, `${plan.name} monthly equivalent on annual billing`)
@@ -298,14 +320,15 @@ export function checkLinks(llmsText, served) {
 }
 
 export async function checkFacts(llmsText) {
-  const [plansSource, introSource, integrationsText, served] = await Promise.all([
+  const [plansSource, marketingPricingSource, introSource, integrationsText, served] = await Promise.all([
     readFile(PLANS_PATH, 'utf8'),
+    readFile(MARKETING_PRICING_PATH, 'utf8'),
     readFile(INTRODUCTION_PATH, 'utf8'),
     readFile(INTEGRATIONS_PATH, 'utf8'),
     collectServedPaths(),
   ])
   return [
-    ...checkPricing(llmsText, plansSource),
+    ...checkPricing(llmsText, plansSource, extractCustomPricedPlans(marketingPricingSource)),
     ...checkChannels(llmsText, introSource, JSON.parse(integrationsText)),
     ...checkLinks(llmsText, served),
   ]

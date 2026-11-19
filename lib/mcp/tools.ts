@@ -112,7 +112,7 @@ async function createTicketTool(orgId: number, args: Record<string, unknown>): P
 
 const generateAnswerDef: McpToolDefinition = {
   name: 'generate_answer',
-  description: "Generate a grounded answer to a question using the organization's knowledge base, without opening a ticket. Returns the answer plus a confidence score. Counts against the org's monthly deflection limit — if the limit is reached, returns an error instead of generating for free.",
+  description: "Generate a grounded answer to a question using the organization's knowledge base, without opening a ticket. Returns the answer plus a confidence score. Counts against the org's monthly AI reply limit — if the limit is reached, returns an error instead of generating for free.",
   inputSchema: {
     type: 'object',
     properties: {

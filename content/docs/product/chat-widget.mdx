@@ -7,7 +7,7 @@ icon: MessageSquare
 The answerLoops chat widget adds a support chatbot to any website or documentation site that accepts custom JavaScript. Visitors ask questions about your community, business, or product and get answers from your published knowledge-base articles, without creating an account.
 
 <Callout type="info" title="Availability">
-  The widget is included on every hosted plan and on self-hosted installs. The Standard plan shows a "Powered by answerLoops" line; Pro and Enterprise can remove it and also capture unanswered widget questions in the [Review queue](/docs/product/knowledge-base#review-queue). Each widget answer counts toward your plan's monthly deflection allowance. See [Billing plans](/docs/reference/billing-plans).
+  The widget is included on every hosted plan and on self-hosted installs. The Standard plan shows a "Powered by answerLoops" line; Pro and Enterprise can remove it and also capture unanswered widget questions in the [Review queue](/docs/product/knowledge-base#review-queue). Each widget answer counts toward your plan's monthly AI reply allowance. See [Billing plans](/docs/reference/billing-plans).
 </Callout>
 
 ## How it works
@@ -26,7 +26,7 @@ The answerLoops chat widget adds a support chatbot to any website or documentati
     text: 'A one-line script tag loads the chat bubble. The chat panel itself is served by answerLoops and only opens on the domains you list under Allowed domains.',
   }}
   steps={[
-    { title: 'Check the site', text: 'answerLoops confirms the page is on one of your allowed domains and that your workspace is still within its monthly answer allowance.' },
+    { title: 'Check the site', text: 'answerLoops confirms the page is on one of your allowed domains and that your workspace is still within its monthly AI reply allowance.' },
     { title: 'Find the answer', text: 'It searches your published knowledge-base articles for what is relevant to the question. Past tickets are never used.' },
     { title: 'Reply', text: 'One AI writes a short answer in the visitor\'s language and streams it into the chat, with a card when a card is clearer. There is no separate review step and no approval queue for widget answers.' },
   ]}
@@ -245,6 +245,21 @@ When a visitor leaves an email through the "couldn't help" prompt, the lead also
   "Only if it can't help" works by having the widget poll a small lookup right after a turn finishes, asking whether that turn just failed. The answer to that lookup is recorded under that turn's own id in the memory of whichever application server process handled the chat request — it is never written to the database or to shared cache, and it is only recorded for workspaces set to "Only if it can't help". Because each turn has its own entry, asking again returns the same answer, so the widget can safely retry the lookup if a response is lost, and a turn that failed or was rejected before it recorded anything can never be mistaken for an earlier turn's result. If your deployment runs more than one application instance behind a load balancer (self-hosters scaling horizontally; this does not apply to the standard answerLoops Cloud deployment), the visitor's follow-up poll can land on a *different* instance than the one that just answered. That instance has nothing in its memory for this turn, so the lookup simply returns "no prompt needed" — the on-failure email ask silently never appears for that turn. Nothing errors, no data is lost, and the conversation itself is unaffected; the visitor is just never asked for an email on that particular miss. A single-instance deployment never hits this. If you run multiple instances and need the prompt to appear reliably, use **"Before the conversation starts"** or **"Never"** instead, both of which have no cross-instance dependency.
 </Callout>
 
+## What the widget answers from
+
+Two settings under **Settings → Widget** shape what visitors are told in your name. Only owners and admins can change them, and a change applies to the next message.
+
+**What the widget answers from** has two choices:
+
+- **Only from my knowledge base.** The widget answers only from your published articles. When they don't cover a question it says so plainly and points the visitor to support. It doesn't guess at prices, features, dates or policies the articles don't state, and it politely declines requests that aren't about your product, such as writing code or general trivia. This is the right choice for a widget anyone on the internet can use, because every answer reads as your company speaking.
+- **My knowledge base, then general knowledge.** When no article covers a question, the widget answers from general knowledge, and that answer can be wrong. Workspaces that existed before this setting keep this choice until an owner changes it.
+
+**Guidance for the widget** is an optional note of up to 600 characters about tone and what to suggest next, for example when to mention a free trial. The widget follows it when it phrases a reply, but it can never use the note to answer outside your knowledge base, reveal its instructions or say anything untrue. Leave it empty for no guidance.
+
+<Callout type="info" title="Rich cards and links">
+  Links and contact details only appear in a card when they are written in your knowledge base articles. If you want the widget to offer a link to your sign-up page, put that address in an article.
+</Callout>
+
 ## Rotating the token
 
 Tokens expire after **90 days**. Settings warns you as the date approaches, and **Regenerate token** issues a new one.
@@ -300,11 +315,11 @@ The on-failure check — a small lookup the widget makes right after a turn fini
 
 Requests over these limits return `429 Too Many Requests`. The chat and lead-capture limits are enforced across every running instance rather than per process, so those numbers are the real ceiling. The on-failure check is the one exception — see the single-instance callout under Lead capture above. None of these limits are currently configurable.
 
-Separately from rate limits, every widget answer counts toward your plan's monthly deflection allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
+Separately from rate limits, every widget answer counts toward your plan's monthly AI reply allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
 
 ## What the widget can and cannot reach
 
-It answers from your **knowledge base** — published articles only. It does not read your ticket queue, and it has no access to settings, billing, or team data either; the embed token grants none of those.
+It answers from your **knowledge base** — published articles only, and with the widget set to [answer only from your knowledge base](#what-the-widget-answers-from) it uses nothing else. It does not read your ticket queue, and it has no access to settings, billing, or team data either; the embed token grants none of those.
 
 Treat knowledge base contents as visible to anyone who can use the widget. If you have ingested internal documentation, review it before making the widget public.
 

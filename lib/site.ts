@@ -1,4 +1,5 @@
 import { getDeploymentMode } from '@/lib/billing/plans'
+import { WIDGET_TOKEN_PATTERN, isWidgetSlug } from '@/lib/widget/slug'
 
 /**
  * Canonical public URLs for the project itself.
@@ -16,6 +17,8 @@ export const GITHUB_URL = 'https://github.com/answerLoops/answerLoops'
 export const GITHUB_SOURCE_URL = 'https://git.new/answerloops-github'
 
 export const GITHUB_ISSUES_URL = `${GITHUB_URL}/issues`
+
+export const X_URL = 'https://x.com/answerLoops'
 
 /**
  * The app's own origin, on a deployment that splits the marketing site and
@@ -39,6 +42,23 @@ export function appOrigin(): string | null {
   } catch {
     return null
   }
+}
+
+/**
+ * The widget id (its public name or its token) of the workspace whose chat
+ * assistant answers on our own public pages, or null when none is configured.
+ *
+ * Read from an unprefixed variable at request time, for the reason given on
+ * appOrigin: a NEXT_PUBLIC_* value is inlined when the site is built, so one set
+ * or changed afterwards would never be seen. The id is not a secret (it is in
+ * the page source of every page that embeds the widget), but it is checked
+ * against the two shapes a widget id can have before it is put into a page, so
+ * a mistyped value is ignored instead of producing a widget that cannot load.
+ */
+export function siteChatWidgetId(): string | null {
+  const raw = process.env.SITE_CHAT_WIDGET_ID?.trim()
+  if (!raw) return null
+  return WIDGET_TOKEN_PATTERN.test(raw) || isWidgetSlug(raw) ? raw : null
 }
 
 /** Canonical origin of the hosted marketing site. */

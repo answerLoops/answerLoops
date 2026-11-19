@@ -40,6 +40,17 @@ describe('next.config: content security policy on ordinary routes', () => {
     expect(csp.get('connect-src')).toContain('https://api.stripe.com')
   })
 
+  it('lets a page open the chat assistant’s own panel, and nothing else, in a frame', async () => {
+    // The assistant is an iframe onto /widget/<token> on the same origin. With
+    // frame-src limited to Stripe the browser refuses to draw it, and the panel
+    // opens blank. Same-origin frames are safe to allow because every page this
+    // policy covers also forbids being framed at all.
+    const csp = directives((await cspFor(catchAll))!)
+    expect(csp.get('frame-src')).toContain("'self'")
+    expect(csp.get('frame-ancestors')).toBe("'none'")
+    expect(csp.get('frame-src')).not.toMatch(/\*(?!\.js\.stripe\.com)|https:(?!\/\/)|\bdata:/)
+  })
+
   it('forbids plugins and base-tag injection', async () => {
     const csp = directives((await cspFor(catchAll))!)
     expect(csp.get('object-src')).toBe("'none'")
