@@ -65,7 +65,7 @@ export function TicketContent({
       {text &&
         (sourcePlatform === 'github' ? (
           <div className="text-sm text-gray-800 break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-            <ReactMarkdown components={markdownComponents}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
               {text}
             </ReactMarkdown>
           </div>
