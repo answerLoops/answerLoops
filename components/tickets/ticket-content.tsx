@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import ReactMarkdown, { type Components } from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 import type { SourcePlatform } from '@/types'
 
