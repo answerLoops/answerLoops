@@ -33,7 +33,7 @@ const markdownComponents: Components = {
     ),
 
   img: ({ src, alt }) =>
-    isSafeExternalUrl(src) ? (
+    typeof src === 'string' && isSafeExternalUrl(src) ? (
       <Image
         src={src}
         alt={alt ?? ''}
