@@ -73,7 +73,7 @@ export default async function Page() {
         {
           question: 'Do generated answers count toward usage?',
           answer:
-            'High-confidence standalone answers count toward the monthly automated-answer allowance. See the billing reference for the counting rules.',
+            'High-confidence standalone answers count toward the monthly AI reply allowance. See the billing reference for the counting rules.',
         },
       ]}
       docs={[

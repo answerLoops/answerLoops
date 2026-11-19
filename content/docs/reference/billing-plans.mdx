@@ -1,22 +1,22 @@
 ---
 title: Billing Plans
-description: Plan tiers, deflection limits, and pricing for answerLoops Cloud.
+description: Plan tiers, AI reply allowances, and pricing for answerLoops Cloud.
 icon: Receipt
 ---
 
-answerLoops Cloud has three plans, priced by how many questions the AI answers for you rather than by seat. This page lists what each plan costs, how many answers it includes, and what happens when you reach the limit, so you can pick a plan before you start a trial.
+answerLoops Cloud has three plans, priced by how many questions the AI answers for you rather than by seat. This page lists what each plan costs, how many AI replies it includes, and what happens when you reach the limit, so you can pick a plan before you start a trial.
 
-A **deflection** is a question the AI answered on its own, without a person stepping in. Every plan includes the full AI pipeline; higher tiers add scale, insight and support.
+An **AI reply** is an answer answerLoops posts on its own, without a person stepping in. (Analytics and the **Automatic Deflections** setting use the word *deflection* for the same thing.) Every plan includes the full AI pipeline; higher tiers add scale, insight and support.
 
 ## Compare the plans
 
 <Cards>
-  <Card icon="Layers" title="Standard: $49/mo">500 deflections a month. Hard cap: auto-answering pauses at the limit.</Card>
-  <Card icon="TrendingUp" title="Pro: $149/mo">3,000 deflections a month. Soft cap: answers keep going out, $5 per 100 over.</Card>
-  <Card icon="Building2" title="Enterprise: custom pricing">Unlimited deflections. No cap to reach.</Card>
+  <Card icon="Layers" title="Standard: $49/mo">500 estimated AI replies a month. Hard cap: auto-answering pauses at the limit.</Card>
+  <Card icon="TrendingUp" title="Pro: $149/mo">3,000 estimated AI replies a month. Soft cap: answers keep going out, $5 per 100 over.</Card>
+  <Card icon="Building2" title="Enterprise: custom pricing">Unlimited AI replies. No cap to reach.</Card>
 </Cards>
 
-| Plan | Price (monthly) | Price (annual, per mo) | Deflections/mo | Beyond the limit |
+| Plan | Price (monthly) | Price (annual, per mo) | Estimated AI replies/mo | Beyond the limit |
 |---|---|---|---|---|
 | Standard | $49 | $39 (20%+ off) | 500 | Hard cap — auto-answering pauses |
 | Pro | $149 | $119 (20%+ off) | 3,000 | Soft cap — keeps answering, $5 per 100 over |
@@ -27,12 +27,12 @@ There is no free tier. Every plan starts with a 14-day trial, described below.
 Annual billing saves at least 20%. The annual charges are **$468 Standard** and **$1,428 Pro**, paid once per year. The equivalent monthly amounts in the table are not monthly installments. Enterprise is priced to your volume and requirements, so [talk to us](https://dub.sh/talk-to-us) for a quote.
 
 <Callout type="info">
-  The [pricing page](https://answerloops.com/pricing) has the full feature comparison and is the one place it is kept up to date. The differences that affect day-to-day use are the deflection allowance above and how the limit behaves.
+  The [pricing page](https://answerloops.com/pricing) has the full feature comparison and is the one place it is kept up to date. The differences that affect day-to-day use are the AI reply allowance above and how the limit behaves.
 </Callout>
 
-## What counts as a deflection
+## What counts as an AI reply
 
-An automated channel answer counts when it meets the configured confidence threshold without human intervention. High-confidence standalone answers generated through MCP or the Agent API also count. Drafts sent to a human for review do not count.
+An automated channel answer counts when it meets the configured confidence threshold without human intervention. High-confidence standalone answers generated through MCP or the Agent API also count. Drafts held for your team to review do not count, including ones a team member later approves or edits.
 
 Allowances reset each **calendar month**, including on annual subscriptions.
 
@@ -48,20 +48,20 @@ Every new account starts a 14-day free trial the moment it is created. No card i
 
 Every hosted plan includes AI usage, so no AI provider key is required: triage, drafting and knowledge-base processing run on answerLoops' own models up to a limit, for the whole 14-day trial and then each calendar month on a paid plan (annual plans included). Answers and knowledge-base processing have separate limits.
 
-The answers limit depends on your plan: each plan includes its own amount, and a higher plan includes more. It is the included amount that sets how many answers the AI can draft on its own models in a month, and it is separate from your plan's deflection allowance above. A plan can reach its included AI usage before it reaches its deflection allowance, in which case drafting pauses until the next month or until you connect your own provider. The trial has a single limit, and the knowledge-base processing limit is the same on every plan.
+The answers limit depends on your plan: each plan includes its own amount, and a higher plan includes more. Every question the AI works on uses some of it, including drafts held for your team, while only AI replies that go out on their own count toward your plan's AI reply allowance above. That is why each plan lists *estimated* AI replies: replies are counted exactly, but longer questions and sources use more AI usage. A plan can reach its included AI usage before it reaches its AI reply allowance, in which case drafting pauses until the next month or until you connect your own provider. The trial has a single limit, and the knowledge-base processing limit is the same on every plan.
 
 A dashboard banner appears at 80% of either. Once you reach one of them, that part of AI pauses until you add your own provider in **Settings → AI Model** (or, on a paid plan, until the next month starts; the trial's usage doesn't reset). An OpenAI key removes both limits; another provider removes the answers limit, and an OpenAI embedding key removes the knowledge-base one. This doesn't apply to self-hosted deployments. See [Billing](/docs/product/billing).
 
 ## Approaching or hitting your limit
 
-Once an org crosses 80% of its monthly deflection allowance, an in-app warning banner appears on **Settings → Billing** with a one-click upgrade to the next tier. What happens at the limit depends on the plan's cap.
+Once an org crosses 80% of its monthly AI reply allowance, an in-app warning banner appears on **Settings → Billing** with a one-click upgrade to the next tier. What happens at the limit depends on the plan's cap.
 
 <Accordions type="single">
   <Accordion title="Standard (hard cap)">
-    AI auto-answering pauses until the next calendar-month reset once 500 deflections are used, and new questions route straight to the human queue instead. There is no Standard overage charge.
+    AI auto-answering pauses until the next calendar-month reset once 500 AI replies are used, and new questions route straight to the human queue instead. There is no Standard overage charge.
   </Accordion>
   <Accordion title="Pro (soft cap)">
-    Answers keep going out past 3,000 deflections. Usage beyond the included amount is billed at $5 per 100 (rounded up to the nearest 100). The Billing page shows how far over the plan the org is.
+    Answers keep going out past 3,000 AI replies. Usage beyond the included amount is billed at $5 per 100 (rounded up to the nearest 100). The Billing page shows how far over the plan the org is.
   </Accordion>
   <Accordion title="Enterprise">
     Unlimited; there is no cap to reach.
@@ -70,7 +70,7 @@ Once an org crosses 80% of its monthly deflection allowance, an in-app warning b
 
 ## Self-hosting
 
-The core platform is AGPL-3.0 licensed. Self-hosted deployments have every feature unlocked, no deflection limit, and no billing integration required. See the [self-hosting production guide](/docs/self-hosting/production).
+The core platform is AGPL-3.0 licensed. Self-hosted deployments have every feature unlocked, no AI reply limit, and no billing integration required. See the [self-hosting production guide](/docs/self-hosting/production).
 
 ## Where to go next
 

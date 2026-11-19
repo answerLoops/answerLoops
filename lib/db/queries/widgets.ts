@@ -9,6 +9,12 @@ import {
   isWidgetLeadCaptureMode,
   type WidgetLeadCaptureMode,
 } from '@/lib/widget/lead-capture'
+import {
+  SAFE_WIDGET_ANSWER_SCOPE_FALLBACK,
+  isWidgetAnswerScope,
+  normalizeWidgetGuidance,
+  type WidgetAnswerScope,
+} from '@/lib/widget/answer-scope'
 
 export interface WidgetOrg {
   id: number
@@ -19,6 +25,10 @@ export interface WidgetOrg {
   widget_allowed_origins: string | null
   /** When the widget asks for an email. See lib/widget/lead-capture.ts. */
   widget_lead_capture_mode: WidgetLeadCaptureMode
+  /** What the widget may answer from. See lib/widget/answer-scope.ts. */
+  widget_answer_scope: WidgetAnswerScope
+  /** The owner's note on tone and next steps, or null. */
+  widget_guidance: string | null
 }
 
 export interface WidgetTokenInfo {
@@ -43,6 +53,8 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       widget_token_expires_at: orgs.widgetTokenExpiresAt,
       widget_allowed_origins: orgs.widgetAllowedOrigins,
       widget_lead_capture_mode: orgs.widgetLeadCaptureMode,
+      widget_answer_scope: orgs.widgetAnswerScope,
+      widget_guidance: orgs.widgetGuidance,
       plan_id: subscriptions.planId,
     })
     .from(orgs)
@@ -72,6 +84,19 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
     widget_lead_capture_mode: isWidgetLeadCaptureMode(row.widget_lead_capture_mode)
       ? row.widget_lead_capture_mode
       : SAFE_WIDGET_LEAD_CAPTURE_MODE_FALLBACK,
+    // Read the same defensive way, but an unreadable value falls back to the
+    // narrower scope, not the old behaviour: this controls what an anonymous
+    // visitor can be told, so an unclear value must not widen it.
+    widget_answer_scope: isWidgetAnswerScope(row.widget_answer_scope)
+      ? row.widget_answer_scope
+      : SAFE_WIDGET_ANSWER_SCOPE_FALLBACK,
+    // Re-cleaned on read so a note written outside the setter (a hand edit, a
+    // restored backup) can never put oversized or malformed text into every
+    // answer's instructions. Anything that does not pass is treated as none.
+    widget_guidance: (() => {
+      const result = normalizeWidgetGuidance(row.widget_guidance)
+      return result.ok ? result.value : null
+    })(),
   }
 }
 
@@ -150,6 +175,48 @@ export async function setWidgetLeadCaptureMode(orgId: number, mode: string): Pro
     throw new Error(`Invalid widget lead capture mode: ${mode}`)
   }
   await getDb().update(orgs).set({ widgetLeadCaptureMode: mode }).where(eq(orgs.id, orgId))
+}
+
+export interface WidgetAnswerSettings {
+  answerScope: WidgetAnswerScope
+  guidance: string | null
+}
+
+/** Current answer scope and guidance note, for the settings UI. */
+export async function getWidgetAnswerSettings(orgId: number): Promise<WidgetAnswerSettings> {
+  const [row] = await getDb()
+    .select({ scope: orgs.widgetAnswerScope, guidance: orgs.widgetGuidance })
+    .from(orgs)
+    .where(eq(orgs.id, orgId))
+    .limit(1)
+  const guidance = normalizeWidgetGuidance(row?.guidance)
+  return {
+    answerScope: isWidgetAnswerScope(row?.scope) ? row.scope : SAFE_WIDGET_ANSWER_SCOPE_FALLBACK,
+    guidance: guidance.ok ? guidance.value : null,
+  }
+}
+
+/**
+ * Set what the org's widget may answer from. Validated here, the only write
+ * path, because the column has no DB-level CHECK: an unknown value must stop
+ * here rather than be stored and later read as something it is not.
+ */
+export async function setWidgetAnswerScope(orgId: number, scope: string): Promise<void> {
+  if (!isWidgetAnswerScope(scope)) {
+    throw new Error(`Invalid widget answer scope: ${scope}`)
+  }
+  await getDb().update(orgs).set({ widgetAnswerScope: scope }).where(eq(orgs.id, orgId))
+}
+
+/**
+ * Set the org's guidance note. Cleaned and length-checked here as well as in
+ * the action, so no caller can store text the read path would then discard.
+ * Pass an empty string or null to clear it.
+ */
+export async function setWidgetGuidance(orgId: number, guidance: string | null): Promise<void> {
+  const result = normalizeWidgetGuidance(guidance)
+  if (!result.ok) throw new Error(result.error)
+  await getDb().update(orgs).set({ widgetGuidance: result.value }).where(eq(orgs.id, orgId))
 }
 
 /** The org's current public slug, or null when none has been chosen. */

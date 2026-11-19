@@ -54,17 +54,17 @@ Connect the places your community already asks. Select a logo to open its setup 
 
 | Feature | What it does |
 | --- | --- |
-| AI deflection | Sends qualifying answers automatically when enabled for a channel. |
+| [AI deflection](/docs/product/ai-deflection) | Sends qualifying answers automatically when enabled for a channel. |
 | Multi-channel ingest | Collects questions from Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and a website widget. |
-| Knowledge base | Imports URLs, files, GitHub content, Notion pages, and promoted resolutions. |
-| Knowledge gaps | Identifies questions that may need better documentation; Pro and Enterprise. |
-| Human escalation | Routes follow-up notifications to configured recipients; Pro and Enterprise. |
-| CSAT scoring | Records customer ratings on supported channels; Pro and Enterprise. |
-| Simulation mode | Tests the answer workflow without sending live replies; Pro and Enterprise. |
-| Ticket list | Collects requests, drafts, replies, and status in one queue. |
+| [Knowledge base](/docs/product/knowledge-base) | Imports URLs, files, GitHub content, Notion pages, and promoted resolutions. |
+| [Knowledge gaps](/docs/product/knowledge-gaps) | Identifies questions that may need better documentation; Pro and Enterprise. |
+| [Human escalation](/docs/product/escalation) | Routes follow-up notifications to configured recipients; Pro and Enterprise. |
+| [CSAT scoring](/docs/product/csat) | Records customer ratings on supported channels; Pro and Enterprise. |
+| [Simulation mode](/docs/product/simulation) | Tests the answer workflow without sending live replies; Pro and Enterprise. |
+| [Ticket list](/docs/product/tickets) | Collects requests, drafts, replies, and status in one queue. |
 | Multi-provider AI | Uses your supported provider account; custom endpoints require Enterprise or self-hosting. |
-| Website widget | Adds support chat and lead capture to your site. |
-| Billing | Hosted plans with monthly answer allowances, or a self-hosted edition without subscription fees. |
+| [Website widget](/docs/product/chat-widget) | Adds support chat and lead capture to your site. |
+| Billing | Hosted plans with a monthly AI reply allowance, or a self-hosted edition without subscription fees. |
 
 ## Ingest channels
 
@@ -73,12 +73,14 @@ Connect the places your community already asks. Select a logo to open its setup 
 | Discord | OAuth installation (cloud) or bot token (self-host) | Text channel messages, forum thread posts, and replies |
 | Slack | OAuth installation or polling mode | Channel messages |
 | Discourse | REST API + webhook | Topics and posts in watched categories |
-| Circle | API token | Space posts and comments |
+| Circle | Workflow webhook (Admin API token optional) | Space posts and comments |
 | GitHub | GitHub App webhook | Issues, issue comments, Discussions, discussion comments |
 | Telegram | Webhook via bot token | Messages in configured chats |
 | Email | Provider-agnostic inbound webhook | Any inbound email forwarded to the webhook URL |
 | Website widget | Embeddable `<script>` tag | Widget chat sessions |
 | Google Chat | Connect-code space pairing | Messages in the paired space |
+
+Channels that deliver events by webhook all follow the flow described in [Webhooks](/docs/reference/webhooks).
 
 ## Choose a deployment
 

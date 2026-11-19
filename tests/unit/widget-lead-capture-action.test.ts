@@ -28,6 +28,9 @@ vi.mock('@/lib/db/queries/widgets', () => ({
   rotateWidgetToken: vi.fn(),
   getWidgetSlug: vi.fn(async () => null),
   setWidgetSlug: vi.fn(),
+  getWidgetAnswerSettings: vi.fn(async () => ({ answerScope: 'general', guidance: null })),
+  setWidgetAnswerScope: vi.fn(),
+  setWidgetGuidance: vi.fn(),
 }))
 vi.mock('@/lib/widget/origin', () => ({ parseAllowedOrigins: (s: string) => s.split('\n').filter(Boolean) }))
 

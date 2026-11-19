@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'Zendesk AI Alternative: answerLoops vs Zendesk AI',
   description:
-    'Zendesk AI vs answerLoops: compare platform scope and total cost. Zendesk adds seats and add-ons; answerLoops uses a hosted answer allowance.',
+    'Zendesk AI vs answerLoops: compare platform scope and total cost. Zendesk adds seats and add-ons; answerLoops uses a hosted AI reply allowance.',
   path: '/vs/zendesk-ai',
 })
 export default function Page() {
@@ -21,7 +21,7 @@ export default function Page() {
       slug="zendesk-ai"
       source="https://www.zendesk.com/pricing/"
       competitorSummary="Zendesk offers a support suite with ticketing, AI agents, and additional products for support operations."
-      intro="Compare the scope of the support platform and the total operating cost. Zendesk combines agent seats, plan allowances, and optional add-ons; answerLoops combines a hosted answer allowance with separate model costs, or can be self-hosted."
+      intro="Compare the scope of the support platform and the total operating cost. Zendesk combines agent seats, plan allowances, and optional add-ons; answerLoops combines a hosted AI reply allowance with separate model costs, or can be self-hosted."
       rows={[
         {
           feature: 'Platform',
@@ -30,7 +30,7 @@ export default function Page() {
         },
         {
           feature: 'Hosted billing',
-          us: 'Monthly or annual plan; automated-answer allowances vary by tier. AI usage is included up to a limit.',
+          us: 'Monthly or annual plan; AI reply allowances vary by tier. AI usage is included up to a limit.',
           them: 'Agent seats, selected add-ons, and AI resolutions beyond the plan allowance contribute to cost.',
         },
         {

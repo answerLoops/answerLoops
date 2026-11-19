@@ -33,7 +33,7 @@ describe('next.config: BuildHop iframe preview of the homepage', () => {
     expect(csp).toContain("default-src 'self'")
     expect(csp).toContain("object-src 'none'")
     expect(csp).toContain("base-uri 'self'")
-    expect(csp).toContain('frame-src https://js.stripe.com')
+    expect(csp).toContain("frame-src 'self' https://js.stripe.com")
   })
 
   it('drops X-Frame-Options on / but keeps the other security headers', async () => {

@@ -5,6 +5,7 @@ import { START_HREF, PRICING_HREF } from './nav-shared'
 import { TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
 import type { ReactNode } from 'react'
 import { Nav, Footer, type NavState } from './chrome'
+import { SiteChatWidget } from '@/components/site-chat-widget'
 import './marketing-site.css'
 import './marketing-theme.css'
 
@@ -17,9 +18,16 @@ const marketingFont = Source_Sans_3({
 export function MarketingPage({
   children,
   navState,
+  chat = false,
 }: {
   children: ReactNode
   navState?: NavState
+  /**
+   * Show the chat assistant on this page. Off by default so each page that
+   * carries it is a decision: it belongs where a visitor is deciding whether
+   * answerLoops is right for them, not on a legal page or a changelog.
+   */
+  chat?: boolean
 }) {
   return (
     <div className={`marketing-site ${marketingFont.variable}`}>
@@ -29,6 +37,7 @@ export function MarketingPage({
       <Nav state={navState} />
       <main id="main-content">{children}</main>
       <Footer />
+      {chat && <SiteChatWidget />}
     </div>
   )
 }

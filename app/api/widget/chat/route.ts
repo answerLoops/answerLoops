@@ -27,6 +27,8 @@ import { logger } from '@/lib/logger'
 import { requestsHuman, isGreetingOrAck, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import { isValidWidgetToken, isValidVisitorId, isValidTurnId } from '@/lib/widget/request-validation'
 import { setLeadSignal } from '@/lib/widget/lead-signal-stash'
+import { buildWidgetInstructions } from '@/lib/widget/instructions'
+import type { WidgetAnswerScope } from '@/lib/widget/answer-scope'
 
 const MOD = 'api/widget/chat'
 
@@ -85,7 +87,16 @@ const MAX_QUERY_CHARS = MAX_MESSAGE_CHARS
 type KBContext = { summary: string; answer: string; articleId?: number }[]
 
 export interface PendingRun {
-  org: { id: number; name: string; widget_lead_capture_mode: WidgetLeadCaptureMode }
+  org: {
+    id: number
+    name: string
+    widget_lead_capture_mode: WidgetLeadCaptureMode
+    // What the widget may answer from, and the owner's note on tone and next
+    // steps. Both come from the workspace row the token resolved to, never
+    // from the request.
+    widget_answer_scope: WidgetAnswerScope
+    widget_guidance: string | null
+  }
   widgetToken: string
   // Which widget message this run answers; scopes the lead-capture signal so
   // the client's later lookup can only ever see this turn's own result.
@@ -430,14 +441,12 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   const widgetAgent = new Agent({
     id: 'widget-chat-agent',
     name: 'widget-chat-agent',
-    instructions: `You are a helpful support assistant for ${org.name}.
-Answer questions concisely and accurately based on the knowledge base context provided.
-If you don't know the answer or it's not covered in the context, say so honestly and suggest the user contact support directly.
-Keep responses brief and friendly. Format with markdown when helpful.
-You can also show a rich card with a tool: show_steps for a how-to sequence, show_choices for quick-reply buttons when a question is ambiguous, show_callout for an important warning or tip, show_link_card for a page that appears in the context below, and show_contact_options when the visitor needs a human. Only use a card when it is clearly clearer than text, never more than one per reply, never number the steps in show_steps (the card numbers them itself), and never put a URL, email or phone number in a card unless it appears in the context below. When you use a card, don't repeat its contents in text — add at most one short sentence.
-Respond in the same language as the user's question — if they write in Spanish, reply in Spanish; French, reply in French; etc.
-Never cite, name, or quote the title of a knowledge base article in your reply — a visitor should never see where an answer came from, since a source could be an internal system name (e.g. a synced Notion page) that would only confuse them. Use the context below to answer, but write as if you simply know the answer.
-If no article below covers the question, answer from general knowledge and don't mention that either.${contextBlock}`,
+    instructions: buildWidgetInstructions({
+      orgName: org.name,
+      answerScope: org.widget_answer_scope,
+      guidance: org.widget_guidance,
+      contextBlock,
+    }),
     model: model as MastraModelConfig,
     memory: getWidgetChatMemory(),
     tools: buildGenuiTools(contextBlock),

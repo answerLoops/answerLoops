@@ -17,6 +17,12 @@ const cloudflareAnalytics = process.env.CLOUDFLARE_WEB_ANALYTICS === 'true'
 // No form-action: OAuth sign-in posts a form to this origin and redirects to
 // the provider, and form-action also constrains that redirect. Dev adds eval
 // and websockets for hot reload only.
+//
+// frame-src names 'self' as well as Stripe so the chat assistant can open its
+// panel: public/widget.js loads /widget/<token> in an iframe on our own pages.
+// That is the only same-origin page that can be framed, because every other
+// route sends frame-ancestors 'none' (below), so allowing same-origin frames
+// here widens nothing else.
 const resourcePolicy = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://js.stripe.com https://*.js.stripe.com${cloudflareAnalytics ? ' https://static.cloudflareinsights.com' : ''}`,
@@ -24,7 +30,7 @@ const resourcePolicy = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   `connect-src 'self' https://api.stripe.com${cloudflareAnalytics ? ' https://cloudflareinsights.com' : ''}${isDev ? ' ws: wss:' : ''}`,
-  "frame-src https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com",
+  "frame-src 'self' https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://checkout.stripe.com",
   "object-src 'none'",
   "base-uri 'self'",
 ].join('; ')
