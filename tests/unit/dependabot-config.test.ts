@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest'
 import fs from 'fs'
 import path from 'path'
 
-// Dependabot exists mainly to stop the CI security scanners (semgrep, zizmor,
-// the trivy-action digest) from drifting silently. These lock in that wiring:
+// Dependabot exists mainly to stop the CI workflow auditor (zizmor) and the
+// SHA-pinned actions (including the trivy-action digest used when publishing
+// the image) from drifting silently. These lock in that wiring:
 // the tools are version-pinned, the workflow installs the pinned file, and
 // Dependabot watches both the pip file and the GitHub Actions. String
 // assertions, matching the other workflow tests in this repo.
@@ -14,16 +15,15 @@ const read = (p: string) => fs.readFileSync(path.join(ROOT, p), 'utf-8')
 describe('.github/security-tools/requirements.txt', () => {
   const reqs = read('.github/security-tools/requirements.txt')
 
-  it('pins semgrep and zizmor to an exact version', () => {
-    expect(reqs).toMatch(/^semgrep==\d+\.\d+\.\d+/m)
+  it('pins zizmor to an exact version', () => {
     expect(reqs).toMatch(/^zizmor==\d+\.\d+\.\d+/m)
   })
 
   it('is what the security workflow installs — no bare `pip install <tool>` left', () => {
     const wf = read('.github/workflows/security.yml')
-    expect(wf).not.toMatch(/pip install (semgrep|zizmor)(\s|$)/)
+    expect(wf).not.toMatch(/pip install zizmor(\s|$)/)
     const installs = [...wf.matchAll(/pip install -r (\S+)/g)].map((m) => m[1])
-    expect(installs.length).toBe(2) // semgrep job + zizmor job
+    expect(installs.length).toBe(1) // zizmor job
     for (const p of installs) expect(p).toBe('.github/security-tools/requirements.txt')
   })
 })

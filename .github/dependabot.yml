@@ -1,9 +1,9 @@
 version: 2
 
 updates:
-  # CI security scanners pinned in .github/security-tools/requirements.txt
-  # (semgrep, zizmor). This is the main reason this file exists — those tools
-  # were unpinned and updated silently.
+  # CI workflow auditor pinned in .github/security-tools/requirements.txt
+  # (zizmor). This is the main reason this file exists — the tool was
+  # unpinned and updated silently.
   - package-ecosystem: pip
     directory: /.github/security-tools
     schedule:

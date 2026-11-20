@@ -96,12 +96,11 @@ echo "Running tests..."
 pnpm test --run || { echo "Commit blocked: tests failed."; exit 1; }
 echo "Tests passed."
 
-# Trivy vuln/misconfig and Semgrep run in CI rather than here, on purpose. With
-# them the hook took over ten minutes, and a hook that slow gets --no-verify'd —
-# which does not skip one stage, it skips all of them, including the disclosure
-# and secret checks above. Both still run on every push and pull request in
-# .github/workflows/security.yml, so nothing is unscanned; it is scanned where
-# the wait does not create an incentive to bypass.
+# Trivy vuln/misconfig and Semgrep are not run here, on purpose. With them the
+# hook took over ten minutes, and a hook that slow gets --no-verify'd — which
+# does not skip one stage, it skips all of them, including the disclosure and
+# secret checks above. Dependency and code scanning run on every pull request
+# through Cycode instead, where the wait does not create an incentive to bypass.
 # <<< answerloops managed <<<
 BLOCK
 
