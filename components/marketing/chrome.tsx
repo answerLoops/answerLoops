@@ -158,7 +158,7 @@ export function Footer() {
     <footer className="border-t border-slate-200 bg-white text-slate-900">
       <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
         <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
-          <div>
+          <div className="flex flex-col items-start">
             <NavWordmark />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">
               Less time answering questions. More time growing your community.
@@ -179,16 +179,24 @@ export function Footer() {
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Secured by Cycode"
-              className="mt-4 flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-slate-900"
+              className="mt-6 flex items-center gap-2 text-base font-medium text-slate-900 transition-colors hover:text-blue-700 lg:mt-auto"
             >
               <span>Secured by</span>
               <Image
                 src="/cycode-logo.svg"
                 alt="Cycode"
-                width={65}
+                width={57}
                 height={16}
                 unoptimized
                 className="h-4 w-auto"
+              />
+              <Image
+                src="/cycode-mark.svg"
+                alt=""
+                width={20}
+                height={20}
+                unoptimized
+                className="h-5 w-5"
               />
             </Link>
           </div>
