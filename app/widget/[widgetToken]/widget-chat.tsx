@@ -24,6 +24,7 @@ import {
   StepsCard,
   WidgetActionsProvider,
 } from './genui-cards'
+import { ChatMarkdown } from './chat-markdown'
 import {
   isWidgetLeadSignal,
   type WidgetLeadCaptureMode,
@@ -210,8 +211,8 @@ const MessageRow = memo(
         {text && (
           <div className="flex justify-start">
             <AssistantAvatar />
-            <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-gray-100 px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap break-words text-gray-800">
-              {text}
+            <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-gray-100 px-3 py-2 text-xs leading-relaxed break-words text-gray-800">
+              <ChatMarkdown text={text} />
             </div>
           </div>
         )}
@@ -318,6 +319,10 @@ function WidgetChatBody({
   const [messages, setMessages] = useState<Message[]>(agent.messages)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // The chat call is refused (HTTP 403) once the page's short-lived pass has
+  // expired, which is what happens when a visitor leaves the chat open and
+  // comes back. Reloading the panel gets a fresh one.
+  const [sessionExpired, setSessionExpired] = useState(false)
 
   const checkLeadSignal = useCallback(async () => {
     if (leadCaptureMode !== 'on-failure' || leadHandled) return
@@ -385,6 +390,11 @@ function WidgetChatBody({
       // Real customer-site visitors get the generic fallback below.
       onRunFailed: ({ error: runError }) => {
         setIsLoading(false)
+        if (/^HTTP 403\b/.test(runError.message)) {
+          setError(null)
+          setSessionExpired(true)
+          return
+        }
         // Strip the "HTTP 503: " transport prefix the AG-UI client adds —
         // only the server's own message text is meant for display.
         const message = runError.message.replace(/^HTTP \d+:\s*/, '')
@@ -599,6 +609,19 @@ function WidgetChatBody({
 
             {error && (
               <p className="break-words text-center text-xs text-red-400">{error}</p>
+            )}
+
+            {sessionExpired && (
+              <div className="space-y-2 text-center" data-testid="session-expired">
+                <p className="text-xs text-gray-600">This chat session timed out. Start a new one to keep going.</p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+                >
+                  Start a new session
+                </button>
+              </div>
             )}
 
             {failurePrompt && (

@@ -238,6 +238,46 @@ describe('WidgetChat: run lifecycle', () => {
   })
 })
 
+describe('WidgetChat: expired session', () => {
+  it('replaces a refused call with a plain prompt to start a new session, not the raw "Forbidden"', async () => {
+    const fake = makeFakeAgent()
+    await renderWidget(fake)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+
+    fake.emit.runInitialized()
+    fake.emit.runFailed(new Error('HTTP 403: Forbidden'))
+
+    expect(screen.queryByText('Forbidden')).toBeNull()
+    expect(screen.getByTestId('session-expired')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Start a new session' })).toBeTruthy()
+  })
+
+  it('reloads the panel from that button so the page gets a fresh pass', async () => {
+    const reload = vi.spyOn(window.location, 'reload').mockImplementation(() => {})
+    const fake = makeFakeAgent()
+    await renderWidget(fake)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+    fake.emit.runInitialized()
+    fake.emit.runFailed(new Error('HTTP 403: Forbidden'))
+
+    await user.click(screen.getByRole('button', { name: 'Start a new session' }))
+    expect(reload).toHaveBeenCalledTimes(1)
+    reload.mockRestore()
+  })
+
+  it('does not show the prompt for other failures', async () => {
+    const fake = makeFakeAgent()
+    await renderWidget(fake)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+    fake.emit.runInitialized()
+    fake.emit.runFailed()
+    expect(screen.queryByTestId('session-expired')).toBeNull()
+  })
+})
+
 describe('WidgetChat: branding', () => {
   it('shows the "Powered by" line when showBranding is true', async () => {
     h2.current = makeFakeAgent()
