@@ -16,7 +16,11 @@
   // Window sizes a business can pick (small is today's size and the default).
   // The server decides which one a business gets; unknown names fall back to small.
   var SIZES = { small: [380, 580], medium: [440, 680], large: [520, 760] };
-  var DEFAULT_COLOR = '#4f46e5';
+  // The launcher bubble's color when a business has not chosen one. It is the
+  // same blue as the chat window (brand-600 in app/globals.css). The server
+  // sends a business's own color, with the icon color that reads best on it.
+  var DEFAULT_COLOR = '#2563eb';
+  var DEFAULT_ICON_COLOR = '#ffffff';
   // How long the page waits for the settings lookup before showing the widget
   // as it looked before the lookup existed.
   var CONFIG_TIMEOUT_MS = 2000;
@@ -24,6 +28,7 @@
   var PANEL_W = SIZES.small[0];
   var PANEL_H = SIZES.small[1];
   var bubbleColor = DEFAULT_COLOR;
+  var iconColor = DEFAULT_ICON_COLOR;
   // The token the chat panel is loaded with. Equal to data-widget-id for a
   // token snippet; for a slug snippet it is whatever the lookup resolves to.
   var panelToken = widgetId;
@@ -31,11 +36,27 @@
   var panel = null;
   var bubble = null;
 
+  // The bubble's shadows are built from its own color so they follow it. Only
+  // called with a value that already passed the #rrggbb check.
+  function rgba(hex, alpha) {
+    return 'rgba(' + parseInt(hex.slice(1, 3), 16) + ',' + parseInt(hex.slice(3, 5), 16) + ',' + parseInt(hex.slice(5, 7), 16) + ',' + alpha + ')';
+  }
+
+  function bubbleIcon(size, path) {
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="' + iconColor + '"><path d="' + path + '"/></svg>';
+  }
+
+  var CHAT_ICON_PATH = 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z';
+  var CLOSE_ICON_PATH = 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z';
+
   function createStyles() {
     var style = document.createElement('style');
     style.textContent = [
-      '#cp-widget-bubble{position:fixed;bottom:24px;right:24px;z-index:2147483646;width:' + BUBBLE_SIZE + 'px;height:' + BUBBLE_SIZE + 'px;border-radius:50%;background:' + bubbleColor + ';box-shadow:0 4px 16px rgba(79,70,229,.4);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;}',
-      '#cp-widget-bubble:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(79,70,229,.5);}',
+      '#cp-widget-bubble{position:fixed;bottom:24px;right:24px;z-index:2147483646;width:' + BUBBLE_SIZE + 'px;height:' + BUBBLE_SIZE + 'px;border-radius:50%;background:' + bubbleColor + ';box-shadow:0 4px 16px ' + rgba(bubbleColor, .4) + ';border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;}',
+      '#cp-widget-bubble:hover{transform:scale(1.08);box-shadow:0 6px 20px ' + rgba(bubbleColor, .5) + ';}',
+      // A two-tone ring (white inside, dark outside) so keyboard focus is visible
+      // on any brand color and on any page background.
+      '#cp-widget-bubble:focus-visible{outline:none;box-shadow:0 0 0 3px #ffffff,0 0 0 6px #111827;}',
       '#cp-widget-panel{position:fixed;bottom:' + (BUBBLE_SIZE + 32) + 'px;right:24px;z-index:2147483645;width:' + PANEL_W + 'px;height:' + PANEL_H + 'px;max-width:calc(100vw - 48px);max-height:calc(100vh - ' + (BUBBLE_SIZE + 56) + 'px);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);border:1px solid #e5e7eb;overflow:hidden;transform-origin:bottom right;transition:transform .2s cubic-bezier(.34,1.56,.64,1),opacity .15s;transform:scale(.85);opacity:0;pointer-events:none;}',
       '#cp-widget-panel.cp-open{transform:scale(1);opacity:1;pointer-events:all;}',
       '#cp-widget-panel iframe{width:100%;height:100%;border:none;display:block;}',
@@ -47,7 +68,7 @@
     bubble = document.createElement('button');
     bubble.id = 'cp-widget-bubble';
     bubble.setAttribute('aria-label', 'Open support chat');
-    bubble.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
+    bubble.innerHTML = bubbleIcon(24, CHAT_ICON_PATH);
     bubble.addEventListener('click', togglePanel);
     document.body.appendChild(bubble);
   }
@@ -77,11 +98,11 @@
     if (isOpen) {
       panel.classList.add('cp-open');
       bubble.setAttribute('aria-label', 'Close support chat');
-      bubble.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+      bubble.innerHTML = bubbleIcon(20, CLOSE_ICON_PATH);
     } else {
       panel.classList.remove('cp-open');
       bubble.setAttribute('aria-label', 'Open support chat');
-      bubble.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
+      bubble.innerHTML = bubbleIcon(24, CHAT_ICON_PATH);
     }
   }
 
@@ -100,6 +121,9 @@
       // stylesheet, so only a plain #rrggbb is ever allowed through.
       if (typeof display.bubbleColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(display.bubbleColor)) {
         bubbleColor = display.bubbleColor;
+      }
+      if (typeof display.bubbleIconColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(display.bubbleIconColor)) {
+        iconColor = display.bubbleIconColor;
       }
     }
   }

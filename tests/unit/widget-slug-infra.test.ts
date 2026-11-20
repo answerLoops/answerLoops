@@ -108,6 +108,7 @@ describe('GET /api/widget/config: slug routing and rate-limit key', () => {
     plan_id: 'pro',
     widget_allowed_origins: null,
     widget_lead_capture_mode: 'on-failure',
+    widget_appearance: { title: null, welcome: null, brandColor: null },
   })
 
   async function call(id: string) {
@@ -145,7 +146,7 @@ describe('GET /api/widget/config: slug routing and rate-limit key', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.token).toBeNull()
-    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#4f46e5' })
+    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff' })
     expect(h.orgHasFeature).not.toHaveBeenCalled()
   })
 

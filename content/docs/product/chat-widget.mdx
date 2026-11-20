@@ -183,6 +183,7 @@ Where you paste the snippet depends on how your site is built. Find your platfor
 | Setting | Where | Notes |
 |---|---|---|
 | Branding | **Settings → Widget** | Standard shows the answerLoops logo and a "Powered by answerLoops" line. Pro and Enterprise can remove the answerLoops branding; **Settings → Widget** shows an upgrade option when your plan does not include it. Self-hosted installs have it unlocked. |
+| Title, welcome message and color | **Settings → Widget** | Pro and above. The title in the chat header, the first message visitors see, and your brand color. See [Widget appearance](#widget-appearance). |
 | Allowed domains | **Settings → Widget** | The domains the widget may load on. Subdomains are included. |
 | Embed token | **Settings → Widget** | Issued per workspace and expires after 90 days; **Regenerate token** issues a new one. |
 | Public name | **Settings → Widget** | An optional stable name for the snippet, so regenerating the token never breaks a page. See [Rotating the token](#rotating-the-token). |
@@ -190,11 +191,27 @@ Where you paste the snippet depends on how your site is built. Find your platfor
 | What it knows | **Knowledge Base** | Publish or unpublish articles and sources. The widget only answers from published articles. |
 | Contact and link cards | Your articles | Cards show links and contact details only when they are written in your articles. There is nothing to configure. |
 
-The chat bubble sits at the bottom right of the page, and the answer language follows the visitor's language. Neither is configurable.
+The chat bubble sits at the bottom right of the page, and the answer language follows the visitor's language. Neither is configurable. The chat bubble uses the same blue as the chat window unless your plan lets you set a brand color.
 
 ### How the snippet gets its display settings
 
 When a page loads, the snippet asks your answerLoops instance how this workspace wants the widget to look (window size and bubble color) and which widget token is current. The answer contains display settings and the widget token only, nothing else about your workspace. It is cached for about a minute, so a change reaches pages shortly after you save it. Which settings a workspace gets always follows its plan and is decided on the server, never by what the snippet says. Until you choose something the widget looks exactly as it did before, and if the lookup is slow or fails the snippet shows that default look after two seconds, so existing installs keep working without re-pasting anything.
+
+## Widget appearance
+
+On Pro and above, **Settings → Widget → Widget appearance** lets you make the chat look like your own:
+
+| Setting | What it does | Limits |
+|---|---|---|
+| Chat title | Replaces the default header, your workspace name followed by "Support", for example "Acme Help Desk". | Up to 60 characters. |
+| Welcome message | Replaces the default greeting shown in an empty chat, and above the email box when the widget asks for an email first. | Up to 200 characters. |
+| Brand color | Used for the chat header icon, the visitor's message bubbles, buttons, answer cards and the chat bubble that opens the widget. | A full hex color such as `#1a73e8`. |
+
+The title and welcome message are shown as plain text, so any markup you type appears exactly as written. The text that sits on top of your color is chosen automatically, white or dark, whichever reads better, so a very light or very dark color never produces text that is hard to read. The settings page shows a sample of it as you choose.
+
+**Save appearance** applies your choices to the live widget within about a minute, with no change to the snippet on your site. **Reset to default** returns the title, welcome message and color to the answerLoops defaults. Only owners and admins can change these settings.
+
+On Standard the controls are shown locked with an upgrade button, and the widget keeps the answerLoops look. Pro and Enterprise include it, together with removing the answerLoops branding. Self-hosted installs have it unlocked.
 
 ## Restricting where the widget works
 

@@ -13,6 +13,7 @@ import { EmbedRefused } from './embed-refused'
 import { clientIp } from '@/lib/http/client-ip'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
+import { brandPalette } from '@/lib/widget/appearance'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,6 +77,12 @@ export default async function WidgetPage({ params }: Props) {
 
   const whiteLabel = await orgHasFeature(org.id, 'white_label_widget')
 
+  // Title, welcome message and brand color are customization, so they apply only
+  // on a plan that includes it, the same check that removes the answerLoops
+  // branding. Anything else gets the default look.
+  const appearance = whiteLabel ? org.widget_appearance : null
+  const brandStyle = appearance?.brandColor ? brandPalette(appearance.brandColor) : null
+
   // Only true when this request is embedded on the org's own instance (the
   // Settings preview link, or a self-host testing the widget on localhost) —
   // never on a real customer's site, since isEmbedAllowed above already
@@ -101,6 +108,9 @@ export default async function WidgetPage({ params }: Props) {
       showBranding={!whiteLabel}
       isSelfPreview={isSelfPreview}
       leadCaptureMode={org.widget_lead_capture_mode}
+      title={appearance?.title ?? null}
+      welcome={appearance?.welcome ?? null}
+      brandStyle={brandStyle}
     />
   )
 }

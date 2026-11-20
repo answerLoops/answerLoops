@@ -87,12 +87,18 @@ export async function GET(request: Request): Promise<Response> {
     const org = await findOrg(id)
     if (!org) return defaults(CACHEABLE)
 
-    // Nothing is stored per business yet beyond the defaults, so the plan check
-    // runs on an empty selection; the resolver is where a chosen size or color
-    // is limited to what the plan includes once those settings exist.
+    // The resolver limits what a business chose to what its plan includes: a
+    // brand color is served only on a plan with customization, and everyone
+    // else gets the default look.
     const customization = await orgHasFeature(org.id, 'white_label_widget')
     return respond(
-      { token: org.widget_token, display: resolveWidgetDisplay(null, { customization }) },
+      {
+        token: org.widget_token,
+        display: resolveWidgetDisplay(
+          { bubbleColor: org.widget_appearance.brandColor },
+          { customization }
+        ),
+      },
       CACHEABLE
     )
   } catch (error) {

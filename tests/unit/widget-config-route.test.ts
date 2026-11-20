@@ -27,15 +27,16 @@ vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: 
 
 const TOKEN = 'a1'.repeat(24)
 const NEXT_TOKEN = 'b2'.repeat(24)
-const DEFAULTS = { windowSize: 'small', bubbleColor: '#4f46e5' }
+const DEFAULTS = { windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff' }
 
-const org = (token: string) => ({
+const org = (token: string, brandColor: string | null = null) => ({
   id: 7,
   name: 'Acme',
   widget_token: token,
   plan_id: 'pro',
   widget_allowed_origins: 'acme.test',
   widget_lead_capture_mode: 'on-failure',
+  widget_appearance: { title: 'Acme Help Desk', welcome: 'Welcome to Acme', brandColor },
 })
 
 async function call(id?: string) {
@@ -102,11 +103,15 @@ describe('GET /api/widget/config: what leaves the server', () => {
   it('returns only the token and display settings, nothing about the workspace', async () => {
     const body = await (await call('acme-support')).json()
     expect(Object.keys(body).sort()).toEqual(['display', 'token'])
-    expect(Object.keys(body.display).sort()).toEqual(['bubbleColor', 'windowSize'])
+    expect(Object.keys(body.display).sort()).toEqual(['bubbleColor', 'bubbleIconColor', 'windowSize'])
     const raw = JSON.stringify(body)
     expect(raw).not.toContain('Acme')
     expect(raw).not.toContain('acme.test')
     expect(raw).not.toContain('pro')
+    // The title and welcome message are read by the chat panel, never by this
+    // public lookup.
+    expect(raw).not.toContain('Help Desk')
+    expect(raw).not.toContain('Welcome to Acme')
   })
 
   it('is readable from any site, without credentials', async () => {
@@ -115,8 +120,20 @@ describe('GET /api/widget/config: what leaves the server', () => {
     expect(res.headers.get('access-control-allow-credentials')).toBeNull()
   })
 
+  it('serves the brand color a workspace on a customization plan chose, with the icon color that reads on it', async () => {
+    h.getOrgByWidgetToken.mockResolvedValue(org(TOKEN, '#ffd60a'))
+    const display = (await (await call(TOKEN)).json()).display
+    expect(display.bubbleColor).toBe('#ffd60a')
+    expect(display.bubbleIconColor).toBe('#111827')
+    h.getOrgByWidgetToken.mockResolvedValue(org(TOKEN, '#0b1f4d'))
+    const dark = (await (await call(TOKEN)).json()).display
+    expect(dark.bubbleColor).toBe('#0b1f4d')
+    expect(dark.bubbleIconColor).toBe('#ffffff')
+  })
+
   it('gives a workspace without customization the defaults whatever else is stored', async () => {
     h.orgHasFeature.mockResolvedValue(false)
+    h.getOrgByWidgetToken.mockResolvedValue(org(TOKEN, '#ffd60a'))
     const res = await call(TOKEN)
     expect((await res.json()).display).toEqual(DEFAULTS)
     expect(h.orgHasFeature).toHaveBeenCalledWith(7, 'white_label_widget')
