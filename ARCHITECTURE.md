@@ -110,7 +110,7 @@ Every tenant-data query requires an explicit `org_id` — there is no silent def
 
 ## 8. Security posture
 
-- Every commit is scanned before merge: Trivy (secrets/deps/misconfig), Semgrep (SAST), Zizmor (GitHub Actions workflow audit for script injection/unpinned actions/over-broad permissions).
+- Every pull request is scanned before merge: Cycode (dependencies, secrets, SAST, IaC, licenses) and Zizmor (GitHub Actions workflow audit for script injection/unpinned actions/over-broad permissions). The published image is scanned with Trivy and Snyk.
 - Per-org data isolation is enforced at the query layer, with regression tests (`tenant-isolation*.test.ts`, `no-default-org.test.ts`) that fail if an org filter regresses.
 - Secrets (bot tokens, AI provider keys) encrypted at rest.
 
