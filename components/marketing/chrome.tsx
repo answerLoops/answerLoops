@@ -160,8 +160,9 @@ export function Footer() {
           <div>
             <NavWordmark />
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">
-              answerLoops helps your team answer community questions using
-              the documentation and resolutions you already maintain.
+              Less time answering questions. More time growing your community.
+              AnswerLoops handles repetitive questions so your team can focus on
+              meaningful conversations, stronger relationships, and community growth.
             </p>
             <Link
               href={GITHUB_SOURCE_URL}
