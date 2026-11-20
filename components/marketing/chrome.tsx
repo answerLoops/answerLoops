@@ -1,9 +1,10 @@
 import { DOCS_HREF, PRICING_HREF } from '@/components/marketing/nav-shared'
+import Image from 'next/image'
 import Link from 'next/link'
 import { LogoMark } from '@/components/logo'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
 import { NavCta } from './nav-cta'
-import { GITHUB_SOURCE_URL, X_URL } from '@/lib/site'
+import { CYCODE_URL, GITHUB_SOURCE_URL, X_URL } from '@/lib/site'
 import type { NavState } from './nav-shared'
 export { GITHUB_SOURCE_URL } from '@/lib/site'
 export { navState } from './nav-shared'
@@ -157,12 +158,14 @@ export function Footer() {
     <footer className="border-t border-slate-200 bg-white text-slate-900">
       <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
         <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
-          <div>
+          <div className="flex flex-col items-start">
             <NavWordmark />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">
-              Less time answering questions. More time growing your community.
-              AnswerLoops handles repetitive questions so your team can focus on
-              meaningful conversations, stronger relationships, and community growth.
+            <p className="mt-4 max-w-xs text-sm font-semibold text-slate-900">
+              Less time answering. More time growing your community.
+            </p>
+            <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
+              answerLoops handles repetitive questions so your team can focus
+              on conversations, connections, and growth.
             </p>
             <Link
               href={GITHUB_SOURCE_URL}
@@ -172,6 +175,31 @@ export function Footer() {
             >
               <GithubIcon className="h-5 w-5" />
               Proudly open-source
+            </Link>
+            <Link
+              href={CYCODE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Secured by Cycode"
+              className="mt-6 flex items-center gap-2 text-base font-medium text-slate-900 transition-colors hover:text-blue-700 lg:mt-auto"
+            >
+              <span>Secured by</span>
+              <Image
+                src="/cycode-logo.svg"
+                alt="Cycode"
+                width={57}
+                height={16}
+                unoptimized
+                className="h-4 w-auto"
+              />
+              <Image
+                src="/cycode-mark.svg"
+                alt=""
+                width={20}
+                height={20}
+                unoptimized
+                className="h-5 w-5"
+              />
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
