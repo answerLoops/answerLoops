@@ -43,6 +43,24 @@ const save = () => screen.getByRole('button', { name: /save appearance|saving/i 
 const reset = () => screen.getByRole('button', { name: /reset to default|resetting/i }) as HTMLButtonElement
 const preview = () => screen.getByTestId('widget-brand-preview')
 
+describe('the color preview', () => {
+  it('is labelled as a preview and is not exposed as a clickable control', () => {
+    render(
+      <WidgetAppearanceSettings
+        canManage
+        customizationAvailable
+        initialAppearance={{ title: null, welcome: null, brandColor: '#0f7f93', starterQuestions: [], starterEnabled: true }}
+      />
+    )
+    expect(screen.getByText('Preview')).toBeTruthy()
+    const box = preview()
+    expect(box.textContent).toBe('Sample button')
+    expect(box.getAttribute('aria-hidden')).toBe('true')
+    expect(box.tagName).toBe('DIV')
+    expect(screen.queryByRole('button', { name: /start chat|sample button/i })).toBeNull()
+  })
+})
+
 describe('a Pro or above owner or admin', () => {
   it('sees the saved values and no lock', () => {
     render(
