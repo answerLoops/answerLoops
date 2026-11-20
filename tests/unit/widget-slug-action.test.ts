@@ -26,6 +26,9 @@ vi.mock('@/lib/db/queries/widgets', () => ({
   setWidgetAllowedOrigins: vi.fn(),
   rotateWidgetToken: vi.fn(),
   setWidgetLeadCaptureMode: vi.fn(),
+  getWidgetAnswerSettings: vi.fn(async () => ({ answerScope: 'general', guidance: null })),
+  setWidgetAnswerScope: vi.fn(),
+  setWidgetGuidance: vi.fn(),
 }))
 
 function form(slug: unknown): FormData {

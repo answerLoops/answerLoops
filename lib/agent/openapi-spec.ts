@@ -80,7 +80,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
                   type: 'string',
                   enum: ['rate_limited', 'deflection_limit_reached', 'call_limit_reached'],
                   description:
-                    'Present on 429 responses; distinguishes the per-minute rate limit (retry after `Retry-After` seconds) from the monthly deflection quota and the monthly call-attempt quota (both need a plan upgrade or the next billing cycle, not a retry). Absent on other error statuses.',
+                    'Present on 429 responses; distinguishes the per-minute rate limit (retry after `Retry-After` seconds) from the monthly AI reply quota and the monthly call-attempt quota (both need a plan upgrade or the next billing cycle, not a retry). Absent on other error statuses.',
                 },
               },
               required: ['message'],
@@ -291,7 +291,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
           summary: "Generate a grounded answer using the organization's knowledge base, without opening a ticket",
           security: scoped('answers:write'),
           description:
-            "Counts against the org's monthly deflection limit — if the limit is reached, returns 429 instead of generating for free. Only high-confidence generations count toward that limit.",
+            "Counts against the org's monthly AI reply limit — if the limit is reached, returns 429 instead of generating for free. Only high-confidence generations count toward that limit.",
           requestBody: {
             required: true,
             content: {
@@ -322,7 +322,7 @@ export function buildAgentOpenApiSpec(origin = 'https://answerloops.com') {
             '401': { description: 'Missing/invalid/revoked API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
             '403': { $ref: '#/components/responses/InsufficientScope' },
             '413': { $ref: '#/components/responses/PayloadTooLarge' },
-            '429': { description: 'Rate limit exceeded, monthly deflection limit reached, or monthly call limit reached — see `error.code`', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+            '429': { description: 'Rate limit exceeded, monthly AI reply limit reached, or monthly call limit reached — see `error.code`', headers: rateLimitHeaders, content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           },
         },
       },

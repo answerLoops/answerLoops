@@ -143,7 +143,7 @@ SLACK_POLL_INTERVAL_SECONDS=60  # default. Minimum recommended: 30.
 
 The channel picker's save form (**Integrations → Slack → Edit channels**) also sets three per-workspace fields stored on the integration record:
 
-- **Escalation User Group ID** (optional) — a Slack user group or user ID (`S…` or `U…`) pinged when the AI's confidence is below threshold
+- **Escalation User Group ID** (optional) — a Slack user group or user ID (`S…` or `U…`) pinged when the AI's confidence is below threshold; see [Human escalation](/docs/product/escalation) for how escalation works across channels
 - **Confidence threshold** (0–1, default `0.8`) — the AI answer confidence required before answerLoops treats a question as answerable at all
 - **Automatic Deflections** — off by default; see the callout above
 

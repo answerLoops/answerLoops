@@ -245,7 +245,7 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
           {/* Original message */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Original Message</h2>
-            <TicketContent content={ticket.content} />
+            <TicketContent content={ticket.content} sourcePlatform={ticket.source_platform} />
           </div>
 
           {/* AI Draft */}
@@ -296,7 +296,7 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
           )}
 
           {/* Conversation: every message after the opening one, any channel */}
-          <TicketThread replies={replies} />
+          <TicketThread replies={replies} sourcePlatform={ticket.source_platform} />
 
           {/* Reply form */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">

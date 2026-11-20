@@ -4,16 +4,16 @@ description: Manage your plan, usage, and payment method from the Billing page.
 icon: CreditCard
 ---
 
-The **Billing** page shows which plan your workspace is on, how many automatic answers you have used this month, and where to upgrade, change plan, or update your card. Open it from **Billing** in the **Configure** group of the sidebar. Everyone in the workspace can view it; starting an upgrade needs an owner or admin, and managing the subscription needs the owner.
+The **Billing** page shows which plan your workspace is on, how many AI replies you have used this month, and where to upgrade, change plan, or update your card. Open it from **Billing** in the **Configure** group of the sidebar. Everyone in the workspace can view it; starting an upgrade needs an owner or admin, and managing the subscription needs the owner.
 
 <Hotspots
   shot="billing"
   only={['usage', 'standard', 'current-plan', 'enterprise']}
   notes={{
-    usage: 'Deflections used this month against your plan limit, with the percentage used and how many remain.',
+    usage: 'AI replies used this month against your plan limit, with the percentage used and how many remain.',
     standard: 'Each plan card lists its price and what it includes, with an Upgrade button on plans other than your own.',
     'current-plan': 'Your current plan is outlined and labeled, with a Your current plan badge in place of the button.',
-    enterprise: 'Enterprise has no deflection limit, so there is nothing to reach.',
+    enterprise: 'Enterprise has no AI reply limit, so there is nothing to reach.',
   }}
 />
 
@@ -25,22 +25,22 @@ The **Billing** page shows which plan your workspace is on, how many automatic a
 
 All hosted plans include the full AI pipeline and begin with a 14-day trial. Higher plans add scale, insight, and support.
 
-| Plan | Price | Included deflections per month | At the limit |
+| Plan | Price | Included estimated AI replies per month | At the limit |
 | --- | --- | --- | --- |
 | Standard | $49/mo | 500 | Hard cap: AI auto-answering pauses |
 | Pro | $149/mo | 3,000 | Soft cap: answers keep going out, $5 per 100 over |
 | Enterprise | Custom pricing | Unlimited | No limit to reach |
 
-A **deflection** is a question the AI answers on its own, with confidence above your threshold, without a person stepping in. High-confidence standalone answers generated through the MCP server or Agent API count too. Annual prices and the full feature comparison are in [Billing plans](/docs/reference/billing-plans) and on the public [pricing page](https://answerloops.com/pricing).
+An **AI reply** is an answer answerLoops posts on its own, with confidence above your threshold, without a person stepping in. Drafts held for your team to review do not count, including ones a team member later approves or edits. (Analytics and the **Automatic Deflections** setting call the same thing a *deflection*.) High-confidence standalone answers generated through the MCP server or Agent API count too. Annual prices and the full feature comparison are in [Billing plans](/docs/reference/billing-plans) and on the public [pricing page](https://answerloops.com/pricing).
 
 ## Track your usage
 
-**Usage this month** shows deflections used against your plan's limit, resetting at the start of each calendar month. Once you pass 80%, a warning banner appears with a one-click upgrade to the next tier, so you see the limit coming instead of being surprised mid-month.
+**Usage this month** shows AI replies used against your plan's limit, resetting at the start of each calendar month. Once you pass 80%, a warning banner appears with a one-click upgrade to the next tier, so you see the limit coming instead of being surprised mid-month.
 
 What happens at 100% depends on your plan:
 
 - **Standard (hard cap):** AI auto-answering pauses until the next calendar-month reset, and new questions route to your human queue instead. There is no Standard overage charge.
-- **Pro (soft cap):** answers keep going out. Usage past your included 3,000 deflections is billed at $5 per 100 (rounded up to the next 100), and the usage bar shows how far over you are.
+- **Pro (soft cap):** answers keep going out. Usage past your included 3,000 AI replies is billed at $5 per 100 (rounded up to the next 100), and the usage bar shows how far over you are.
 - **Enterprise:** unlimited. The page shows your count with no limit.
 
 <Callout type="info">
@@ -89,10 +89,11 @@ These are notices about your trial, so they are sent whether or not you opted in
 
 ## Included AI usage
 
-You do not need your own AI provider key to use answerLoops on a hosted plan. Triage, drafting, confidence grading, and knowledge-base processing (uploads, imports, syncs, and search) are included up to a limit, during your trial and every month on a paid plan. This is separate from your plan's deflection limit above.
+You do not need your own AI provider key to use answerLoops on a hosted plan. Triage, drafting, confidence grading, and knowledge-base processing (uploads, imports, syncs, and search) are included up to a limit, during your trial and every month on a paid plan. This is separate from your plan's AI reply limit above.
 
 - **Separate limits:** answers and knowledge-base processing each have their own limit, so a large import never uses up what your answers need.
 - **By plan:** the answers limit is set per plan, so a higher plan includes more. The knowledge-base processing limit is the same on every plan, and the trial has one limit of its own. Changing plan changes your limit straight away, and the usage already counted this month carries over.
+- **What uses it:** every question the AI works on uses some, including drafts held for your team. Only AI replies that go out on their own count toward your plan's AI reply limit above, which is why plans list *estimated* AI replies: replies are counted exactly, but longer questions and sources use more AI usage.
 - **Warning:** at 80% of either, a banner across your dashboard lets you know.
 - **At the limit:** that part of AI pauses until you add your own provider in **Settings → AI Model** or, on a paid plan, until the next month starts. The trial's included usage does not reset. Tickets keep arriving either way.
 - **Reset:** the paid-plan limit resets at the start of each calendar month, for monthly and annual plans alike.

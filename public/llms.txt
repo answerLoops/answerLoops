@@ -44,11 +44,11 @@ Agents can search the knowledge base, read FAQs and tickets, generate answers, a
 
 ## Pricing
 
-Monthly subscriptions: Standard $49 with 500 automated answers and a hard cap; Pro $149 with 3,000, then $5 per additional block of 100, rounded up; Enterprise has custom pricing with unlimited automated answers, so talk to us for a quote.
+Monthly subscriptions: Standard $49 with 500 estimated AI replies and a hard cap; Pro $149 with 3,000, then $5 per additional block of 100, rounded up; Enterprise has custom pricing with unlimited AI replies, so talk to us for a quote.
 
 Annual subscriptions: Standard $468 per year ($39 monthly equivalent) and Pro $1,428 ($119 equivalent).
 
-Every new hosted account gets one 14-day trial with every feature included and no card required; continuing afterwards means choosing a paid plan and adding a card. AI usage is included without a provider key, up to a limit, during the trial and each calendar month on paid plans, with separate limits for answers and knowledge-base processing. The included answers amount depends on the plan: Standard covers roughly 500 answers a month and higher plans include more, separate from each plan's automated-answer allowance. Connecting your own provider removes the limit for what it handles (an OpenAI key covers answers and knowledge-base processing; other providers cover answers, plus an OpenAI embedding key for the knowledge base); that model usage is billed by your provider. Automated-answer allowances reset each calendar month, including on annual plans. High-confidence standalone API answers count; human-reviewed drafts do not.
+Every new hosted account gets one 14-day trial with every feature included and no card required; continuing afterwards means choosing a paid plan and adding a card. AI usage is included without a provider key, up to a limit, during the trial and each calendar month on paid plans, with separate limits for answers and knowledge-base processing. The included amount depends on the plan: Standard covers roughly 500 estimated AI replies a month and higher plans include more. Every question the AI works on uses some of it, including drafts held for the team, while only replies that go out on their own count toward the AI-reply allowance, so a plan can reach its included AI usage first. Connecting your own provider removes the limit for what it handles (an OpenAI key covers answers and knowledge-base processing; other providers cover answers, plus an OpenAI embedding key for the knowledge base); that model usage is billed by your provider. AI-reply allowances reset each calendar month, including on annual plans. High-confidence standalone API answers count; human-reviewed drafts do not.
 
 ## Integrations
 

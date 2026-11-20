@@ -99,7 +99,7 @@ export default function LandingPage() {
     })),
   }
   return (
-    <MarketingPage>
+    <MarketingPage chat>
       <PageSchema
         name={PAGE_TITLE}
         description={metadata.description!}

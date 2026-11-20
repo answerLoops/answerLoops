@@ -104,24 +104,112 @@ describe('NotionKBSection', () => {
     expect(screen.getByRole('button', { name: /^unpublish$/i })).toBeTruthy()
   })
 
-  it('the publish toggle PATCHes /api/kb/sources/:id with { published: 1 } when going from unpublished', async () => {
+  const patchCalls = () =>
+    mockFetch.mock.calls.filter(([url]) => typeof url === 'string' && url.startsWith('/api/kb/sources/'))
+
+  async function openPublishConfirm(sourceOverrides: Record<string, unknown> = { published: 0 }, conn: unknown = connectedConn) {
+    mockFetch.mockImplementation(routeFetch({ conn, sources: [notionSource(sourceOverrides)] }))
+    const user = userEvent.setup()
+    const onSynced = vi.fn()
+    render(<NotionKBSection onSynced={onSynced} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: /publish to widget/i })).toBeTruthy())
+    await user.click(screen.getByRole('button', { name: /publish to widget/i }))
+    return { user, onSynced }
+  }
+
+  it('asks before publishing: nothing is sent until the person confirms', async () => {
+    await openPublishConfirm()
+
+    const panel = screen.getByRole('group', { name: /confirm publishing/i })
+    expect(panel).toBeTruthy()
+    expect(screen.getByText(/8 chunks will go live/i)).toBeTruthy()
+    expect(screen.getByText(/shared with your Notion integration/i)).toBeTruthy()
+    expect(patchCalls()).toHaveLength(0)
+  })
+
+  it('confirming PATCHes /api/kb/sources/:id with { published: 1 }, closes the prompt and refreshes', async () => {
+    const { user, onSynced } = await openPublishConfirm()
+
+    await user.click(screen.getByRole('button', { name: /yes, publish/i }))
+
+    await waitFor(() => {
+      expect(patchCalls()).toHaveLength(1)
+      expect(patchCalls()[0][0]).toBe('/api/kb/sources/42')
+      expect(patchCalls()[0][1].method).toBe('PATCH')
+      expect(JSON.parse(patchCalls()[0][1].body)).toEqual({ published: 1 })
+    })
+    await waitFor(() => expect(onSynced).toHaveBeenCalled())
+    expect(screen.queryByRole('group', { name: /confirm publishing/i })).toBeNull()
+  })
+
+  it('cancelling closes the prompt without sending anything', async () => {
+    const { user } = await openPublishConfirm()
+
+    await user.click(screen.getByRole('button', { name: /^cancel$/i }))
+
+    expect(screen.queryByRole('group', { name: /confirm publishing/i })).toBeNull()
+    expect(patchCalls()).toHaveLength(0)
+    expect(screen.getByRole('button', { name: /publish to widget/i })).not.toBeDisabled()
+  })
+
+  it('Escape closes the prompt without sending anything', async () => {
+    const { user } = await openPublishConfirm()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('group', { name: /confirm publishing/i })).toBeNull()
+    expect(patchCalls()).toHaveLength(0)
+  })
+
+  it('focuses Cancel, not the publishing action, when the prompt opens', async () => {
+    await openPublishConfirm()
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /^cancel$/i }))
+  })
+
+  it('disables the publish button while the prompt is open', async () => {
+    await openPublishConfirm()
+    expect(screen.getByRole('button', { name: /publish to widget/i })).toBeDisabled()
+  })
+
+  it('uses the singular for a single chunk', async () => {
+    await openPublishConfirm({ published: 0 }, { ...connectedConn, kb_chunk_count: 1 })
+    expect(screen.getByText(/1 chunk will go live/i)).toBeTruthy()
+  })
+
+  it('leaves the chunk count out of the prompt when none has been counted', async () => {
+    await openPublishConfirm({ published: 0 }, { ...connectedConn, kb_chunk_count: 0 })
+    expect(screen.queryByText(/will go live/i)).toBeNull()
+    expect(screen.getByText(/shared with your Notion integration/i)).toBeTruthy()
+  })
+
+  it('shows an error and no longer asks when the publish request fails', async () => {
     mockFetch.mockImplementation(
-      routeFetch({ conn: connectedConn, sources: [notionSource({ published: 0 })] }),
+      routeFetch({ conn: connectedConn, sources: [notionSource({ published: 0 })], patchOk: false }),
     )
     const user = userEvent.setup()
     render(<NotionKBSection onSynced={vi.fn()} />)
-
     await waitFor(() => expect(screen.getByRole('button', { name: /publish to widget/i })).toBeTruthy())
     await user.click(screen.getByRole('button', { name: /publish to widget/i }))
+    await user.click(screen.getByRole('button', { name: /yes, publish/i }))
 
+    await waitFor(() => expect(screen.getByText('Could not update publish state')).toBeTruthy())
+    expect(screen.queryByRole('group', { name: /confirm publishing/i })).toBeNull()
+  })
+
+  it('unpublishing needs no confirmation: one click PATCHes { published: 0 }', async () => {
+    mockFetch.mockImplementation(
+      routeFetch({ conn: connectedConn, sources: [notionSource({ published: 1 })] }),
+    )
+    const user = userEvent.setup()
+    render(<NotionKBSection onSynced={vi.fn()} />)
+    await waitFor(() => expect(screen.getByRole('button', { name: /^unpublish$/i })).toBeTruthy())
+
+    await user.click(screen.getByRole('button', { name: /^unpublish$/i }))
+
+    expect(screen.queryByRole('group', { name: /confirm publishing/i })).toBeNull()
     await waitFor(() => {
-      const patchCall = mockFetch.mock.calls.find(
-        ([url]) => typeof url === 'string' && url.startsWith('/api/kb/sources/'),
-      )
-      expect(patchCall).toBeTruthy()
-      expect(patchCall![0]).toBe('/api/kb/sources/42')
-      expect(patchCall![1].method).toBe('PATCH')
-      expect(JSON.parse(patchCall![1].body)).toEqual({ published: 1 })
+      expect(patchCalls()).toHaveLength(1)
+      expect(JSON.parse(patchCalls()[0][1].body)).toEqual({ published: 0 })
     })
   })
 
