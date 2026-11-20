@@ -22,7 +22,7 @@ function title(ticket: Ticket): string {
 export function ActivityPanel({ tickets, total }: { tickets: Ticket[]; total: number }) {
   if (total === 0 || tickets.length === 0) return null
   const viewAll = (
-    <Link href="/tickets?newActivity=1&sort=activity" prefetch={false} className="shrink-0 text-xs font-medium text-brand-600 hover:text-brand-700">
+    <Link href="/tickets?newActivity=1&sort=activity" prefetch={false} className="inline-flex min-h-11 shrink-0 items-center text-xs font-medium text-brand-600 hover:text-brand-700">
       View all {total} →
     </Link>
   )
