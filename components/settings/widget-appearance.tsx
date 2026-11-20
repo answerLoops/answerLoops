@@ -283,12 +283,14 @@ export function WidgetAppearanceSettings({
             className={`${inputClass} min-w-0 flex-1 font-mono sm:max-w-[10rem]`}
           />
         </div>
+        <p className="mt-2 text-[0.6875rem] font-medium text-gray-500">Preview</p>
         <div
-          className="mt-2 flex min-h-10 items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-medium sm:max-w-xs"
+          aria-hidden="true"
+          className="mt-1 flex min-h-10 cursor-default select-none items-center justify-center rounded-lg px-3 py-2 text-center text-xs font-medium sm:max-w-xs"
           style={{ backgroundColor: previewColor, color: previewText }}
           data-testid="widget-brand-preview"
         >
-          Start chat
+          Sample button
         </div>
         <p className="pt-1 text-[0.6875rem] text-gray-500">
           The text on your color is chosen automatically ({previewText === '#ffffff' ? 'white' : 'dark'}) so it is always readable. Leave empty for the answerLoops blue.
