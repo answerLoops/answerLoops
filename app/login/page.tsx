@@ -5,11 +5,10 @@ import { auth } from '@/auth'
 import { parsePromoCode } from '@/lib/billing/promo'
 import { LoginForm } from '@/components/auth/login-form'
 import { configuredSignInProviders } from '@/lib/auth/providers'
-//import { IntegrationIcon } from '@/components/marketing/integration-icon'
-//import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 import { Logo, LogoMark } from '@/components/logo'
 import { ORDERED_PLANS, TRIAL_DAYS } from '@/lib/billing/plans'
 import { SupportedChannels } from '@/components/marketing/supported-channels'
+
 export const dynamic = 'force-dynamic'
 
 // Sign-in is not a search result. It is reachable under many query strings
@@ -121,7 +120,6 @@ export default async function LoginPage({ searchParams }: Props) {
             <div className="border-t border-slate-100 bg-slate-50/70 px-6 py-4">
               <SupportedChannels variant="compact" />
             </div>
-
 
             <p className="border-t border-slate-100 px-6 py-4 text-xs leading-relaxed text-slate-500">
               When the {TRIAL_DAYS} days end, you choose whether to continue, from ${startingPrice}/month.
