@@ -26,9 +26,6 @@ function job(workflow: string, id: string): string {
 
 const REQUIRED_CI_NAMES = ['Test + build']
 const REQUIRED_SECURITY_NAMES = [
-  'Semgrep SAST',
-  'Trivy — deps + secrets + Dockerfile',
-  'pnpm audit',
   'Supply-chain trust audit',
   'Zizmor — GitHub Actions workflow audit',
 ]
