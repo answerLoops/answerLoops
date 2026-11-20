@@ -186,6 +186,7 @@ describe('public/widget.js: using the resolved token', () => {
     textContent: string
     attrs: Record<string, string>
     children: El[]
+    listeners: Record<string, () => void>
     [k: string]: unknown
   }
   const el = (): El => {
@@ -201,7 +202,10 @@ describe('public/widget.js: using the resolved token', () => {
         e.attrs[k] = v
       },
       getAttribute: (k: string) => (k in e.attrs ? e.attrs[k] : null),
-      addEventListener: () => {},
+      listeners: {},
+      addEventListener: (type: string, fn: () => void) => {
+        e.listeners[type] = fn
+      },
       appendChild: (c: El) => {
         e.children.push(c)
       },
@@ -242,6 +246,7 @@ describe('public/widget.js: using the resolved token', () => {
       panel: () => body.children.find((c) => c.id === 'cp-widget-panel'),
       bubble: () => body.children.find((c) => c.id === 'cp-widget-bubble'),
       iframeSrc: () => body.children.find((c) => c.id === 'cp-widget-panel')?.children[0]?.src,
+      open: () => body.children.find((c) => c.id === 'cp-widget-bubble')?.listeners.click?.(),
     }
   }
 
@@ -251,7 +256,9 @@ describe('public/widget.js: using the resolved token', () => {
 
   it('a slug snippet builds the iframe from the returned token, never the slug', async () => {
     const w = run('acme-help', { token: RESOLVED, display: {} })
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${RESOLVED}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${RESOLVED}`)
     expect(w.iframeSrc()).not.toContain('acme-help')
   })
 
