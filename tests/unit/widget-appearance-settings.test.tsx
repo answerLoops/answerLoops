@@ -27,7 +27,7 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-const NONE = { title: null, welcome: null, brandColor: null }
+const NONE = { title: null, welcome: null, brandColor: null, starterQuestions: [] as string[], starterEnabled: true }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -35,6 +35,8 @@ beforeEach(() => {
 
 const title = () => screen.getByLabelText('Chat title') as HTMLInputElement
 const welcome = () => screen.getByLabelText('Welcome message') as HTMLTextAreaElement
+const starters = () => screen.getByLabelText('Starter questions') as HTMLTextAreaElement
+const toggle = () => screen.getByRole('switch', { name: /show starter questions/i }) as HTMLInputElement
 const colorText = () => screen.getByLabelText('Brand color') as HTMLInputElement
 const colorPicker = () => screen.getByLabelText('Pick a brand color') as HTMLInputElement
 const save = () => screen.getByRole('button', { name: /save appearance|saving/i }) as HTMLButtonElement
@@ -47,7 +49,7 @@ describe('a Pro or above owner or admin', () => {
       <WidgetAppearanceSettings
         canManage
         customizationAvailable
-        initialAppearance={{ title: 'Acme Help', welcome: 'Hello there', brandColor: '#ffd60a' }}
+        initialAppearance={{ title: 'Acme Help', welcome: 'Hello there', brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true }}
       />
     )
     expect(title().value).toBe('Acme Help')
@@ -70,7 +72,7 @@ describe('a Pro or above owner or admin', () => {
 
   it('keeps Save off until something changes, then sends the form and shows what was stored', async () => {
     h.saveWidgetAppearanceAction.mockResolvedValue({
-      appearance: { title: 'Acme Help', welcome: null, brandColor: '#ffd60a' },
+      appearance: { title: 'Acme Help', welcome: null, brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true },
     })
     render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
     expect(save().disabled).toBe(true)
@@ -141,7 +143,7 @@ describe('a Pro or above owner or admin', () => {
       <WidgetAppearanceSettings
         canManage
         customizationAvailable
-        initialAppearance={{ title: 'Acme Help', welcome: 'Hello', brandColor: '#ffd60a' }}
+        initialAppearance={{ title: 'Acme Help', welcome: 'Hello', brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true }}
       />
     )
     await userEvent.click(reset())
@@ -162,6 +164,200 @@ describe('a Pro or above owner or admin', () => {
     expect(save().className).toMatch(/min-h-11/)
     expect(reset().className).toMatch(/min-h-11/)
     expect(save().className).toMatch(/\bw-full\b/)
+  })
+})
+
+describe('starter questions', () => {
+  it('shows the saved questions one per line, with a live count out of four', async () => {
+    render(
+      <WidgetAppearanceSettings
+        canManage
+        customizationAvailable
+        initialAppearance={{ ...NONE, starterQuestions: ['How does it work?', 'What does it cost?'] }}
+      />
+    )
+    expect(starters().value).toBe('How does it work?\nWhat does it cost?')
+    expect(screen.getByText('2 / 4 questions')).toBeTruthy()
+    await userEvent.type(starters(), '{Enter}Is there a free trial?')
+    expect(screen.getByText('3 / 4 questions')).toBeTruthy()
+  })
+
+  it('does not count blank lines, and keeps Save off until something changes', async () => {
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    expect(screen.getByText('0 / 4 questions')).toBeTruthy()
+    await userEvent.type(starters(), '{Enter}{Enter}')
+    expect(screen.getByText('0 / 4 questions')).toBeTruthy()
+    expect(save().disabled).toBe(true)
+    await userEvent.type(starters(), 'How does it work?')
+    expect(save().disabled).toBe(false)
+  })
+
+  it('sends them with the form and shows exactly what the server stored', async () => {
+    h.saveWidgetAppearanceAction.mockResolvedValue({
+      appearance: { ...NONE, starterQuestions: ['How does it work?', 'What does it cost?'] },
+    })
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    await userEvent.type(starters(), ' How does it work? {Enter}{Enter}What does it cost?{Enter}how does it work?')
+    await userEvent.click(save())
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/within about a minute/))
+    const fd = h.saveWidgetAppearanceAction.mock.calls[0][1] as FormData
+    expect(fd.get('starterQuestions')).toBe(' How does it work? \n\nWhat does it cost?\nhow does it work?')
+    expect(starters().value).toBe('How does it work?\nWhat does it cost?')
+    expect(save().disabled).toBe(true)
+  })
+
+  it('blocks Save and says why when there are more than four or one is too long', async () => {
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    await userEvent.type(starters(), 'a{Enter}b{Enter}c{Enter}d{Enter}e')
+    expect(screen.getByText('Use up to 4 starter questions, 80 characters each.')).toBeTruthy()
+    expect(save().disabled).toBe(true)
+    await userEvent.clear(starters())
+    await userEvent.type(starters(), 'q'.repeat(81))
+    expect(screen.getByText('Use up to 4 starter questions, 80 characters each.')).toBeTruthy()
+    expect(save().disabled).toBe(true)
+    await userEvent.clear(starters())
+    await userEvent.type(starters(), 'q'.repeat(80))
+    expect(save().disabled).toBe(false)
+  })
+
+  it('shows the server’s message next to the box', async () => {
+    h.saveWidgetAppearanceAction.mockResolvedValue({
+      field: 'starterQuestions',
+      error: 'Use up to 4 starter questions, 80 characters each.',
+    })
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    await userEvent.type(starters(), 'How does it work?')
+    await userEvent.click(save())
+    await waitFor(() =>
+      expect(screen.getByText('Use up to 4 starter questions, 80 characters each.')).toBeTruthy()
+    )
+  })
+
+  it('is emptied by Reset to default', async () => {
+    h.resetWidgetAppearanceAction.mockResolvedValue({ appearance: NONE })
+    render(
+      <WidgetAppearanceSettings
+        canManage
+        customizationAvailable
+        initialAppearance={{ ...NONE, starterQuestions: ['How does it work?'] }}
+      />
+    )
+    expect(reset().disabled).toBe(false)
+    await userEvent.click(reset())
+    await waitFor(() => expect(starters().value).toBe(''))
+    expect(h.resetWidgetAppearanceAction).toHaveBeenCalledTimes(1)
+  })
+
+  it('is locked on a plan without customization and read-only for a member', () => {
+    const { unmount } = render(
+      <WidgetAppearanceSettings canManage customizationAvailable={false} initialAppearance={NONE} />
+    )
+    expect(starters().disabled).toBe(true)
+    unmount()
+    render(
+      <WidgetAppearanceSettings
+        canManage={false}
+        customizationAvailable
+        initialAppearance={{ ...NONE, starterQuestions: ['How does it work?'] }}
+      />
+    )
+    expect(starters().disabled).toBe(true)
+    expect(starters().value).toBe('How does it work?')
+  })
+})
+
+describe('the starter questions switch', () => {
+  const QS = ['How does it work?', 'What does it cost?']
+
+  it('is on by default, labelled, and a comfortable size to tap', () => {
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    expect(toggle().checked).toBe(true)
+    expect(toggle().closest('label')?.className).toMatch(/min-h-11/)
+    expect(screen.getByText(/without deleting your questions/i)).toBeTruthy()
+  })
+
+  it('shows the saved state, and still lets the questions be edited while off', async () => {
+    render(
+      <WidgetAppearanceSettings
+        canManage
+        customizationAvailable
+        initialAppearance={{ ...NONE, starterQuestions: QS, starterEnabled: false }}
+      />
+    )
+    expect(toggle().checked).toBe(false)
+    expect(starters().disabled).toBe(false)
+    expect(starters().value).toBe(QS.join('\n'))
+    await userEvent.type(starters(), '{Enter}Is there a trial?')
+    expect(screen.getByText('3 / 4 questions')).toBeTruthy()
+  })
+
+  it('turns Save on when flipped, sends the choice with the form, and shows what was stored', async () => {
+    h.saveWidgetAppearanceAction.mockResolvedValue({
+      appearance: { ...NONE, starterQuestions: QS, starterEnabled: false },
+    })
+    render(
+      <WidgetAppearanceSettings
+        canManage
+        customizationAvailable
+        initialAppearance={{ ...NONE, starterQuestions: QS, starterEnabled: true }}
+      />
+    )
+    expect(save().disabled).toBe(true)
+    await userEvent.click(toggle())
+    expect(toggle().checked).toBe(false)
+    expect(save().disabled).toBe(false)
+    await userEvent.click(save())
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/within about a minute/))
+    const fd = h.saveWidgetAppearanceAction.mock.calls[0][1] as FormData
+    expect(fd.get('starterEnabled')).toBe('false')
+    expect(fd.get('starterQuestions')).toBe(QS.join('\n'))
+    expect(toggle().checked).toBe(false)
+    expect(save().disabled).toBe(true)
+  })
+
+  it('sends "true" when on', async () => {
+    h.saveWidgetAppearanceAction.mockResolvedValue({ appearance: { ...NONE, starterQuestions: QS } })
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    await userEvent.type(starters(), QS[0])
+    await userEvent.click(save())
+    await waitFor(() => expect(h.saveWidgetAppearanceAction).toHaveBeenCalled())
+    expect((h.saveWidgetAppearanceAction.mock.calls[0][1] as FormData).get('starterEnabled')).toBe('true')
+  })
+
+  it('is back on, with the questions cleared, after Reset to default', async () => {
+    h.resetWidgetAppearanceAction.mockResolvedValue({ appearance: NONE })
+    render(
+      <WidgetAppearanceSettings
+        canManage
+        customizationAvailable
+        initialAppearance={{ ...NONE, starterQuestions: QS, starterEnabled: false }}
+      />
+    )
+    expect(reset().disabled).toBe(false)
+    await userEvent.click(reset())
+    await waitFor(() => expect(toggle().checked).toBe(true))
+    expect(starters().value).toBe('')
+  })
+
+  it('counts as something to reset when it is the only thing switched off', () => {
+    render(
+      <WidgetAppearanceSettings
+        canManage
+        customizationAvailable
+        initialAppearance={{ ...NONE, starterEnabled: false }}
+      />
+    )
+    expect(reset().disabled).toBe(false)
+  })
+
+  it('is locked on a plan without customization and for a member', () => {
+    const { unmount } = render(
+      <WidgetAppearanceSettings canManage customizationAvailable={false} initialAppearance={NONE} />
+    )
+    expect(toggle().disabled).toBe(true)
+    unmount()
+    render(<WidgetAppearanceSettings canManage={false} customizationAvailable initialAppearance={NONE} />)
+    expect(toggle().disabled).toBe(true)
   })
 })
 
@@ -187,7 +383,7 @@ describe('a member who is not an owner or admin', () => {
       <WidgetAppearanceSettings
         canManage={false}
         customizationAvailable
-        initialAppearance={{ title: 'Acme Help', welcome: null, brandColor: null }}
+        initialAppearance={{ title: 'Acme Help', welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true }}
       />
     )
     expect(screen.getByText(/only owners and admins can change this/i)).toBeTruthy()

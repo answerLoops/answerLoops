@@ -69,6 +69,12 @@ export const orgs = pgTable('orgs', {
   widgetTitle: text('widget_title'),
   widgetWelcome: text('widget_welcome'),
   widgetBrandColor: text('widget_brand_color'),
+  // Up to four short questions shown as tappable buttons when the chat opens
+  // (migration 0079), one per line. NULL means none.
+  widgetStarterQuestions: text('widget_starter_questions'),
+  // Whether those buttons are shown. NULL and true mean shown; only an explicit
+  // false hides them, so an owner can switch them off and keep the questions.
+  widgetStarterEnabled: boolean('widget_starter_enabled'),
   roiMinutesPerTicket: integer('roi_minutes_per_ticket'),
   roiStaffHourlyRate: integer('roi_staff_hourly_rate'),
   // Set the moment an owner confirms account deletion. NULL means active.

@@ -19,7 +19,11 @@ import {
   normalizeBrandColor,
   normalizeWidgetTitle,
   normalizeWidgetWelcome,
+  normalizeStarterQuestions,
+  readStarterEnabled,
   readWidgetAppearance,
+  serializeStarterEnabled,
+  serializeStarterQuestions,
   type WidgetAppearance,
 } from '@/lib/widget/appearance'
 
@@ -67,6 +71,8 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       widget_title: orgs.widgetTitle,
       widget_welcome: orgs.widgetWelcome,
       widget_brand_color: orgs.widgetBrandColor,
+      widget_starter_questions: orgs.widgetStarterQuestions,
+      widget_starter_enabled: orgs.widgetStarterEnabled,
       plan_id: subscriptions.planId,
     })
     .from(orgs)
@@ -116,6 +122,8 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       title: row.widget_title,
       welcome: row.widget_welcome,
       brandColor: row.widget_brand_color,
+      starterQuestions: row.widget_starter_questions,
+      starterEnabled: row.widget_starter_enabled,
     }),
   }
 }
@@ -239,13 +247,15 @@ export async function setWidgetGuidance(orgId: number, guidance: string | null):
   await getDb().update(orgs).set({ widgetGuidance: result.value }).where(eq(orgs.id, orgId))
 }
 
-/** What the owner has chosen for the widget's title, welcome message and brand color. */
+/** What the owner has chosen for the widget's title, welcome message, brand color and starter questions. */
 export async function getWidgetAppearance(orgId: number): Promise<WidgetAppearance> {
   const [row] = await getDb()
     .select({
       title: orgs.widgetTitle,
       welcome: orgs.widgetWelcome,
       brandColor: orgs.widgetBrandColor,
+      starterQuestions: orgs.widgetStarterQuestions,
+      starterEnabled: orgs.widgetStarterEnabled,
     })
     .from(orgs)
     .where(eq(orgs.id, orgId))
@@ -254,6 +264,8 @@ export async function getWidgetAppearance(orgId: number): Promise<WidgetAppearan
     title: row?.title,
     welcome: row?.welcome,
     brandColor: row?.brandColor,
+    starterQuestions: row?.starterQuestions,
+    starterEnabled: row?.starterEnabled,
   })
 }
 
@@ -264,7 +276,7 @@ export async function getWidgetAppearance(orgId: number): Promise<WidgetAppearan
  */
 export async function setWidgetAppearance(
   orgId: number,
-  input: { title: unknown; welcome: unknown; brandColor: unknown }
+  input: { title: unknown; welcome: unknown; brandColor: unknown; starterQuestions?: unknown; starterEnabled?: unknown }
 ): Promise<WidgetAppearance> {
   const title = normalizeWidgetTitle(input.title)
   if (!title.ok) throw new Error(title.error)
@@ -272,11 +284,20 @@ export async function setWidgetAppearance(
   if (!welcome.ok) throw new Error(welcome.error)
   const color = normalizeBrandColor(input.brandColor)
   if (!color.ok) throw new Error(color.error)
+  const starters = normalizeStarterQuestions(input.starterQuestions)
+  if (!starters.ok) throw new Error(starters.error)
+  const starterEnabled = readStarterEnabled(input.starterEnabled)
   await getDb()
     .update(orgs)
-    .set({ widgetTitle: title.value, widgetWelcome: welcome.value, widgetBrandColor: color.value })
+    .set({
+      widgetTitle: title.value,
+      widgetWelcome: welcome.value,
+      widgetBrandColor: color.value,
+      widgetStarterQuestions: serializeStarterQuestions(starters.value),
+      widgetStarterEnabled: serializeStarterEnabled(starterEnabled),
+    })
     .where(eq(orgs.id, orgId))
-  return { title: title.value, welcome: welcome.value, brandColor: color.value }
+  return { title: title.value, welcome: welcome.value, brandColor: color.value, starterQuestions: starters.value, starterEnabled }
 }
 
 /** The org's current public slug, or null when none has been chosen. */

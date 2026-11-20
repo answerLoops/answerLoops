@@ -3,16 +3,24 @@ import {
   DEFAULT_WIDGET_BRAND_COLOR,
   ON_BRAND_DARK,
   ON_BRAND_LIGHT,
+  STARTER_QUESTIONS_LIMIT_MESSAGE,
+  WIDGET_STARTER_QUESTIONS_MAX,
+  WIDGET_STARTER_QUESTION_MAX_CHARS,
   WIDGET_TITLE_MAX_CHARS,
   WIDGET_WELCOME_MAX_CHARS,
   brandPalette,
   contrastRatio,
   isValidBrandColor,
   normalizeBrandColor,
+  normalizeStarterQuestions,
   normalizeWidgetTitle,
   normalizeWidgetWelcome,
   readWidgetAppearance,
   readableTextColor,
+  readStarterEnabled,
+  readStarterQuestions,
+  serializeStarterEnabled,
+  serializeStarterQuestions,
 } from '@/lib/widget/appearance'
 
 const HEX = /^#[0-9a-f]{6}$/
@@ -199,6 +207,8 @@ describe('reading stored values', () => {
       title: 'Acme',
       welcome: 'Hi',
       brandColor: '#ffd60a',
+      starterQuestions: [],
+      starterEnabled: true,
     })
     expect(
       readWidgetAppearance({
@@ -206,7 +216,77 @@ describe('reading stored values', () => {
         welcome: 'w'.repeat(WIDGET_WELCOME_MAX_CHARS + 5),
         brandColor: 'red;}',
       })
-    ).toEqual({ title: null, welcome: null, brandColor: null })
-    expect(readWidgetAppearance({})).toEqual({ title: null, welcome: null, brandColor: null })
+    ).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true })
+    expect(readWidgetAppearance({})).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true })
+  })
+})
+
+describe('starter questions', () => {
+  it('has the limits the settings page and the docs state', () => {
+    expect(WIDGET_STARTER_QUESTIONS_MAX).toBe(4)
+    expect(WIDGET_STARTER_QUESTION_MAX_CHARS).toBe(80)
+    expect(STARTER_QUESTIONS_LIMIT_MESSAGE).toBe('Use up to 4 starter questions, 80 characters each.')
+  })
+
+  it('takes one question per line: trimmed, no blanks, no repeats in any letter case', () => {
+    expect(normalizeStarterQuestions('  How does it work?  \r\n\n What does it cost?\nhow does it work?\n ')).toEqual({
+      ok: true,
+      value: ['How does it work?', 'What does it cost?'],
+    })
+    expect(normalizeStarterQuestions(['One', 'Two'])).toEqual({ ok: true, value: ['One', 'Two'] })
+  })
+
+  it('treats nothing, empty and blank lines as "show none"', () => {
+    for (const empty of [null, undefined, '', '   ', '\n\n \n', []]) {
+      expect(normalizeStarterQuestions(empty)).toEqual({ ok: true, value: [] })
+    }
+  })
+
+  it('strips control characters and keeps each question on its own line as plain text', () => {
+    const result = normalizeStarterQuestions('Hel\u0000lo\u0007 there\t friend')
+    expect(result).toEqual({ ok: true, value: ['Hello there friend'] })
+    // Markup is kept as typed text: the widget draws it as text, never as HTML.
+    expect(normalizeStarterQuestions('<img src=x onerror=alert(1)>')).toEqual({
+      ok: true,
+      value: ['<img src=x onerror=alert(1)>'],
+    })
+  })
+
+  it('refuses more than four, or any longer than 80 characters, with one plain message', () => {
+    expect(normalizeStarterQuestions('a\nb\nc\nd')).toEqual({ ok: true, value: ['a', 'b', 'c', 'd'] })
+    expect(normalizeStarterQuestions('a\nb\nc\nd\ne')).toEqual({ ok: false, error: STARTER_QUESTIONS_LIMIT_MESSAGE })
+    expect(normalizeStarterQuestions('q'.repeat(80))).toEqual({ ok: true, value: ['q'.repeat(80)] })
+    expect(normalizeStarterQuestions('q'.repeat(81))).toEqual({ ok: false, error: STARTER_QUESTIONS_LIMIT_MESSAGE })
+  })
+
+  it('refuses a value that is neither text nor a list of text', () => {
+    for (const bad of [5, {}, [1, 2], true]) {
+      expect(normalizeStarterQuestions(bad)).toEqual({ ok: false, error: 'Invalid starter questions' })
+    }
+  })
+
+  it('stores as one question per line, or null for none, and reads back the same', () => {
+    expect(serializeStarterQuestions(['One', 'Two'])).toBe('One\nTwo')
+    expect(serializeStarterQuestions([])).toBeNull()
+    expect(readStarterQuestions('One\nTwo')).toEqual(['One', 'Two'])
+    expect(readStarterQuestions(null)).toEqual([])
+  })
+
+  it('is on unless it is explicitly switched off', () => {
+    for (const on of [true, null, undefined, 'true', 'on', '1', '', 'yes', 0, {}]) {
+      expect(readStarterEnabled(on), String(on)).toBe(true)
+    }
+    for (const off of [false, 'false', ' FALSE ', 'off', '0']) {
+      expect(readStarterEnabled(off), String(off)).toBe(false)
+    }
+  })
+
+  it('stores the switch as false when off and null (the default, on) otherwise', () => {
+    expect(serializeStarterEnabled(false)).toBe(false)
+    expect(serializeStarterEnabled(true)).toBeNull()
+  })
+
+  it('reads a hand-edited row defensively: drops oversized lines, caps at four', () => {
+    expect(readStarterQuestions('ok\n' + 'x'.repeat(200) + '\na\nb\nc\nd\ne')).toEqual(['ok', 'a', 'b', 'c'])
   })
 })

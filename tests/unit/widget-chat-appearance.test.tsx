@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { brandPalette } from '@/lib/widget/appearance'
 
@@ -52,20 +52,22 @@ async function renderChat(props: Partial<React.ComponentProps<typeof import('@/a
 }
 
 describe('the chat title', () => {
+  // The title is drawn twice in an empty chat: in the header, and as the
+  // heading of the welcome card.
   it('is "<name> Support" when the owner has not set one', async () => {
     await renderChat()
-    expect(screen.getByText('Acme Support')).toBeTruthy()
+    expect(screen.getAllByText('Acme Support').length).toBeGreaterThanOrEqual(1)
   })
 
   it('shows the owner’s title instead', async () => {
     await renderChat({ title: 'Acme Help Desk' })
-    expect(screen.getByText('Acme Help Desk')).toBeTruthy()
+    expect(screen.getAllByText('Acme Help Desk').length).toBeGreaterThanOrEqual(1)
     expect(screen.queryByText('Acme Support')).toBeNull()
   })
 
   it('renders a title containing markup as text, never as HTML', async () => {
     const { container } = await renderChat({ title: '<img src=x onerror=alert(1)><b>Hi</b>' })
-    expect(screen.getByText('<img src=x onerror=alert(1)><b>Hi</b>')).toBeTruthy()
+    expect(screen.getAllByText('<img src=x onerror=alert(1)><b>Hi</b>').length).toBeGreaterThanOrEqual(1)
     expect(container.querySelector('b')).toBeNull()
     expect(container.querySelector('img[src="x"]')).toBeNull()
   })
@@ -129,5 +131,138 @@ describe('the brand color', () => {
     const send = container.querySelector('button[type="submit"]') as HTMLElement
     expect(send.className).toContain('text-on-brand')
     expect(send.className).not.toContain('text-white')
+  })
+})
+
+describe('the first screen', () => {
+  it('is a welcome card with a larger avatar and the greeting as its heading, without repeating the title', async () => {
+    await renderChat({ title: 'Acme Help Desk', welcome: 'Ask us anything.' })
+    const card = screen.getByTestId('welcome-card')
+    expect(card.className).toContain('from-brand-50')
+    const heading = card.querySelector('h2') as HTMLElement
+    expect(heading.textContent).toBe('Ask us anything.')
+    expect(heading.className).toContain('text-base')
+    expect(heading.className).toContain('font-semibold')
+    // The title lives in the header; the card does not say it a second time.
+    expect(card.textContent).not.toContain('Acme Help Desk')
+    expect(screen.getAllByText('Acme Help Desk')).toHaveLength(1)
+  })
+
+  it('shows the default greeting as the heading when none is set', async () => {
+    await renderChat({ title: 'Acme Help Desk' })
+    const heading = screen.getByTestId('welcome-card').querySelector('h2') as HTMLElement
+    expect(heading.textContent).toBe('👋 Hi! How can I help you today?')
+  })
+
+  it('does not explain where answers come from', async () => {
+    await renderChat()
+    expect(screen.getByTestId('welcome-card').textContent).not.toMatch(/docs|knowledge base|source/i)
+  })
+
+  it('goes away once the conversation has started', async () => {
+    fake.agent.messages = [{ id: 'm1', role: 'user', content: 'hello' }]
+    await renderChat()
+    expect(screen.queryByTestId('welcome-card')).toBeNull()
+    fake.agent.messages = []
+  })
+})
+
+describe('starter questions', () => {
+  const QUESTIONS = ['How does it work?', 'What does it cost?']
+
+  beforeEach(() => {
+    fake.agent.messages = []
+    fake.agent.addMessage.mockImplementation((m: unknown) => {
+      fake.agent.messages.push(m)
+    })
+  })
+
+  it('shows each as a button under the greeting', async () => {
+    await renderChat({ starterQuestions: QUESTIONS })
+    const group = screen.getByTestId('starter-questions')
+    const buttons = Array.from(group.querySelectorAll('button'))
+    expect(buttons.map((b) => b.textContent)).toEqual(QUESTIONS)
+    for (const b of buttons) {
+      expect(b.getAttribute('type')).toBe('button')
+      expect(b.className).toContain('min-h-11')
+      expect(b.className).toContain('focus-visible:ring-2')
+    }
+  })
+
+  it('shows none when there are none', async () => {
+    await renderChat({ starterQuestions: [] })
+    expect(screen.queryByTestId('starter-questions')).toBeNull()
+    cleanup()
+    await renderChat()
+    expect(screen.queryByTestId('starter-questions')).toBeNull()
+  })
+
+  it('sends exactly that text once, the way a typed question is sent', async () => {
+    const user = userEvent.setup()
+    await renderChat({ starterQuestions: QUESTIONS })
+    await user.click(screen.getByRole('button', { name: 'What does it cost?' }))
+    expect(fake.agent.addMessage).toHaveBeenCalledTimes(1)
+    expect(fake.agent.addMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ role: 'user', content: 'What does it cost?' })
+    )
+    expect(fake.agent.runAgent).toHaveBeenCalledTimes(1)
+    expect(fake.agent.runAgent).toHaveBeenCalledWith({
+      forwardedProps: expect.objectContaining({ widgetToken: 'a'.repeat(48), renderToken: 't' }),
+    })
+  })
+
+  it('disappears once the question has been sent', async () => {
+    const user = userEvent.setup()
+    await renderChat({ starterQuestions: QUESTIONS })
+    await user.click(screen.getByRole('button', { name: 'How does it work?' }))
+    expect(screen.queryByTestId('starter-questions')).toBeNull()
+    expect(screen.queryByTestId('welcome-card')).toBeNull()
+  })
+
+  it('stays hidden behind the email screen until the visitor gets past it', async () => {
+    const user = userEvent.setup()
+    await renderChat({ starterQuestions: QUESTIONS, leadCaptureMode: 'up-front' })
+    expect(screen.queryByTestId('starter-questions')).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+    expect(screen.getByTestId('starter-questions')).toBeTruthy()
+  })
+
+  it('is drawn as text, never as HTML', async () => {
+    const { container } = await renderChat({ starterQuestions: ['<img src=x onerror=alert(1)>'] })
+    expect(screen.getByRole('button', { name: '<img src=x onerror=alert(1)>' })).toBeTruthy()
+    expect(container.querySelector('img[src="x"]')).toBeNull()
+  })
+})
+
+describe('the welcome card logo', () => {
+  it('is the answerLoops mark by default', async () => {
+    await renderChat()
+    const img = screen.getByTestId('welcome-avatar').querySelector('img') as HTMLImageElement
+    expect(img.getAttribute('src')).toContain('logo.png')
+  })
+
+  it('shows a workspace logo when one is passed, in the same round frame', async () => {
+    await renderChat({ logoUrl: 'https://cdn.example.com/acme.png' })
+    const avatar = screen.getByTestId('welcome-avatar')
+    const img = avatar.querySelector('img') as HTMLImageElement
+    expect(img.getAttribute('src')).toBe('https://cdn.example.com/acme.png')
+    expect(avatar.className).toContain('rounded-full')
+  })
+
+  it('falls back to the default mark for anything that is not a path on this site or an https address', async () => {
+    for (const bad of ['javascript:alert(1)', 'http://insecure.example.com/a.png', '//evil.example.com/a.png', 'data:image/png;base64,AAAA', '']) {
+      const { unmount } = await renderChat({ logoUrl: bad })
+      const img = screen.getByTestId('welcome-avatar').querySelector('img') as HTMLImageElement
+      expect(img.getAttribute('src'), bad).toContain('logo.png')
+      unmount()
+    }
+  })
+})
+
+describe('with the starter questions switched off', () => {
+  it('shows the welcome card and no buttons, because the panel is given none', async () => {
+    await renderChat({ starterQuestions: [] })
+    expect(screen.getByTestId('welcome-card')).toBeTruthy()
+    expect(screen.queryByTestId('starter-questions')).toBeNull()
   })
 })

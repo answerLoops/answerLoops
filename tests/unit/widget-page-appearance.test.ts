@@ -28,7 +28,13 @@ vi.mock('@/app/widget/[widgetToken]/embed-refused', () => ({ EmbedRefused: () =>
 
 const TOKEN = 'a1'.repeat(24)
 
-const org = (appearance: { title: string | null; welcome: string | null; brandColor: string | null }) => ({
+const org = (appearance: {
+  title: string | null
+  welcome: string | null
+  brandColor: string | null
+  starterQuestions?: string[]
+  starterEnabled?: boolean
+}) => ({
   id: 7,
   name: 'Acme',
   widget_token: TOKEN,
@@ -37,7 +43,7 @@ const org = (appearance: { title: string | null; welcome: string | null; brandCo
   widget_lead_capture_mode: 'off',
   widget_answer_scope: 'general',
   widget_guidance: null,
-  widget_appearance: appearance,
+  widget_appearance: { starterQuestions: [], starterEnabled: true, ...appearance },
 })
 
 async function renderPage() {
@@ -70,6 +76,29 @@ describe('widget page appearance', () => {
     expect(style['--brand-600']).toBe('#ffd60a')
     expect(style['--brand-on']).toBe('#111827')
     expect(props.showBranding).toBe(false)
+  })
+
+  it('passes the starter questions to the panel on a customization plan', async () => {
+    h.getOrgByWidgetToken.mockResolvedValue(
+      org({ title: null, welcome: null, brandColor: null, starterQuestions: ['How does it work?', 'What does it cost?'] })
+    )
+    const props = await renderPage()
+    expect(props.starterQuestions).toEqual(['How does it work?', 'What does it cost?'])
+  })
+
+  it('passes none when the owner has switched them off, though the questions stay saved', async () => {
+    h.getOrgByWidgetToken.mockResolvedValue(
+      org({ title: null, welcome: null, brandColor: null, starterQuestions: ['How does it work?'], starterEnabled: false })
+    )
+    expect((await renderPage()).starterQuestions).toEqual([])
+  })
+
+  it('shows no starter questions on a plan without customization, whatever is stored', async () => {
+    h.orgHasFeature.mockResolvedValue(false)
+    h.getOrgByWidgetToken.mockResolvedValue(
+      org({ title: null, welcome: null, brandColor: null, starterQuestions: ['How does it work?'] })
+    )
+    expect((await renderPage()).starterQuestions).toEqual([])
   })
 
   it('applies none of it on a plan without customization, whatever is stored', async () => {
