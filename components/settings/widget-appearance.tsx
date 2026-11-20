@@ -217,6 +217,7 @@ export function WidgetAppearanceSettings({
             id="widget-starter-enabled"
             type="checkbox"
             role="switch"
+            aria-checked={startersOn}
             checked={startersOn}
             onChange={(e) => setStartersOn(e.target.checked)}
             disabled={!editable}
