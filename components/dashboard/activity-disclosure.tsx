@@ -2,7 +2,8 @@
 
 import { useId, useState, type ReactNode } from 'react'
 
-export function ActivityDisclosure({ total, viewAll, children }: {
+export function ActivityDisclosure({ headingId, total, viewAll, children }: {
+  headingId: string
   total: number
   viewAll: ReactNode
   children: ReactNode
@@ -12,9 +13,9 @@ export function ActivityDisclosure({ total, viewAll, children }: {
 
   return (
     <>
-      <div className="flex items-center justify-between gap-3 px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 py-3 sm:flex-nowrap">
         <div className="min-w-0">
-          <h2 id="activity-heading" className="text-sm font-semibold text-slate-950">
+          <h2 className="text-sm font-semibold text-slate-950">
             <button
               type="button"
               aria-label={`Activity, ${total} ${total === 1 ? 'ticket' : 'tickets'} with new customer replies`}
@@ -23,7 +24,7 @@ export function ActivityDisclosure({ total, viewAll, children }: {
               onClick={() => setExpanded(!expanded)}
               className="group inline-flex min-h-11 items-center gap-2 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
             >
-              Activity
+              <span id={headingId}>Activity</span>
               <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[0.6875rem] font-semibold text-white">
                 {total > 99 ? '99+' : total}
               </span>

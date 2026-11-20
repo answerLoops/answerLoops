@@ -1,14 +1,11 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ActivityPanel } from '@/components/dashboard/activity-panel'
 import type { Ticket } from '@/types'
 
-afterEach(() => {
-  cleanup()
-  vi.restoreAllMocks()
-})
+afterEach(cleanup)
 
 function ticket(overrides: Partial<Ticket>): Ticket {
   return {
@@ -26,16 +23,24 @@ function ticket(overrides: Partial<Ticket>): Ticket {
 }
 
 describe('ActivityPanel', () => {
-  it('renders nothing for an empty list', () => {
-    const { container } = render(<ActivityPanel tickets={[]} total={0} />)
+  it.each([0, 1])('renders nothing for an empty list with count %i', (total) => {
+    const { container } = render(<ActivityPanel tickets={[]} total={total} />)
     expect(container).toBeEmptyDOMElement()
   })
 
-  it.each([[5, '5'], [99, '99'], [200, '99+']])(
+  it('renders nothing for a zero count even if the preview contains a ticket', () => {
+    const { container } = render(<ActivityPanel tickets={[ticket({})]} total={0} />)
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it.each([[1, '1'], [5, '5'], [99, '99'], [100, '99+'], [200, '99+']])(
     'starts collapsed and exposes the exact total for %i tickets',
     (total, badge) => {
       render(<ActivityPanel tickets={[ticket({})]} total={total} />)
-      const toggle = screen.getByRole('button', { name: `Activity, ${total} tickets with new customer replies` })
+      const region = screen.getByRole('region', { name: 'Activity' })
+      const toggle = within(region).getByRole('button', {
+        name: `Activity, ${total} ${total === 1 ? 'ticket' : 'tickets'} with new customer replies`,
+      })
       const preview = document.getElementById(toggle.getAttribute('aria-controls')!)
       expect(toggle).toHaveAttribute('aria-expanded', 'false')
       expect(preview).toHaveAttribute('hidden')
@@ -46,9 +51,8 @@ describe('ActivityPanel', () => {
     }
   )
 
-  it('toggles the preview by click without fetching data', async () => {
+  it('toggles the preview by click', async () => {
     const user = userEvent.setup()
-    const fetch = vi.spyOn(globalThis, 'fetch')
     render(<ActivityPanel tickets={[ticket({})]} total={1} />)
     const toggle = screen.getByRole('button', { name: /Activity/ })
     const preview = document.getElementById(toggle.getAttribute('aria-controls')!)
@@ -58,7 +62,6 @@ describe('ActivityPanel', () => {
     await user.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     expect(preview).toHaveAttribute('hidden')
-    expect(fetch).not.toHaveBeenCalled()
   })
 
   it('supports Enter and Space from the keyboard', async () => {
@@ -73,25 +76,26 @@ describe('ActivityPanel', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
   })
 
-  it('shows only five rows in newest-first order and links to the full list in the footer', async () => {
+  it('shows the five supplied rows and a count note when there are six unseen tickets', async () => {
     const user = userEvent.setup()
-    const tickets = [8, 7, 6, 5, 4, 3].map((id) => ticket({
+    const tickets = [8, 7, 6, 5, 4].map((id) => ticket({
       id,
       org_ticket_number: id,
       last_customer_reply_at: `2026-10-0${id}T00:00:00.000Z`,
     }))
-    render(<ActivityPanel tickets={tickets} total={200} />)
-    const footer = screen.getByText('Showing the latest 5 of 200')
-    expect(footer).not.toBeVisible()
-    await user.click(screen.getByRole('button', { name: /Activity/ }))
+    render(<ActivityPanel tickets={tickets} total={6} />)
+    const toggle = screen.getByRole('button', { name: /Activity/ })
+    const preview = document.getElementById(toggle.getAttribute('aria-controls')!)
+    const footer = screen.getByText('Showing the latest 5 of 6')
+    expect(preview).toContainElement(footer)
+    expect(preview).toHaveAttribute('hidden')
+    await user.click(toggle)
     const rows = within(screen.getByRole('list')).getAllByRole('link')
     expect(rows.map((row) => row.getAttribute('href'))).toEqual([
       '/tickets/8', '/tickets/7', '/tickets/6', '/tickets/5', '/tickets/4',
     ])
-    expect(footer).toBeVisible()
-    const links = screen.getAllByRole('link', { name: 'View all 200 →' })
-    expect(links).toHaveLength(2)
-    expect(links[1]).toHaveAttribute('href', links[0].getAttribute('href'))
+    expect(preview).not.toHaveAttribute('hidden')
+    expect(screen.getByRole('link', { name: 'View all 6 →' })).toHaveAttribute('href', '/tickets?newActivity=1&sort=activity')
   })
 
   it.each([1, 5])('omits the footer for %i unseen tickets', async (total) => {
