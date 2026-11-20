@@ -1,9 +1,10 @@
 import { DOCS_HREF, PRICING_HREF } from '@/components/marketing/nav-shared'
+import Image from 'next/image'
 import Link from 'next/link'
 import { LogoMark } from '@/components/logo'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
 import { NavCta } from './nav-cta'
-import { GITHUB_SOURCE_URL, X_URL } from '@/lib/site'
+import { CYCODE_URL, GITHUB_SOURCE_URL, X_URL } from '@/lib/site'
 import type { NavState } from './nav-shared'
 export { GITHUB_SOURCE_URL } from '@/lib/site'
 export { navState } from './nav-shared'
@@ -172,6 +173,23 @@ export function Footer() {
             >
               <GithubIcon className="h-5 w-5" />
               Proudly open-source
+            </Link>
+            <Link
+              href={CYCODE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Secured by Cycode"
+              className="mt-4 flex items-center gap-2 text-sm text-slate-600 transition-colors hover:text-slate-900"
+            >
+              <span>Secured by</span>
+              <Image
+                src="/cycode-logo.svg"
+                alt="Cycode"
+                width={65}
+                height={16}
+                unoptimized
+                className="h-4 w-auto"
+              />
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
