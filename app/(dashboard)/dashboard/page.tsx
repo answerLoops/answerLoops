@@ -2,7 +2,7 @@ import { getTicketStats, getSLABreachedTickets, getTickets, getUnseenActivityTic
 import { getDeflectionStats } from '@/lib/db/queries/analytics'
 import { deflectionRate as calculateDeflectionRate } from '@/lib/analytics/roi'
 import { StatsCards } from '@/components/dashboard/stats-cards'
-import { ActivityPanel } from '@/components/dashboard/activity-panel'
+import { ACTIVITY_PREVIEW_LIMIT, ActivityPanel } from '@/components/dashboard/activity-panel'
 import { SLABreachList } from '@/components/dashboard/sla-breach-list'
 import Link from 'next/link'
 import { StatusBadge, CategoryBadge } from '@/components/ui/badge'
@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     getSLABreachedTickets(orgId),
     getTickets({ status: 'open' }, orgId, 6),
     getDeflectionStats(orgId),
-    getUnseenActivityTickets(orgId),
+    getUnseenActivityTickets(orgId, ACTIVITY_PREVIEW_LIMIT),
     countUnseenActivityTickets(orgId),
   ])
   const dashboardDeflectionRate = Math.round(
