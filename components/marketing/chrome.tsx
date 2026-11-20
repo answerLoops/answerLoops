@@ -160,10 +160,12 @@ export function Footer() {
         <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
           <div className="flex flex-col items-start">
             <NavWordmark />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">
-              Less time answering questions. More time growing your community.
-              AnswerLoops handles repetitive questions so your team can focus on
-              meaningful conversations, stronger relationships, and community growth.
+            <p className="mt-4 max-w-xs text-sm font-semibold text-slate-900">
+              Less time answering. More time growing your community.
+            </p>
+            <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
+              answerLoops handles repetitive questions so your team can focus
+              on conversations, connections, and growth.
             </p>
             <Link
               href={GITHUB_SOURCE_URL}
