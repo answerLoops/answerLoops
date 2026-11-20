@@ -66,9 +66,9 @@ function log(level: Level, message: string, fields: LogFields = {}): void {
       ? ' ' + JSON.stringify(rest)
       : ''
     if (level === 'error' || level === 'warn') {
-      console.error(`${prefix} ${message}${detail}`, error ?? '') // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
+      console.error(`${prefix} ${message}${detail}`, error ?? '')
     } else {
-      console.log(`${prefix} ${message}${detail}`) // nosemgrep: javascript.lang.security.audit.unsafe-formatstring.unsafe-formatstring
+      console.log(`${prefix} ${message}${detail}`)
     }
   }
 }

@@ -79,6 +79,5 @@ export function PageSchema({ name, description, path, breadcrumbs = [], type = '
 
   // jsonLd is built entirely from server-controlled strings (page name/description/paths),
   // never user input, and jsonLdHtml escapes `<` so the payload can't break out of the script tag.
-  // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdHtml(jsonLd) }} />
 }

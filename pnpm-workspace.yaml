@@ -42,15 +42,15 @@ minimumReleaseAgeExclude:
   - '@auth/core@0.41.3'
   # disclosure-ok  High-severity event-loop DoS (CVE-2026-93749), fixed only
   # in 1.2.2 — released 2026-09-30, inside the 7-day aging window as of this
-  # fix. Trivy gates CI on it now, so excluded rather than waiting the window out.
+  # fix. the dependency scan gates CI on it now, so excluded rather than waiting the window out.
   - 'source-map-js@1.2.2'
   # Patched releases for two transitive packages, published inside the 7-day
-  # aging window; Trivy gates CI on them, so excluded rather than waiting it out.
+  # aging window; the dependency scan gates CI on them, so excluded rather than waiting it out.
   - 'body-parser@2.4.0'
   - 'fast-uri@3.1.9'
   - 'happy-dom@21.0.4'
   # Patched release of a transitive package, published inside the 7-day aging
-  # window; the audit and Trivy gate CI on it, so excluded rather than waiting it out.
+  # window; the dependency scan gates CI on it, so excluded rather than waiting it out.
   - 'follow-redirects@1.16.2'
 overrides:
   ws: '>=8.21.0'
