@@ -8,42 +8,22 @@ scope spans 3+ files.
 
 ---
 
-## Step 1 — full scan (both tools, all severities)
+## Step 1 — full scan (all severities)
 
-Run Trivy and Semgrep in parallel. Write logs to a private scratch dir, not
-`/tmp` (scan output can contain redacted-but-sensitive context):
+Run Trivy. Write logs to a private scratch dir, not `/tmp` (scan output can
+contain redacted-but-sensitive context):
 
 ```bash
 SCAN_DIR=$(mktemp -d)
 
-# Terminal 1 (background)
 trivy fs \
   --scanners vuln,secret,misconfig \
   --severity CRITICAL,HIGH,MEDIUM,LOW \
   --skip-dirs .pnpm-store,node_modules/.cache \
-  . 2>&1 | tee "$SCAN_DIR/trivy-full.txt" &
-
-# Terminal 2 (background)
-semgrep scan \
-  --config=auto \
-  --no-rewrite-rule-ids \
-  . 2>&1 | tee "$SCAN_DIR/semgrep-full.txt" &
-
-wait
+  . 2>&1 | tee "$SCAN_DIR/trivy-full.txt"
 ```
 
-Or sequentially if parallel output would be confusing:
-
-```bash
-trivy fs --scanners vuln,secret,misconfig --severity CRITICAL,HIGH,MEDIUM,LOW \
-  --skip-dirs .pnpm-store,node_modules/.cache . 2>&1
-
-semgrep scan --config=auto --no-rewrite-rule-ids . 2>&1
-```
-
-`semgrep --config=auto` fetches rules from the Semgrep registry over the
-network (rules only, not your code). If that call must be avoided, pin a local
-ruleset with `--config=<path>` instead.
+Code-level analysis runs on every pull request through Cycode, not here.
 
 ---
 
@@ -55,11 +35,11 @@ For each finding, classify before touching any code:
 |---|---|---|
 | **Real — fix now** | Attacker-controlled input reaches a sink, crypto weakness, secret in code, dep with known exploit | Fix in this session |
 | **Real — track** | Low severity, no known exploit, no user-controlled path | Add to known-issues list, note in commit |
-| **False positive** | Internal data only, test fixture, docs placeholder | Suppress with `# nosemgrep` or `.semgrepignore` entry + comment explaining why |
+| **False positive** | Internal data only, test fixture, docs placeholder | Suppress with an ignore entry and a comment explaining why |
 
 **Never suppress without a written reason.** The suppression comment must explain what makes it safe.
 
-**Secret finding protocol:** if Trivy or Semgrep finds a secret (any severity):
+**Secret finding protocol:** if Trivy finds a secret (any severity):
 1. Stop everything else.
 2. Identify the file and line.
 3. Alert the user: file, line, secret type, and the env-var name if it can be
@@ -102,11 +82,9 @@ All tests must pass before moving to the next finding. If a fix breaks a test:
 After all fixes are applied:
 
 ```bash
-# Both tools, same flags as Step 1
+# Same flags as Step 1
 trivy fs --scanners vuln,secret,misconfig --severity CRITICAL,HIGH,MEDIUM,LOW \
   --skip-dirs .pnpm-store,node_modules/.cache . 2>&1
-
-semgrep scan --config=auto --no-rewrite-rule-ids . 2>&1
 ```
 
 Expected: zero findings (or only known-tracked / suppressed-with-reason items).
@@ -134,7 +112,7 @@ Do not run `git commit` without explicit user approval (global rule). Stage,
 show the diff, and ask.
 
 The real detail — root cause per finding, why each fix works, every
-nosemgrep / semgrepignore justification — goes to the **internal Security page**
+suppression justification — goes to the **internal Security page**
 (`$NOTION_SECURITY_ID`), never to the commit, PR, branch, or an issue. The
 `commit-msg` / `pre-commit` disclosure hooks are a backstop that matches
 vocabulary, not meaning — keep the message clean regardless.
@@ -154,14 +132,13 @@ Output this block when all findings are resolved and scans are clean:
 SECURITY-FIX SIGN-OFF
 =====================
 Branch: <branch>
-Scan tools: Trivy <version> + Semgrep <version>
+Scan tool: Trivy <version>
 Findings: <N total>
   Fixed:     <N> — <list with severity>
   Suppressed: <N> — <list with justification>
   Tracked:   <N> — <list with reason not fixed now>
 pnpm test: PASS (<N> tests)
 Trivy rescan: CLEAN
-Semgrep rescan: CLEAN
 Secrets found: YES (cycled) / NO
 Orchestrator verdict: APPROVED ✅ / NEEDS REVISION ❌
 ```

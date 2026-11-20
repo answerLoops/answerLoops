@@ -81,7 +81,6 @@ function PricingStructuredData() {
 
   return (
     <>
-      {/* nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml */}
       {/* softwareJsonLd/faqJsonLd are built from server-controlled strings (plan names, FAQ copy), never user input; jsonLdHtml escapes `<` so the payload can't break out of the script tag. */}
       <script
         type="application/ld+json"

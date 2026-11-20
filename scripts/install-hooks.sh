@@ -96,11 +96,11 @@ echo "Running tests..."
 pnpm test --run || { echo "Commit blocked: tests failed."; exit 1; }
 echo "Tests passed."
 
-# Trivy vuln/misconfig and Semgrep are not run here, on purpose. With them the
-# hook took over ten minutes, and a hook that slow gets --no-verify'd — which
+# Dependency and code scanning are not run here, on purpose. Slow scans took
+# the hook over ten minutes, and a hook that slow gets --no-verify'd — which
 # does not skip one stage, it skips all of them, including the disclosure and
-# secret checks above. Dependency and code scanning run on every pull request
-# through Cycode instead, where the wait does not create an incentive to bypass.
+# secret checks above. They run on every pull request through Cycode instead,
+# where the wait does not create an incentive to bypass.
 # <<< answerloops managed <<<
 BLOCK
 
