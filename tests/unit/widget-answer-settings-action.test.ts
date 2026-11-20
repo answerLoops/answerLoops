@@ -17,7 +17,10 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
+vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: vi.fn(async () => true) }))
 vi.mock('@/lib/db/queries/widgets', () => ({
+  getWidgetAppearance: vi.fn(async () => ({ title: null, welcome: null, brandColor: null })),
+  setWidgetAppearance: vi.fn(),
   setWidgetAnswerScope: h.setWidgetAnswerScope,
   setWidgetGuidance: h.setWidgetGuidance,
   getWidgetAnswerSettings: h.getWidgetAnswerSettings,

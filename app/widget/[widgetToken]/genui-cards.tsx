@@ -53,7 +53,7 @@ export function StepsCard({ data }: { data: StepsData }) {
           return (
             <li key={i} className="flex gap-2.5">
               <div className="flex flex-col items-center">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600 text-[0.625rem] font-semibold text-white">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600 text-[0.625rem] font-semibold text-on-brand">
                   {i + 1}
                 </span>
                 {!isLast && <span className="my-0.5 w-px flex-1 bg-brand-100" />}
@@ -92,7 +92,7 @@ export function ChoicesCard({ data }: { data: ChoicesData }) {
               }}
               className={`max-w-full break-words rounded-2xl border px-3 py-1.5 text-left text-xs font-medium transition-colors ${
                 selected
-                  ? 'border-brand-600 bg-brand-600 text-white'
+                  ? 'border-brand-600 bg-brand-600 text-on-brand'
                   : 'border-brand-200 bg-brand-50 text-brand-700 hover:border-brand-300 hover:bg-brand-100 disabled:opacity-50 disabled:hover:bg-brand-50'
               }`}
             >

@@ -187,10 +187,11 @@ describe('widget token actions cannot act on a defaulted org', () => {
     // works at all; the lead-capture mode decides when a chat visitor is asked
     // for an email; the public slug decides what name live embeds depend on;
     // the answer scope and the guidance note decide what the widget tells a
-    // visitor in the workspace's name. All six are owner/admin. Reading the
+    // visitor in the workspace's name; saving and resetting the appearance
+    // change what every visitor sees. All eight are owner/admin. Reading the
     // token stays open to any member so they can still see the embed snippet.
     const gated = [...s.matchAll(/requireOrgAccess\(WIDGET_ADMIN_ROLES\)/g)]
-    expect(gated.length).toBe(6)
+    expect(gated.length).toBe(8)
     const ungated = [...s.matchAll(/requireOrgAccess\(\)/g)]
     expect(ungated.length).toBe(1)
   })
@@ -281,6 +282,16 @@ describe('the allowlist is enforced where the parent origin is visible', () => {
     expect(s).not.toContain('parentOrigin')
     // window.location.origin still appears legitimately, as the fallback for
     // deriving baseUrl when script.src is unavailable — that is unrelated.
+  })
+
+  it('the launcher bubble uses the chat window blue, from one named constant, with no indigo left', () => {
+    const s = read('public/widget.js')
+    expect(s).not.toMatch(/4f46e5/i)
+    expect(s).not.toContain('79,70,229')
+    // One constant near BUBBLE_SIZE, so a workspace's own color replaces it in one place.
+    expect(s).toMatch(/var BUBBLE_SIZE = 56;[\s\S]{0,800}var DEFAULT_COLOR = '#2563eb';/)
+    // The same blue the chat window uses (brand-600 in app/globals.css).
+    expect(read('app/globals.css')).toContain('--brand-600, #2563eb')
   })
 
   it('the page reads the embed origin from headers only', () => {

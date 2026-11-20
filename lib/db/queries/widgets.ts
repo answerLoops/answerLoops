@@ -15,6 +15,13 @@ import {
   normalizeWidgetGuidance,
   type WidgetAnswerScope,
 } from '@/lib/widget/answer-scope'
+import {
+  normalizeBrandColor,
+  normalizeWidgetTitle,
+  normalizeWidgetWelcome,
+  readWidgetAppearance,
+  type WidgetAppearance,
+} from '@/lib/widget/appearance'
 
 export interface WidgetOrg {
   id: number
@@ -29,6 +36,8 @@ export interface WidgetOrg {
   widget_answer_scope: WidgetAnswerScope
   /** The owner's note on tone and next steps, or null. */
   widget_guidance: string | null
+  /** Chat title, welcome message and brand color the owner chose, each null for the default. */
+  widget_appearance: WidgetAppearance
 }
 
 export interface WidgetTokenInfo {
@@ -55,6 +64,9 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       widget_lead_capture_mode: orgs.widgetLeadCaptureMode,
       widget_answer_scope: orgs.widgetAnswerScope,
       widget_guidance: orgs.widgetGuidance,
+      widget_title: orgs.widgetTitle,
+      widget_welcome: orgs.widgetWelcome,
+      widget_brand_color: orgs.widgetBrandColor,
       plan_id: subscriptions.planId,
     })
     .from(orgs)
@@ -97,6 +109,14 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       const result = normalizeWidgetGuidance(row.widget_guidance)
       return result.ok ? result.value : null
     })(),
+    // Same defensive read: anything that would not pass the write-side checks
+    // is treated as not set, so a hand-edited row cannot put oversized text or
+    // an unusable color into a live widget.
+    widget_appearance: readWidgetAppearance({
+      title: row.widget_title,
+      welcome: row.widget_welcome,
+      brandColor: row.widget_brand_color,
+    }),
   }
 }
 
@@ -217,6 +237,46 @@ export async function setWidgetGuidance(orgId: number, guidance: string | null):
   const result = normalizeWidgetGuidance(guidance)
   if (!result.ok) throw new Error(result.error)
   await getDb().update(orgs).set({ widgetGuidance: result.value }).where(eq(orgs.id, orgId))
+}
+
+/** What the owner has chosen for the widget's title, welcome message and brand color. */
+export async function getWidgetAppearance(orgId: number): Promise<WidgetAppearance> {
+  const [row] = await getDb()
+    .select({
+      title: orgs.widgetTitle,
+      welcome: orgs.widgetWelcome,
+      brandColor: orgs.widgetBrandColor,
+    })
+    .from(orgs)
+    .where(eq(orgs.id, orgId))
+    .limit(1)
+  return readWidgetAppearance({
+    title: row?.title,
+    welcome: row?.welcome,
+    brandColor: row?.brandColor,
+  })
+}
+
+/**
+ * Save the widget's title, welcome message and brand color. Cleaned and checked
+ * here as well as in the action, so no caller can store a value the read path
+ * would then discard. A null or empty field goes back to the default.
+ */
+export async function setWidgetAppearance(
+  orgId: number,
+  input: { title: unknown; welcome: unknown; brandColor: unknown }
+): Promise<WidgetAppearance> {
+  const title = normalizeWidgetTitle(input.title)
+  if (!title.ok) throw new Error(title.error)
+  const welcome = normalizeWidgetWelcome(input.welcome)
+  if (!welcome.ok) throw new Error(welcome.error)
+  const color = normalizeBrandColor(input.brandColor)
+  if (!color.ok) throw new Error(color.error)
+  await getDb()
+    .update(orgs)
+    .set({ widgetTitle: title.value, widgetWelcome: welcome.value, widgetBrandColor: color.value })
+    .where(eq(orgs.id, orgId))
+  return { title: title.value, welcome: welcome.value, brandColor: color.value }
 }
 
 /** The org's current public slug, or null when none has been chosen. */

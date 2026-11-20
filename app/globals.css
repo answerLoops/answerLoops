@@ -309,3 +309,10 @@ details > summary::-webkit-details-marker {
     filter: none;
   }
 }
+
+/* Text that sits on a brand-600 background. The chat panel sets --brand-on to
+   white or near-black depending on the workspace's brand color, so text stays
+   readable on any color; everywhere else it is white. */
+.text-on-brand {
+  color: var(--brand-on, #ffffff);
+}

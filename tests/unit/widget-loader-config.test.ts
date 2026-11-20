@@ -143,7 +143,7 @@ describe('widget.js: when the lookup fails', () => {
       throw new Error('network down')
     })
     await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
-    expect(w.css()).toContain('background:#4f46e5')
+    expect(w.css()).toContain('background:#2563eb')
     expect(w.css()).toContain('width:380px')
   })
 
@@ -154,7 +154,7 @@ describe('widget.js: when the lookup fails', () => {
   ])('shows a token install as before after %s', async (_name, impl) => {
     const w = run(TOKEN, impl as FakeFetch)
     await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
-    expect(w.css()).toContain('background:#4f46e5')
+    expect(w.css()).toContain('background:#2563eb')
   })
 
   it('shows a token install as before when fetch does not exist', async () => {
@@ -195,6 +195,37 @@ describe('widget.js: applying display settings', () => {
     expect(w.css()).toContain('height:760px')
   })
 
+  it('builds the bubble shadows from the served color, at the same strengths', async () => {
+    const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#ffd60a', bubbleIconColor: '#111827' } }))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    // The DOM may serialise .4 as 0.4; the strengths are what matter.
+    expect(w.css()).toMatch(/box-shadow:0 4px 16px rgba\(255,214,10,0?\.4\)/)
+    expect(w.css()).toMatch(/box-shadow:0 6px 20px rgba\(255,214,10,0?\.5\)/)
+    expect(w.css()).not.toContain('79,70,229')
+  })
+
+  it('draws the bubble icon in the served icon color, and white when none is served', async () => {
+    const dark = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#ffd60a', bubbleIconColor: '#111827' } }))
+    await vi.waitFor(() => expect(dark.panel()).toBeDefined())
+    expect(dark.bubble()?.innerHTML).toContain('fill="#111827"')
+    const plain = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#aa00ff' } }))
+    await vi.waitFor(() => expect(plain.panel()).toBeDefined())
+    expect(plain.bubble()?.innerHTML).toContain('fill="#ffffff"')
+  })
+
+  it('ignores an icon color that is not a plain #rrggbb', async () => {
+    const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#aa00ff', bubbleIconColor: '"><script>x</script>' } }))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    expect(w.bubble()?.innerHTML).not.toContain('script')
+    expect(w.bubble()?.innerHTML).toContain('fill="#ffffff"')
+  })
+
+  it('shows a keyboard focus ring that reads on any brand color', async () => {
+    const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#ffd60a' } }))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    expect(w.css()).toContain('#cp-widget-bubble:focus-visible{outline:none;box-shadow:0 0 0 3px #ffffff,0 0 0 6px #111827;}')
+  })
+
   it('never lets a hostile color reach the stylesheet', async () => {
     const w = run(
       TOKEN,
@@ -202,7 +233,7 @@ describe('widget.js: applying display settings', () => {
     )
     await vi.waitFor(() => expect(w.panel()).toBeDefined())
     expect(w.css()).not.toContain('display:none')
-    expect(w.css()).toContain('background:#4f46e5')
+    expect(w.css()).toContain('background:#2563eb')
   })
 
   it('treats an unknown size name, including inherited ones, as small', async () => {

@@ -62,6 +62,13 @@ export const orgs = pgTable('orgs', {
   // instructions. NULL means none. Cleaned and length-limited by
   // normalizeWidgetGuidance before it is stored.
   widgetGuidance: text('widget_guidance'),
+  // How a Pro or above workspace customises its widget (migration 0078): the
+  // chat header title, the welcome message and a brand color. NULL means the
+  // answerLoops default. Cleaned and validated by lib/widget/appearance.ts at
+  // every write and again at every read.
+  widgetTitle: text('widget_title'),
+  widgetWelcome: text('widget_welcome'),
+  widgetBrandColor: text('widget_brand_color'),
   roiMinutesPerTicket: integer('roi_minutes_per_ticket'),
   roiStaffHourlyRate: integer('roi_staff_hourly_rate'),
   // Set the moment an owner confirms account deletion. NULL means active.
