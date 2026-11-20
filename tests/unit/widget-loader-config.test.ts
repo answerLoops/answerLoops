@@ -24,7 +24,8 @@ interface El {
   children: El[]
   setAttribute(k: string, v: string): void
   getAttribute(k: string): string | null
-  addEventListener(): void
+  addEventListener(type: string, fn: () => void): void
+  listeners: Record<string, () => void>
   appendChild(c: El): void
   classList: { add(): void; remove(): void }
 }
@@ -45,7 +46,10 @@ function el(tag: string): El {
     getAttribute(k) {
       return k in e.attrs ? e.attrs[k] : null
     },
-    addEventListener() {},
+    listeners: {},
+    addEventListener(type, fn) {
+      e.listeners[type] = fn
+    },
     appendChild(c) {
       e.children.push(c)
     },
@@ -91,6 +95,8 @@ function run(widgetId: string | null, fetchImpl?: FakeFetch) {
     bubble: () => body.children.find((c) => c.id === 'cp-widget-bubble'),
     iframeSrc: () => body.children.find((c) => c.id === 'cp-widget-panel')?.children[0]?.src,
     css: () => head.children.map((c) => c.textContent).join(''),
+    // The visitor opening the chat: the frame is only created at this point.
+    open: () => body.children.find((c) => c.id === 'cp-widget-bubble')?.listeners.click?.(),
   }
 }
 
@@ -114,12 +120,16 @@ describe('widget.js: resolving the id', () => {
 
   it('loads the panel with the token a slug resolves to', async () => {
     const w = run('acme-support', reply({ token: ROTATED, display: {} }))
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${ROTATED}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${ROTATED}`)
   })
 
   it('keeps a token snippet\'s own token when the reply carries none', async () => {
     const w = run(TOKEN, reply({ token: null, display: {} }))
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
   })
 
   it('ignores a resolved token that is not token-shaped', async () => {
@@ -142,7 +152,9 @@ describe('widget.js: when the lookup fails', () => {
     const w = run(TOKEN, async () => {
       throw new Error('network down')
     })
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
     expect(w.css()).toContain('background:#2563eb')
     expect(w.css()).toContain('width:380px')
   })
@@ -153,13 +165,17 @@ describe('widget.js: when the lookup fails', () => {
     ['a null body', reply(null)],
   ])('shows a token install as before after %s', async (_name, impl) => {
     const w = run(TOKEN, impl as FakeFetch)
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
     expect(w.css()).toContain('background:#2563eb')
   })
 
   it('shows a token install as before when fetch does not exist', async () => {
     const w = run(TOKEN, undefined)
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
   })
 
   it('does not load a slug install it could not resolve', async () => {
@@ -181,6 +197,7 @@ describe('widget.js: when the lookup fails', () => {
     await vi.advanceTimersByTimeAsync(1999)
     expect(w.panel()).toBeUndefined()
     await vi.advanceTimersByTimeAsync(2)
+    w.open()
     expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
     expect(signal?.aborted).toBe(true)
   })

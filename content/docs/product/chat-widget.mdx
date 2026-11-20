@@ -301,11 +301,15 @@ A **public name** is a stable label for your widget, such as `acme-support`, tha
 
 A public name is as visible as the token and grants nothing more. The allowed-domains list still decides where the widget loads. Names are unique across the instance, so one that another workspace holds is refused. Snippets that carry the token keep working until it expires or is regenerated. Clearing the name stops the widget loading on any page that still uses it. Only owners and admins can set or clear it.
 
-## Reply formatting and idle chats
+## Reply formatting
 
 Reply text shows bold, italic, inline code, short lists and links as formatted text. Nothing else in a reply is interpreted: images, headings, tables and HTML never appear, and a link must be `http` or `https`, opening in a new tab.
 
-A chat that sits idle for a few minutes times out. The next message then shows "This chat session timed out" with a **Start a new session** button that reloads the chat so the visitor can carry on.
+## Keeping the conversation
+
+The chat keeps the conversation in the visitor's own browser, so refreshing the page or moving to another page of your site does not lose it. It is forgotten a day after the last message, and nothing extra is sent to anyone to bring it back. The most recent messages are kept, up to a few dozen. A **New chat** button in the chat header clears it and starts again. If the browser blocks storage (some private windows do), the chat still works and simply starts fresh each time.
+
+The chat refreshes itself when it has been left open for a while: the visitor's next question is sent again automatically after a quick reload, with the conversation still on screen. Only if that fails twice in a row does the chat show "This chat session timed out" with a **Start a new session** button.
 
 ## Rich answer cards
 

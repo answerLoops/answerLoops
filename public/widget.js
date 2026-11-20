@@ -35,6 +35,14 @@
   var isOpen = false;
   var panel = null;
   var bubble = null;
+  // The chat frame is created the first time the bubble is opened, not when
+  // the page loads, so what the visitor sees was loaded when they started
+  // chatting. If the panel is reopened after the frame has been loaded for
+  // longer than this, it is loaded again (the chat keeps the conversation in
+  // the visitor's browser, so nothing is lost).
+  var FRAME_MAX_AGE_MS = 4 * 60 * 1000;
+  var iframe = null;
+  var frameLoadedAt = 0;
 
   // The bubble's shadows are built from its own color so they follow it. Only
   // called with a value that already passed the #rrggbb check.
@@ -57,7 +65,7 @@
       // A two-tone ring (white inside, dark outside) so keyboard focus is visible
       // on any brand color and on any page background.
       '#cp-widget-bubble:focus-visible{outline:none;box-shadow:0 0 0 3px #ffffff,0 0 0 6px #111827;}',
-      '#cp-widget-panel{position:fixed;bottom:' + (BUBBLE_SIZE + 32) + 'px;right:24px;z-index:2147483645;width:' + PANEL_W + 'px;height:' + PANEL_H + 'px;max-width:calc(100vw - 48px);max-height:calc(100vh - ' + (BUBBLE_SIZE + 56) + 'px);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);border:1px solid #e5e7eb;overflow:hidden;transform-origin:bottom right;transition:transform .2s cubic-bezier(.34,1.56,.64,1),opacity .15s;transform:scale(.85);opacity:0;pointer-events:none;}',
+      '#cp-widget-panel{position:fixed;bottom:' + (BUBBLE_SIZE + 32) + 'px;right:24px;z-index:2147483645;width:' + PANEL_W + 'px;height:' + PANEL_H + 'px;background:#ffffff;max-width:calc(100vw - 48px);max-height:calc(100vh - ' + (BUBBLE_SIZE + 56) + 'px);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);border:1px solid #e5e7eb;overflow:hidden;transform-origin:bottom right;transition:transform .2s cubic-bezier(.34,1.56,.64,1),opacity .15s;transform:scale(.85);opacity:0;pointer-events:none;}',
       '#cp-widget-panel.cp-open{transform:scale(1);opacity:1;pointer-events:all;}',
       '#cp-widget-panel iframe{width:100%;height:100%;border:none;display:block;}',
     ].join('');
@@ -78,24 +86,30 @@
     panel.id = 'cp-widget-panel';
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-label', 'Support chat');
-
-    var iframe = document.createElement('iframe');
-    // The embedding origin is not passed here on purpose. The server reads it
-    // from the Referer header, which the browser sets and page script cannot
-    // forge. Anything this script could send would be equally settable by
-    // whoever is embedding the widget, so it would defeat the allowed-domains
-    // check rather than support it.
-    iframe.src = baseUrl + '/widget/' + panelToken;
-    iframe.title = 'Support chat';
-    iframe.setAttribute('allow', 'clipboard-write');
-
-    panel.appendChild(iframe);
     document.body.appendChild(panel);
+  }
+
+  // Creates the chat frame on first use and (re)loads it. The embedding origin
+  // is not passed here on purpose. The server reads it from the Referer
+  // header, which the browser sets and page script cannot forge. Anything
+  // this script could send would be equally settable by whoever is embedding
+  // the widget, so it would defeat the allowed-domains check rather than
+  // support it.
+  function loadFrame() {
+    if (!iframe) {
+      iframe = document.createElement('iframe');
+      iframe.title = 'Support chat';
+      iframe.setAttribute('allow', 'clipboard-write');
+      panel.appendChild(iframe);
+    }
+    iframe.src = baseUrl + '/widget/' + panelToken;
+    frameLoadedAt = Date.now();
   }
 
   function togglePanel() {
     isOpen = !isOpen;
     if (isOpen) {
+      if (!iframe || Date.now() - frameLoadedAt > FRAME_MAX_AGE_MS) loadFrame();
       panel.classList.add('cp-open');
       bubble.setAttribute('aria-label', 'Close support chat');
       bubble.innerHTML = bubbleIcon(20, CLOSE_ICON_PATH);
