@@ -19,7 +19,9 @@ import {
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import {
   normalizeBrandColor,
+  normalizeStarterQuestions,
   normalizeWidgetTitle,
+  readStarterEnabled,
   normalizeWidgetWelcome,
   type WidgetAppearance,
 } from '@/lib/widget/appearance'
@@ -227,7 +229,7 @@ export async function saveWidgetSlugAction(
 interface WidgetAppearanceResult {
   appearance?: WidgetAppearance
   /** Which field a message belongs to, so the form can show it next to the control. */
-  field?: 'title' | 'welcome' | 'brandColor'
+  field?: 'title' | 'welcome' | 'brandColor' | 'starterQuestions'
   error?: string
 }
 
@@ -258,11 +260,15 @@ export async function saveWidgetAppearanceAction(
   if (!welcome.ok) return { field: 'welcome', error: welcome.error }
   const color = normalizeBrandColor(formData.get('brandColor'))
   if (!color.ok) return { field: 'brandColor', error: color.error }
+  const starters = normalizeStarterQuestions(formData.get('starterQuestions'))
+  if (!starters.ok) return { field: 'starterQuestions', error: starters.error }
 
   const appearance = await setWidgetAppearance(access.orgId, {
     title: title.value,
     welcome: welcome.value,
     brandColor: color.value,
+    starterQuestions: starters.value,
+    starterEnabled: readStarterEnabled(formData.get('starterEnabled')),
   })
   return { appearance }
 }
@@ -274,6 +280,6 @@ export async function resetWidgetAppearanceAction(): Promise<WidgetAppearanceRes
   if (!(await orgHasFeature(access.orgId, 'white_label_widget'))) {
     return { error: CUSTOMIZATION_REQUIRES_PRO }
   }
-  const appearance = await setWidgetAppearance(access.orgId, { title: null, welcome: null, brandColor: null })
+  const appearance = await setWidgetAppearance(access.orgId, { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true })
   return { appearance }
 }

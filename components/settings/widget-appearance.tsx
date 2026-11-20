@@ -6,21 +6,25 @@ import { Button } from '@/components/ui/button'
 import { resetWidgetAppearanceAction, saveWidgetAppearanceAction } from '@/lib/actions/widget'
 import {
   DEFAULT_WIDGET_BRAND_COLOR,
+  STARTER_QUESTIONS_LIMIT_MESSAGE,
+  WIDGET_STARTER_QUESTIONS_MAX,
+  WIDGET_STARTER_QUESTION_MAX_CHARS,
   WIDGET_TITLE_MAX_CHARS,
   WIDGET_WELCOME_MAX_CHARS,
   isValidBrandColor,
+  normalizeStarterQuestions,
   readableTextColor,
   type WidgetAppearance,
 } from '@/lib/widget/appearance'
 
 /**
- * Widget appearance: the chat title, the welcome message and the brand color,
+ * Widget appearance: the chat title, the welcome message, the starter questions and the brand color,
  * shown inside the widget section of Settings. Pro and above; on Standard the
  * controls are shown locked with a short explanation, and the server refuses a
  * save from Standard regardless of what this screen shows.
  */
 
-type FieldName = 'title' | 'welcome' | 'brandColor'
+type FieldName = 'title' | 'welcome' | 'brandColor' | 'starterQuestions'
 
 export function WidgetAppearanceSettings({
   canManage,
@@ -34,6 +38,10 @@ export function WidgetAppearanceSettings({
   const [saved, setSaved] = useState<WidgetAppearance>(initialAppearance)
   const [title, setTitle] = useState(initialAppearance.title ?? '')
   const [welcome, setWelcome] = useState(initialAppearance.welcome ?? '')
+  // One question per line, exactly as typed. Cleaned and limited on save.
+  const [starters, setStarters] = useState(initialAppearance.starterQuestions.join('\n'))
+  // Off hides the buttons on the live widget and keeps the questions saved.
+  const [startersOn, setStartersOn] = useState(initialAppearance.starterEnabled)
   // The hex field holds what is typed, including a half-typed value. An empty
   // field means the answerLoops blue.
   const [color, setColor] = useState(initialAppearance.brandColor ?? '')
@@ -50,10 +58,17 @@ export function WidgetAppearanceSettings({
   const previewColor = isValidBrandColor(colorTrimmed) ? colorTrimmed.toLowerCase() : DEFAULT_WIDGET_BRAND_COLOR
   const previewText = readableTextColor(previewColor)
 
+  const startersResult = normalizeStarterQuestions(starters)
+  const starterCount = starters.split(/\r?\n/).filter((line) => line.trim() !== '').length
+  const startersValid = startersResult.ok
+
   const unchanged =
     title.trim() === (saved.title ?? '') &&
     welcome.trim() === (saved.welcome ?? '') &&
-    colorTrimmed.toLowerCase() === (saved.brandColor ?? '')
+    colorTrimmed.toLowerCase() === (saved.brandColor ?? '') &&
+    startersResult.ok &&
+    startersResult.value.join('\n') === saved.starterQuestions.join('\n') &&
+    startersOn === saved.starterEnabled
 
   function applyStored(appearance: WidgetAppearance) {
     // Show what was actually stored, which may differ from what was typed
@@ -61,6 +76,8 @@ export function WidgetAppearanceSettings({
     setSaved(appearance)
     setTitle(appearance.title ?? '')
     setWelcome(appearance.welcome ?? '')
+    setStarters(appearance.starterQuestions.join('\n'))
+    setStartersOn(appearance.starterEnabled)
     setColor(appearance.brandColor ?? '')
   }
 
@@ -71,6 +88,8 @@ export function WidgetAppearanceSettings({
     const fd = new FormData()
     fd.set('title', title)
     fd.set('welcome', welcome)
+    fd.set('starterQuestions', starters)
+    fd.set('starterEnabled', startersOn ? 'true' : 'false')
     fd.set('brandColor', colorTrimmed)
     const result = await saveWidgetAppearanceAction(null, fd)
     if (result.error) {
@@ -97,7 +116,12 @@ export function WidgetAppearanceSettings({
     setResetting(false)
   }
 
-  const nothingCustomized = !saved.title && !saved.welcome && !saved.brandColor
+  const nothingCustomized =
+    !saved.title &&
+    !saved.welcome &&
+    !saved.brandColor &&
+    saved.starterQuestions.length === 0 &&
+    saved.starterEnabled
   const inputClass =
     'w-full rounded border border-gray-200 bg-white px-3 py-2 text-base text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 sm:text-xs'
 
@@ -182,6 +206,57 @@ export function WidgetAppearanceSettings({
       </div>
 
       <div className="space-y-1">
+        <label htmlFor="widget-starter-questions" className="block text-[0.6875rem] font-medium text-gray-700">
+          Starter questions
+        </label>
+        <label
+          htmlFor="widget-starter-enabled"
+          className={`flex min-h-11 items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 ${editable ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+        >
+          <input
+            id="widget-starter-enabled"
+            type="checkbox"
+            role="switch"
+            aria-checked={startersOn}
+            checked={startersOn}
+            onChange={(e) => setStartersOn(e.target.checked)}
+            disabled={!editable}
+            className="h-5 w-5 shrink-0 accent-brand-600"
+          />
+          <span className="min-w-0 text-xs text-gray-800">
+            Show starter questions
+            <span className="block text-[0.6875rem] text-gray-500">
+              Switch off to hide the buttons without deleting your questions.
+            </span>
+          </span>
+        </label>
+        <textarea
+          id="widget-starter-questions"
+          value={starters}
+          onChange={(e) => setStarters(e.target.value)}
+          rows={4}
+          disabled={!editable}
+          placeholder={'How does it work?\nWhat does it cost?'}
+          spellCheck={false}
+          className={`${inputClass} resize-y`}
+        />
+        <p className="text-[0.6875rem] text-gray-500">
+          One question per line. They appear as buttons under the greeting; tapping one sends it. Up to {WIDGET_STARTER_QUESTIONS_MAX}, {WIDGET_STARTER_QUESTION_MAX_CHARS} characters each.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[0.6875rem] text-gray-500">
+            {starterCount} / {WIDGET_STARTER_QUESTIONS_MAX} questions
+          </span>
+          {!startersValid && (
+            <p className="break-words text-[0.6875rem] text-red-600">{STARTER_QUESTIONS_LIMIT_MESSAGE}</p>
+          )}
+          {fieldError?.field === 'starterQuestions' && startersValid && (
+            <p className="break-words text-[0.6875rem] text-red-600">{fieldError.error}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="space-y-1">
         <label htmlFor="widget-brand-color" className="block text-[0.6875rem] font-medium text-gray-700">
           Brand color
         </label>
@@ -231,7 +306,7 @@ export function WidgetAppearanceSettings({
           <Button
             size="sm"
             onClick={save}
-            disabled={saving || resetting || unchanged || !colorValid}
+            disabled={saving || resetting || unchanged || !colorValid || !startersValid}
             className="min-h-11 w-full sm:min-h-0 sm:w-auto"
           >
             {saving ? 'Saving…' : 'Save appearance'}

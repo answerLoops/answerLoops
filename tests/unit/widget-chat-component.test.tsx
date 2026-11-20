@@ -278,6 +278,20 @@ describe('WidgetChat: expired session', () => {
   })
 })
 
+describe('WidgetChat: header type size', () => {
+  it('draws the title at 14px and the Online line at 12px, with the title still truncating', async () => {
+    await renderWidget(makeFakeAgent())
+    const header = document.querySelector('.border-b.border-gray-100') as HTMLElement
+    const title = header.querySelector('p.font-semibold') as HTMLElement
+    expect(title.className).toContain('text-sm')
+    expect(title.className).not.toMatch(/\btext-xs\b/)
+    expect(title.className).toContain('truncate')
+    const online = screen.getAllByText('Online')[0]
+    expect(online.className).toContain('text-xs')
+    expect(online.className).not.toContain('0.625rem')
+  })
+})
+
 describe('WidgetChat: branding', () => {
   it('shows the "Powered by" line when showBranding is true', async () => {
     h2.current = makeFakeAgent()

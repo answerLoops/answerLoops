@@ -48,8 +48,8 @@ beforeEach(() => {
   h.orgHasFeature.mockResolvedValue(true)
   h.ensureWidgetToken.mockResolvedValue({ token: 'a'.repeat(48), expiresAt: '2099-01-01T00:00:00.000Z' })
   h.getWidgetAllowedOrigins.mockResolvedValue(null)
-  h.getWidgetAppearance.mockResolvedValue({ title: 'Acme Help', welcome: null, brandColor: '#ffd60a' })
-  h.setWidgetAppearance.mockImplementation(async (_org: number, v: { title: string | null; welcome: string | null; brandColor: string | null }) => v)
+  h.getWidgetAppearance.mockResolvedValue({ title: 'Acme Help', welcome: null, brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true })
+  h.setWidgetAppearance.mockImplementation(async (_org: number, v: { title: string | null; welcome: string | null; brandColor: string | null; starterQuestions: string[]; starterEnabled: boolean }) => v)
 })
 
 describe('saveWidgetAppearanceAction', () => {
@@ -76,22 +76,54 @@ describe('saveWidgetAppearanceAction', () => {
     const { saveWidgetAppearanceAction } = await import('@/lib/actions/widget')
     const result = await saveWidgetAppearanceAction(
       null,
-      form({ title: '  Acme   Help ', welcome: 'Hi! Ask us anything.', brandColor: ' #FFD60A ' })
+      form({
+        title: '  Acme   Help ',
+        welcome: 'Hi! Ask us anything.',
+        brandColor: ' #FFD60A ',
+        starterQuestions: ' How does it work? \r\n\r\nWhat does it cost?\nhow does it work?',
+      })
     )
     expect(h.setWidgetAppearance).toHaveBeenCalledWith(5, {
       title: 'Acme Help',
       welcome: 'Hi! Ask us anything.',
       brandColor: '#ffd60a',
+      starterQuestions: ['How does it work?', 'What does it cost?'],
+      starterEnabled: true,
     })
     expect(result).toEqual({
-      appearance: { title: 'Acme Help', welcome: 'Hi! Ask us anything.', brandColor: '#ffd60a' },
+      appearance: {
+        title: 'Acme Help',
+        welcome: 'Hi! Ask us anything.',
+        brandColor: '#ffd60a',
+        starterQuestions: ['How does it work?', 'What does it cost?'],
+        starterEnabled: true,
+      },
     })
   })
 
   it('treats empty fields as "use the default"', async () => {
     const { saveWidgetAppearanceAction } = await import('@/lib/actions/widget')
-    await saveWidgetAppearanceAction(null, form({ title: '', welcome: '  ', brandColor: '' }))
-    expect(h.setWidgetAppearance).toHaveBeenCalledWith(5, { title: null, welcome: null, brandColor: null })
+    await saveWidgetAppearanceAction(null, form({ title: '', welcome: '  ', brandColor: '', starterQuestions: ' \n ' }))
+    expect(h.setWidgetAppearance).toHaveBeenCalledWith(5, {
+      title: null,
+      welcome: null,
+      brandColor: null,
+      starterQuestions: [],
+      starterEnabled: true,
+    })
+  })
+
+  it('saves the starter-question switch: off only when the form says so, on otherwise', async () => {
+    const { saveWidgetAppearanceAction } = await import('@/lib/actions/widget')
+    await saveWidgetAppearanceAction(null, form({ starterQuestions: 'How does it work?', starterEnabled: 'false' }))
+    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(
+      5,
+      expect.objectContaining({ starterQuestions: ['How does it work?'], starterEnabled: false })
+    )
+    await saveWidgetAppearanceAction(null, form({ starterQuestions: 'How does it work?', starterEnabled: 'true' }))
+    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(5, expect.objectContaining({ starterEnabled: true }))
+    await saveWidgetAppearanceAction(null, form({ starterQuestions: 'How does it work?' }))
+    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(5, expect.objectContaining({ starterEnabled: true }))
   })
 
   it('names the field and gives a plain message for each kind of bad input, without writing', async () => {
@@ -103,6 +135,15 @@ describe('saveWidgetAppearanceAction', () => {
     expect(await saveWidgetAppearanceAction(null, form({ welcome: 'w'.repeat(201) }))).toEqual({
       field: 'welcome',
       error: 'Keep the welcome message under 200 characters',
+    })
+    const limit = 'Use up to 4 starter questions, 80 characters each.'
+    expect(await saveWidgetAppearanceAction(null, form({ starterQuestions: 'a\nb\nc\nd\ne' }))).toEqual({
+      field: 'starterQuestions',
+      error: limit,
+    })
+    expect(await saveWidgetAppearanceAction(null, form({ starterQuestions: 'q'.repeat(81) }))).toEqual({
+      field: 'starterQuestions',
+      error: limit,
     })
     for (const bad of ['red', '#fff', 'url(javascript:alert(1))', '#12345g', 'rgb(1,2,3)']) {
       expect(await saveWidgetAppearanceAction(null, form({ brandColor: bad }))).toEqual({
@@ -137,11 +178,19 @@ describe('resetWidgetAppearanceAction', () => {
     expect(h.setWidgetAppearance).not.toHaveBeenCalled()
   })
 
-  it('clears all three values for the caller’s workspace', async () => {
+  it('clears all four values for the caller’s workspace', async () => {
     const { resetWidgetAppearanceAction } = await import('@/lib/actions/widget')
     const result = await resetWidgetAppearanceAction()
-    expect(h.setWidgetAppearance).toHaveBeenCalledWith(5, { title: null, welcome: null, brandColor: null })
-    expect(result).toEqual({ appearance: { title: null, welcome: null, brandColor: null } })
+    expect(h.setWidgetAppearance).toHaveBeenCalledWith(5, {
+      title: null,
+      welcome: null,
+      brandColor: null,
+      starterQuestions: [],
+      starterEnabled: true,
+    })
+    expect(result).toEqual({
+      appearance: { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true },
+    })
   })
 })
 
@@ -149,7 +198,7 @@ describe('getWidgetTokenAction', () => {
   it('reports the saved appearance and whether the plan includes customization', async () => {
     const { getWidgetTokenAction } = await import('@/lib/actions/widget')
     const result = await getWidgetTokenAction()
-    expect(result.appearance).toEqual({ title: 'Acme Help', welcome: null, brandColor: '#ffd60a' })
+    expect(result.appearance).toEqual({ title: 'Acme Help', welcome: null, brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true })
     expect(result.customizationAvailable).toBe(true)
     expect(h.orgHasFeature).toHaveBeenCalledWith(5, 'white_label_widget')
   })

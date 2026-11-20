@@ -13,6 +13,8 @@
 
 export const WIDGET_TITLE_MAX_CHARS = 60
 export const WIDGET_WELCOME_MAX_CHARS = 200
+export const WIDGET_STARTER_QUESTIONS_MAX = 4
+export const WIDGET_STARTER_QUESTION_MAX_CHARS = 80
 
 /** The answerLoops blue (`brand-600` in app/globals.css), used when nothing is chosen. */
 export const DEFAULT_WIDGET_BRAND_COLOR = '#2563eb'
@@ -51,6 +53,87 @@ export function normalizeWidgetTitle(raw: unknown): AppearanceTextResult {
 /** Cleans the welcome message before it is stored. Empty means "use the default". */
 export function normalizeWidgetWelcome(raw: unknown): AppearanceTextResult {
   return normalizeText(raw, 'welcome message', WIDGET_WELCOME_MAX_CHARS)
+}
+
+// ---- Starter questions ------------------------------------------------------
+
+export const STARTER_QUESTIONS_LIMIT_MESSAGE = `Use up to ${WIDGET_STARTER_QUESTIONS_MAX} starter questions, ${WIDGET_STARTER_QUESTION_MAX_CHARS} characters each.`
+
+export type StarterQuestionsResult = { ok: true; value: string[] } | { ok: false; error: string }
+
+/** One question per line becomes a clean list: trimmed, plain text, no blanks, no repeats. */
+function parseStarterQuestionLines(raw: string[]): string[] {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const line of raw) {
+    const cleaned = cleanPlainText(line)
+    if (cleaned.length === 0) continue
+    const key = cleaned.toLowerCase()
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(cleaned)
+  }
+  return out
+}
+
+function splitLines(raw: unknown): string[] | null {
+  if (raw === null || raw === undefined) return []
+  if (typeof raw === 'string') return raw.split(/\r?\n/)
+  if (Array.isArray(raw) && raw.every((item) => typeof item === 'string')) return raw as string[]
+  return null
+}
+
+/**
+ * Cleans the starter questions before they are stored. Accepts the text of the
+ * settings box (one question per line) or a list. Empty means "show none".
+ * Too many or too long is refused with one plain message, never trimmed
+ * silently, so the form shows exactly what will be used.
+ */
+export function normalizeStarterQuestions(raw: unknown): StarterQuestionsResult {
+  const lines = splitLines(raw)
+  if (lines === null) return { ok: false, error: 'Invalid starter questions' }
+  const questions = parseStarterQuestionLines(lines)
+  if (
+    questions.length > WIDGET_STARTER_QUESTIONS_MAX ||
+    questions.some((q) => q.length > WIDGET_STARTER_QUESTION_MAX_CHARS)
+  ) {
+    return { ok: false, error: STARTER_QUESTIONS_LIMIT_MESSAGE }
+  }
+  return { ok: true, value: questions }
+}
+
+/**
+ * Reads the on/off switch for the starter buttons. Only an explicit "off" turns
+ * them off (false, "false", "off" or "0"); anything else, including nothing at
+ * all, leaves them on, which is the default.
+ */
+export function readStarterEnabled(raw: unknown): boolean {
+  if (raw === false) return false
+  if (typeof raw === 'string' && ['false', 'off', '0'].includes(raw.trim().toLowerCase())) return false
+  return true
+}
+
+/** The value stored in the column: false when switched off, null (the default, on) otherwise. */
+export function serializeStarterEnabled(enabled: boolean): boolean | null {
+  return enabled ? null : false
+}
+
+/** The text stored in the column: one question per line, or null for none. */
+export function serializeStarterQuestions(questions: string[]): string | null {
+  return questions.length > 0 ? questions.join('\n') : null
+}
+
+/**
+ * Reads the stored text defensively: lines that would not pass the write-side
+ * checks are dropped and the list is capped, so a hand-edited row can never put
+ * an oversized or empty button into a live widget.
+ */
+export function readStarterQuestions(stored: unknown): string[] {
+  const lines = splitLines(stored)
+  if (!lines) return []
+  return parseStarterQuestionLines(lines)
+    .filter((q) => q.length <= WIDGET_STARTER_QUESTION_MAX_CHARS)
+    .slice(0, WIDGET_STARTER_QUESTIONS_MAX)
 }
 
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
@@ -206,12 +289,18 @@ export interface WidgetAppearance {
   title: string | null
   welcome: string | null
   brandColor: string | null
+  /** At most four short questions, in the order they are shown. */
+  starterQuestions: string[]
+  /** Whether the starter questions are shown. On by default; off keeps the questions saved. */
+  starterEnabled: boolean
 }
 
 export const EMPTY_WIDGET_APPEARANCE: WidgetAppearance = {
   title: null,
   welcome: null,
   brandColor: null,
+  starterQuestions: [],
+  starterEnabled: true,
 }
 
 /**
@@ -223,6 +312,8 @@ export function readWidgetAppearance(stored: {
   title?: unknown
   welcome?: unknown
   brandColor?: unknown
+  starterQuestions?: unknown
+  starterEnabled?: unknown
 }): WidgetAppearance {
   const title = normalizeWidgetTitle(stored.title)
   const welcome = normalizeWidgetWelcome(stored.welcome)
@@ -231,5 +322,7 @@ export function readWidgetAppearance(stored: {
     title: title.ok ? title.value : null,
     welcome: welcome.ok ? welcome.value : null,
     brandColor: color.ok ? color.value : null,
+    starterQuestions: readStarterQuestions(stored.starterQuestions),
+    starterEnabled: readStarterEnabled(stored.starterEnabled),
   }
 }
