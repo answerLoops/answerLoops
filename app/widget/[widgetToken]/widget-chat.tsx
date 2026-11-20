@@ -612,12 +612,12 @@ function WidgetChatBody({
             )}
 
             {sessionExpired && (
-              <div className="space-y-2 text-center" data-testid="session-expired">
-                <p className="text-xs text-gray-600">This chat session timed out. Start a new one to keep going.</p>
+              <div className="space-y-3 px-2 text-center" data-testid="session-expired">
+                <p className="break-words text-xs leading-relaxed text-gray-600">This chat session timed out. Start a new one to keep going.</p>
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
-                  className="rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+                  className="mx-auto block min-h-11 w-full max-w-[16rem] rounded-lg bg-brand-600 px-4 py-2.5 text-xs font-medium text-white hover:bg-brand-700 transition-colors"
                 >
                   Start a new session
                 </button>

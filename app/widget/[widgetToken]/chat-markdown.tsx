@@ -25,7 +25,7 @@ const components: Components = {
   ul: ({ children }) => <ul className="mb-2 list-disc space-y-1 pl-4 last:mb-0">{children}</ul>,
   ol: ({ children }) => <ol className="mb-2 list-decimal space-y-1 pl-4 last:mb-0">{children}</ol>,
   strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-  code: ({ children }) => <code className="rounded bg-gray-200 px-1 py-0.5 font-mono text-[0.92em]">{children}</code>,
+  code: ({ children }) => <code className="box-decoration-clone rounded bg-gray-200 px-1 py-0.5 font-mono text-[0.92em]">{children}</code>,
   a: ({ href, children }) =>
     isSafeLink(href) ? (
       <a href={href} target="_blank" rel="noopener noreferrer" className="text-brand-600 underline break-words">
