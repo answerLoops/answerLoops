@@ -35,6 +35,7 @@ import {
   subscriptions,
   platformAiUsage,
   widgetLeads,
+  widgetLogos,
   slaConfigs,
   productFeedback,
   productFeedbackVotes,
@@ -215,6 +216,7 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     await tx.delete(subscriptions).where(eq(subscriptions.orgId, orgId))
     await tx.delete(platformAiUsage).where(eq(platformAiUsage.orgId, orgId))
     await tx.delete(widgetLeads).where(eq(widgetLeads.orgId, orgId))
+    await tx.delete(widgetLogos).where(eq(widgetLogos.orgId, orgId))
     await tx.delete(slaConfigs).where(eq(slaConfigs.orgId, orgId))
     // The up-votes this workspace's members cast go first. They can sit on
     // other workspaces' entries, but each vote's org_id is the voter's

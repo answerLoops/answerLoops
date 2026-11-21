@@ -410,3 +410,138 @@ describe('a member who is not an owner or admin', () => {
     expect(screen.queryByRole('button', { name: /save appearance/i })).toBeNull()
   })
 })
+
+describe('the logo control', () => {
+  const LOGO = `/api/widget/logo/${'a'.repeat(48)}?v=0123456789abcdef`
+  const NEW_LOGO = `/api/widget/logo/${'a'.repeat(48)}?v=fedcba9876543210`
+  const fetchMock = vi.fn()
+  const fileInput = () => screen.getByTestId('widget-logo-file') as HTMLInputElement
+  const previewImg = () => screen.getByTestId('widget-logo-preview').querySelector('img') as HTMLImageElement
+  const file = (name = 'logo.png', type = 'image/png', bytes = 2000) => new File([new Uint8Array(bytes)], name, { type })
+  const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body })
+
+  beforeEach(() => {
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+  })
+
+  function renderPro(initialLogoUrl: string | null = null, props: Partial<React.ComponentProps<typeof WidgetAppearanceSettings>> = {}) {
+    return render(
+      <WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} initialLogoUrl={initialLogoUrl} {...props} />
+    )
+  }
+
+  it('shows the answerLoops mark and an Upload logo button when there is no logo', () => {
+    renderPro()
+    expect(previewImg().getAttribute('src')).toContain('logo.png')
+    expect(screen.getByRole('button', { name: 'Upload logo' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull()
+  })
+
+  it('shows the current logo, with Replace and Remove, when there is one', () => {
+    renderPro(LOGO)
+    expect(previewImg().getAttribute('src')).toBe(LOGO)
+    expect(screen.getByRole('button', { name: 'Replace logo' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Remove' })).toBeTruthy()
+  })
+
+  it('only offers PNG, JPEG and WebP in the file chooser', () => {
+    renderPro()
+    expect(fileInput().accept).toBe('image/png,image/jpeg,image/webp')
+  })
+
+  it('uploads the chosen file straight away and shows the new logo', async () => {
+    fetchMock.mockResolvedValue(json({ logoUrl: NEW_LOGO }))
+    renderPro()
+    await userEvent.upload(fileInput(), file())
+    await waitFor(() => expect(previewImg().getAttribute('src')).toBe(NEW_LOGO))
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchMock.mock.calls[0] as [string, { method: string; body: FormData }]
+    expect(url).toBe('/api/settings/widget-logo')
+    expect(init.method).toBe('POST')
+    expect((init.body.get('file') as File).name).toBe('logo.png')
+    expect(screen.getByRole('button', { name: 'Replace logo' })).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toMatch(/Logo saved/)
+  })
+
+  it('shows the server\'s plain message when the file is refused, and keeps the old logo', async () => {
+    fetchMock.mockResolvedValue(json({ error: 'That file is not a PNG, JPEG or WebP image.' }, 400))
+    renderPro(LOGO)
+    await userEvent.setup({ applyAccept: false }).upload(fileInput(), file('logo.svg', 'image/svg+xml'))
+    expect((await screen.findByRole('alert')).textContent).toBe('That file is not a PNG, JPEG or WebP image.')
+    expect(previewImg().getAttribute('src')).toBe(LOGO)
+  })
+
+  it('refuses a file over 1 MB on the spot, without sending it', async () => {
+    renderPro()
+    await userEvent.upload(fileInput(), file('big.png', 'image/png', 1024 * 1024 + 1))
+    expect((await screen.findByRole('alert')).textContent).toBe('The image is larger than 1 MB.')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('says so, in plain words, when the connection fails', async () => {
+    fetchMock.mockRejectedValue(new Error('network down'))
+    renderPro()
+    await userEvent.upload(fileInput(), file())
+    expect((await screen.findByRole('alert')).textContent).toMatch(/could not save that logo/i)
+    expect(previewImg().getAttribute('src')).toContain('logo.png')
+  })
+
+  it('cannot be pressed twice while an upload is running', async () => {
+    let finish: (v: unknown) => void = () => {}
+    fetchMock.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+    renderPro(LOGO)
+    await userEvent.upload(fileInput(), file())
+    const busy = await screen.findByRole('button', { name: 'Uploading…' })
+    expect((busy as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Remove' }) as HTMLButtonElement).disabled).toBe(true)
+    finish(json({ logoUrl: NEW_LOGO }))
+    await waitFor(() => expect(previewImg().getAttribute('src')).toBe(NEW_LOGO))
+  })
+
+  it('removes the logo and goes back to the answerLoops mark', async () => {
+    fetchMock.mockResolvedValue(json({ logoUrl: null }))
+    renderPro(LOGO)
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(previewImg().getAttribute('src')).toContain('logo.png'))
+    expect((fetchMock.mock.calls[0] as [string, { method: string }])[1].method).toBe('DELETE')
+    expect(screen.getByRole('button', { name: 'Upload logo' })).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toMatch(/Logo removed/)
+  })
+
+  it('keeps the logo and says so when removing fails', async () => {
+    fetchMock.mockResolvedValue(json({ error: 'We could not remove that logo. Try again.' }, 500))
+    renderPro(LOGO)
+    await userEvent.click(screen.getByRole('button', { name: 'Remove' }))
+    expect((await screen.findByRole('alert')).textContent).toBe('We could not remove that logo. Try again.')
+    expect(previewImg().getAttribute('src')).toBe(LOGO)
+  })
+
+  it('is disabled, and sends nothing, on a plan without customization', async () => {
+    renderPro(null, { customizationAvailable: false })
+    expect((screen.getByRole('button', { name: 'Upload logo' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(fileInput().disabled).toBe(true)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it('is disabled for a member who is not an owner or admin', () => {
+    renderPro(LOGO, { canManage: false })
+    expect((screen.getByRole('button', { name: 'Replace logo' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Remove' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('goes away with Reset to default, and Reset is available when the logo is the only thing set', async () => {
+    h.resetWidgetAppearanceAction.mockResolvedValue({ appearance: NONE })
+    renderPro(LOGO)
+    expect(reset().disabled).toBe(false)
+    await userEvent.click(reset())
+    await waitFor(() => expect(previewImg().getAttribute('src')).toContain('logo.png'))
+    expect(screen.queryByRole('button', { name: 'Remove' })).toBeNull()
+  })
+
+  it('explains what it does, with the limits', () => {
+    renderPro()
+    expect(screen.getByText(/PNG, JPEG or WebP, up to 1 MB/)).toBeTruthy()
+    expect(screen.getByText(/crop it to a square/)).toBeTruthy()
+  })
+})

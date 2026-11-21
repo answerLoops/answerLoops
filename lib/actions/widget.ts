@@ -17,6 +17,8 @@ import {
   setWidgetAppearance,
 } from '@/lib/db/queries/widgets'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
+import { deleteWidgetLogo, getWidgetLogoVersion } from '@/lib/db/queries/widget-logos'
+import { widgetLogoPath } from '@/lib/widget/logo'
 import {
   normalizeBrandColor,
   normalizeStarterQuestions,
@@ -56,6 +58,8 @@ interface WidgetTokenResult {
   appearance?: WidgetAppearance
   /** Whether the plan includes widget customization (Pro and above). */
   customizationAvailable?: boolean
+  /** The address of the workspace's logo, or null. Only given while the plan includes customization. */
+  logoUrl?: string | null
   error?: string
 }
 
@@ -75,10 +79,12 @@ export async function getWidgetTokenAction(): Promise<WidgetTokenResult> {
   const slug = await getWidgetSlug(access.orgId)
   const appearance = await getWidgetAppearance(access.orgId)
   const customizationAvailable = await orgHasFeature(access.orgId, 'white_label_widget')
+  const logo = customizationAvailable ? await getWidgetLogoVersion(access.orgId) : null
   return {
     token: info.token,
     appearance,
     customizationAvailable,
+    logoUrl: logo ? widgetLogoPath(info.token, logo.etag) : null,
     slug,
     expiresAt: info.expiresAt,
     allowedOrigins: allowedOrigins ?? '',
@@ -281,5 +287,7 @@ export async function resetWidgetAppearanceAction(): Promise<WidgetAppearanceRes
     return { error: CUSTOMIZATION_REQUIRES_PRO }
   }
   const appearance = await setWidgetAppearance(access.orgId, { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true })
+  // Back to the answerLoops look includes the answerLoops mark.
+  await deleteWidgetLogo(access.orgId)
   return { appearance }
 }

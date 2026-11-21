@@ -25,6 +25,12 @@ vi.mock('@/lib/db/queries/widgets', () => ({
   getOrgByWidgetSlug: h.getOrgByWidgetSlug,
 }))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
+vi.mock('@/lib/db/queries/widget-logos', () => ({
+  getWidgetLogoVersion: vi.fn(async () => null),
+  getWidgetLogo: vi.fn(async () => null),
+  setWidgetLogo: vi.fn(async () => ({ etag: '0123456789abcdef' })),
+  deleteWidgetLogo: vi.fn(async () => undefined),
+}))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
@@ -146,7 +152,7 @@ describe('GET /api/widget/config: slug routing and rate-limit key', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.token).toBeNull()
-    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff' })
+    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoPath: null })
     expect(h.orgHasFeature).not.toHaveBeenCalled()
   })
 

@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const h = vi.hoisted(() => ({
   getOrgByWidgetToken: vi.fn(),
   orgHasFeature: vi.fn(),
+  getWidgetLogoVersion: vi.fn(),
   rateLimitShared: vi.fn(),
   headers: new Map<string, string>(),
 }))
@@ -21,6 +22,12 @@ vi.mock('next/navigation', () => ({
 }))
 vi.mock('@/lib/db/queries/widgets', () => ({ getOrgByWidgetToken: h.getOrgByWidgetToken }))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
+vi.mock('@/lib/db/queries/widget-logos', () => ({
+  getWidgetLogoVersion: h.getWidgetLogoVersion,
+  getWidgetLogo: vi.fn(async () => null),
+  setWidgetLogo: vi.fn(async () => ({ etag: '0123456789abcdef' })),
+  deleteWidgetLogo: vi.fn(async () => undefined),
+}))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
 vi.mock('@/app/widget/[widgetToken]/widget-chat', () => ({ WidgetChat: () => null }))
@@ -63,6 +70,7 @@ beforeEach(() => {
   h.headers.set('host', 'app.test')
   h.rateLimitShared.mockResolvedValue({ ok: true })
   h.orgHasFeature.mockResolvedValue(true)
+  h.getWidgetLogoVersion.mockResolvedValue(null)
 })
 
 describe('widget page appearance', () => {
@@ -126,5 +134,29 @@ describe('widget page appearance', () => {
       expect(name).toMatch(/^--brand-(50|100|200|300|400|500|600|700|800|900|950|on)$/)
       expect(value).toMatch(/^#[0-9a-f]{6}$/)
     }
+  })
+})
+
+
+describe('widget page logo', () => {
+  it('passes the workspace logo\'s address to the panel on a customization plan', async () => {
+    h.getWidgetLogoVersion.mockResolvedValue({ etag: '0123456789abcdef' })
+    h.getOrgByWidgetToken.mockResolvedValue(org({ title: null, welcome: null, brandColor: null }))
+    const props = await renderPage()
+    expect(h.getWidgetLogoVersion).toHaveBeenCalledWith(7)
+    expect(props.logoUrl).toBe(`/api/widget/logo/${TOKEN}?v=0123456789abcdef`)
+  })
+
+  it('passes none when the workspace has no logo', async () => {
+    h.getOrgByWidgetToken.mockResolvedValue(org({ title: null, welcome: null, brandColor: null }))
+    expect((await renderPage()).logoUrl).toBeNull()
+  })
+
+  it('passes none on a plan without customization, whatever is stored, and does not look it up', async () => {
+    h.orgHasFeature.mockResolvedValue(false)
+    h.getWidgetLogoVersion.mockResolvedValue({ etag: '0123456789abcdef' })
+    h.getOrgByWidgetToken.mockResolvedValue(org({ title: null, welcome: null, brandColor: null }))
+    expect((await renderPage()).logoUrl).toBeNull()
+    expect(h.getWidgetLogoVersion).not.toHaveBeenCalled()
   })
 })

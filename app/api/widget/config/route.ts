@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getOrgByWidgetSlug, getOrgByWidgetToken, type WidgetOrg } from '@/lib/db/queries/widgets'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
+import { getWidgetLogoVersion } from '@/lib/db/queries/widget-logos'
+import { widgetLogoPath } from '@/lib/widget/logo'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
@@ -91,11 +93,15 @@ export async function GET(request: Request): Promise<Response> {
     // brand color is served only on a plan with customization, and everyone
     // else gets the default look.
     const customization = await orgHasFeature(org.id, 'white_label_widget')
+    const logo = customization ? await getWidgetLogoVersion(org.id) : null
     return respond(
       {
         token: org.widget_token,
         display: resolveWidgetDisplay(
-          { bubbleColor: org.widget_appearance.brandColor },
+          {
+            bubbleColor: org.widget_appearance.brandColor,
+            logoPath: logo && org.widget_token ? widgetLogoPath(org.widget_token, logo.etag) : null,
+          },
           { customization }
         ),
       },

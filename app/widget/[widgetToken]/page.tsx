@@ -13,6 +13,8 @@ import { EmbedRefused } from './embed-refused'
 import { clientIp } from '@/lib/http/client-ip'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
+import { getWidgetLogoVersion } from '@/lib/db/queries/widget-logos'
+import { widgetLogoPath } from '@/lib/widget/logo'
 import { brandPalette } from '@/lib/widget/appearance'
 
 export const dynamic = 'force-dynamic'
@@ -82,6 +84,10 @@ export default async function WidgetPage({ params }: Props) {
   // branding. Anything else gets the default look.
   const appearance = whiteLabel ? org.widget_appearance : null
   const brandStyle = appearance?.brandColor ? brandPalette(appearance.brandColor) : null
+  // The workspace's own logo, on the same plan check. Without one (or without the
+  // plan) the chat shows the answerLoops mark.
+  const logo = whiteLabel ? await getWidgetLogoVersion(org.id) : null
+  const logoUrl = logo ? widgetLogoPath(widgetToken, logo.etag) : null
 
   // Only true when this request is embedded on the org's own instance (the
   // Settings preview link, or a self-host testing the widget on localhost) —
@@ -112,6 +118,7 @@ export default async function WidgetPage({ params }: Props) {
       welcome={appearance?.welcome ?? null}
       starterQuestions={appearance?.starterEnabled ? appearance.starterQuestions : []}
       brandStyle={brandStyle}
+      logoUrl={logoUrl}
     />
   )
 }

@@ -29,6 +29,12 @@
   var PANEL_H = SIZES.small[1];
   var bubbleColor = DEFAULT_COLOR;
   var iconColor = DEFAULT_ICON_COLOR;
+  // The workspace's own logo, when it has one: an address on this chat's own site
+  // (checked against one exact shape below), shown inside a white circle on the
+  // bubble. If the image cannot load, the normal chat icon is used instead.
+  var LOGO_PATH_PATTERN = /^\/api\/widget\/logo\/[0-9a-f]{48}\?v=[0-9a-f]{16}$/;
+  var logoSrc = null;
+  var logoFailed = false;
   // The token the chat panel is loaded with. Equal to data-widget-id for a
   // token snippet; for a slug snippet it is whatever the lookup resolves to.
   var panelToken = widgetId;
@@ -65,6 +71,7 @@
       // A two-tone ring (white inside, dark outside) so keyboard focus is visible
       // on any brand color and on any page background.
       '#cp-widget-bubble:focus-visible{outline:none;box-shadow:0 0 0 3px #ffffff,0 0 0 6px #111827;}',
+      '#cp-widget-bubble .cp-logo{width:44px;height:44px;border-radius:50%;background:#ffffff;object-fit:cover;display:block;}',
       '#cp-widget-panel{position:fixed;bottom:' + (BUBBLE_SIZE + 32) + 'px;right:24px;z-index:2147483645;width:' + PANEL_W + 'px;height:' + PANEL_H + 'px;background:#ffffff;max-width:calc(100vw - 48px);max-height:calc(100vh - ' + (BUBBLE_SIZE + 56) + 'px);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);border:1px solid #e5e7eb;overflow:hidden;transform-origin:bottom right;transition:transform .2s cubic-bezier(.34,1.56,.64,1),opacity .15s;transform:scale(.85);opacity:0;pointer-events:none;}',
       '#cp-widget-panel.cp-open{transform:scale(1);opacity:1;pointer-events:all;}',
       '#cp-widget-panel iframe{width:100%;height:100%;border:none;display:block;}',
@@ -72,11 +79,30 @@
     document.head.appendChild(style);
   }
 
+  // The closed bubble shows the workspace's logo in a white circle when there is
+  // one and it loads, otherwise the chat icon.
+  function showClosedBubble() {
+    if (logoSrc && !logoFailed) {
+      bubble.textContent = '';
+      var img = document.createElement('img');
+      img.className = 'cp-logo';
+      img.alt = '';
+      img.setAttribute('aria-hidden', 'true');
+      img.onerror = function () {
+        logoFailed = true;
+        if (!isOpen) showClosedBubble();
+      };
+      img.src = logoSrc;
+      bubble.appendChild(img);
+    } else {
+      bubble.innerHTML = bubbleIcon(24, CHAT_ICON_PATH);
+    }
+  }
   function createBubble() {
     bubble = document.createElement('button');
     bubble.id = 'cp-widget-bubble';
     bubble.setAttribute('aria-label', 'Open support chat');
-    bubble.innerHTML = bubbleIcon(24, CHAT_ICON_PATH);
+    showClosedBubble();
     bubble.addEventListener('click', togglePanel);
     document.body.appendChild(bubble);
   }
@@ -116,7 +142,7 @@
     } else {
       panel.classList.remove('cp-open');
       bubble.setAttribute('aria-label', 'Open support chat');
-      bubble.innerHTML = bubbleIcon(24, CHAT_ICON_PATH);
+      showClosedBubble();
     }
   }
 
@@ -138,6 +164,9 @@
       }
       if (typeof display.bubbleIconColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(display.bubbleIconColor)) {
         iconColor = display.bubbleIconColor;
+      }
+      if (typeof display.logoPath === 'string' && LOGO_PATH_PATTERN.test(display.logoPath)) {
+        logoSrc = baseUrl + display.logoPath;
       }
     }
   }

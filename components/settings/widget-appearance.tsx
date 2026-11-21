@@ -1,9 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { resetWidgetAppearanceAction, saveWidgetAppearanceAction } from '@/lib/actions/widget'
+import { LOGO_ERROR_MESSAGES, LOGO_MAX_BYTES } from '@/lib/images/logo-limits'
 import {
   DEFAULT_WIDGET_BRAND_COLOR,
   STARTER_QUESTIONS_LIMIT_MESSAGE,
@@ -30,10 +31,13 @@ export function WidgetAppearanceSettings({
   canManage,
   customizationAvailable,
   initialAppearance,
+  initialLogoUrl = null,
 }: {
   canManage: boolean
   customizationAvailable: boolean
   initialAppearance: WidgetAppearance
+  /** The address of the workspace's current logo, or null for the answerLoops mark. */
+  initialLogoUrl?: string | null
 }) {
   const [saved, setSaved] = useState<WidgetAppearance>(initialAppearance)
   const [title, setTitle] = useState(initialAppearance.title ?? '')
@@ -48,6 +52,12 @@ export function WidgetAppearanceSettings({
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  // The logo is applied the moment it is uploaded or removed; it is not part of Save.
+  const [logoUrl, setLogoUrl] = useState<string | null>(initialLogoUrl)
+  const [logoBusy, setLogoBusy] = useState<'uploading' | 'removing' | null>(null)
+  const [logoError, setLogoError] = useState<string | null>(null)
+  const [logoNote, setLogoNote] = useState<string | null>(null)
+  const fileInput = useRef<HTMLInputElement>(null)
   const [fieldError, setFieldError] = useState<{ field: FieldName; error: string } | null>(null)
 
   const locked = !customizationAvailable
@@ -111,9 +121,60 @@ export function WidgetAppearanceSettings({
       setMessage(result.error)
     } else if (result.appearance) {
       applyStored(result.appearance)
+      setLogoUrl(null)
+      setLogoError(null)
+      setLogoNote(null)
       setMessage('Back to the answerLoops look. The widget on your site picks this up within about a minute.')
     }
     setResetting(false)
+  }
+
+  async function uploadLogo(file: File) {
+    setLogoError(null)
+    setLogoNote(null)
+    if (file.size > LOGO_MAX_BYTES) {
+      setLogoError(LOGO_ERROR_MESSAGES['too-large'])
+      return
+    }
+    setLogoBusy('uploading')
+    try {
+      const fd = new FormData()
+      fd.set('file', file)
+      const res = await fetch('/api/settings/widget-logo', { method: 'POST', body: fd })
+      const data = (await res.json().catch(() => ({}))) as { logoUrl?: string; error?: string }
+      if (!res.ok || !data.logoUrl) {
+        setLogoError(data.error ?? 'We could not save that logo. Try again.')
+      } else {
+        setLogoUrl(data.logoUrl)
+        setLogoNote('Logo saved. The widget on your site picks it up within about a minute.')
+      }
+    } catch {
+      setLogoError('We could not save that logo. Check your connection and try again.')
+    } finally {
+      setLogoBusy(null)
+      // So choosing the same file again still counts as a change.
+      if (fileInput.current) fileInput.current.value = ''
+    }
+  }
+
+  async function removeLogo() {
+    setLogoError(null)
+    setLogoNote(null)
+    setLogoBusy('removing')
+    try {
+      const res = await fetch('/api/settings/widget-logo', { method: 'DELETE' })
+      const data = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) {
+        setLogoError(data.error ?? 'We could not remove that logo. Try again.')
+      } else {
+        setLogoUrl(null)
+        setLogoNote('Logo removed. The chat is back to the answerLoops mark.')
+      }
+    } catch {
+      setLogoError('We could not remove that logo. Check your connection and try again.')
+    } finally {
+      setLogoBusy(null)
+    }
   }
 
   const nothingCustomized =
@@ -121,7 +182,8 @@ export function WidgetAppearanceSettings({
     !saved.welcome &&
     !saved.brandColor &&
     saved.starterQuestions.length === 0 &&
-    saved.starterEnabled
+    saved.starterEnabled &&
+    !logoUrl
   const inputClass =
     'w-full rounded border border-gray-200 bg-white px-3 py-2 text-base text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 sm:text-xs'
 
@@ -156,6 +218,73 @@ export function WidgetAppearanceSettings({
           Only owners and admins can change this.
         </p>
       )}
+
+      <div className="space-y-2" data-testid="widget-logo-control">
+        <p className="text-[0.6875rem] font-medium text-gray-700" id="widget-logo-label">
+          Logo
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <div
+            className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-200 bg-brand-50"
+            data-testid="widget-logo-preview"
+          >
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key={logoUrl} src={logoUrl} alt="Your chat logo" width={64} height={64} className="h-full w-full object-cover" />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img key="default-mark" src="/logo.png" alt="The answerLoops mark" width={36} height={36} className="h-9 w-9 object-contain" />
+            )}
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap">
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              className="sr-only"
+              tabIndex={-1}
+              aria-labelledby="widget-logo-label"
+              data-testid="widget-logo-file"
+              disabled={!editable || logoBusy !== null}
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) void uploadLogo(file)
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              disabled={!editable || logoBusy !== null}
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-gray-300 bg-white px-4 text-xs font-medium text-gray-800 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:w-auto"
+            >
+              {logoBusy === 'uploading' ? 'Uploading…' : logoUrl ? 'Replace logo' : 'Upload logo'}
+            </button>
+            {logoUrl && (
+              <button
+                type="button"
+                onClick={removeLogo}
+                disabled={!editable || logoBusy !== null}
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-gray-200 bg-white px-4 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:w-auto"
+              >
+                {logoBusy === 'removing' ? 'Removing…' : 'Remove'}
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="text-[0.6875rem] text-gray-500">
+          Shown in the chat header, beside each reply and on the chat bubble. PNG, JPEG or WebP, up to 1 MB. We crop it to a square and shrink it.
+        </p>
+        {logoError && (
+          <p className="break-words text-[0.6875rem] text-red-600" role="alert">
+            {logoError}
+          </p>
+        )}
+        {logoNote && (
+          <p className="break-words text-[0.6875rem] text-gray-600" role="status">
+            {logoNote}
+          </p>
+        )}
+      </div>
 
       <div className="space-y-1">
         <label htmlFor="widget-title" className="block text-[0.6875rem] font-medium text-gray-700">

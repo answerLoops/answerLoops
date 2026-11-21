@@ -11,6 +11,7 @@ const h = vi.hoisted(() => ({
   getOrgByWidgetToken: vi.fn(),
   getOrgByWidgetSlug: vi.fn(),
   orgHasFeature: vi.fn(),
+  getWidgetLogoVersion: vi.fn(),
   rateLimitShared: vi.fn(),
   verifyOriginProxy: vi.fn(),
 }))
@@ -20,6 +21,12 @@ vi.mock('@/lib/db/queries/widgets', () => ({
   getOrgByWidgetSlug: h.getOrgByWidgetSlug,
 }))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
+vi.mock('@/lib/db/queries/widget-logos', () => ({
+  getWidgetLogoVersion: h.getWidgetLogoVersion,
+  getWidgetLogo: vi.fn(async () => null),
+  setWidgetLogo: vi.fn(async () => ({ etag: '0123456789abcdef' })),
+  deleteWidgetLogo: vi.fn(async () => undefined),
+}))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: h.verifyOriginProxy }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
@@ -27,7 +34,7 @@ vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: 
 
 const TOKEN = 'a1'.repeat(24)
 const NEXT_TOKEN = 'b2'.repeat(24)
-const DEFAULTS = { windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff' }
+const DEFAULTS = { windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoPath: null }
 
 const org = (token: string, brandColor: string | null = null) => ({
   id: 7,
@@ -53,6 +60,7 @@ beforeEach(() => {
   h.orgHasFeature.mockResolvedValue(true)
   h.getOrgByWidgetToken.mockResolvedValue(org(TOKEN))
   h.getOrgByWidgetSlug.mockResolvedValue(org(NEXT_TOKEN))
+  h.getWidgetLogoVersion.mockResolvedValue(null)
 })
 
 describe('GET /api/widget/config: resolving the id', () => {
@@ -103,7 +111,7 @@ describe('GET /api/widget/config: what leaves the server', () => {
   it('returns only the token and display settings, nothing about the workspace', async () => {
     const body = await (await call('acme-support')).json()
     expect(Object.keys(body).sort()).toEqual(['display', 'token'])
-    expect(Object.keys(body.display).sort()).toEqual(['bubbleColor', 'bubbleIconColor', 'windowSize'])
+    expect(Object.keys(body.display).sort()).toEqual(['bubbleColor', 'bubbleIconColor', 'logoPath', 'windowSize'])
     const raw = JSON.stringify(body)
     expect(raw).not.toContain('Acme')
     expect(raw).not.toContain('acme.test')
@@ -189,5 +197,47 @@ describe('GET /api/widget/config: abuse controls', () => {
     expect(res.status).toBe(503)
     expect(res.headers.get('cache-control')).toBe('no-store')
     expect(await res.json()).toEqual({ token: null, display: DEFAULTS })
+  })
+})
+
+
+describe('GET /api/widget/config: the logo', () => {
+  const VERSION = '0123456789abcdef'
+  const lookup = async (id: string) => {
+    const res = await call(id)
+    return { res, body: (await res.json()) as { display: Record<string, unknown> } }
+  }
+
+  it('hands the launcher the logo\'s address when the workspace has one on a customization plan', async () => {
+    h.getWidgetLogoVersion.mockResolvedValue({ etag: VERSION })
+    const { body } = await lookup(TOKEN)
+    expect(h.getWidgetLogoVersion).toHaveBeenCalledWith(7)
+    expect(body.display.logoPath).toBe(`/api/widget/logo/${TOKEN}?v=${VERSION}`)
+  })
+
+  it('builds the address from the token the workspace has now, so a slug snippet gets the current one', async () => {
+    h.getWidgetLogoVersion.mockResolvedValue({ etag: VERSION })
+    const { body } = await lookup('acme-support')
+    expect(body.display.logoPath).toBe(`/api/widget/logo/${NEXT_TOKEN}?v=${VERSION}`)
+  })
+
+  it('gives none when the workspace has no logo', async () => {
+    const { body } = await lookup(TOKEN)
+    expect(body.display.logoPath).toBeNull()
+  })
+
+  it('gives none on a plan without customization, and does not even look for one', async () => {
+    h.orgHasFeature.mockResolvedValue(false)
+    h.getWidgetLogoVersion.mockResolvedValue({ etag: VERSION })
+    const { body } = await lookup(TOKEN)
+    expect(body.display.logoPath).toBeNull()
+    expect(h.getWidgetLogoVersion).not.toHaveBeenCalled()
+  })
+
+  it('still answers with the default look when the logo lookup fails', async () => {
+    h.getWidgetLogoVersion.mockRejectedValue(new Error('db down'))
+    const { res, body } = await lookup(TOKEN)
+    expect(res.status).toBe(503)
+    expect(body.display).toEqual(DEFAULTS)
   })
 })
