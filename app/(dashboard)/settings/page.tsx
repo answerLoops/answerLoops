@@ -1216,7 +1216,7 @@ export function WidgetSection() {
 
           {/* Keyed the same way, for the same reason. */}
           <WidgetAppearanceSettings
-            key={`${customizationAvailable}:${appearance.title ?? ''}:${appearance.welcome ?? ''}:${appearance.brandColor ?? ''}:${appearance.starterQuestions.join('|')}:${appearance.starterEnabled}`}
+            key={`${customizationAvailable}:${appearance.title ?? ''}:${appearance.welcome ?? ''}:${appearance.brandColor ?? ''}:${appearance.starterQuestions.join('|')}:${appearance.starterEnabled}:${appearance.followUpsEnabled}`}
             canManage={canManage}
             customizationAvailable={customizationAvailable}
             initialAppearance={appearance}

@@ -9,6 +9,7 @@ import type { MastraModelConfig } from '@mastra/core/llm'
 import { chatModel, DEFAULT_FAST_MODEL, NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { embedQueryCached } from '@/lib/widget/embed-cache'
 import { buildGenuiTools } from '@/lib/widget/genui-tools'
+import { followUpsAvailable, groundFollowUps } from '@/lib/widget/follow-ups'
 import { flattenMastraStream } from '@/lib/widget/mastra-stream'
 import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import { getKBContext } from '@/lib/db/queries/kb'
@@ -96,6 +97,9 @@ export interface PendingRun {
     // from the request.
     widget_answer_scope: WidgetAnswerScope
     widget_guidance: string | null
+    // The owner's switch for follow-up suggestions (the workspace row the token
+    // resolved to). Whether the plan includes them is checked per run.
+    widget_appearance?: { followUpsEnabled: boolean }
   }
   widgetToken: string
   // Which widget message this run answers; scopes the lead-capture signal so
@@ -422,7 +426,11 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   }
   const { org, widgetToken, turnId, model, query, visitorId, reservationId } = run
 
-  const allContext = await (run.context ?? retrieveContext(query, org.id))
+  // Checked alongside retrieval so the plan lookup adds no waiting of its own.
+  const [allContext, followUps] = await Promise.all([
+    run.context ?? retrieveContext(query, org.id),
+    followUpsAvailable({ id: org.id, followUpsEnabled: org.widget_appearance?.followUpsEnabled !== false }),
+  ])
   const contextBlock = allContext.length
     ? `\n\nKnowledge base context — use this to answer. ${REFERENCE_MATERIAL_NOTICE}\n${renderReferenceBlock(
         allContext.map((c) => ({ question: c.summary, answer: c.answer }))
@@ -446,10 +454,11 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
       answerScope: org.widget_answer_scope,
       guidance: org.widget_guidance,
       contextBlock,
+      followUps,
     }),
     model: model as MastraModelConfig,
     memory: getWidgetChatMemory(),
-    tools: buildGenuiTools(contextBlock),
+    tools: buildGenuiTools(contextBlock, followUps ? { followUps: { ground: (labels) => groundFollowUps(org.id, labels) } } : {}),
   })
 
   // One id for this generation, so a repeated completion callback records the

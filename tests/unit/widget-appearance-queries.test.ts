@@ -40,9 +40,9 @@ describe('setWidgetAppearance', () => {
     const { setWidgetAppearance } = await import('@/lib/db/queries/widgets')
     const stored = await setWidgetAppearance(5, { title: '  Acme   Help  ', welcome: ' Hi! ', brandColor: '#FFD60A' })
     expect(db.state.setValues).toEqual([
-      { widgetTitle: 'Acme Help', widgetWelcome: 'Hi!', widgetBrandColor: '#ffd60a', widgetStarterQuestions: null, widgetStarterEnabled: null },
+      { widgetTitle: 'Acme Help', widgetWelcome: 'Hi!', widgetBrandColor: '#ffd60a', widgetStarterQuestions: null, widgetStarterEnabled: null, widgetFollowUpsEnabled: null },
     ])
-    expect(stored).toEqual({ title: 'Acme Help', welcome: 'Hi!', brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true })
+    expect(stored).toEqual({ title: 'Acme Help', welcome: 'Hi!', brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true, followUpsEnabled: true })
   })
 
   it('stores starter questions cleaned, one per line, and returns them as a list', async () => {
@@ -60,6 +60,7 @@ describe('setWidgetAppearance', () => {
         widgetBrandColor: null,
         widgetStarterQuestions: 'How does it work?\nWhat does it cost?',
         widgetStarterEnabled: null,
+        widgetFollowUpsEnabled: null,
       },
     ])
     expect(stored.starterQuestions).toEqual(['How does it work?', 'What does it cost?'])
@@ -73,12 +74,26 @@ describe('setWidgetAppearance', () => {
       brandColor: null,
       starterQuestions: 'How does it work?',
       starterEnabled: false,
+      followUpsEnabled: true,
     })
     expect(db.state.setValues[0]).toMatchObject({
       widgetStarterQuestions: 'How does it work?',
       widgetStarterEnabled: false,
+      widgetFollowUpsEnabled: null,
     })
-    expect(stored).toMatchObject({ starterQuestions: ['How does it work?'], starterEnabled: false })
+    expect(stored).toMatchObject({ starterQuestions: ['How does it work?'], starterEnabled: false, followUpsEnabled: true })
+  })
+
+  it('stores the follow-up suggestions switch as false only when off, leaving the rest alone', async () => {
+    const { setWidgetAppearance } = await import('@/lib/db/queries/widgets')
+    const off = await setWidgetAppearance(5, { title: null, welcome: null, brandColor: null, followUpsEnabled: false })
+    expect(db.state.setValues[0]).toMatchObject({ widgetFollowUpsEnabled: false, widgetStarterEnabled: null })
+    expect(off.followUpsEnabled).toBe(false)
+    const on = await setWidgetAppearance(5, { title: null, welcome: null, brandColor: null, followUpsEnabled: true })
+    expect(db.state.setValues[1]).toMatchObject({ widgetFollowUpsEnabled: null })
+    expect(on.followUpsEnabled).toBe(true)
+    const unset = await setWidgetAppearance(5, { title: null, welcome: null, brandColor: null })
+    expect(unset.followUpsEnabled).toBe(true)
   })
 
   it('refuses too many or too long starter questions without writing', async () => {
@@ -103,6 +118,7 @@ describe('setWidgetAppearance', () => {
         widgetBrandColor: null,
         widgetStarterQuestions: null,
         widgetStarterEnabled: null,
+        widgetFollowUpsEnabled: null,
       },
     ])
   })
@@ -136,23 +152,28 @@ describe('getWidgetAppearance', () => {
       brandColor: '#ffd60a',
       starterQuestions: ['How does it work?', 'What does it cost?'],
       starterEnabled: true,
+      followUpsEnabled: true,
     })
   })
 
   it('reads the switch: only an explicit false is off', async () => {
     const { getWidgetAppearance } = await import('@/lib/db/queries/widgets')
-    db.state.selectRows = [{ title: null, welcome: null, brandColor: null, starterQuestions: 'Q', starterEnabled: false }]
-    expect(await getWidgetAppearance(5)).toMatchObject({ starterQuestions: ['Q'], starterEnabled: false })
+    db.state.selectRows = [{ title: null, welcome: null, brandColor: null, starterQuestions: 'Q', starterEnabled: false, followUpsEnabled: true }]
+    expect(await getWidgetAppearance(5)).toMatchObject({ starterQuestions: ['Q'], starterEnabled: false, followUpsEnabled: true })
+    db.state.selectRows = [{ title: null, welcome: null, brandColor: null, starterQuestions: null, starterEnabled: null, followUpsEnabled: false }]
+    expect(await getWidgetAppearance(5)).toMatchObject({ followUpsEnabled: false })
+    db.state.selectRows = [{ title: null, welcome: null, brandColor: null, starterQuestions: null, starterEnabled: null, followUpsEnabled: null }]
+    expect(await getWidgetAppearance(5)).toMatchObject({ followUpsEnabled: true })
     db.state.selectRows = [{ title: null, welcome: null, brandColor: null, starterQuestions: 'Q', starterEnabled: null }]
-    expect(await getWidgetAppearance(5)).toMatchObject({ starterEnabled: true })
+    expect(await getWidgetAppearance(5)).toMatchObject({ starterEnabled: true, followUpsEnabled: true })
   })
 
   it('treats a workspace with nothing stored, or no row, as the answerLoops default', async () => {
     const { getWidgetAppearance } = await import('@/lib/db/queries/widgets')
     db.state.selectRows = [{ title: null, welcome: null, brandColor: null }]
-    expect(await getWidgetAppearance(5)).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true })
+    expect(await getWidgetAppearance(5)).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true, followUpsEnabled: true })
     db.state.selectRows = []
-    expect(await getWidgetAppearance(5)).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true })
+    expect(await getWidgetAppearance(5)).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true, followUpsEnabled: true })
   })
 
   it('discards a value written outside the setter that would not pass the checks', async () => {
@@ -171,6 +192,7 @@ describe('getWidgetAppearance', () => {
       brandColor: null,
       starterQuestions: ['fine', 'a', 'b', 'c'],
       starterEnabled: true,
+      followUpsEnabled: true,
     })
   })
 })
