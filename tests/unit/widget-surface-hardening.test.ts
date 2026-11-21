@@ -114,7 +114,9 @@ describe('widget lead endpoint carries the standard abuse controls', () => {
   it('bounds the email length and shape rather than checking for an @', () => {
     const s = src()
     expect(s).toContain('MAX_EMAIL_CHARS')
-    expect(s).toContain('EMAIL_PATTERN.test(normalized)')
+    // The shape is checked by the shared strict check, not a loose pattern.
+    expect(s).toContain('isAcceptableLeadEmail(normalized)')
+    expect(s).not.toContain('EMAIL_PATTERN')
     // The original check stored any string containing an @, at any length.
     expect(s).not.toContain("email.includes('@')")
   })

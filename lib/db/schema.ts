@@ -75,6 +75,9 @@ export const orgs = pgTable('orgs', {
   // Whether those buttons are shown. NULL and true mean shown; only an explicit
   // false hides them, so an owner can switch them off and keep the questions.
   widgetStarterEnabled: boolean('widget_starter_enabled'),
+  // When this workspace was last emailed about new website chat leads; limits
+  // it to one email per window. See lib/widget/lead-notifications.ts.
+  widgetLeadsEmailedAt: timestamp('widget_leads_emailed_at', { withTimezone: true }),
   roiMinutesPerTicket: integer('roi_minutes_per_ticket'),
   roiStaffHourlyRate: integer('roi_staff_hourly_rate'),
   // Set the moment an owner confirms account deletion. NULL means active.
@@ -1073,6 +1076,8 @@ export const widgetLeads = pgTable(
     // no question yet when it's collected. Without this the team sees a bare
     // address with nothing to follow up on.
     question: text('question'),
+    // When this lead was included in an email to the team; NULL until then.
+    notifiedAt: timestamp('notified_at', { withTimezone: true }),
     createdAt: text('created_at').notNull().default(now),
   },
   (t) => [

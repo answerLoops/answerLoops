@@ -225,6 +225,43 @@ function startTrialReminderSweep(): void {
   setInterval(() => { sweep().catch(() => {}) }, TRIAL_REMINDER_SWEEP_INTERVAL_MS)
 }
 
+// Website chat lead emails. When a visitor leaves their email, the app emails
+// the team at once if that workspace has not been emailed in the last few
+// minutes; leads that arrive inside that window wait. This sweep sends those
+// waiting leads together once the window has closed. The app route decides who
+// is due and sends; this process only keeps the sweep running.
+const WIDGET_LEAD_SWEEP_INTERVAL_MS = 5 * 60 * 1000
+const WIDGET_LEAD_REQUEST_TIMEOUT_MS = 2 * 60 * 1000
+
+function startWidgetLeadSweep(): void {
+  const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
+  const botSecret = process.env.BOT_SECRET
+  let inFlight = false
+
+  const sweep = async () => {
+    if (!botSecret) return // the route requires BOT_SECRET; nothing to do without it
+    if (inFlight) return // the previous sweep is still running; never overlap
+    inFlight = true
+    try {
+      const res = await fetch(`${targetUrl}/api/widget/lead-notifications/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${botSecret}` },
+        signal: AbortSignal.timeout(WIDGET_LEAD_REQUEST_TIMEOUT_MS),
+      })
+      if (!res.ok) {
+        logger.warn('widget lead sweep: request failed', { module: MOD, status: res.status })
+      }
+    } catch (err) {
+      // Must not crash the bot process; it retries on the next sweep.
+      logger.error('widget lead sweep failed', { module: MOD, error: err })
+    } finally {
+      inFlight = false
+    }
+  }
+  sweep().catch(() => {})
+  setInterval(() => { sweep().catch(() => {}) }, WIDGET_LEAD_SWEEP_INTERVAL_MS)
+}
+
 // KB sync worker. Notion/GitHub KB syncs are enqueued into kb_sync_jobs (by the
 // "Sync now" buttons and the GitHub push webhook) instead of running inline in
 // those requests. This sweep claims queued jobs and drives each one via
@@ -867,6 +904,7 @@ async function main() {
   startStuckTicketSweep()
   startEmbeddingMigrationSweep()
   startTrialReminderSweep()
+  startWidgetLeadSweep()
 
   client.login(initial.discordToken)
 }
