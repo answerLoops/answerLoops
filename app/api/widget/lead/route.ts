@@ -1,3 +1,5 @@
+import { isAcceptableLeadEmail } from '@/lib/widget/lead-email-address'
+import { after } from 'next/server'
 import { getOrgByWidgetToken } from '@/lib/db/queries/widgets'
 import { saveWidgetLead } from '@/lib/db/queries/widget-leads'
 import { rateLimitShared } from '@/lib/ratelimit'
@@ -9,6 +11,7 @@ import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 import { isValidWidgetToken } from '@/lib/widget/request-validation'
 import { verifyLeadQuestionToken } from '@/lib/widget/lead-question-token'
+import { notifyNewWidgetLead } from '@/lib/widget/lead-notifications'
 
 const MOD = 'api/widget/lead'
 
@@ -27,11 +30,9 @@ const MAX_BODY_BYTES = 64 * 1024
 // RFC 5321 caps a path at 254 characters. Anything longer is not an address.
 const MAX_EMAIL_CHARS = 254
 
-// Deliberately loose: one @, something either side, no whitespace, a dot in the
-// domain. Stricter patterns reject valid addresses, and this is a lead capture
-// box, not an identity system — the goal is to keep junk out of the table, not
-// to prove deliverability.
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+\.[^\s@]+$/
+// The address is checked by isAcceptableLeadEmail (lib/widget/lead-email-address.ts):
+// plain, ordinary addresses only. It lands in an email to the team and on the
+// Leads page, so anything odd is refused here and never stored.
 
 export async function POST(request: Request) {
   // Must precede clientIp(), which trusts the proxy-supplied client-IP header —
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
 
   if (typeof email !== 'string') return new Response('Invalid email', { status: 400 })
   const normalized = email.trim().toLowerCase()
-  if (normalized.length > MAX_EMAIL_CHARS || !EMAIL_PATTERN.test(normalized)) {
+  if (normalized.length > MAX_EMAIL_CHARS || !isAcceptableLeadEmail(normalized)) {
     return new Response('Invalid email', { status: 400 })
   }
 
@@ -94,7 +95,11 @@ export async function POST(request: Request) {
     const org = await getOrgByWidgetToken(widgetToken)
     if (!org) return new Response('Invalid widget token', { status: 404 })
 
-    await saveWidgetLead(org.id, widgetToken, normalized, verifiedQuestion)
+    const saved = await saveWidgetLead(org.id, widgetToken, normalized, verifiedQuestion)
+    // Tell the team once, for a first submission only: a repeat from the same
+    // address sends nothing. It runs after the response, so the visitor never
+    // waits on the mail provider, and a problem there cannot fail their request.
+    if (saved?.isNew) after(() => notifyNewWidgetLead(org.id))
     return Response.json({ ok: true })
   } catch (err) {
     logger.error('widget lead save failed', { module: MOD, requestId: getRequestId(request), widgetToken, error: err })
