@@ -19,10 +19,10 @@ function title(ticket: Ticket): string {
  * recent first. Shows nothing when there is nothing new, so a quiet workspace
  * has no empty box on its dashboard.
  */
-export function ActivityPanel({ tickets, total, cutoff, proof }: {
+export function ActivityPanel({ tickets, total, snapshot, proof }: {
   tickets: Ticket[]
   total: number
-  cutoff?: string
+  snapshot?: string
   proof?: string
 }) {
   const viewAll = (
@@ -36,7 +36,7 @@ export function ActivityPanel({ tickets, total, cutoff, proof }: {
       total={tickets.length ? total : 0}
       viewAll={viewAll}
       previewNote={total > ACTIVITY_PREVIEW_LIMIT ? `Showing the latest ${ACTIVITY_PREVIEW_LIMIT} of ${total}` : undefined}
-      cutoff={cutoff}
+      snapshot={snapshot}
       proof={proof}
     >
       <ul className="divide-y divide-blue-100">

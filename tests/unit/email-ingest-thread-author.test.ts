@@ -10,6 +10,7 @@ const h = vi.hoisted(() => ({
   findTicketByMessageIds: vi.fn(),
   notifyTicketActivity: vi.fn(),
   setEmailMessageTicket: vi.fn(),
+  updateEmailMessageStatus: vi.fn(),
   processCommunityMessage: vi.fn(async () => ({ ticket_id: 500 })),
 }))
 
@@ -29,7 +30,7 @@ vi.mock('@/lib/db/queries/notifications', () => ({ createNotification: vi.fn() }
 vi.mock('@/lib/tickets/notify-activity', () => ({ notifyTicketActivity: h.notifyTicketActivity }))
 vi.mock('@/lib/db/queries/email-messages', () => ({
   recordInboundEmail: vi.fn(async () => ({ id: 1 })),
-  updateEmailMessageStatus: vi.fn(),
+  updateEmailMessageStatus: h.updateEmailMessageStatus,
   setEmailMessageTicket: h.setEmailMessageTicket,
   findTicketByMessageIds: h.findTicketByMessageIds,
   countRecentOutboundToSender: vi.fn(async () => 0),
@@ -86,8 +87,12 @@ describe('email reply stored in the ticket thread', () => {
       orgId: 3,
     }))
     h.recordCustomerReply.mockResolvedValueOnce(false)
-    await POST(inbound('Casey Customer <customer@example.com>', '<reply-duplicate@mail.test>') as never)
+    const response = await POST(inbound('Casey Customer <customer@example.com>', '<reply-duplicate@mail.test>') as never)
     expect(h.notifyTicketActivity).toHaveBeenCalledOnce()
+    expect(h.setEmailMessageTicket.mock.calls).toEqual([[1, 77], [1, 77]])
+    expect(h.updateEmailMessageStatus.mock.calls).toEqual([[1, 'processed'], [1, 'processed']])
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ ok: true })
   })
 
   it('links the email to a new ticket when deletion wins the reply race', async () => {

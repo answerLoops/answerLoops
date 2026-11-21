@@ -5,7 +5,7 @@ import { render } from '@testing-library/react'
 const h = vi.hoisted(() => ({
   statsCards: vi.fn(),
   getDeflectionStats: vi.fn(),
-  getUnseenActivityTickets: vi.fn(async () => []),
+  getUnseenActivityTickets: vi.fn(async () => ({ tickets: [], total: 0 })),
 }))
 
 vi.mock('@/auth', () => ({ auth: async () => ({ orgId: 7, user: { name: 'Sam Lee' } }) }))
@@ -17,8 +17,6 @@ vi.mock('@/lib/db/queries/tickets', () => ({
   getSLABreachedTickets: async () => [],
   getTickets: async () => [],
   getUnseenActivityTickets: h.getUnseenActivityTickets,
-  getActivityCutoff: async () => '2026-10-02T00:00:00.123456Z',
-  countUnseenActivityTickets: async () => 0,
 }))
 vi.mock('@/lib/db/queries/analytics', () => ({ getDeflectionStats: h.getDeflectionStats }))
 vi.mock('@/components/dashboard/stats-cards', () => ({
@@ -55,6 +53,6 @@ describe('DashboardPage activity preview', () => {
     h.getDeflectionStats.mockResolvedValue({ deflected: 0, answered: 0 })
     await DashboardPage()
 
-    expect(h.getUnseenActivityTickets).toHaveBeenCalledExactlyOnceWith(7, 5, '2026-10-02T00:00:00.123456Z')
+    expect(h.getUnseenActivityTickets).toHaveBeenCalledExactlyOnceWith(7, 5)
   })
 })

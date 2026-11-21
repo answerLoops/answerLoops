@@ -29,12 +29,12 @@ function ticket(overrides: Partial<Ticket>): Ticket {
 }
 
 describe('bulk activity confirmation', () => {
-  const cutoff = '2026-10-02T00:00:00.123456Z'
-  const proof = '<dashboard-cutoff-proof>'
+  const snapshot = '2026-10-02T00:00:00.123456Z'
+  const proof = '<dashboard-snapshot-proof>'
 
   async function open(total: number) {
     const user = userEvent.setup()
-    const panel = render(<ActivityPanel tickets={[ticket({})]} total={total} cutoff={cutoff} proof={proof} />)
+    const panel = render(<ActivityPanel tickets={[ticket({})]} total={total} snapshot={snapshot} proof={proof} />)
     expect(screen.queryByRole('button', { name: 'Mark all as seen' })).toBeNull()
     await user.click(screen.getByRole('button', { name: /^Activity,/ }))
     const trigger = screen.getByRole('button', { name: 'Mark all as seen' })
@@ -59,30 +59,62 @@ describe('bulk activity confirmation', () => {
     const { panel } = await open(200)
     const deferred = Promise.withResolvers<{ ok: true; count: number }>()
     bulk.mockReturnValue(deferred.promise)
-    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={201} cutoff="different-cutoff" proof="different-proof" />)
     const confirm = screen.getByRole('button', { name: 'Confirm mark all as seen' })
     act(() => {
       fireEvent.click(confirm)
       fireEvent.click(confirm)
     })
-    expect(bulk).toHaveBeenCalledExactlyOnceWith(cutoff, proof)
+    expect(bulk).toHaveBeenCalledExactlyOnceWith(snapshot, proof)
     expect(confirm).toBeDisabled()
-    panel.rerender(<ActivityPanel tickets={[]} total={0} cutoff={cutoff} />)
-    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={1} cutoff="new-cutoff" proof="new-proof" />)
+    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={201} snapshot="different-snapshot" proof="different-proof" />)
+    panel.rerender(<ActivityPanel tickets={[]} total={0} snapshot={snapshot} />)
+    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={1} snapshot="new-snapshot" proof="new-proof" />)
     expect(screen.queryByRole('group', { name: /as seen/ })).toBeNull()
     expect(screen.getByRole('button', { name: 'Mark all as seen' })).toBeDisabled()
     await act(async () => deferred.resolve({ ok: true, count: 198 }))
-    panel.rerender(<ActivityPanel tickets={[]} total={0} cutoff={cutoff} />)
+    panel.rerender(<ActivityPanel tickets={[]} total={0} snapshot={snapshot} />)
     expect(screen.queryByRole('region', { name: 'Activity' })).toBeNull()
     expect(screen.getByRole('status')).toHaveTextContent('Marked 198 tickets as seen.')
+  })
+
+  it('keeps the confirmation pending through Escape and panel toggles', async () => {
+    const { user } = await open(1)
+    const deferred = Promise.withResolvers<{ ok: true; count: number }>()
+    bulk.mockReturnValueOnce(deferred.promise)
+    const toggle = screen.getByRole('button', { name: /^Activity,/ })
+    await user.click(screen.getByRole('button', { name: 'Confirm mark all as seen' }))
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('button', { name: 'Marking tickets…' })).toBeDisabled()
+    await user.click(toggle)
+    expect(screen.queryByRole('group')).toBeNull()
+    await user.click(toggle)
+    expect(screen.getByRole('button', { name: 'Marking tickets…' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    await act(async () => deferred.resolve({ ok: true, count: 1 }))
+    expect(bulk).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('group')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Marked 1 ticket as seen.')
+    expect(toggle).toHaveFocus()
+  })
+
+  it('asks for confirmation again if a refresh changes the snapshot before submitting', async () => {
+    const { user, panel } = await open(200)
+    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={201} snapshot="updated-snapshot" proof="updated-proof" />)
+    expect(screen.queryByRole('group')).toBeNull()
+    expect(bulk).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Mark all as seen' }))
+    expect(screen.getByRole('group', { name: 'Mark 201 tickets as seen?' })).toBeVisible()
+    bulk.mockResolvedValueOnce({ ok: true, count: 201 })
+    await user.click(screen.getByRole('button', { name: 'Confirm mark all as seen' }))
+    expect(bulk).toHaveBeenCalledExactlyOnceWith('updated-snapshot', 'updated-proof')
   })
 
   it('discards an unused confirmation when a refresh empties and then refills the backlog', async () => {
     const { user, panel } = await open(200)
     expect(screen.getByRole('group', { name: 'Mark 200 tickets as seen?' })).toBeVisible()
-    panel.rerender(<ActivityPanel tickets={[]} total={0} cutoff={cutoff} />)
+    panel.rerender(<ActivityPanel tickets={[]} total={0} snapshot={snapshot} />)
     expect(screen.queryByRole('region', { name: 'Activity' })).toBeNull()
-    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={1} cutoff="new-cutoff" proof="new-proof" />)
+    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={1} snapshot="new-snapshot" proof="new-proof" />)
     expect(screen.queryByRole('group', { name: /as seen/ })).toBeNull()
     const trigger = screen.getByRole('button', { name: 'Mark all as seen' })
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
@@ -90,7 +122,46 @@ describe('bulk activity confirmation', () => {
     expect(screen.getByRole('group', { name: 'Mark 1 ticket as seen?' })).toBeVisible()
     bulk.mockResolvedValue({ ok: true, count: 1 })
     await user.click(screen.getByRole('button', { name: 'Confirm mark all as seen' }))
-    expect(bulk).toHaveBeenCalledExactlyOnceWith('new-cutoff', 'new-proof')
+    expect(bulk).toHaveBeenCalledExactlyOnceWith('new-snapshot', 'new-proof')
+  })
+
+  it.each(['open', 'pending'])('moves focus to View all tickets when a refresh removes the %s confirmation', async (phase) => {
+    function dashboard(hasActivity: boolean) {
+      return (
+        <>
+          <a id="dashboard-view-all-tickets" href="/tickets">View all tickets</a>
+          <ActivityPanel
+            tickets={hasActivity ? [ticket({})] : []}
+            total={hasActivity ? 1 : 0}
+            snapshot={hasActivity ? snapshot : undefined}
+            proof={hasActivity ? proof : undefined}
+          />
+        </>
+      )
+    }
+
+    const user = userEvent.setup()
+    const panel = render(dashboard(true))
+    const fallback = screen.getByRole('link', { name: 'View all tickets' })
+    await user.click(screen.getByRole('button', { name: /^Activity,/ }))
+    await user.click(screen.getByRole('button', { name: 'Mark all as seen' }))
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus()
+
+    const deferred = Promise.withResolvers<{ ok: false }>()
+    if (phase === 'pending') {
+      bulk.mockReturnValueOnce(deferred.promise)
+      await user.click(screen.getByRole('button', { name: 'Confirm mark all as seen' }))
+      expect(screen.getByRole('button', { name: 'Marking tickets…' })).toBeDisabled()
+    }
+
+    panel.rerender(dashboard(false))
+    expect(screen.queryByRole('region', { name: 'Activity' })).toBeNull()
+    expect(fallback).toHaveFocus()
+    if (phase === 'pending') {
+      await act(async () => deferred.resolve({ ok: false }))
+      expect(screen.getByRole('alert')).toHaveTextContent('Couldn’t mark tickets as seen.')
+      expect(fallback).toHaveFocus()
+    }
   })
 
   it.each(['rejected', 'denied'])('reports a %s request and lets the person retry', async (failure) => {
@@ -102,10 +173,12 @@ describe('bulk activity confirmation', () => {
     await user.click(confirm)
     expect(screen.getByRole('alert')).toHaveTextContent('Couldn’t mark tickets as seen. Try again.')
     expect(confirm).toBeEnabled()
+    expect(confirm).toHaveFocus()
     bulk.mockResolvedValueOnce({ ok: true, count: 1 })
     await user.click(confirm)
     expect(screen.queryByRole('alert')).toBeNull()
     expect(screen.getByRole('status')).toHaveTextContent('Marked 1 ticket as seen.')
+    expect(screen.getByRole('status')).toHaveFocus()
   })
 })
 

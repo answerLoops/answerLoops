@@ -20,7 +20,7 @@ vi.mock('@/lib/db/queries/tickets', () => ({
 vi.mock('next/cache', () => ({ refresh: h.refresh, revalidatePath: h.revalidatePath }))
 
 import { markAllNotificationsReadAction, markAllTicketsSeenAction, markTicketSeenAction } from '@/lib/actions/notifications'
-import { signActivityCutoff } from '@/lib/tickets/activity-cutoff'
+import { signActivitySnapshot } from '@/lib/tickets/activity-snapshot'
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -30,33 +30,34 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs())
 
 describe('markAllTicketsSeenAction', () => {
-  const cutoff = '2026-10-02T00:00:00.123456Z'
+  const snapshot = '2026-10-02T00:00:00.123456Z|10:11:10'
 
   beforeEach(() => vi.stubEnv('AUTH_SECRET', '<test-auth-secret>'))
 
   it.each([0, 1, 198])('returns the database count %i and refreshes both surfaces', async (count) => {
     h.markAllTicketsSeen.mockResolvedValue(count)
-    expect(await markAllTicketsSeenAction(cutoff, signActivityCutoff(cutoff, 3, 5))).toEqual({ ok: true, count })
+    expect(await markAllTicketsSeenAction(snapshot, signActivitySnapshot(snapshot, 3, 5))).toEqual({ ok: true, count })
     expect(h.requireOrgAccess).toHaveBeenCalledWith()
-    expect(h.markAllTicketsSeen).toHaveBeenCalledWith(3, cutoff)
+    expect(h.markAllTicketsSeen).toHaveBeenCalledWith(3, snapshot)
     expect(h.refresh).toHaveBeenCalledOnce()
     expect(h.revalidatePath).toHaveBeenCalledWith('/tickets')
   })
 
-  it('rejects a stale membership, a changed cutoff, and proofs from other workspaces or users', async () => {
-    const proof = signActivityCutoff(cutoff, 3, 5)
+  it('rejects a stale membership, a changed snapshot, and proofs from other workspaces or users', async () => {
+    const proof = signActivitySnapshot(snapshot, 3, 5)
     h.requireOrgAccess.mockResolvedValueOnce({ ok: false, error: 'Unauthorized' })
-    expect(await markAllTicketsSeenAction(cutoff, proof)).toEqual({ ok: false })
-    expect(await markAllTicketsSeenAction('2026-10-02T00:01:00.123456Z', proof)).toEqual({ ok: false })
-    expect(await markAllTicketsSeenAction(cutoff, signActivityCutoff(cutoff, 4, 5))).toEqual({ ok: false })
-    expect(await markAllTicketsSeenAction(cutoff, signActivityCutoff(cutoff, 3, 6))).toEqual({ ok: false })
+    expect(await markAllTicketsSeenAction(snapshot, proof)).toEqual({ ok: false })
+    expect(await markAllTicketsSeenAction('2026-10-02T00:01:00.123456Z|10:11:10', proof)).toEqual({ ok: false })
+    expect(await markAllTicketsSeenAction(snapshot.replace('10:11:10', '10:11:'), proof)).toEqual({ ok: false })
+    expect(await markAllTicketsSeenAction(snapshot, signActivitySnapshot(snapshot, 4, 5))).toEqual({ ok: false })
+    expect(await markAllTicketsSeenAction(snapshot, signActivitySnapshot(snapshot, 3, 6))).toEqual({ ok: false })
     expect(h.markAllTicketsSeen).not.toHaveBeenCalled()
     expect(h.refresh).not.toHaveBeenCalled()
   })
 
   it('leaves the routes alone if the transaction fails', async () => {
     h.markAllTicketsSeen.mockRejectedValue(new Error('Transaction failed'))
-    await expect(markAllTicketsSeenAction(cutoff, signActivityCutoff(cutoff, 3, 5))).rejects.toThrow('Transaction failed')
+    await expect(markAllTicketsSeenAction(snapshot, signActivitySnapshot(snapshot, 3, 5))).rejects.toThrow('Transaction failed')
     expect(h.refresh).not.toHaveBeenCalled()
     expect(h.revalidatePath).not.toHaveBeenCalled()
   })

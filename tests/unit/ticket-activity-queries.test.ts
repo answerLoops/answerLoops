@@ -67,12 +67,17 @@ describe('markTicketSeen', () => {
 
 describe('unseen activity queries', () => {
   it('getUnseenActivityTickets filters by org and unseen condition, newest customer reply first', async () => {
-    const { calls, tq } = await withDb(() => ticketRow())
+    const { calls, tq } = await withDb(() => [[...ticketRow()[0], '2026-10-02T00:00:00.123456Z|10:11:', 17]])
     const out = await tq.getUnseenActivityTickets(3, 5)
-    expect(out).toHaveLength(1)
+    expect(out.tickets).toHaveLength(1)
+    expect(out.total).toBe(17)
+    expect(out.snapshot).toBe('2026-10-02T00:00:00.123456Z|10:11:')
+    expect(calls).toHaveLength(1)
     const q = lower(calls[0].sql)
     expect(q).toContain('"tickets"."org_id" = $1')
     expect(q).toMatch(UNSEEN)
+    expect(q).toContain('pg_current_snapshot()')
+    expect(q).toContain('count(*) over ()')
     expect(q).toMatch(/order by "tickets"\."last_customer_reply_at" desc, "tickets"\."id" desc limit \$2/)
     expect(calls[0].params).toEqual([3, 5])
   })

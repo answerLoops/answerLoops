@@ -250,25 +250,21 @@ function unseenActivityThrough(cutoff?: string): SQL {
     : unseenActivityCondition
 }
 
-export async function getActivityCutoff(): Promise<string> {
-  const [row] = await getDb().execute<{ cutoff: string }>(sql`
-    SELECT to_char(clock_timestamp() AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS cutoff
-  `)
-  return row.cutoff
-}
-
-/**
- * Tickets with customer replies the team hasn't opened yet, most recent reply
- * first. Feeds the dashboard's Activity panel.
- */
-export async function getUnseenActivityTickets(orgId: number, limit = 8, cutoff?: string): Promise<Ticket[]> {
+/** The preview, total and visibility boundary come from the same statement snapshot. */
+export async function getUnseenActivityTickets(orgId: number, limit = 8) {
+  const cutoff = sql`statement_timestamp()`
   const rows = await getDb()
-    .select()
+    .select({
+      ...getTableColumns(tickets),
+      snapshot: sql<string>`to_char(${cutoff} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+        || '|' || pg_current_snapshot()::text`,
+      total: sql<number>`count(*) OVER ()::int`,
+    })
     .from(tickets)
-    .where(and(eq(tickets.orgId, orgId), unseenActivityThrough(cutoff)))
+    .where(and(eq(tickets.orgId, orgId), unseenActivityCondition, sql`${tickets.lastCustomerReplyAt} <= ${cutoff}`))
     .orderBy(desc(tickets.lastCustomerReplyAt), desc(tickets.id))
     .limit(limit)
-  return rows.map(toTicket)
+  return { tickets: rows.map(toTicket), total: rows[0]?.total ?? 0, snapshot: rows[0]?.snapshot }
 }
 
 export async function countUnseenActivityTickets(orgId: number, cutoff?: string): Promise<number> {
@@ -304,23 +300,28 @@ export async function markTicketSeen(ticketId: number, orgId: number): Promise<b
   return true
 }
 
-export async function markAllTicketsSeen(orgId: number, cutoff: string): Promise<number> {
+export async function markAllTicketsSeen(orgId: number, snapshot: string): Promise<number> {
+  const [cutoff, visibility] = snapshot.split('|')
   return getDb().transaction(async (tx) => {
     // Wait before taking the UPDATE snapshot so it includes bell inserts
     // already published alongside their customer replies.
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${TICKET_ACTIVITY_LOCK_CLASS}, ${orgId})`)
     // At READ COMMITTED the UPDATE rechecks eligibility after waiting for
-    // another writer on the ticket. Only rows it actually updates clear alerts.
+    // another writer on the ticket. The saved transaction ID belongs to the
+    // latest customer reply, even if another write changed the ticket since.
     const [row] = await tx.execute<{ count: number }>(sql`
       WITH seen AS (
         UPDATE ${tickets}
         SET last_seen_at = greatest(clock_timestamp(), ${tickets.lastCustomerReplyAt})
         WHERE ${eq(tickets.orgId, orgId)} AND ${unseenActivityThrough(cutoff)}
+          AND (${tickets.lastCustomerReplyXid} IS NULL OR
+            pg_visible_in_snapshot(${tickets.lastCustomerReplyXid}::xid8, ${visibility}::pg_snapshot))
         RETURNING id
       ), cleared AS (
         UPDATE ${notifications}
         SET read = 1
         WHERE ${eq(notifications.orgId, orgId)} AND ${eq(notifications.read, 0)}
+          AND ${eq(notifications.type, 'ticket_activity')}
           AND ${notifications.ticketId} IN (SELECT id FROM seen)
       )
       SELECT count(*)::int AS count FROM seen
@@ -780,6 +781,8 @@ export async function recordCustomerReply(
       ...(wasClosed ? { status: 'open' } : {}),
       updatedAt: at.toISOString(),
       lastActivityAt: at,
+      // Persist the top-level transaction ID for dashboard visibility checks.
+      lastCustomerReplyXid: sql`pg_current_xact_id()::text`,
       lastCustomerReplyAt: sql`greatest(
         clock_timestamp(),
         ${tickets.lastSeenAt} + interval '1 microsecond',

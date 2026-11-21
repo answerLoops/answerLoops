@@ -1,5 +1,5 @@
-import { getTicketStats, getSLABreachedTickets, getTickets, getUnseenActivityTickets, countUnseenActivityTickets, getActivityCutoff } from '@/lib/db/queries/tickets'
-import { signActivityCutoff } from '@/lib/tickets/activity-cutoff'
+import { getTicketStats, getSLABreachedTickets, getTickets, getUnseenActivityTickets } from '@/lib/db/queries/tickets'
+import { signActivitySnapshot } from '@/lib/tickets/activity-snapshot'
 import { getDeflectionStats } from '@/lib/db/queries/analytics'
 import { deflectionRate as calculateDeflectionRate } from '@/lib/analytics/roi'
 import { StatsCards } from '@/components/dashboard/stats-cards'
@@ -21,14 +21,12 @@ function rowSummary(content: string): string {
 export default async function DashboardPage() {
   const session = await auth()
   const orgId = session?.orgId ?? DEFAULT_ORG_ID
-  const cutoff = await getActivityCutoff()
-  const [stats, breachedTickets, recentTickets, deflectionStats, activityTickets, activityTotal] = await Promise.all([
+  const [stats, breachedTickets, recentTickets, deflectionStats, activity] = await Promise.all([
     getTicketStats(orgId),
     getSLABreachedTickets(orgId),
     getTickets({ status: 'open' }, orgId, 6),
     getDeflectionStats(orgId),
-    getUnseenActivityTickets(orgId, ACTIVITY_PREVIEW_LIMIT, cutoff),
-    countUnseenActivityTickets(orgId, cutoff),
+    getUnseenActivityTickets(orgId, ACTIVITY_PREVIEW_LIMIT),
   ])
   const dashboardDeflectionRate = Math.round(
     calculateDeflectionRate(deflectionStats.deflected, deflectionStats.answered) * 100
@@ -50,6 +48,7 @@ export default async function DashboardPage() {
           <p className="mt-1 text-sm text-slate-500">Here&rsquo;s what&rsquo;s happening in your community today.</p>
         </div>
         <Link
+          id="dashboard-view-all-tickets"
           href="/tickets"
           className="flex items-center gap-1.5 self-start rounded-lg bg-[#082e50] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:brightness-110"
         >
@@ -61,11 +60,11 @@ export default async function DashboardPage() {
       </div>
 
       <ActivityPanel
-        tickets={activityTickets}
-        total={activityTotal}
-        cutoff={cutoff}
-        proof={session?.user?.id && activityTotal > 0
-          ? signActivityCutoff(cutoff, orgId, Number(session.user.id))
+        tickets={activity.tickets}
+        total={activity.total}
+        snapshot={activity.snapshot}
+        proof={session?.user?.id && activity.snapshot
+          ? signActivitySnapshot(activity.snapshot, orgId, Number(session.user.id))
           : undefined}
       />
 
