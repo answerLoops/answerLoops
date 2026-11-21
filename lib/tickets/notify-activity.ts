@@ -1,24 +1,12 @@
-import { createNotification } from '@/lib/db/queries/notifications'
+import { activitySnippet } from '@/lib/tickets/activity'
 import { sendPushToAll } from '@/lib/push/notify'
 import { platformLabel } from '@/lib/tickets/platform-label'
 import { logger } from '@/lib/logger'
 import type { Ticket } from '@/types'
 
 const MOD = 'tickets/notify-activity'
-const SNIPPET_LENGTH = 140
-
-/** One line of the reply: whitespace collapsed, cut at a word where it can be. */
-export function activitySnippet(content: string): string {
-  const flat = content.replace(/\s+/g, ' ').trim()
-  if (flat.length <= SNIPPET_LENGTH) return flat
-  const cut = flat.slice(0, SNIPPET_LENGTH)
-  const space = cut.lastIndexOf(' ')
-  return `${(space > SNIPPET_LENGTH * 0.6 ? cut.slice(0, space) : cut).trimEnd()}…`
-}
-
 /**
- * Tells the team a customer wrote on a ticket that already exists: one
- * notification for the bell and one push. The push carries the ticket number,
+ * Sends push after the reply and its bell notification commit. It carries the ticket number,
  * who wrote, where, and a snippet. Its tag is the ticket, so a second reply
  * replaces the first on the device instead of stacking. Call it only for a
  * message that was newly stored: a redelivery has nothing new to announce,
@@ -34,13 +22,6 @@ export async function notifyTicketActivity(input: {
   const number = ticket.org_ticket_number
   const channel = platformLabel(ticket.source_platform)
   const snippet = activitySnippet(input.content)
-
-  await createNotification(
-    'ticket_activity',
-    `${authorName} replied on #${number} (${channel})${snippet ? `: ${snippet}` : ''}`,
-    ticket.id,
-    orgId
-  )
 
   try {
     await sendPushToAll({

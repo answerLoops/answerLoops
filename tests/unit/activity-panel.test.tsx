@@ -1,11 +1,17 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ActivityPanel } from '@/components/dashboard/activity-panel'
 import type { Ticket } from '@/types'
 
-afterEach(cleanup)
+const bulk = vi.hoisted(() => vi.fn())
+vi.mock('@/lib/actions/notifications', () => ({ markAllTicketsSeenAction: bulk }))
+
+afterEach(() => {
+  cleanup()
+  bulk.mockReset()
+})
 
 function ticket(overrides: Partial<Ticket>): Ticket {
   return {
@@ -21,6 +27,87 @@ function ticket(overrides: Partial<Ticket>): Ticket {
     ...overrides,
   } as Ticket
 }
+
+describe('bulk activity confirmation', () => {
+  const cutoff = '2026-10-02T00:00:00.123456Z'
+  const proof = '<dashboard-cutoff-proof>'
+
+  async function open(total: number) {
+    const user = userEvent.setup()
+    const panel = render(<ActivityPanel tickets={[ticket({})]} total={total} cutoff={cutoff} proof={proof} />)
+    expect(screen.queryByRole('button', { name: 'Mark all as seen' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: /^Activity,/ }))
+    const trigger = screen.getByRole('button', { name: 'Mark all as seen' })
+    await user.click(trigger)
+    return { user, trigger, panel }
+  }
+
+  it.each(['Cancel', 'Escape'])('dismisses with %s and restores focus without mutating', async (method) => {
+    const { user, trigger } = await open(200)
+    const group = screen.getByRole('group', { name: 'Mark 200 tickets as seen?' })
+    expect(group).toHaveTextContent('for your whole team')
+    const cancel = within(group).getByRole('button', { name: 'Cancel' })
+    expect(cancel).toHaveFocus()
+    if (method === 'Cancel') await user.click(cancel)
+    else await user.keyboard('{Escape}')
+    expect(group).not.toBeInTheDocument()
+    expect(trigger).toHaveFocus()
+    expect(bulk).not.toHaveBeenCalled()
+  })
+
+  it('keeps the confirmed snapshot through a refresh and reports the actual count after the panel disappears', async () => {
+    const { panel } = await open(200)
+    const deferred = Promise.withResolvers<{ ok: true; count: number }>()
+    bulk.mockReturnValue(deferred.promise)
+    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={201} cutoff="different-cutoff" proof="different-proof" />)
+    const confirm = screen.getByRole('button', { name: 'Confirm mark all as seen' })
+    act(() => {
+      fireEvent.click(confirm)
+      fireEvent.click(confirm)
+    })
+    expect(bulk).toHaveBeenCalledExactlyOnceWith(cutoff, proof)
+    expect(confirm).toBeDisabled()
+    panel.rerender(<ActivityPanel tickets={[]} total={0} cutoff={cutoff} />)
+    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={1} cutoff="new-cutoff" proof="new-proof" />)
+    expect(screen.queryByRole('group', { name: /as seen/ })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Mark all as seen' })).toBeDisabled()
+    await act(async () => deferred.resolve({ ok: true, count: 198 }))
+    panel.rerender(<ActivityPanel tickets={[]} total={0} cutoff={cutoff} />)
+    expect(screen.queryByRole('region', { name: 'Activity' })).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Marked 198 tickets as seen.')
+  })
+
+  it('discards an unused confirmation when a refresh empties and then refills the backlog', async () => {
+    const { user, panel } = await open(200)
+    expect(screen.getByRole('group', { name: 'Mark 200 tickets as seen?' })).toBeVisible()
+    panel.rerender(<ActivityPanel tickets={[]} total={0} cutoff={cutoff} />)
+    expect(screen.queryByRole('region', { name: 'Activity' })).toBeNull()
+    panel.rerender(<ActivityPanel tickets={[ticket({})]} total={1} cutoff="new-cutoff" proof="new-proof" />)
+    expect(screen.queryByRole('group', { name: /as seen/ })).toBeNull()
+    const trigger = screen.getByRole('button', { name: 'Mark all as seen' })
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    await user.click(trigger)
+    expect(screen.getByRole('group', { name: 'Mark 1 ticket as seen?' })).toBeVisible()
+    bulk.mockResolvedValue({ ok: true, count: 1 })
+    await user.click(screen.getByRole('button', { name: 'Confirm mark all as seen' }))
+    expect(bulk).toHaveBeenCalledExactlyOnceWith('new-cutoff', 'new-proof')
+  })
+
+  it.each(['rejected', 'denied'])('reports a %s request and lets the person retry', async (failure) => {
+    const { user } = await open(1)
+    expect(screen.getByRole('group', { name: 'Mark 1 ticket as seen?' })).toBeVisible()
+    if (failure === 'rejected') bulk.mockRejectedValueOnce(new Error('Network failed'))
+    else bulk.mockResolvedValueOnce({ ok: false })
+    const confirm = screen.getByRole('button', { name: 'Confirm mark all as seen' })
+    await user.click(confirm)
+    expect(screen.getByRole('alert')).toHaveTextContent('Couldn’t mark tickets as seen. Try again.')
+    expect(confirm).toBeEnabled()
+    bulk.mockResolvedValueOnce({ ok: true, count: 1 })
+    await user.click(confirm)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('status')).toHaveTextContent('Marked 1 ticket as seen.')
+  })
+})
 
 describe('ActivityPanel', () => {
   it.each([0, 1])('renders nothing for an empty list with count %i', (total) => {

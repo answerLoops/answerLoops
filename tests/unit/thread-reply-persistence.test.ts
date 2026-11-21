@@ -25,6 +25,7 @@ const {
   recordCustomerReply,
   createTicket,
   createNotification,
+  sendPushToAll,
   triageMessage,
   runAIAgent,
 } = vi.hoisted(() => ({
@@ -33,6 +34,7 @@ const {
   recordCustomerReply: vi.fn(),
   createTicket: vi.fn(),
   createNotification: vi.fn(),
+  sendPushToAll: vi.fn(),
   triageMessage: vi.fn(),
   runAIAgent: vi.fn(),
 }))
@@ -51,7 +53,7 @@ vi.mock('@/lib/sla/engine', () => ({
   calculateDeadlines: vi.fn(async () => ({ sla_response_deadline: null, sla_resolve_deadline: null })),
   checkSlaBreaches: vi.fn(async () => []),
 }))
-vi.mock('@/lib/push/notify', () => ({ sendPushToAll: vi.fn() }))
+vi.mock('@/lib/push/notify', () => ({ sendPushToAll }))
 vi.mock('@/lib/email/send', () => ({ sendNewTicketEmail: vi.fn(), sendSlaBreachEmails: vi.fn() }))
 vi.mock('@/lib/ai/embed', () => ({ embedText: vi.fn(), EMBEDDING_MODEL: 'test-model' }))
 vi.mock('@/lib/ai/related', () => ({ findRelated: vi.fn(() => []), isDuplicate: vi.fn(() => false) }))
@@ -116,12 +118,8 @@ describe('processCommunityMessage: thread replies append instead of creating a n
       3
     )
 
-    expect(createNotification).toHaveBeenCalledWith(
-      'ticket_activity',
-      expect.stringContaining('#7'),
-      42,
-      3
-    )
+    expect(sendPushToAll).toHaveBeenCalledWith(expect.objectContaining({ url: '/tickets/7', tag: 'ticket-42' }), 3)
+    expect(createNotification).not.toHaveBeenCalled()
   })
 
   it('never runs triage, creates a new ticket, or invokes the AI agent on an appended reply', async () => {

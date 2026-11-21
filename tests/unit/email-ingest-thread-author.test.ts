@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   recordCustomerReply: vi.fn(),
   getTicketById: vi.fn(),
   findTicketByMessageIds: vi.fn(),
+  notifyTicketActivity: vi.fn(),
 }))
 
 vi.mock('@/lib/db/queries/integrations', () => ({
@@ -23,6 +24,7 @@ vi.mock('@/lib/db/queries/tickets', () => ({
   updateTicketAIDraftStatus: vi.fn(),
 }))
 vi.mock('@/lib/db/queries/notifications', () => ({ createNotification: vi.fn() }))
+vi.mock('@/lib/tickets/notify-activity', () => ({ notifyTicketActivity: h.notifyTicketActivity }))
 vi.mock('@/lib/db/queries/email-messages', () => ({
   recordInboundEmail: vi.fn(async () => ({ id: 1 })),
   updateEmailMessageStatus: vi.fn(),
@@ -53,6 +55,7 @@ function inbound(from: string, messageId: string) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  h.recordCustomerReply.mockResolvedValue(true)
   h.findTicketByMessageIds.mockResolvedValue(77)
   h.getTicketById.mockResolvedValue({ id: 77, org_ticket_number: 12, source_author_id: 'customer@example.com' })
 })
@@ -71,5 +74,17 @@ describe('email reply stored in the ticket thread', () => {
     const { POST } = await import('@/app/api/email/ingest/route')
     await POST(inbound('Casey Customer <customer@example.com>', 'reply-2@mail.test') as never)
     expect(h.recordCustomerReply.mock.calls[0][2].messageId).toBe('<reply-2@mail.test>')
+  })
+
+  it('sends a push only after the reply and its bell notification have been stored', async () => {
+    const { POST } = await import('@/app/api/email/ingest/route')
+    await POST(inbound('Casey Customer <customer@example.com>', '<reply-new@mail.test>') as never)
+    expect(h.notifyTicketActivity).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      ticket: expect.objectContaining({ id: 77 }),
+      orgId: 3,
+    }))
+    h.recordCustomerReply.mockResolvedValueOnce(false)
+    await POST(inbound('Casey Customer <customer@example.com>', '<reply-duplicate@mail.test>') as never)
+    expect(h.notifyTicketActivity).toHaveBeenCalledOnce()
   })
 })

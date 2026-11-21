@@ -10,6 +10,10 @@ afterEach(cleanup)
 const REPLY = '2026-10-02T12:00:00.000Z'
 
 describe('NewActivityBadge', () => {
+  it('uses exact database activity when display timestamps share a millisecond', () => {
+    render(<NewActivityBadge ticket={{ last_customer_reply_at: REPLY, last_seen_at: REPLY, has_new_activity: true }} />)
+    expect(screen.getByText('New activity')).toBeVisible()
+  })
   it('shows when the customer replied and the team has never opened the ticket', () => {
     render(<NewActivityBadge ticket={{ last_customer_reply_at: REPLY, last_seen_at: null }} />)
     expect(screen.getByText('New activity')).toBeTruthy()

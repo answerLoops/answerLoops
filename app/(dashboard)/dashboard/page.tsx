@@ -1,4 +1,5 @@
-import { getTicketStats, getSLABreachedTickets, getTickets, getUnseenActivityTickets, countUnseenActivityTickets } from '@/lib/db/queries/tickets'
+import { getTicketStats, getSLABreachedTickets, getTickets, getUnseenActivityTickets, countUnseenActivityTickets, getActivityCutoff } from '@/lib/db/queries/tickets'
+import { signActivityCutoff } from '@/lib/tickets/activity-cutoff'
 import { getDeflectionStats } from '@/lib/db/queries/analytics'
 import { deflectionRate as calculateDeflectionRate } from '@/lib/analytics/roi'
 import { StatsCards } from '@/components/dashboard/stats-cards'
@@ -20,13 +21,14 @@ function rowSummary(content: string): string {
 export default async function DashboardPage() {
   const session = await auth()
   const orgId = session?.orgId ?? DEFAULT_ORG_ID
+  const cutoff = await getActivityCutoff()
   const [stats, breachedTickets, recentTickets, deflectionStats, activityTickets, activityTotal] = await Promise.all([
     getTicketStats(orgId),
     getSLABreachedTickets(orgId),
     getTickets({ status: 'open' }, orgId, 6),
     getDeflectionStats(orgId),
-    getUnseenActivityTickets(orgId, ACTIVITY_PREVIEW_LIMIT),
-    countUnseenActivityTickets(orgId),
+    getUnseenActivityTickets(orgId, ACTIVITY_PREVIEW_LIMIT, cutoff),
+    countUnseenActivityTickets(orgId, cutoff),
   ])
   const dashboardDeflectionRate = Math.round(
     calculateDeflectionRate(deflectionStats.deflected, deflectionStats.answered) * 100
@@ -58,7 +60,14 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <ActivityPanel tickets={activityTickets} total={activityTotal} />
+      <ActivityPanel
+        tickets={activityTickets}
+        total={activityTotal}
+        cutoff={cutoff}
+        proof={session?.user?.id && activityTotal > 0
+          ? signActivityCutoff(cutoff, orgId, Number(session.user.id))
+          : undefined}
+      />
 
       {/* Stats */}
       <StatsCards {...stats} deflectionRate={dashboardDeflectionRate} />

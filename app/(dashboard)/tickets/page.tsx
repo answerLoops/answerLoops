@@ -56,7 +56,7 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
     newActivity: searchParams.newActivity === '1' || undefined,
     sort: searchParams.sort === 'activity' ? ('activity' as const) : undefined,
   }
-  const rows = await getTickets(filters, orgId, PAGE_SIZE + 1, cursor ?? undefined)
+  const rows = await getTickets(filters, orgId, PAGE_SIZE + 1, cursor ?? undefined, true)
   const hasMore = rows.length > PAGE_SIZE
   const tickets = hasMore ? rows.slice(0, PAGE_SIZE) : rows
   const last = tickets[tickets.length - 1]
