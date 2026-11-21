@@ -84,6 +84,70 @@ jobs:
 
       - run: pnpm test --shard=${{ matrix.shard }}/3
 
+  # Tests that need a real PostgreSQL server: advisory locks, shared vs
+  # exclusive lock interaction, transaction rollback and READ COMMITTED
+  # rechecks only exist inside a real engine, so a mocked database cannot
+  # prove them. Files are named *.postgres.test.ts and skip themselves unless
+  # TEST_ACTIVITY_DATABASE_URL is set; the regular unit-test shards leave it
+  # unset on purpose. Each file creates and drops its own schema, so it only
+  # needs a reachable server. Same image (pinned by digest) as the e2e job.
+  postgres-tests:
+    name: Postgres tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16@sha256:7b822b0aac60967beb1ea5e576b8602c94c300a157d187f385ae3e0da199b90a
+        env:
+          POSTGRES_USER: community
+          POSTGRES_PASSWORD: community
+          POSTGRES_DB: community
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U community"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115  # v6.1.1
+        with:
+          version: 11
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run Postgres-backed tests
+        env:
+          TEST_ACTIVITY_DATABASE_URL: postgres://community:community@localhost:5432/community
+        run: |
+          if ! ls tests/unit/*.postgres.test.ts >/dev/null 2>&1; then
+            echo "No *.postgres.test.ts files found; nothing to run."
+            exit 0
+          fi
+          pnpm exec vitest run --reporter=default --reporter=json --outputFile=postgres-results.json tests/unit/*.postgres.test.ts
+          # A green run where every test was skipped proves nothing, so fail
+          # if the suite passed nothing or skipped anything.
+          node -e '
+            const r = JSON.parse(require("fs").readFileSync("postgres-results.json", "utf8"));
+            console.log(`passed=${r.numPassedTests} skipped=${r.numPendingTests} failed=${r.numFailedTests}`);
+            if (r.numPassedTests === 0 || r.numPendingTests > 0) {
+              console.error("Postgres tests were skipped or did not run.");
+              process.exit(1);
+            }
+          '
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -125,19 +189,21 @@ jobs:
     # failed or was cancelled. Without it a failure would leave this required
     # check "skipped", which branch protection can treat as passing.
     if: ${{ always() }}
-    needs: [unit-tests, build]
+    needs: [unit-tests, postgres-tests, build]
     runs-on: ubuntu-latest
     permissions: {}
 
     steps:
-      - name: Require unit tests and build to pass
+      - name: Require unit tests, Postgres tests and build to pass
         env:
           UNIT_TESTS_RESULT: ${{ needs.unit-tests.result }}
+          POSTGRES_TESTS_RESULT: ${{ needs.postgres-tests.result }}
           BUILD_RESULT: ${{ needs.build.result }}
         run: |
           echo "unit-tests: $UNIT_TESTS_RESULT"
+          echo "postgres-tests: $POSTGRES_TESTS_RESULT"
           echo "build: $BUILD_RESULT"
-          if [ "$UNIT_TESTS_RESULT" != "success" ] || [ "$BUILD_RESULT" != "success" ]; then
+          if [ "$UNIT_TESTS_RESULT" != "success" ] || [ "$POSTGRES_TESTS_RESULT" != "success" ] || [ "$BUILD_RESULT" != "success" ]; then
             exit 1
           fi
 
