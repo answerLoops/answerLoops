@@ -79,6 +79,15 @@ export async function getTicket(
   return (await fetchTicket(request, ticketId))?.ticket ?? null
 }
 
+/** The API uses the internal ID. Dashboard routes use the workspace ticket number. */
+export async function ticketDetailPath(request: APIRequestContext, ticketId: number): Promise<string> {
+  const number = (await getTicket(request, ticketId))?.org_ticket_number
+  if (typeof number !== 'number' || !Number.isSafeInteger(number) || number < 1) {
+    throw new Error(`No workspace ticket number returned for ticket ID ${ticketId}`)
+  }
+  return `/tickets/${number}`
+}
+
 /**
  * Block until the ingest pipeline's background work finishes. Polls through the
  * API (the server reads its own db connection); the app runs in a separate

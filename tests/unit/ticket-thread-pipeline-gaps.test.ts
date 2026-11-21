@@ -64,27 +64,37 @@ beforeEach(() => {
   h.getTicketByThreadId.mockResolvedValue(TICKET)
 })
 
-describe('processCommunityMessage when the reply is already stored', () => {
+describe('processCommunityMessage for customer replies', () => {
   it('reports a duplicate and does not notify, push, triage or open a ticket', async () => {
     h.recordCustomerReply.mockResolvedValue(false)
     const { processCommunityMessage } = await import('@/lib/ingest/pipeline')
     const result = await processCommunityMessage(payload, 3)
 
     expect(result).toEqual({ ticket_id: 42, duplicate: true })
+    expect(h.recordCustomerReply).toHaveBeenCalledOnce()
     expect(h.createNotification).not.toHaveBeenCalled()
     expect(h.sendPushToAll).not.toHaveBeenCalled()
     expect(h.triageMessage).not.toHaveBeenCalled()
     expect(h.createTicket).not.toHaveBeenCalled()
   })
 
-  it('a stored reply is reported as appended, not duplicate', async () => {
-    h.recordCustomerReply.mockResolvedValue(true)
+  it('sends one push after the reply transaction succeeds and delegates bell persistence to it', async () => {
+    const stored = Promise.withResolvers<boolean>()
+    h.recordCustomerReply.mockReturnValue(stored.promise)
     const { processCommunityMessage } = await import('@/lib/ingest/pipeline')
-    const result = await processCommunityMessage(payload, 3)
+    const result = processCommunityMessage(payload, 3)
+    await vi.waitFor(() => expect(h.recordCustomerReply).toHaveBeenCalledExactlyOnceWith(
+      42, payload.content, { authorName: payload.authorName, messageId: payload.messageId },
+    ))
+    expect(h.sendPushToAll).not.toHaveBeenCalled()
 
-    expect(result).toMatchObject({ ticket_id: 42, appended: true })
-    expect(result).not.toHaveProperty('duplicate')
-    expect(h.createNotification).toHaveBeenCalledTimes(1)
+    stored.resolve(true)
+    expect(await result).toEqual({ ticket_id: 42, appended: true })
+    expect(h.sendPushToAll).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ url: '/tickets/7', tag: 'ticket-42' }), 3,
+    )
+    // The PostgreSQL activity suite covers bell persistence and rollback.
+    expect(h.createNotification).not.toHaveBeenCalled()
   })
 })
 

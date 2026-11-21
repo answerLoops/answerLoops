@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { ingest, waitForPipeline, getTicket } from './helpers'
+import { ingest, waitForPipeline, getTicket, ticketDetailPath } from './helpers'
 
 // Proves the harness end-to-end: bot ingest -> triage -> embed -> agent ->
 // assess, all under mock mode, with the result observable via the API and the UI.
@@ -18,7 +18,7 @@ test.describe('smoke: ingest pipeline', () => {
     await waitForPipeline(request, ticketId)
 
     // The auto-answer shows on the ticket detail page.
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(await ticketDetailPath(request, ticketId))
     await expect(page.getByText('AI Confidence')).toBeVisible()
     await expect(page.getByText(/auto-answered/i).first()).toBeVisible()
   })
@@ -29,7 +29,7 @@ test.describe('smoke: ingest pipeline', () => {
     })
     await waitForPipeline(request, ticketId)
 
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(await ticketDetailPath(request, ticketId))
     await expect(page.getByText(/needs human review/i)).toBeVisible()
   })
 })

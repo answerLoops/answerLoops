@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { ingest, waitForPipeline, waitForTicketField } from './helpers'
+import { ingest, waitForPipeline, waitForTicketField, ticketDetailPath } from './helpers'
 
 interface Analytics {
   stats: { totalTickets: number; answered: number; deflected: number }
@@ -37,9 +37,10 @@ test.describe('analytics / ROI', () => {
   test('a resolved how-to is a doc gap until promoted to KB', async ({ request, page }) => {
     const ticketId = await ingest(request, { content: 'How do I configure the client connection?' })
     await waitForPipeline(request, ticketId)
+    const ticketPath = await ticketDetailPath(request, ticketId)
 
     // Resolve it.
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(ticketPath)
     const statusForm = page.locator('form:has(select[name="status"])')
     await statusForm.locator('input[name="staffName"]').fill('Sarah')
     await statusForm.locator('select[name="status"]').selectOption('resolved')
@@ -52,7 +53,7 @@ test.describe('analytics / ROI', () => {
     expect(a.docGaps.some((g) => g.id === ticketId)).toBe(true)
 
     // Promote to KB → the gap closes.
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(ticketPath)
     await page.getByRole('button', { name: 'Promote to KB' }).click()
     await expect(page.getByText('✓ In knowledge base')).toBeVisible()
 
