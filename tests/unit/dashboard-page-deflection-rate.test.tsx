@@ -17,6 +17,7 @@ vi.mock('@/lib/db/queries/tickets', () => ({
   getSLABreachedTickets: async () => [],
   getTickets: async () => [],
   getUnseenActivityTickets: h.getUnseenActivityTickets,
+  getActivityCutoff: async () => '2026-10-02T00:00:00.123456Z',
   countUnseenActivityTickets: async () => 0,
 }))
 vi.mock('@/lib/db/queries/analytics', () => ({ getDeflectionStats: h.getDeflectionStats }))
@@ -54,6 +55,6 @@ describe('DashboardPage activity preview', () => {
     h.getDeflectionStats.mockResolvedValue({ deflected: 0, answered: 0 })
     await DashboardPage()
 
-    expect(h.getUnseenActivityTickets).toHaveBeenCalledExactlyOnceWith(7, 5)
+    expect(h.getUnseenActivityTickets).toHaveBeenCalledExactlyOnceWith(7, 5, '2026-10-02T00:00:00.123456Z')
   })
 })

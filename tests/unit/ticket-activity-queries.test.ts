@@ -16,6 +16,7 @@ async function withDb(rows: (c: Call) => unknown[][] = () => []) {
     calls.push(call)
     return { rows: rows(call) }
   })
+  vi.spyOn(fakeDb, 'transaction').mockImplementation((callback) => callback(fakeDb as never))
   vi.doMock('@/lib/db/drizzle', () => ({ getDb: () => fakeDb }))
   vi.resetModules()
   return {
@@ -45,8 +46,8 @@ describe('markTicketSeen', () => {
     expect(calls).toHaveLength(2)
 
     const t = lower(calls[0].sql)
-    expect(t).toMatch(/^update "tickets" set "last_seen_at" = \$1 where \("tickets"\."id" = \$2 and "tickets"\."org_id" = \$3\) returning "id"/)
-    expect(calls[0].params.slice(1)).toEqual([7, 3])
+    expect(t).toMatch(/^update "tickets" set "last_seen_at" = greatest\(clock_timestamp\(\), "tickets"\."last_customer_reply_at"\) where \("tickets"\."id" = \$1 and "tickets"\."org_id" = \$2\) returning "id"/)
+    expect(calls[0].params).toEqual([7, 3])
 
     const n = lower(calls[1].sql)
     expect(n).toMatch(/^update "notifications" set "read" = \$1 where/)
@@ -151,8 +152,8 @@ describe('recordCustomerReply activity columns', () => {
     expect(updates).toHaveLength(1)
     const q = lower(updates[0].sql)
     expect(q).toContain('"last_activity_at" = $')
-    expect(q).toContain('"last_customer_reply_at" = $')
-    expect(q).not.toContain('last_seen_at')
+    expect(q).toContain('"last_customer_reply_at" = greatest(')
+    expect(q).toContain('"tickets"."last_seen_at" + interval')
   })
 })
 

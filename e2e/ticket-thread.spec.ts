@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 import { test, expect } from '@playwright/test'
-import { BOT_AUTH, ingest, waitForPipeline } from './helpers'
+import { BOT_AUTH, ingest, waitForPipeline, ticketDetailPath } from './helpers'
 
 // A conversation that arrives as several messages shows up as one ticket with
 // every message on its page, in order. Driven through the same ingest endpoint
@@ -35,7 +35,7 @@ test.describe('ticket conversation thread', () => {
     expect(first).toMatchObject({ ticket_id: ticketId, appended: true })
     expect(second).toMatchObject({ ticket_id: ticketId, appended: true })
 
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(await ticketDetailPath(request, ticketId))
     const thread = page.getByRole('region', { name: 'Conversation' })
 
     // Two team members answer from the dashboard, one after the other.
@@ -77,7 +77,7 @@ test.describe('ticket conversation thread', () => {
     const other = await ingest(request, { content: 'Second question about billing invoices', messageId: `b-${run}`, channelId })
     expect(other).not.toBe(ticketId)
 
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(await ticketDetailPath(request, ticketId))
     // Only this ticket's own conversation (answerLoops's answer to it) is shown.
     const thread = page.getByRole('region', { name: 'Conversation' })
     await expect(thread).not.toContainText('billing invoices')
@@ -94,7 +94,7 @@ test.describe('ticket conversation thread', () => {
     await reply(request, { messageId: `r1-${run}`, threadId: rootId, author: 'bob', content: `${'x'.repeat(300)}\n[Attachment: ${'a'.repeat(120)}.png] — https://files.example/${'a'.repeat(120)}.png`, channelId })
 
     await page.setViewportSize({ width: 375, height: 800 })
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(await ticketDetailPath(request, ticketId))
     await expect(page.getByRole('region', { name: 'Conversation' })).toBeVisible()
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
     expect(overflow).toBeLessThanOrEqual(0)

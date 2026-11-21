@@ -130,6 +130,6 @@ describe('Dashboard surfaces thread the session org into their queries', () => {
     const src = read('app/(dashboard)/tickets/page.tsx')
     expect(src).toContain('const orgId = session?.orgId ?? DEFAULT_ORG_ID')
     expect(src).toContain('const PAGE_SIZE = 50')
-    expect(src).toMatch(/getTickets\(filters, orgId, PAGE_SIZE \+ 1, cursor \?\? undefined\)/)
+    expect(src).toMatch(/getTickets\(filters, orgId, PAGE_SIZE \+ 1, cursor \?\? undefined, true\)/)
   })
 })
