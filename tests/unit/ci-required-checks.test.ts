@@ -35,14 +35,31 @@ describe('ci.yml required check', () => {
     expect(await read('.github/workflows/ci.yml')).toContain(`name: ${name}\n`)
   })
 
-  it('gates Test + build on both unit-tests and build, even when they fail', async () => {
+  it('gates Test + build on unit-tests, postgres-tests and build, even when they fail', async () => {
     const gate = job(await read('.github/workflows/ci.yml'), 'test-and-build')
     expect(gate, 'test-and-build job is missing').not.toBe('')
     expect(gate).toMatch(/if:\s*\$\{\{\s*always\(\)\s*\}\}/)
-    expect(gate).toMatch(/needs:\s*\[unit-tests,\s*build\]/)
+    expect(gate).toMatch(/needs:\s*\[unit-tests,\s*postgres-tests,\s*build\]/)
     expect(gate).toContain('needs.unit-tests.result')
+    expect(gate).toContain('needs.postgres-tests.result')
     expect(gate).toContain('needs.build.result')
     expect(gate).toContain('exit 1')
+  })
+
+  it('runs the Postgres-backed tests against a real database and fails on a silent skip', async () => {
+    const pg = job(await read('.github/workflows/ci.yml'), 'postgres-tests')
+    expect(pg, 'postgres-tests job is missing').not.toBe('')
+    expect(pg).toContain('pgvector/pgvector:pg16@sha256:')
+    expect(pg).toContain('TEST_ACTIVITY_DATABASE_URL: postgres://')
+    expect(pg).toContain('tests/unit/*.postgres.test.ts')
+    // A run where every test skipped must fail instead of reporting green.
+    expect(pg).toContain('numPendingTests > 0')
+    expect(pg).toContain('numPassedTests === 0')
+  })
+
+  it('does not set the Postgres URL in the sharded unit-test job', async () => {
+    const unit = job(await read('.github/workflows/ci.yml'), 'unit-tests')
+    expect(unit).not.toContain('TEST_ACTIVITY_DATABASE_URL:')
   })
 
   it('shards the unit tests and runs every shard', async () => {
