@@ -4,6 +4,7 @@ import { getDeflectionStats } from '@/lib/db/queries/analytics'
 import { deflectionRate as calculateDeflectionRate } from '@/lib/analytics/roi'
 import { StatsCards } from '@/components/dashboard/stats-cards'
 import { ACTIVITY_PREVIEW_LIMIT, ActivityPanel } from '@/components/dashboard/activity-panel'
+import { VIEW_ALL_TICKETS_ID } from '@/components/dashboard/activity-ids'
 import { SLABreachList } from '@/components/dashboard/sla-breach-list'
 import Link from 'next/link'
 import { StatusBadge, CategoryBadge } from '@/components/ui/badge'
@@ -48,7 +49,7 @@ export default async function DashboardPage() {
           <p className="mt-1 text-sm text-slate-500">Here&rsquo;s what&rsquo;s happening in your community today.</p>
         </div>
         <Link
-          id="dashboard-view-all-tickets"
+          id={VIEW_ALL_TICKETS_ID}
           href="/tickets"
           className="flex items-center gap-1.5 self-start rounded-lg bg-[#082e50] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:brightness-110"
         >

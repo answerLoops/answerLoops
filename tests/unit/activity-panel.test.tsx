@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ActivityPanel } from '@/components/dashboard/activity-panel'
+import { VIEW_ALL_TICKETS_ID } from '@/components/dashboard/activity-ids'
 import type { Ticket } from '@/types'
 
 const bulk = vi.hoisted(() => vi.fn())
@@ -129,7 +130,7 @@ describe('bulk activity confirmation', () => {
     function dashboard(hasActivity: boolean) {
       return (
         <>
-          <a id="dashboard-view-all-tickets" href="/tickets">View all tickets</a>
+          <a id={VIEW_ALL_TICKETS_ID} href="/tickets">View all tickets</a>
           <ActivityPanel
             tickets={hasActivity ? [ticket({})] : []}
             total={hasActivity ? 1 : 0}

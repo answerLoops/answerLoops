@@ -1,6 +1,7 @@
 import { eq, and, or, inArray, sql, desc, lt, ne, isNotNull, isNull, gt, getTableColumns, type SQL } from 'drizzle-orm'
 import { ticketActivityMessage } from '@/lib/tickets/activity'
 import { getDb } from '../drizzle'
+import { lockTicketActivity } from '../locks'
 import {
   tickets,
   ticketReplies,
@@ -242,12 +243,9 @@ const unseenActivityCondition = and(
   or(isNull(tickets.lastSeenAt), gt(tickets.lastCustomerReplyAt, tickets.lastSeenAt))
 )!
 
-export const TICKET_ACTIVITY_LOCK_CLASS = 619
-
-function unseenActivityThrough(cutoff?: string): SQL {
-  return cutoff
-    ? and(unseenActivityCondition, sql`${tickets.lastCustomerReplyAt} <= ${cutoff}::timestamptz`)!
-    : unseenActivityCondition
+/** Unseen activity whose latest customer reply is no newer than `cutoff`. */
+function unseenActivityThrough(cutoff: SQL | string): SQL {
+  return and(unseenActivityCondition, sql`${tickets.lastCustomerReplyAt} <= ${cutoff}::timestamptz`)!
 }
 
 /** The preview, total and visibility boundary come from the same statement snapshot. */
@@ -261,18 +259,10 @@ export async function getUnseenActivityTickets(orgId: number, limit = 8) {
       total: sql<number>`count(*) OVER ()::int`,
     })
     .from(tickets)
-    .where(and(eq(tickets.orgId, orgId), unseenActivityCondition, sql`${tickets.lastCustomerReplyAt} <= ${cutoff}`))
+    .where(and(eq(tickets.orgId, orgId), unseenActivityThrough(cutoff)))
     .orderBy(desc(tickets.lastCustomerReplyAt), desc(tickets.id))
     .limit(limit)
   return { tickets: rows.map(toTicket), total: rows[0]?.total ?? 0, snapshot: rows[0]?.snapshot }
-}
-
-export async function countUnseenActivityTickets(orgId: number, cutoff?: string): Promise<number> {
-  const [row] = await getDb()
-    .select({ n: sql<number>`COUNT(*)::int` })
-    .from(tickets)
-    .where(and(eq(tickets.orgId, orgId), unseenActivityThrough(cutoff)))
-  return row?.n ?? 0
 }
 
 /** Records that something happened on the conversation, without marking it as customer activity. */
@@ -305,7 +295,7 @@ export async function markAllTicketsSeen(orgId: number, snapshot: string): Promi
   return getDb().transaction(async (tx) => {
     // Wait before taking the UPDATE snapshot so it includes bell inserts
     // already published alongside their customer replies.
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(${TICKET_ACTIVITY_LOCK_CLASS}, ${orgId})`)
+    await lockTicketActivity(tx, orgId, 'exclusive')
     // At READ COMMITTED the UPDATE rechecks eligibility after waiting for
     // another writer on the ticket. The saved transaction ID belongs to the
     // latest customer reply, even if another write changed the ticket since.
@@ -761,7 +751,7 @@ export async function recordCustomerReply(
   return getDb().transaction(async (tx) => {
     // Reply writers can proceed together. Bulk clear takes the exclusive
     // lock before reading either the tickets or the bell notifications.
-    await tx.execute(sql`SELECT pg_advisory_xact_lock_shared(${TICKET_ACTIVITY_LOCK_CLASS}, ${workspace.orgId})`)
+    await lockTicketActivity(tx, workspace.orgId, 'shared')
     const [row] = await tx.select().from(tickets)
       .where(and(eq(tickets.id, ticketId), eq(tickets.orgId, workspace.orgId))).limit(1)
     if (!row) return null
@@ -883,7 +873,7 @@ export async function deleteTicket(id: number): Promise<void> {
 
     // Deletion removes dependents before the ticket. Exclude bulk updates
     // and new reply writes before taking any of those row locks.
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(${TICKET_ACTIVITY_LOCK_CLASS}, ${ticket.orgId})`)
+    await lockTicketActivity(tx, ticket.orgId, 'exclusive')
     await tx.update(kbArticles).set({ sourceTicketId: null }).where(eq(kbArticles.sourceTicketId, id))
     await tx.delete(notifications).where(eq(notifications.ticketId, id))
     await tx.delete(ticketEmbeddings).where(eq(ticketEmbeddings.ticketId, id))

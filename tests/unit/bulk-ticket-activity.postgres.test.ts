@@ -9,7 +9,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 import * as tables from '@/lib/db/schema'
 import { tickets } from '@/lib/db/schema'
 import { hardPurgeOrg } from '@/lib/db/queries/orgs'
-import { countUnseenActivityTickets, deleteTicket, getTickets, getUnseenActivityTickets, markAllTicketsSeen, markTicketSeen, recordCustomerReply } from '@/lib/db/queries/tickets'
+import { deleteTicket, getTickets, getUnseenActivityTickets, markAllTicketsSeen, markTicketSeen, recordCustomerReply } from '@/lib/db/queries/tickets'
 
 const state = vi.hoisted(() => ({ getDb: vi.fn() }))
 vi.mock('@/lib/db/drizzle', () => state)
@@ -95,6 +95,18 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
     return rows[0].id
   }
 
+  // An independent oracle for the unseen rule, so the production query is not
+  // used to check itself.
+  async function countUnseen(org: number, cutoff?: string) {
+    const [row] = await client<{ n: number }[]>`
+      SELECT count(*)::int AS n FROM tickets
+      WHERE org_id = ${org} AND last_customer_reply_at IS NOT NULL
+        AND (last_seen_at IS NULL OR last_customer_reply_at > last_seen_at)
+        AND (${cutoff ?? null}::timestamptz IS NULL OR last_customer_reply_at <= ${cutoff ?? null}::timestamptz)
+    `
+    return row.n
+  }
+
   async function captureSnapshot(cutoff?: string) {
     const [row] = await client<{ snapshot: string }[]>`
       SELECT coalesce(${cutoff ?? null}, to_char(statement_timestamp() AT TIME ZONE 'UTC',
@@ -125,7 +137,7 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
     const cutoff = '2020-10-02T00:00:00.123456Z'
     await seed(1, 1, cutoff)
     await seed(1, 1, '2020-10-02T00:00:00.123457Z')
-    expect(await countUnseenActivityTickets(1, cutoff)).toBe(1)
+    expect(await countUnseen(1, cutoff)).toBe(1)
     expect(await markAllTicketsSeen(1, await captureSnapshot(cutoff))).toBe(1)
     expect(await client`SELECT read FROM notifications ORDER BY id`).toEqual([{ read: 1 }, { read: 0 }])
   })
@@ -149,7 +161,7 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
       const [ticket] = await getTickets({}, 1, 1, undefined, true)
       expect(ticket.has_new_activity).toBe(true)
       expect(await markAllTicketsSeen(1, await captureSnapshot(cutoff))).toBe(count)
-      expect(await countUnseenActivityTickets(1)).toBe(1 - count)
+      expect(await countUnseen(1)).toBe(1 - count)
     } finally {
       await client`DROP FUNCTION clock_timestamp()`
     }
@@ -170,8 +182,8 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
     expect(preview).toHaveLength(Math.min(size, 5))
     expect(await markAllTicketsSeen(1, snapshot!)).toBe(size)
     expect(await markAllTicketsSeen(1, snapshot!)).toBe(0)
-    expect(await countUnseenActivityTickets(1)).toBe(1)
-    expect(await countUnseenActivityTickets(2)).toBe(1)
+    expect(await countUnseen(1)).toBe(1)
+    expect(await countUnseen(2)).toBe(1)
     const unread = await client`SELECT org_id, ticket_id FROM notifications WHERE read = 0 ORDER BY id`
     expect(unread).toEqual([
       { org_id: 1, ticket_id: seen }, { org_id: 1, ticket_id: noReply },
@@ -186,14 +198,14 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
   it('rolls back all tickets when a notification update fails', async () => {
     await seed(9, 3)
     await expect(markAllTicketsSeen(9, await captureSnapshot())).rejects.toMatchObject({ cause: { code: '23514' } })
-    expect(await countUnseenActivityTickets(9)).toBe(3)
+    expect(await countUnseen(9)).toBe(3)
     expect(await client`SELECT read FROM notifications`).toEqual([{ read: 0 }, { read: 0 }, { read: 0 }])
   })
 
   it('rolls back the customer reply and its activity if the bell insert fails', async () => {
     const id = await seed(1, 1, old, old)
     await expect(recordCustomerReply(id, 'Rejected reply')).rejects.toMatchObject({ cause: { code: '23514' } })
-    expect(await countUnseenActivityTickets(1)).toBe(0)
+    expect(await countUnseen(1)).toBe(0)
     expect(await client`SELECT id FROM ticket_replies`).toEqual([])
     expect(await client`SELECT id FROM ticket_events`).toEqual([])
   })
@@ -208,7 +220,7 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
       await waitForLock('%WITH seen AS%')
     })
     expect(await bulk).toBe(0)
-    expect(await countUnseenActivityTickets(1)).toBe(1)
+    expect(await countUnseen(1)).toBe(1)
     expect(await client`SELECT read FROM notifications`).toEqual([{ read: 0 }])
   })
 
@@ -226,10 +238,10 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
     })
     expect(await bulk).toBe(1)
     expect(await reply).toBe(true)
-    expect(await countUnseenActivityTickets(1)).toBe(1)
+    expect(await countUnseen(1)).toBe(1)
     expect(await client`SELECT read FROM notifications ORDER BY id`).toEqual([{ read: 1 }, { read: 0 }])
     expect(await markTicketSeen(id, 1)).toBe(true)
-    expect(await countUnseenActivityTickets(1)).toBe(0)
+    expect(await countUnseen(1)).toBe(0)
   })
 
   it.each([false, true])('keeps a reply that commits after load unseen (ticket previously visible: %s)', async (visible) => {
@@ -263,7 +275,7 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
         AS before_cutoff FROM tickets WHERE id = ${id}`
       expect(row.before_cutoff).toBe(true)
       expect(await bulk).toBe(1)
-      expect(await countUnseenActivityTickets(1)).toBe(1)
+      expect(await countUnseen(1)).toBe(1)
       expect(await client`SELECT ticket_id, read, message FROM notifications ORDER BY id`).toEqual([
         { ticket_id: id, read: 0, message: null },
         { ticket_id: other, read: 1, message: null },
@@ -370,7 +382,7 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
       expect(await tx`SELECT ticket_id FROM ticket_replies`).toEqual([{ ticket_id: otherId }])
     })
     expect(await bulk).toBe(1)
-    expect(await countUnseenActivityTickets(2)).toBe(1)
+    expect(await countUnseen(2)).toBe(1)
     expect(await client`SELECT read FROM notifications WHERE org_id = 2 ORDER BY id`).toEqual([{ read: 0 }, { read: 0 }])
   }, 12_000)
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { markAllTicketsSeenAction } from '@/lib/actions/notifications'
+import { VIEW_ALL_TICKETS_ID } from '@/components/dashboard/activity-ids'
 
 export function ActivityDisclosure({ headingId, total, viewAll, previewNote, snapshot, proof, children }: {
   headingId: string
@@ -15,35 +16,48 @@ export function ActivityDisclosure({ headingId, total, viewAll, previewNote, sna
   const [expanded, setExpanded] = useState(false)
   const previewId = useId()
   const confirmationId = useId()
+  // The confirmation belongs to the proof it was opened for, so a refresh that
+  // brings a new proof closes it instead of confirming stale data.
   const [confirmedProof, setConfirmedProof] = useState<string | null>(null)
-  const [pending, setPending] = useState(false)
-  const [count, setCount] = useState<number | null>(null)
-  const [failed, setFailed] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'pending' | 'failed'>('idle')
+  // `focus` records whether keyboard focus was on the confirmation when it
+  // finished, so the result is announced where the user was.
+  const [result, setResult] = useState<{ count: number; focus: boolean } | null>(null)
   const submitting = useRef(false)
   const trigger = useRef<HTMLButtonElement>(null)
   const cancel = useRef<HTMLButtonElement>(null)
   const confirmButton = useRef<HTMLButtonElement>(null)
   const confirmationGroup = useRef<HTMLFieldSetElement>(null)
-  const status = useRef<HTMLOutputElement>(null)
-  const focusResult = useRef(false)
+  const output = useRef<HTMLOutputElement>(null)
   const visible = total > 0
-  const error = failed && <p role="alert" className="text-sm text-red-700">Couldn’t mark tickets as seen. Try again.</p>
+  const pending = status === 'pending'
+  const error = status === 'failed' && <p role="alert" className="text-sm text-red-700">Couldn’t mark tickets as seen. Try again.</p>
 
   const confirmation = visible && Boolean(snapshot && proof && confirmedProof === proof)
 
   const dismissConfirmation = useCallback(() => {
     setConfirmedProof(null)
-    setFailed(false)
+    setStatus((current) => (current === 'failed' ? 'idle' : current))
   }, [])
 
+  const cancelConfirmation = useCallback(() => {
+    dismissConfirmation()
+    trigger.current?.focus()
+  }, [dismissConfirmation])
+
+  // If a refresh closes the confirmation or the retry fails while focus fell
+  // back to the page, put focus somewhere useful.
   useEffect(() => {
-    if (confirmedProof === null || confirmation || document.activeElement !== document.body) return
+    if (document.activeElement !== document.body) return
+    const lostConfirmation = confirmedProof !== null && !confirmation
     if (!visible) {
-      document.getElementById('dashboard-view-all-tickets')?.focus()
-    } else if (!pending) {
+      if (lostConfirmation) document.getElementById(VIEW_ALL_TICKETS_ID)?.focus()
+    } else if (status === 'failed') {
+      (confirmButton.current ?? trigger.current)?.focus()
+    } else if (status === 'idle' && lostConfirmation) {
       trigger.current?.focus()
     }
-  }, [confirmation, confirmedProof, pending, visible])
+  }, [confirmation, confirmedProof, status, visible])
 
   useEffect(() => {
     if (!confirmation || !expanded) return
@@ -51,53 +65,52 @@ export function ActivityDisclosure({ headingId, total, viewAll, previewNote, sna
     const dismiss = (event: KeyboardEvent) => {
       if (event.key !== 'Escape' || submitting.current) return
       event.preventDefault()
-      dismissConfirmation()
-      trigger.current?.focus()
+      cancelConfirmation()
     }
     document.addEventListener('keydown', dismiss)
     return () => document.removeEventListener('keydown', dismiss)
-  }, [confirmation, expanded, dismissConfirmation])
+  }, [confirmation, expanded, cancelConfirmation])
 
   useEffect(() => {
-    if (failed && !pending && document.activeElement === document.body) {
-      (confirmButton.current ?? trigger.current)?.focus()
-    }
-  }, [failed, pending])
+    if (result?.focus) output.current?.focus()
+  }, [result])
 
-  useEffect(() => {
-    if (count === null || !focusResult.current) return
-    focusResult.current = false
-    status.current?.focus()
-  }, [count])
+  function openConfirmation() {
+    if (confirmation || submitting.current || !proof) return
+    setResult(null)
+    setStatus('idle')
+    setConfirmedProof(proof)
+  }
 
   async function confirm() {
     if (!confirmation || !snapshot || !proof || submitting.current) return
     submitting.current = true
-    setPending(true)
-    setFailed(false)
+    setStatus('pending')
     try {
-      const result = await markAllTicketsSeenAction(snapshot, proof)
-      if (!result.ok) {
-        setFailed(true)
+      const response = await markAllTicketsSeenAction(snapshot, proof)
+      if (!response.ok) {
+        setStatus('failed')
         return
       }
-      focusResult.current = document.activeElement === document.body ||
-        Boolean(confirmationGroup.current?.contains(document.activeElement))
-      setCount(result.count)
-      dismissConfirmation()
+      setResult({
+        count: response.count,
+        focus: document.activeElement === document.body ||
+          Boolean(confirmationGroup.current?.contains(document.activeElement)),
+      })
+      setConfirmedProof(null)
+      setStatus('idle')
     } catch {
-      setFailed(true)
+      setStatus('failed')
     } finally {
       submitting.current = false
-      setPending(false)
     }
   }
 
   return (
     <>
-      {(visible || pending || count !== null) && (
-        <output ref={status} tabIndex={-1} className={count === null ? 'sr-only' : 'block text-sm text-slate-700'}>
-          {count !== null && `Marked ${count} ${count === 1 ? 'ticket' : 'tickets'} as seen.`}
+      {(visible || pending || result !== null) && (
+        <output ref={output} tabIndex={-1} className={result === null ? 'sr-only' : 'block text-sm text-slate-700'}>
+          {result !== null && `Marked ${result.count} ${result.count === 1 ? 'ticket' : 'tickets'} as seen.`}
         </output>
       )}
       {(!confirmation || !expanded) && error}
@@ -145,12 +158,7 @@ export function ActivityDisclosure({ headingId, total, viewAll, previewNote, sna
                     disabled={pending}
                     aria-expanded={confirmation}
                     aria-controls={confirmation ? confirmationId : undefined}
-                    onClick={() => {
-                      if (confirmation || submitting.current) return
-                      setCount(null)
-                      setFailed(false)
-                      setConfirmedProof(proof)
-                    }}
+                    onClick={openConfirmation}
                     className="ml-auto min-h-11 rounded-md px-2 text-sm font-medium text-slate-700 hover:bg-blue-100"
                   >
                     Mark all as seen
@@ -172,10 +180,7 @@ export function ActivityDisclosure({ headingId, total, viewAll, previewNote, sna
                     ref={cancel}
                     type="button"
                     disabled={pending}
-                    onClick={() => {
-                      dismissConfirmation()
-                      trigger.current?.focus()
-                    }}
+                    onClick={cancelConfirmation}
                     className="min-h-11 rounded-md px-3 text-sm font-medium text-slate-700 hover:bg-blue-100 disabled:opacity-60"
                   >
                     Cancel

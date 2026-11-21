@@ -87,15 +87,6 @@ describe('unseen activity queries', () => {
     await tq.getUnseenActivityTickets(3)
     expect(calls[0].params).toEqual([3, 8])
   })
-
-  it('countUnseenActivityTickets counts with the same condition in one org', async () => {
-    const { calls, tq } = await withDb(() => [[4]])
-    expect(await tq.countUnseenActivityTickets(3)).toBe(4)
-    const q = lower(calls[0].sql)
-    expect(q).toContain('count(*)')
-    expect(q).toContain('"tickets"."org_id" = $1')
-    expect(q).toMatch(UNSEEN)
-  })
 })
 
 describe('getTickets activity options', () => {

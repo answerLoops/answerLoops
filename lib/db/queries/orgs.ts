@@ -1,6 +1,6 @@
 import { and, eq, inArray, isNotNull, lt, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
-import { TICKET_ACTIVITY_LOCK_CLASS } from './tickets'
+import { lockTicketActivity } from '../locks'
 import {
   orgs,
   memberships,
@@ -166,7 +166,7 @@ export async function getOrgsPendingPurge(): Promise<number[]> {
 export async function hardPurgeOrg(orgId: number): Promise<void> {
   await getDb().transaction(async (tx) => {
     // Purge also removes notifications before tickets.
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(${TICKET_ACTIVITY_LOCK_CLASS}, ${orgId})`)
+    await lockTicketActivity(tx, orgId, 'exclusive')
     const ticketIdRows = await tx
       .select({ id: tickets.id })
       .from(tickets)
