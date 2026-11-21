@@ -186,7 +186,7 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
     const id = await seed()
     const cutoff = await getActivityCutoff()
     let bulk: Promise<number> | undefined
-    let reply: Promise<boolean> | undefined
+    let reply: Promise<boolean | null> | undefined
     await client.begin(async (tx) => {
       await tx`SELECT id FROM notifications WHERE ticket_id = ${id} FOR UPDATE`
       bulk = markAllTicketsSeen(1, cutoff)
@@ -212,7 +212,7 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
     $$`
     await client`CREATE TRIGGER pause_reply_notification BEFORE INSERT ON notifications
       FOR EACH ROW EXECUTE FUNCTION pause_reply_notification()`
-    let reply: Promise<boolean> | undefined
+    let reply: Promise<boolean | null> | undefined
     let bulk: Promise<number> | undefined
     try {
       await client.begin(async (tx) => {
@@ -275,7 +275,7 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
   it('commits a reply to another ticket while the first reply in the workspace is waiting', async () => {
     const firstId = await seed()
     const secondId = await seed()
-    let first: Promise<boolean> | undefined
+    let first: Promise<boolean | null> | undefined
     await client.begin(async (tx) => {
       // Allow the reply's FK check through, then block its ticket UPDATE.
       await tx`SELECT id FROM tickets WHERE id = ${firstId} FOR NO KEY UPDATE`
@@ -303,5 +303,23 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
     expect(await bulk).toBe(1)
     expect(await countUnseenActivityTickets(2)).toBe(1)
     expect(await client`SELECT read FROM notifications WHERE org_id = 2 ORDER BY id`).toEqual([{ read: 0 }, { read: 0 }])
+  }, 12_000)
+
+  it('reports a missing ticket when deletion commits while the reply waits for the shared lock', async () => {
+    const id = await seed()
+    let deletion: Promise<void> | undefined
+    let reply: Promise<boolean | null> | undefined
+    await client.begin(async (tx) => {
+      await tx`SELECT id FROM notifications WHERE ticket_id = ${id} FOR UPDATE`
+      deletion = deleteTicket(id)
+      await waitForLock('delete from "notifications"%')
+      reply = recordCustomerReply(id, 'Reply while the ticket is deleted')
+      await waitForLock('%pg_advisory_xact_lock_shared%')
+    })
+    await deletion
+    expect(await reply).toBeNull()
+    expect(await client`SELECT id FROM ticket_replies`).toEqual([])
+    expect(await client`SELECT id FROM ticket_events`).toEqual([])
+    expect(await client`SELECT id FROM notifications`).toEqual([])
   }, 12_000)
 })

@@ -136,8 +136,9 @@ describe('processCommunityMessage: thread replies append instead of creating a n
     expect(runAIAgent).not.toHaveBeenCalled()
   })
 
-  it('falls through to normal ticket creation when threadId is set but no existing ticket matches', async () => {
-    getTicketByThreadId.mockResolvedValue(null)
+  it.each([null, EXISTING_TICKET])('creates a ticket when the thread lookup finds %j and no ticket can accept the reply', async (match) => {
+    getTicketByThreadId.mockResolvedValue(match)
+    recordCustomerReply.mockResolvedValue(null)
     triageMessage.mockResolvedValue({
       category: 'general_question', severity_score: 0.3, summary: 'a new thread, first message', suggested_priority: 'medium', reasoning: 'x',
     })
@@ -149,7 +150,7 @@ describe('processCommunityMessage: thread replies append instead of creating a n
       3
     )
 
-    expect(recordCustomerReply).not.toHaveBeenCalled()
+    expect(recordCustomerReply).toHaveBeenCalledTimes(match ? 1 : 0)
     expect(createTicket).toHaveBeenCalledTimes(1)
     expect(result.ticket_id).toBe(99)
     expect(result.appended).toBeUndefined()

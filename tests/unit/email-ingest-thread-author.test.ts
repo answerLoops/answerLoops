@@ -9,6 +9,8 @@ const h = vi.hoisted(() => ({
   getTicketById: vi.fn(),
   findTicketByMessageIds: vi.fn(),
   notifyTicketActivity: vi.fn(),
+  setEmailMessageTicket: vi.fn(),
+  processCommunityMessage: vi.fn(async () => ({ ticket_id: 500 })),
 }))
 
 vi.mock('@/lib/db/queries/integrations', () => ({
@@ -17,7 +19,7 @@ vi.mock('@/lib/db/queries/integrations', () => ({
   parseChannelIds: () => [],
 }))
 vi.mock('@/lib/db/queries/email-domains', () => ({ getEmailDomainByDomain: vi.fn() }))
-vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage: vi.fn(async () => ({ ticket_id: 500 })) }))
+vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage: h.processCommunityMessage }))
 vi.mock('@/lib/db/queries/tickets', () => ({
   recordCustomerReply: h.recordCustomerReply,
   getTicketById: h.getTicketById,
@@ -28,7 +30,7 @@ vi.mock('@/lib/tickets/notify-activity', () => ({ notifyTicketActivity: h.notify
 vi.mock('@/lib/db/queries/email-messages', () => ({
   recordInboundEmail: vi.fn(async () => ({ id: 1 })),
   updateEmailMessageStatus: vi.fn(),
-  setEmailMessageTicket: vi.fn(),
+  setEmailMessageTicket: h.setEmailMessageTicket,
   findTicketByMessageIds: h.findTicketByMessageIds,
   countRecentOutboundToSender: vi.fn(async () => 0),
   markStatusByProviderMessageId: vi.fn(),
@@ -86,5 +88,15 @@ describe('email reply stored in the ticket thread', () => {
     h.recordCustomerReply.mockResolvedValueOnce(false)
     await POST(inbound('Casey Customer <customer@example.com>', '<reply-duplicate@mail.test>') as never)
     expect(h.notifyTicketActivity).toHaveBeenCalledOnce()
+  })
+
+  it('links the email to a new ticket when deletion wins the reply race', async () => {
+    const { POST } = await import('@/app/api/email/ingest/route')
+    h.recordCustomerReply.mockResolvedValueOnce(null)
+    const response = await POST(inbound('Casey Customer <customer@example.com>', '<reply-after-delete@mail.test>') as never)
+    expect(response.ok).toBe(true)
+    expect(h.processCommunityMessage).toHaveBeenCalledOnce()
+    expect(h.setEmailMessageTicket).toHaveBeenCalledExactlyOnceWith(1, 500)
+    expect(h.notifyTicketActivity).not.toHaveBeenCalled()
   })
 })

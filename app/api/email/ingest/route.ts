@@ -326,16 +326,18 @@ export async function POST(req: NextRequest) {
       authorName: senderName,
       messageId: rfcMessageId,
     })
-    await setEmailMessageTicket(recorded.id, existingTicketId)
-    await updateEmailMessageStatus(recorded.id, 'processed')
-    if (stored) await notifyTicketActivity({
-      ticket: existingTicket,
-      authorName: senderName,
-      content: cleanText || content,
-      orgId,
-    })
-    logger.info('inbound email appended to existing ticket', { module: MOD, orgId, ticketId: existingTicketId })
-    return Response.json({ ok: true })
+    if (stored !== null) {
+      await setEmailMessageTicket(recorded.id, existingTicketId)
+      await updateEmailMessageStatus(recorded.id, 'processed')
+      if (stored) await notifyTicketActivity({
+        ticket: existingTicket,
+        authorName: senderName,
+        content: cleanText || content,
+        orgId,
+      })
+      logger.info('inbound email appended to existing ticket', { module: MOD, orgId, ticketId: existingTicketId })
+      return Response.json({ ok: true })
+    }
   }
 
   logger.info('email ingest received', { module: MOD, orgId, senderEmail, subject })

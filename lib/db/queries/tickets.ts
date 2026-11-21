@@ -746,22 +746,25 @@ export interface ThreadMessageInput {
  * an email reply, or a message in a chat/forum/issue thread the ticket came
  * from. Reopens the ticket if it was resolved/closed — a reply means the issue
  * isn't actually done. System path (webhook ingest), so unscoped by design.
- * Returns false, changing nothing, when this exact message is already stored.
+ * Returns false for a duplicate, or null if the ticket no longer exists.
  */
 export async function recordCustomerReply(
   ticketId: number,
   content: string,
   input: ThreadMessageInput = {}
-): Promise<boolean> {
-  const [row] = await getDb().select().from(tickets).where(eq(tickets.id, ticketId)).limit(1)
-  if (!row) throw new Error('Ticket not found')
-  const ticket = toTicket(row)
+): Promise<boolean | null> {
+  const [workspace] = await getDb().select({ orgId: tickets.orgId }).from(tickets).where(eq(tickets.id, ticketId)).limit(1)
+  if (!workspace) return null
 
   const authorName = input.authorName ?? 'Customer'
   return getDb().transaction(async (tx) => {
     // Reply writers can proceed together. Bulk clear takes the exclusive
     // lock before reading either the tickets or the bell notifications.
-    await tx.execute(sql`SELECT pg_advisory_xact_lock_shared(${TICKET_ACTIVITY_LOCK_CLASS}, ${row.orgId})`)
+    await tx.execute(sql`SELECT pg_advisory_xact_lock_shared(${TICKET_ACTIVITY_LOCK_CLASS}, ${workspace.orgId})`)
+    const [row] = await tx.select().from(tickets)
+      .where(and(eq(tickets.id, ticketId), eq(tickets.orgId, workspace.orgId))).limit(1)
+    if (!row) return null
+    const ticket = toTicket(row)
     const inserted = await tx.insert(ticketReplies).values({
       ticketId,
       staffName: authorName,
