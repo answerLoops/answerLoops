@@ -243,6 +243,7 @@ export const tickets = pgTable(
     // millisecond precision so a keyset cursor on last_activity_at is exact.
     lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).notNull().default(sql`date_trunc('milliseconds', now())`),
     lastCustomerReplyAt: timestamp('last_customer_reply_at', { withTimezone: true }),
+    lastCustomerReplyXid: text('last_customer_reply_xid'),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   },
   (t) => [

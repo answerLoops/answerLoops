@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { ingest, waitForPipeline } from './helpers'
+import { ingest, waitForPipeline, ticketDetailPath } from './helpers'
 
 // Exercises the server actions reachable from the ticket detail page: staff
 // feedback vote, AI draft approval, and a status update.
@@ -8,7 +8,7 @@ test.describe('ticket detail interactions', () => {
     const ticketId = await ingest(request, { content: 'How do I configure the client?' })
     await waitForPipeline(request, ticketId)
 
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(await ticketDetailPath(request, ticketId))
     await page.getByRole('button', { name: '👍' }).click()
 
     await expect(page.getByText('your vote counted')).toBeVisible()
@@ -19,7 +19,7 @@ test.describe('ticket detail interactions', () => {
     const ticketId = await ingest(request, { content: 'How do I configure the client?' })
     await waitForPipeline(request, ticketId)
 
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(await ticketDetailPath(request, ticketId))
     await page.getByRole('button', { name: 'Approve' }).click()
 
     // The panel re-renders (server action + refresh) showing the approved state.
@@ -31,7 +31,7 @@ test.describe('ticket detail interactions', () => {
     const ticketId = await ingest(request, { content: 'How do I configure the client?' })
     await waitForPipeline(request, ticketId)
 
-    await page.goto(`/tickets/${ticketId}`)
+    await page.goto(await ticketDetailPath(request, ticketId))
     // staffName appears in both the status and reply forms — scope to the
     // status form (the one with the status select).
     const statusForm = page.locator('form:has(select[name="status"])')

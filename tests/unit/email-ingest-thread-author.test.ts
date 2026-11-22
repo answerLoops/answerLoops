@@ -8,6 +8,10 @@ const h = vi.hoisted(() => ({
   recordCustomerReply: vi.fn(),
   getTicketById: vi.fn(),
   findTicketByMessageIds: vi.fn(),
+  notifyTicketActivity: vi.fn(),
+  setEmailMessageTicket: vi.fn(),
+  updateEmailMessageStatus: vi.fn(),
+  processCommunityMessage: vi.fn(async () => ({ ticket_id: 500 })),
 }))
 
 vi.mock('@/lib/db/queries/integrations', () => ({
@@ -16,17 +20,18 @@ vi.mock('@/lib/db/queries/integrations', () => ({
   parseChannelIds: () => [],
 }))
 vi.mock('@/lib/db/queries/email-domains', () => ({ getEmailDomainByDomain: vi.fn() }))
-vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage: vi.fn(async () => ({ ticket_id: 500 })) }))
+vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage: h.processCommunityMessage }))
 vi.mock('@/lib/db/queries/tickets', () => ({
   recordCustomerReply: h.recordCustomerReply,
   getTicketById: h.getTicketById,
   updateTicketAIDraftStatus: vi.fn(),
 }))
 vi.mock('@/lib/db/queries/notifications', () => ({ createNotification: vi.fn() }))
+vi.mock('@/lib/tickets/notify-activity', () => ({ notifyTicketActivity: h.notifyTicketActivity }))
 vi.mock('@/lib/db/queries/email-messages', () => ({
   recordInboundEmail: vi.fn(async () => ({ id: 1 })),
-  updateEmailMessageStatus: vi.fn(),
-  setEmailMessageTicket: vi.fn(),
+  updateEmailMessageStatus: h.updateEmailMessageStatus,
+  setEmailMessageTicket: h.setEmailMessageTicket,
   findTicketByMessageIds: h.findTicketByMessageIds,
   countRecentOutboundToSender: vi.fn(async () => 0),
   markStatusByProviderMessageId: vi.fn(),
@@ -53,6 +58,7 @@ function inbound(from: string, messageId: string) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  h.recordCustomerReply.mockResolvedValue(true)
   h.findTicketByMessageIds.mockResolvedValue(77)
   h.getTicketById.mockResolvedValue({ id: 77, org_ticket_number: 12, source_author_id: 'customer@example.com' })
 })
@@ -71,5 +77,31 @@ describe('email reply stored in the ticket thread', () => {
     const { POST } = await import('@/app/api/email/ingest/route')
     await POST(inbound('Casey Customer <customer@example.com>', 'reply-2@mail.test') as never)
     expect(h.recordCustomerReply.mock.calls[0][2].messageId).toBe('<reply-2@mail.test>')
+  })
+
+  it('sends a push only after the reply and its bell notification have been stored', async () => {
+    const { POST } = await import('@/app/api/email/ingest/route')
+    await POST(inbound('Casey Customer <customer@example.com>', '<reply-new@mail.test>') as never)
+    expect(h.notifyTicketActivity).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({
+      ticket: expect.objectContaining({ id: 77 }),
+      orgId: 3,
+    }))
+    h.recordCustomerReply.mockResolvedValueOnce(false)
+    const response = await POST(inbound('Casey Customer <customer@example.com>', '<reply-duplicate@mail.test>') as never)
+    expect(h.notifyTicketActivity).toHaveBeenCalledOnce()
+    expect(h.setEmailMessageTicket.mock.calls).toEqual([[1, 77], [1, 77]])
+    expect(h.updateEmailMessageStatus.mock.calls).toEqual([[1, 'processed'], [1, 'processed']])
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ ok: true })
+  })
+
+  it('links the email to a new ticket when deletion wins the reply race', async () => {
+    const { POST } = await import('@/app/api/email/ingest/route')
+    h.recordCustomerReply.mockResolvedValueOnce(null)
+    const response = await POST(inbound('Casey Customer <customer@example.com>', '<reply-after-delete@mail.test>') as never)
+    expect(response.ok).toBe(true)
+    expect(h.processCommunityMessage).toHaveBeenCalledOnce()
+    expect(h.setEmailMessageTicket).toHaveBeenCalledExactlyOnceWith(1, 500)
+    expect(h.notifyTicketActivity).not.toHaveBeenCalled()
   })
 })

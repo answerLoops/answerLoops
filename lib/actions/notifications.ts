@@ -1,10 +1,11 @@
 'use server'
 
 import { z } from 'zod'
-import { refresh } from 'next/cache'
+import { refresh, revalidatePath } from 'next/cache'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { markAllNotificationsRead } from '@/lib/db/queries/notifications'
-import { getTicketByOrgTicketNumber, markTicketSeen } from '@/lib/db/queries/tickets'
+import { getTicketByOrgTicketNumber, markAllTicketsSeen, markTicketSeen } from '@/lib/db/queries/tickets'
+import { verifyActivitySnapshot } from '@/lib/tickets/activity-snapshot'
 
 /** Clears the bell: every unread notification in the workspace becomes read. */
 export async function markAllNotificationsReadAction(): Promise<{ ok: boolean }> {
@@ -32,4 +33,18 @@ export async function markTicketSeenAction(ticketNumber: number): Promise<{ ok: 
   const found = await markTicketSeen(ticket.id, access.orgId)
   if (found) refresh()
   return { ok: found }
+}
+
+export async function markAllTicketsSeenAction(
+  snapshot: string,
+  proof: string
+): Promise<{ ok: true; count: number } | { ok: false }> {
+  if (typeof snapshot !== 'string' || typeof proof !== 'string') return { ok: false }
+  const access = await requireOrgAccess()
+  if (!access.ok || !verifyActivitySnapshot(snapshot, proof, access.orgId, access.userId)) return { ok: false }
+
+  const count = await markAllTicketsSeen(access.orgId, snapshot)
+  refresh()
+  revalidatePath('/tickets')
+  return { ok: true, count }
 }

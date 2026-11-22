@@ -18,6 +18,7 @@ async function withDb(rows: (c: Call) => unknown[][] = () => []) {
     calls.push(call)
     return { rows: rows(call) }
   })
+  vi.spyOn(fakeDb, 'transaction').mockImplementation((callback) => callback(fakeDb as never))
   vi.doMock('@/lib/db/drizzle', () => ({ getDb: () => fakeDb }))
   vi.resetModules()
   return { calls, queries: await import('@/lib/db/queries/tickets') }

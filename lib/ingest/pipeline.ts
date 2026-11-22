@@ -91,17 +91,19 @@ export async function processCommunityMessage(
       const stored = await recordCustomerReply(threadTicket.id, content, { authorName, messageId })
       // A redelivered webhook for a reply already in the thread: nothing new
       // to record, notify about, or acknowledge a second time.
-      if (!stored) return { ticket_id: threadTicket.id, duplicate: true }
-      await notifyTicketActivity({ ticket: threadTicket, authorName, content, orgId })
-      // See sendKeepAlive's doc comment (lib/channels/post-reply.ts) — Google
-      // Chat's UI flags the app as "not responding" for this silence too, so
-      // it gets the same neutral, content-free receipt as the deflections-off
-      // paths in lib/ai/agent.ts. Every other platform no-ops here.
-      await sendKeepAlive(platform, threadId, orgId)
-      logger.info('thread reply appended to existing ticket', {
-        module: MOD, ticketId: threadTicket.id, threadId, platform,
-      })
-      return { ticket_id: threadTicket.id, appended: true }
+      if (stored === false) return { ticket_id: threadTicket.id, duplicate: true }
+      if (stored) {
+        await notifyTicketActivity({ ticket: threadTicket, authorName, content, orgId })
+        // See sendKeepAlive's doc comment (lib/channels/post-reply.ts) — Google
+        // Chat's UI flags the app as "not responding" for this silence too, so
+        // it gets the same neutral, content-free receipt as the deflections-off
+        // paths in lib/ai/agent.ts. Every other platform no-ops here.
+        await sendKeepAlive(platform, threadId, orgId)
+        logger.info('thread reply appended to existing ticket', {
+          module: MOD, ticketId: threadTicket.id, threadId, platform,
+        })
+        return { ticket_id: threadTicket.id, appended: true }
+      }
     }
   }
 

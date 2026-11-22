@@ -1,26 +1,66 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const h = vi.hoisted(() => ({
   requireOrgAccess: vi.fn(),
   markAllNotificationsRead: vi.fn(),
   getTicketByOrgTicketNumber: vi.fn(),
   markTicketSeen: vi.fn(),
+  markAllTicketsSeen: vi.fn(),
   refresh: vi.fn(),
+  revalidatePath: vi.fn(),
 }))
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
 vi.mock('@/lib/db/queries/notifications', () => ({ markAllNotificationsRead: h.markAllNotificationsRead }))
 vi.mock('@/lib/db/queries/tickets', () => ({
   getTicketByOrgTicketNumber: h.getTicketByOrgTicketNumber,
   markTicketSeen: h.markTicketSeen,
+  markAllTicketsSeen: h.markAllTicketsSeen,
 }))
-vi.mock('next/cache', () => ({ refresh: h.refresh }))
+vi.mock('next/cache', () => ({ refresh: h.refresh, revalidatePath: h.revalidatePath }))
 
-import { markAllNotificationsReadAction, markTicketSeenAction } from '@/lib/actions/notifications'
+import { markAllNotificationsReadAction, markAllTicketsSeenAction, markTicketSeenAction } from '@/lib/actions/notifications'
+import { signActivitySnapshot } from '@/lib/tickets/activity-snapshot'
 
 beforeEach(() => {
   vi.clearAllMocks()
-  h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 3 })
+  h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 3, userId: 5, role: 'member' })
+})
+
+afterEach(() => vi.unstubAllEnvs())
+
+describe('markAllTicketsSeenAction', () => {
+  const snapshot = '2026-10-02T00:00:00.123456Z|10:11:10'
+
+  beforeEach(() => vi.stubEnv('AUTH_SECRET', '<test-auth-secret>'))
+
+  it.each([0, 1, 198])('returns the database count %i and refreshes both surfaces', async (count) => {
+    h.markAllTicketsSeen.mockResolvedValue(count)
+    expect(await markAllTicketsSeenAction(snapshot, signActivitySnapshot(snapshot, 3, 5))).toEqual({ ok: true, count })
+    expect(h.requireOrgAccess).toHaveBeenCalledWith()
+    expect(h.markAllTicketsSeen).toHaveBeenCalledWith(3, snapshot)
+    expect(h.refresh).toHaveBeenCalledOnce()
+    expect(h.revalidatePath).toHaveBeenCalledWith('/tickets')
+  })
+
+  it('rejects a stale membership, a changed snapshot, and proofs from other workspaces or users', async () => {
+    const proof = signActivitySnapshot(snapshot, 3, 5)
+    h.requireOrgAccess.mockResolvedValueOnce({ ok: false, error: 'Unauthorized' })
+    expect(await markAllTicketsSeenAction(snapshot, proof)).toEqual({ ok: false })
+    expect(await markAllTicketsSeenAction('2026-10-02T00:01:00.123456Z|10:11:10', proof)).toEqual({ ok: false })
+    expect(await markAllTicketsSeenAction(snapshot.replace('10:11:10', '10:11:'), proof)).toEqual({ ok: false })
+    expect(await markAllTicketsSeenAction(snapshot, signActivitySnapshot(snapshot, 4, 5))).toEqual({ ok: false })
+    expect(await markAllTicketsSeenAction(snapshot, signActivitySnapshot(snapshot, 3, 6))).toEqual({ ok: false })
+    expect(h.markAllTicketsSeen).not.toHaveBeenCalled()
+    expect(h.refresh).not.toHaveBeenCalled()
+  })
+
+  it('leaves the routes alone if the transaction fails', async () => {
+    h.markAllTicketsSeen.mockRejectedValue(new Error('Transaction failed'))
+    await expect(markAllTicketsSeenAction(snapshot, signActivitySnapshot(snapshot, 3, 5))).rejects.toThrow('Transaction failed')
+    expect(h.refresh).not.toHaveBeenCalled()
+    expect(h.revalidatePath).not.toHaveBeenCalled()
+  })
 })
 
 describe('markAllNotificationsReadAction', () => {

@@ -72,8 +72,9 @@ vi.mock('@/lib/db/queries/tickets', () => ({
   updateTicketTriage: vi.fn(),
 }))
 
-const { createNotification, triageMessage, runAIAgent } = vi.hoisted(() => ({
+const { createNotification, sendPushToAll, triageMessage, runAIAgent } = vi.hoisted(() => ({
   createNotification: vi.fn(),
+  sendPushToAll: vi.fn(),
   triageMessage: vi.fn(),
   runAIAgent: vi.fn(),
 }))
@@ -85,7 +86,7 @@ vi.mock('@/lib/sla/engine', () => ({
   calculateDeadlines: vi.fn(async () => ({ sla_response_deadline: null, sla_resolve_deadline: null })),
   checkSlaBreaches: vi.fn(async () => []),
 }))
-vi.mock('@/lib/push/notify', () => ({ sendPushToAll: vi.fn() }))
+vi.mock('@/lib/push/notify', () => ({ sendPushToAll }))
 vi.mock('@/lib/email/send', () => ({ sendNewTicketEmail: vi.fn(), sendSlaBreachEmails: vi.fn() }))
 vi.mock('@/lib/ai/embed', () => ({ embedTextWithModel: vi.fn(), embedText: vi.fn(), EMBEDDING_MODEL: 'test-model' }))
 vi.mock('@/lib/ai/related', () => ({ findRelated: vi.fn(() => []), isDuplicate: vi.fn(() => false) }))
@@ -226,7 +227,7 @@ describe.each(CONVERSATIONS)('$platform threading through the pipeline', (c) => 
     expect(store.replies).toEqual([
       expect.objectContaining({ ticketId: first.ticket_id, author: 'alice', role: 'customer', messageId: c.reply.messageId }),
     ])
-    expect(createNotification).toHaveBeenCalledTimes(1)
+    expect(sendPushToAll).toHaveBeenCalledTimes(1)
     expect(triageMessage).not.toHaveBeenCalled()
     expect(runAIAgent).not.toHaveBeenCalled()
   })
@@ -246,7 +247,7 @@ describe.each(CONVERSATIONS)('$platform threading through the pipeline', (c) => 
     const again = await send(c.platform, c.reply)
     expect(again.duplicate).toBe(true)
     expect(store.replies).toHaveLength(1)
-    expect(createNotification).toHaveBeenCalledTimes(1)
+    expect(sendPushToAll).toHaveBeenCalledTimes(1)
   })
 
   it('another organization with the same ids never joins this conversation', async () => {

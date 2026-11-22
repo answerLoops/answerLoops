@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNotNull, lt, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
+import { lockTicketActivity } from '../locks'
 import {
   orgs,
   memberships,
@@ -164,6 +165,8 @@ export async function getOrgsPendingPurge(): Promise<number[]> {
  */
 export async function hardPurgeOrg(orgId: number): Promise<void> {
   await getDb().transaction(async (tx) => {
+    // Purge also removes notifications before tickets.
+    await lockTicketActivity(tx, orgId, 'exclusive')
     const ticketIdRows = await tx
       .select({ id: tickets.id })
       .from(tickets)
@@ -262,5 +265,5 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     }
 
     await tx.delete(orgs).where(eq(orgs.id, orgId))
-  })
+  }, { isolationLevel: 'read committed' })
 }

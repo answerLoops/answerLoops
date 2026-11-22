@@ -68,6 +68,7 @@ export interface Ticket {
   last_customer_reply_at: string | null
   /** When the team last opened the ticket. */
   last_seen_at: string | null
+  has_new_activity?: boolean
 }
 
 export interface TicketReply {
