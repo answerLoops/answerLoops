@@ -18,21 +18,21 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://answerloops.com'),
   title: 'answerLoops',
   description:
-    'Use your documentation to answer community support questions. Review drafts and choose which channels can reply automatically, with hosted and self-hosted options.',
+    'Give members timely answers from your docs and keep questions that need your team in one place. Hosted and self-hosted options.',
   openGraph: {
     type: 'website',
     siteName: 'answerLoops',
-    title: 'answerLoops — Answers from your documentation',
+    title: 'answerLoops — Help your community grow',
     description:
-      'answerLoops drafts support replies from your documentation and checks them before sending. Your team decides which channels can reply automatically.',
+      'Give members timely answers so they can stay involved and keep coming back.',
     // Social card image comes from app/opengraph-image.png (1200×630) via the
     // Next file convention — it fills both openGraph and twitter automatically.
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'answerLoops — Answers from your documentation',
+    title: 'answerLoops — Help your community grow',
     description:
-      'answerLoops drafts support replies from your documentation and checks them before sending. Your team decides which channels can reply automatically.',
+      'Give members timely answers so they can stay involved and keep coming back.',
   },
   // Icons are generated from app/favicon.ico, app/icon.png, and app/apple-icon.png.
   // File-based metadata keeps their dimensions and cache versions in sync.

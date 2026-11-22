@@ -93,12 +93,11 @@ export default function AlternativesPage() {
       />
       <PageHero
         eyebrow="Comparisons"
-        title="Choose the support workflow your team needs."
+        title="Find the right support for your community"
       >
         <p>
-          Compare channels, answer review, deployment, and operating costs. Each
-          comparison links to the competitor’s published information and
-          includes a review date.
+          See which options meet members where they ask and give your team
+          a way to step in when they need more help.
         </p>
       </PageHero>
       <section className="marketing-section">

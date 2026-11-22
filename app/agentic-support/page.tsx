@@ -23,8 +23,8 @@ export default async function AgenticSupportPage() {
     <ProofPage
       navState={await resolveNavState()}
       eyebrow="Answer preparation"
-      title="How answerLoops drafts and checks a reply"
-      intro="The answer agent retrieves your documentation and drafts a reply. The review agent checks that draft against its sources. Your channel settings decide whether a qualifying answer is sent or held for your team."
+      title="Help members get unstuck with answers they can use"
+      intro="Members get answers from your guides in the channels they use. A separate AI review checks drafts against their sources, and your team decides which channels can send qualifying replies automatically."
       sections={[
         {
           title: 'Draft from your documentation',

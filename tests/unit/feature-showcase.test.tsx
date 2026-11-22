@@ -15,13 +15,11 @@ vi.mock('next/image', () => ({
 
 // The real registry is used on purpose: a renamed or deleted shot id must fail here.
 const ROWS = [
-  { shot: 'ticket-detail', heading: 'Every conversation becomes a ticket', plan: null },
-  { shot: 'dashboard', heading: 'See what’s urgent before it’s late', plan: null },
-  { shot: 'knowledge-gaps', heading: 'Find the gaps in your docs', plan: 'Pro' },
-  { shot: 'analytics', heading: 'Know what the AI saves you', plan: null },
+  { shot: 'ticket-detail', heading: 'See which questions still need an answer' },
+  { shot: 'dashboard', heading: 'See what’s urgent before it’s late' },
+  { shot: 'knowledge-gaps', heading: 'Find the gaps in your docs' },
+  { shot: 'analytics', heading: 'See where your support is improving' },
 ] as const
-
-const PLAN_NAMES = ['Pro', 'Standard', 'Enterprise']
 
 function renderRows() {
   const { container } = render(<FeatureShowcase />)
@@ -38,23 +36,11 @@ describe('FeatureShowcase', () => {
     })
   })
 
-  it('shows a plan pill only on the gated Knowledge gaps row', () => {
+  it('states plan availability in the Knowledge gaps description', () => {
     const { rows } = renderRows()
-    rows.forEach((row, i) => {
-      const eyebrow = row.querySelector('p')!
-      // The eyebrow paragraph holds the label text and, when gated, the pill as its only child element.
-      const pill = eyebrow.querySelector('span')
-      if (ROWS[i].plan) {
-        expect(pill).not.toBeNull()
-        expect(pill).toHaveTextContent(ROWS[i].plan!)
-      } else {
-        expect(pill).toBeNull()
-        for (const name of PLAN_NAMES) {
-          expect(eyebrow.textContent).not.toContain(name)
-        }
-      }
-    })
-    expect(screen.getAllByText('Pro')).toHaveLength(1)
+    const availability = 'Available on Pro and Enterprise.'
+    expect(within(rows[2]).getByText(availability, { exact: false })).toBeVisible()
+    expect(screen.getAllByText(availability, { exact: false })).toHaveLength(1)
   })
 
   it('flips every second row so the image alternates sides', () => {

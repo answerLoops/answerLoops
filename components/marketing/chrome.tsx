@@ -161,11 +161,11 @@ export function Footer() {
           <div className="flex flex-col items-start">
             <NavWordmark />
             <p className="mt-4 max-w-xs text-sm font-semibold text-slate-900">
-              Less time answering. More time growing your community.
+              Help your community grow.
             </p>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
-              answerLoops handles repetitive questions so your team can focus
-              on conversations, connections, and growth.
+              Give members timely answers so they can stay involved and keep
+              coming back.
             </p>
             <Link
               href={GITHUB_SOURCE_URL}

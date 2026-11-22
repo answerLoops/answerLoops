@@ -23,8 +23,8 @@ export default async function SupportWorkflowPage() {
     <ProofPage
       navState={await resolveNavState()}
       eyebrow="Support workflow"
-      title="Set the rules for automated replies"
-      intro="Start with drafts your team reviews. Enable automatic replies for a channel after testing your knowledge sources and confidence threshold."
+      title="Stay in control of the answers members receive"
+      intro="Start by reviewing answers from your own docs. When you are ready, choose which channels can reply automatically and keep the rest of the drafts in your team’s queue."
       sections={[
         {
           title: '1. Connect a channel',

@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'answerLoops blog',
   description:
-    'Architecture notes, integration guides, and benchmarks from the team building answerLoops.',
+    'Practical guides for answering community questions, plus notes on how answerLoops works.',
   path: '/blog',
 })
 
@@ -29,14 +29,14 @@ export default function BlogIndexPage() {
     <MarketingPage>
       <PageSchema
         name="answerLoops blog"
-        description="Architecture notes, integration guides, and benchmarks from the team building answerLoops."
+        description="Practical guides for answering community questions, plus notes on how answerLoops works."
         path="/blog"
         type="CollectionPage"
       />
-      <PageHero title="Engineering the support layer" compact>
+      <PageHero title="Better support for growing communities" compact>
         <p>
-          Architecture notes, integration guides, and benchmarks from the
-          team building answerLoops.
+          Practical guides for answering community questions, plus notes on
+          how answerLoops works.
         </p>
       </PageHero>
       <section className="marketing-section marketing-post-top">
