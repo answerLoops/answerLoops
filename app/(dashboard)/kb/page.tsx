@@ -18,7 +18,9 @@ import { ArticleAnswers } from '@/components/dashboard/article-answers'
 import { ArticleHistory } from '@/components/dashboard/article-history'
 import { ArticleVerificationControl } from '@/components/dashboard/article-verification'
 import { ReviewTab } from './review-tab'
+import { FlagsTab } from './flags-tab'
 import type { ReviewCounts } from '@/lib/db/queries/kb-review'
+import type { FlagCounts } from '@/lib/db/queries/widget-answer-flags'
 
 type Article = KBArticle | KBSearchResult
 
@@ -689,6 +691,7 @@ const KB_TABS = [
   { id: 'manage', label: 'Manage' },
   { id: 'coverage', label: 'Knowledge coverage' },
   { id: 'review', label: 'Review' },
+  { id: 'flags', label: 'Flagged answers' },
 ] as const
 type KBTabId = (typeof KB_TABS)[number]['id']
 
@@ -702,11 +705,26 @@ export default function KBPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const tabParam = searchParams.get('tab')
-  const activeTab: KBTabId = tabParam === 'coverage' || tabParam === 'review' ? tabParam : 'manage'
+  const activeTab: KBTabId =
+    tabParam === 'coverage' || tabParam === 'review' || tabParam === 'flags' ? tabParam : 'manage'
   // How many unseen questions are waiting in the review queue; stays null for
   // workspaces without the feature, so no badge shows.
   const [pendingReview, setPendingReview] = useState<number | null>(null)
   const handleReviewCounts = useCallback((c: ReviewCounts) => setPendingReview(c.pending), [])
+  // The same for answers visitors flagged as wrong.
+  const [openFlags, setOpenFlags] = useState<number | null>(null)
+  const handleFlagCounts = useCallback((c: FlagCounts) => setOpenFlags(c.open), [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/kb/flags?limit=0')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { counts?: FlagCounts } | null) => {
+        if (!cancelled && data?.counts) setOpenFlags(data.counts.open)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -870,6 +888,11 @@ export default function KBPage() {
                 {pendingReview}
               </span>
             )}
+            {tab.id === 'flags' && openFlags !== null && openFlags > 0 && (
+              <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[0.625rem] font-semibold tabular-nums text-white">
+                {openFlags}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -878,6 +901,8 @@ export default function KBPage() {
         <CoverageTab />
       ) : activeTab === 'review' ? (
         <ReviewTab onCountsChange={handleReviewCounts} />
+      ) : activeTab === 'flags' ? (
+        <FlagsTab onCountsChange={handleFlagCounts} />
       ) : (
         <>
 

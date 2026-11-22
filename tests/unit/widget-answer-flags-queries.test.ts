@@ -256,6 +256,33 @@ describe('listFlags and countFlags', () => {
   })
 })
 
+describe('listFlagsForLeads', () => {
+  it('reads only thumbs-down flags that have a lead, in this workspace, oldest first', async () => {
+    respond = () => []
+    const { listFlagsForLeads } = await import('@/lib/db/queries/widget-answer-flags')
+    expect(await listFlagsForLeads(7)).toEqual(new Map())
+    const select = calls[0]
+    expect(select.params).toEqual(expect.arrayContaining([7, 'down']))
+    expect(select.sql).toContain('"lead_id" is not null')
+    expect(select.sql).toMatch(/order by "widget_answer_flags"\."created_at" asc/)
+    // The visitor's note is never read for this list.
+    expect(select.sql).not.toContain('"note"')
+  })
+
+  it('maps each lead to its flag, and the newest flag wins where one lead flagged several answers', async () => {
+    respond = () => [
+      [10, 5, 'outdated', 'older q', 'older a'],
+      [11, 6, null, 'q6', 'a6'],
+      [12, 5, 'wrong_information', 'newer q', 'newer a'],
+    ]
+    const { listFlagsForLeads } = await import('@/lib/db/queries/widget-answer-flags')
+    const out = await listFlagsForLeads(7)
+    expect([...out.keys()]).toEqual([5, 6])
+    expect(out.get(5)).toEqual({ flag_id: 12, lead_id: 5, reason: 'wrong_information', question: 'newer q', answer: 'newer a' })
+    expect(out.get(6)).toEqual({ flag_id: 11, lead_id: 6, reason: null, question: 'q6', answer: 'a6' })
+  })
+})
+
 describe('purgeExpiredFlagText', () => {
   it('clears text on dismissed flags and on flags older than the retention window, and counts the rows', async () => {
     respond = () => [[1], [2], [3]]

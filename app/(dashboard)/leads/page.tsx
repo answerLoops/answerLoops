@@ -3,14 +3,24 @@ import { listWidgetLeads } from '@/lib/db/queries/widget-leads'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { LockedCsvExportButton } from '@/components/billing/locked-csv-export-button'
+import Link from 'next/link'
+import { listFlagsForLeads } from '@/lib/db/queries/widget-answer-flags'
+import type { FlagReason, LeadFlag } from '@/lib/db/queries/widget-answer-flags'
 
 export const dynamic = 'force-dynamic'
+
+const REASON_LABEL: Record<FlagReason, string> = {
+  wrong_information: 'Wrong information',
+  outdated: 'Out of date',
+  did_not_answer: "Didn't answer the question",
+  other: 'Something else',
+}
 
 export default async function LeadsPage() {
   const session = await auth()
   const orgId = session?.orgId ?? DEFAULT_ORG_ID
   const canExportCsv = await orgHasFeature(orgId, 'csv_export')
-  const leads = await listWidgetLeads(orgId)
+  const [leads, flagsByLead] = await Promise.all([listWidgetLeads(orgId), listFlagsForLeads(orgId)])
 
   return (
     <div className="dashboard-page max-w-6xl space-y-6">
@@ -63,8 +73,14 @@ export default async function LeadsPage() {
               {leads.map((lead) => (
                 <tr key={lead.id} className="hover:bg-gray-50/50">
                   <td className="px-5 py-3 text-gray-800">{lead.email}</td>
-                  <td className="px-5 py-3 text-gray-500 max-w-xs truncate" title={lead.question ?? undefined}>
-                    {lead.question ?? <span className="text-gray-300">—</span>}
+                  <td className="px-5 py-3 text-gray-500 max-w-xs">
+                    {lead.question ? (
+                      <span className="block truncate" title={lead.question}>{lead.question}</span>
+                    ) : flagsByLead.has(lead.id) ? (
+                      <FlaggedAnswer flag={flagsByLead.get(lead.id)!} />
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-gray-400 text-xs">
                     {new Date(lead.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
@@ -76,6 +92,30 @@ export default async function LeadsPage() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// A lead left through the thumbs-down panel carries no question of its own; this
+// shows the answer it flagged instead, so the team knows what the visitor was
+// unhappy with. The text is cleared after the retention window, and the note is
+// never shown here (it stays on the Flagged answers tab for owners and admins).
+function FlaggedAnswer({ flag }: { flag: LeadFlag }) {
+  const gone = flag.question === '' && flag.answer === ''
+  return (
+    <div className="space-y-0.5 text-xs" data-testid="lead-flagged-answer">
+      <p className="font-medium text-amber-700">
+        Flagged an answer{flag.reason ? `: ${REASON_LABEL[flag.reason]}` : ''}
+      </p>
+      {gone ? (
+        <p className="text-gray-400">The text of this flag is no longer stored.</p>
+      ) : (
+        <>
+          {flag.question && <p className="truncate text-gray-700" title={flag.question}>Asked: {flag.question}</p>}
+          {flag.answer && <p className="truncate text-gray-500" title={flag.answer}>Answered: {flag.answer}</p>}
+        </>
+      )}
+      <Link href="/kb?tab=flags" className="text-blue-700 hover:underline">See the flag</Link>
     </div>
   )
 }
