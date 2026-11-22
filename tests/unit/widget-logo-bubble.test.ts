@@ -61,6 +61,14 @@ function el(tag: string): El {
     },
     classList: { add() {}, remove() {} },
   }
+  let text = ''
+  Object.defineProperty(e, 'textContent', {
+    get: () => text,
+    set: (v: string) => {
+      text = v
+      if (v === '') e.children.length = 0
+    },
+  })
   return e
 }
 
@@ -77,6 +85,7 @@ function run(config: unknown) {
       head,
       body,
       createElement: (tag: string) => el(tag),
+      createElementNS: (_ns: string, tag: string) => el(tag),
       getElementsByTagName: () => [script],
       addEventListener: () => {},
     },
@@ -98,9 +107,14 @@ function run(config: unknown) {
     bubble,
     css: () => head.children.map((c) => c.textContent).join(''),
     click: () => bubble()?.listeners.click?.(),
-    logoImage: () => bubble()?.children[bubble()!.children.length - 1],
+    logoImage: () => bubble()?.children.find((c) => c.tag === 'img'),
+    icon: () => bubble()?.children.find((c) => c.tag === 'svg'),
   }
 }
+
+const CHAT_PATH = 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z'
+const CLOSE_PATH = 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'
+const pathOf = (svg?: El) => svg?.children.find((c) => c.tag === 'path')?.attrs.d
 
 const withLogo = (logoPath: unknown) => ({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoPath } })
 const ready = async (w: ReturnType<typeof run>) => {
@@ -131,14 +145,17 @@ describe('widget.js: the launcher bubble and a workspace logo', () => {
   it('never puts the address into markup text', async () => {
     const w = run(withLogo(LOGO_PATH))
     await ready(w)
-    expect(w.bubble()?.innerHTML).not.toContain('/api/widget/logo')
+    expect(w.icon()).toBeUndefined()
+    expect(w.bubble()?.children.map((c) => c.tag)).toEqual(['img'])
+    expect(JSON.stringify(w.bubble()?.attrs)).not.toContain('/api/widget/logo')
   })
 
   it('shows the normal chat icon when the workspace has no logo', async () => {
     const w = run(withLogo(null))
     await ready(w)
-    expect(w.bubble()?.children).toHaveLength(0)
-    expect(w.bubble()?.innerHTML).toContain('<svg')
+    expect(w.logoImage()).toBeUndefined()
+    expect(w.icon()?.tag).toBe('svg')
+    expect(pathOf(w.icon())).toBe(CHAT_PATH)
   })
 
   it.each([
@@ -155,27 +172,29 @@ describe('widget.js: the launcher bubble and a workspace logo', () => {
   ])('ignores %s and shows the chat icon', async (_label, value) => {
     const w = run(withLogo(value))
     await ready(w)
-    expect(w.bubble()?.children).toHaveLength(0)
-    expect(w.bubble()?.innerHTML).toContain('<svg')
+    expect(w.logoImage()).toBeUndefined()
+    expect(w.icon()?.tag).toBe('svg')
+    expect(pathOf(w.icon())).toBe(CHAT_PATH)
   })
 
   it('falls back to the chat icon if the image cannot load', async () => {
     const w = run(withLogo(LOGO_PATH))
     await ready(w)
     w.logoImage()?.onerror?.()
-    expect(w.bubble()?.innerHTML).toContain('<svg')
+    expect(w.logoImage()).toBeUndefined()
+    expect(pathOf(w.icon())).toBe(CHAT_PATH)
   })
 
   it('shows the close icon, not the logo, while the chat is open, and the logo again when it closes', async () => {
     const w = run(withLogo(LOGO_PATH))
     await ready(w)
-    const before = w.bubble()?.children.length ?? 0
     w.click() // open
-    expect(w.bubble()?.innerHTML).toContain('<svg')
+    expect(w.logoImage()).toBeUndefined()
+    expect(pathOf(w.icon())).toBe(CLOSE_PATH)
     expect(w.bubble()?.getAttribute('aria-label')).toBe('Close support chat')
     w.click() // close
     expect(w.bubble()?.getAttribute('aria-label')).toBe('Open support chat')
-    expect(w.bubble()?.children.length).toBe(before + 1)
+    expect(w.icon()).toBeUndefined()
     expect(w.logoImage()?.src).toBe(`https://app.test${LOGO_PATH}`)
   })
 
@@ -183,16 +202,15 @@ describe('widget.js: the launcher bubble and a workspace logo', () => {
     const w = run(withLogo(LOGO_PATH))
     await ready(w)
     w.logoImage()?.onerror?.()
-    const count = w.bubble()?.children.length ?? 0
     w.click()
     w.click()
-    expect(w.bubble()?.children.length).toBe(count)
-    expect(w.bubble()?.innerHTML).toContain('<svg')
+    expect(w.logoImage()).toBeUndefined()
+    expect(pathOf(w.icon())).toBe(CHAT_PATH)
   })
 
   it('works with no logo field at all, as an older settings reply would give', async () => {
     const w = run({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff' } })
     await ready(w)
-    expect(w.bubble()?.innerHTML).toContain('<svg')
+    expect(pathOf(w.icon())).toBe(CHAT_PATH)
   })
 })

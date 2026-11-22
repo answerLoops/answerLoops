@@ -56,8 +56,19 @@
     return 'rgba(' + parseInt(hex.slice(1, 3), 16) + ',' + parseInt(hex.slice(3, 5), 16) + ',' + parseInt(hex.slice(5, 7), 16) + ',' + alpha + ')';
   }
 
-  function bubbleIcon(size, path) {
-    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="' + iconColor + '"><path d="' + path + '"/></svg>';
+  // Builds the icon from DOM nodes and replaces whatever the bubble shows.
+  function setBubbleIcon(size, path) {
+    var SVG_NS = 'http://www.w3.org/2000/svg';
+    var svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('width', String(size));
+    svg.setAttribute('height', String(size));
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('fill', iconColor);
+    var shape = document.createElementNS(SVG_NS, 'path');
+    shape.setAttribute('d', path);
+    svg.appendChild(shape);
+    bubble.textContent = '';
+    bubble.appendChild(svg);
   }
 
   var CHAT_ICON_PATH = 'M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z';
@@ -95,7 +106,7 @@
       img.src = logoSrc;
       bubble.appendChild(img);
     } else {
-      bubble.innerHTML = bubbleIcon(24, CHAT_ICON_PATH);
+      setBubbleIcon(24, CHAT_ICON_PATH);
     }
   }
   function createBubble() {
@@ -138,7 +149,7 @@
       if (!iframe || Date.now() - frameLoadedAt > FRAME_MAX_AGE_MS) loadFrame();
       panel.classList.add('cp-open');
       bubble.setAttribute('aria-label', 'Close support chat');
-      bubble.innerHTML = bubbleIcon(20, CLOSE_ICON_PATH);
+      setBubbleIcon(20, CLOSE_ICON_PATH);
     } else {
       panel.classList.remove('cp-open');
       bubble.setAttribute('aria-label', 'Open support chat');

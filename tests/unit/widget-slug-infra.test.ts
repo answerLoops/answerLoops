@@ -187,6 +187,7 @@ describe('public/widget.js: using the resolved token', () => {
   const RESOLVED = 'd4'.repeat(24)
 
   interface El {
+    tag: string
     id: string
     src: string
     textContent: string
@@ -195,8 +196,9 @@ describe('public/widget.js: using the resolved token', () => {
     listeners: Record<string, () => void>
     [k: string]: unknown
   }
-  const el = (): El => {
+  const el = (tag = ''): El => {
     const e: El = {
+      tag,
       id: '',
       src: '',
       textContent: '',
@@ -217,6 +219,14 @@ describe('public/widget.js: using the resolved token', () => {
       },
       classList: { add() {}, remove() {} },
     }
+    let text = ''
+    Object.defineProperty(e, 'textContent', {
+      get: () => text,
+      set: (v: string) => {
+        text = v
+        if (v === '') e.children.length = 0
+      },
+    })
     return e
   }
 
@@ -232,7 +242,8 @@ describe('public/widget.js: using the resolved token', () => {
         readyState: 'complete',
         head,
         body,
-        createElement: () => el(),
+        createElement: (tag: string) => el(tag),
+        createElementNS: (_ns: string, tag: string) => el(tag),
         getElementsByTagName: () => [script],
         addEventListener: () => {},
       },
