@@ -72,6 +72,17 @@
   var iframe = null;
   var frameLoadedAt = 0;
 
+  // Rebuilds a color that already passed the #rrggbb check from its three
+  // numeric channels, so what reaches the page is made only of digits and
+  // hex letters this script generated, never the server's text itself.
+  function cleanHex(hex) {
+    function channel(start) {
+      var value = parseInt(hex.slice(start, start + 2), 16);
+      return (value < 16 ? '0' : '') + value.toString(16);
+    }
+    return '#' + channel(1) + channel(3) + channel(5);
+  }
+
   // The bubble's shadows are built from its own color so they follow it. Only
   // called with a value that already passed the #rrggbb check.
   function rgba(hex, alpha) {
@@ -193,10 +204,10 @@
       // Checked here as well as on the server: the value ends up inside a
       // stylesheet, so only a plain #rrggbb is ever allowed through.
       if (typeof display.bubbleColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(display.bubbleColor)) {
-        bubbleColor = display.bubbleColor;
+        bubbleColor = cleanHex(display.bubbleColor);
       }
       if (typeof display.bubbleIconColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(display.bubbleIconColor)) {
-        iconColor = display.bubbleIconColor;
+        iconColor = cleanHex(display.bubbleIconColor);
       }
       if (typeof display.logoVersion === 'number' && isFinite(display.logoVersion) && display.logoVersion >= 0) {
         logoVersion = Math.floor(display.logoVersion);
