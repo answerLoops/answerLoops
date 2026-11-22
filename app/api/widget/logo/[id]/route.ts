@@ -5,7 +5,7 @@ import { rateLimitShared } from '@/lib/ratelimit'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
 import { WIDGET_TOKEN_PATTERN, isWidgetSlug } from '@/lib/widget/slug'
-import { WIDGET_LOGO_VERSION_PATTERN } from '@/lib/widget/logo'
+import { logoVersionMatches } from '@/lib/widget/logo'
 import { logger } from '@/lib/logger'
 
 const MOD = 'api/widget/logo'
@@ -71,7 +71,7 @@ export async function GET(request: Request, ctx: { params: Promise<{ id: string 
     if (!logo) return notFound()
 
     const requested = new URL(request.url).searchParams.get('v')
-    const versioned = requested !== null && WIDGET_LOGO_VERSION_PATTERN.test(requested) && requested === logo.etag
+    const versioned = logoVersionMatches(requested, logo.etag)
     const headers: Record<string, string> = {
       'Content-Type': logo.contentType,
       'X-Content-Type-Options': 'nosniff',

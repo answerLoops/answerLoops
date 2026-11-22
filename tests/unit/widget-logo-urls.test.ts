@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isWidgetLogoPath, widgetLogoPath } from '@/lib/widget/logo'
+import { logoVersionMatches, widgetLogoPath, widgetLogoVersionNumber } from '@/lib/widget/logo'
 
 const TOKEN = 'c3'.repeat(24)
 const VERSION = '0123456789abcdef'
@@ -8,33 +8,41 @@ describe('the logo address', () => {
   it('is the widget token and the version, on this site', () => {
     expect(widgetLogoPath(TOKEN, VERSION)).toBe(`/api/widget/logo/${TOKEN}?v=${VERSION}`)
   })
+})
 
-  it('is recognised by the check', () => {
-    expect(isWidgetLogoPath(widgetLogoPath(TOKEN, VERSION))).toBe(true)
+describe('the logo version number', () => {
+  it('is the first ten hex characters of the fingerprint, as a whole number', () => {
+    expect(widgetLogoVersionNumber('0123456789abcdef')).toBe(parseInt('0123456789', 16))
+    expect(widgetLogoVersionNumber('ffffffffffffffff')).toBe(0xffffffffff)
   })
 
-  it.each([
-    ['another host', `https://evil.test/api/widget/logo/${TOKEN}?v=${VERSION}`],
-    ['a protocol-relative address', `//evil.test/api/widget/logo/${TOKEN}?v=${VERSION}`],
-    ['a different path', `/api/other/${TOKEN}?v=${VERSION}`],
-    ['a javascript address', 'javascript:alert(1)'],
-    ['a data address', 'data:image/png;base64,AAAA'],
-    ['a slug instead of the token', `/api/widget/logo/acme-support?v=${VERSION}`],
-    ['a short token', `/api/widget/logo/${'c3'.repeat(10)}?v=${VERSION}`],
-    ['capital letters', `/api/widget/logo/${TOKEN.toUpperCase()}?v=${VERSION}`],
-    ['a missing version', `/api/widget/logo/${TOKEN}`],
-    ['a short version', `/api/widget/logo/${TOKEN}?v=abc`],
-    ['an extra query', `/api/widget/logo/${TOKEN}?v=${VERSION}&x=1`],
-    ['a trailing path', `/api/widget/logo/${TOKEN}/extra?v=${VERSION}`],
-    ['a quote that could end an attribute', `/api/widget/logo/${TOKEN}?v=${VERSION}"`],
-    ['a newline', `/api/widget/logo/${TOKEN}?v=${VERSION}\n`],
-    ['a space', ` /api/widget/logo/${TOKEN}?v=${VERSION}`],
-    ['nothing', ''],
-  ])('rejects %s', (_label, value) => {
-    expect(isWidgetLogoPath(value)).toBe(false)
+  it('is a safe integer', () => {
+    expect(Number.isSafeInteger(widgetLogoVersionNumber('ffffffffffffffff'))).toBe(true)
   })
 
-  it('rejects anything that is not a string', () => {
-    for (const value of [null, undefined, 42, {}, []]) expect(isWidgetLogoPath(value)).toBe(false)
+  it('changes when the image fingerprint changes', () => {
+    expect(widgetLogoVersionNumber('0123456789abcdef')).not.toBe(widgetLogoVersionNumber('1123456789abcdef'))
   })
+
+  it('is null for anything that is not a fingerprint', () => {
+    for (const value of ['', 'abc', 'XYZ3456789abcdef', '0123456789abcdef0']) {
+      expect(widgetLogoVersionNumber(value)).toBeNull()
+    }
+  })
+})
+
+describe('matching a requested version', () => {
+  const NUMBER = String(parseInt(VERSION.slice(0, 10), 16))
+
+  it('accepts the fingerprint and its number form', () => {
+    expect(logoVersionMatches(VERSION, VERSION)).toBe(true)
+    expect(logoVersionMatches(NUMBER, VERSION)).toBe(true)
+  })
+
+  it.each([null, '', 'abc', '1', `${NUMBER}0`, 'fedcba9876543210', '12345678901234567890', `${NUMBER}&x=1`])(
+    'rejects %s',
+    (value) => {
+      expect(logoVersionMatches(value, VERSION)).toBe(false)
+    }
+  )
 })

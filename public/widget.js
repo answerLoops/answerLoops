@@ -29,11 +29,11 @@
   var PANEL_H = SIZES.small[1];
   var bubbleColor = DEFAULT_COLOR;
   var iconColor = DEFAULT_ICON_COLOR;
-  // The workspace's own logo, when it has one: an address on this chat's own site
-  // (checked against one exact shape below), shown inside a white circle on the
-  // bubble. If the image cannot load, the normal chat icon is used instead.
-  var LOGO_PATH_PATTERN = /^\/api\/widget\/logo\/[0-9a-f]{48}\?v=[0-9a-f]{16}$/;
-  var logoSrc = null;
+  // The workspace's own logo, when it has one: the lookup gives a version number
+  // and the address is built from this script's own base address, the widget
+  // token and that number. It is shown inside a white circle on the bubble. If
+  // the image cannot load, the normal chat icon is used instead.
+  var logoVersion = null;
   var logoFailed = false;
   // The token the chat panel is loaded with. Equal to data-widget-id for a
   // token snippet; for a slug snippet it is whatever the lookup resolves to.
@@ -93,7 +93,7 @@
   // The closed bubble shows the workspace's logo in a white circle when there is
   // one and it loads, otherwise the chat icon.
   function showClosedBubble() {
-    if (logoSrc && !logoFailed) {
+    if (logoVersion !== null && !logoFailed && TOKEN_PATTERN.test(panelToken)) {
       bubble.textContent = '';
       var img = document.createElement('img');
       img.className = 'cp-logo';
@@ -103,7 +103,7 @@
         logoFailed = true;
         if (!isOpen) showClosedBubble();
       };
-      img.src = logoSrc;
+      img.src = baseUrl + '/api/widget/logo/' + panelToken + '?v=' + String(logoVersion);
       bubble.appendChild(img);
     } else {
       setBubbleIcon(24, CHAT_ICON_PATH);
@@ -176,8 +176,8 @@
       if (typeof display.bubbleIconColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(display.bubbleIconColor)) {
         iconColor = display.bubbleIconColor;
       }
-      if (typeof display.logoPath === 'string' && LOGO_PATH_PATTERN.test(display.logoPath)) {
-        logoSrc = baseUrl + display.logoPath;
+      if (typeof display.logoVersion === 'number' && isFinite(display.logoVersion) && display.logoVersion >= 0) {
+        logoVersion = Math.floor(display.logoVersion);
       }
     }
   }

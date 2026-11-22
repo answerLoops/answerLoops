@@ -5,7 +5,6 @@
 // Which values a business actually gets is decided here, on the server, from
 // their plan. The install snippet cannot ask for more than the plan includes.
 
-import { isWidgetLogoPath } from '@/lib/widget/logo'
 import {
   DEFAULT_WIDGET_BRAND_COLOR,
   ON_BRAND_LIGHT,
@@ -22,8 +21,8 @@ export interface WidgetDisplaySettings {
   bubbleColor: string
   /** `#rrggbb`: the icon on the bubble, white or near-black, whichever reads better on `bubbleColor`. */
   bubbleIconColor: string
-  /** The path of the workspace's logo, or null for the normal chat icon. Only ever one of our own logo addresses. */
-  logoPath: string | null
+  /** The workspace logo's version, a whole number that changes when the image does, or null for the normal chat icon. */
+  logoVersion: number | null
 }
 
 // Today's look. A business that has chosen nothing gets exactly this, so an
@@ -32,7 +31,7 @@ export const DEFAULT_WIDGET_DISPLAY: WidgetDisplaySettings = {
   windowSize: 'small',
   bubbleColor: DEFAULT_WIDGET_BRAND_COLOR,
   bubbleIconColor: ON_BRAND_LIGHT,
-  logoPath: null,
+  logoVersion: null,
 }
 
 export function isWidgetWindowSize(value: unknown): value is WidgetWindowSize {
@@ -46,8 +45,8 @@ export function isWidgetBubbleColor(value: unknown): value is string {
 export interface StoredWidgetDisplay {
   windowSize?: string | null
   bubbleColor?: string | null
-  /** The workspace's logo address, when it has a logo. */
-  logoPath?: string | null
+  /** The workspace's logo version, when it has a logo. */
+  logoVersion?: number | null
 }
 
 export interface DisplayPlanLimits {
@@ -73,6 +72,9 @@ export function resolveWidgetDisplay(
       : DEFAULT_WIDGET_DISPLAY.windowSize,
     bubbleColor,
     bubbleIconColor: readableTextColor(bubbleColor),
-    logoPath: isWidgetLogoPath(stored.logoPath) ? stored.logoPath : null,
+    logoVersion:
+      typeof stored.logoVersion === 'number' && Number.isSafeInteger(stored.logoVersion) && stored.logoVersion >= 0
+        ? stored.logoVersion
+        : null,
   }
 }

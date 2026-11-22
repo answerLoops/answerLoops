@@ -34,7 +34,7 @@ vi.mock('@/lib/logger', () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: 
 
 const TOKEN = 'a1'.repeat(24)
 const NEXT_TOKEN = 'b2'.repeat(24)
-const DEFAULTS = { windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoPath: null }
+const DEFAULTS = { windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoVersion: null }
 
 const org = (token: string, brandColor: string | null = null) => ({
   id: 7,
@@ -111,7 +111,7 @@ describe('GET /api/widget/config: what leaves the server', () => {
   it('returns only the token and display settings, nothing about the workspace', async () => {
     const body = await (await call('acme-support')).json()
     expect(Object.keys(body).sort()).toEqual(['display', 'token'])
-    expect(Object.keys(body.display).sort()).toEqual(['bubbleColor', 'bubbleIconColor', 'logoPath', 'windowSize'])
+    expect(Object.keys(body.display).sort()).toEqual(['bubbleColor', 'bubbleIconColor', 'logoVersion', 'windowSize'])
     const raw = JSON.stringify(body)
     expect(raw).not.toContain('Acme')
     expect(raw).not.toContain('acme.test')
@@ -208,29 +208,58 @@ describe('GET /api/widget/config: the logo', () => {
     return { res, body: (await res.json()) as { display: Record<string, unknown> } }
   }
 
-  it('hands the launcher the logo\'s address when the workspace has one on a customization plan', async () => {
+  const NUMBER = parseInt(VERSION.slice(0, 10), 16)
+
+  it('hands the launcher the logo\'s version number when the workspace has one on a customization plan', async () => {
     h.getWidgetLogoVersion.mockResolvedValue({ etag: VERSION })
     const { body } = await lookup(TOKEN)
     expect(h.getWidgetLogoVersion).toHaveBeenCalledWith(7)
-    expect(body.display.logoPath).toBe(`/api/widget/logo/${TOKEN}?v=${VERSION}`)
+    expect(body.display.logoVersion).toBe(NUMBER)
+    expect(typeof body.display.logoVersion).toBe('number')
   })
 
-  it('builds the address from the token the workspace has now, so a slug snippet gets the current one', async () => {
+  it('gives the same number for a slug snippet, whose token the lookup resolves separately', async () => {
     h.getWidgetLogoVersion.mockResolvedValue({ etag: VERSION })
     const { body } = await lookup('acme-support')
-    expect(body.display.logoPath).toBe(`/api/widget/logo/${NEXT_TOKEN}?v=${VERSION}`)
+    expect(body.display.logoVersion).toBe(NUMBER)
+    expect((body as unknown as { token: string }).token).toBe(NEXT_TOKEN)
+  })
+
+  it('gives a different number when the image changes', async () => {
+    h.getWidgetLogoVersion.mockResolvedValue({ etag: VERSION })
+    const first = (await lookup(TOKEN)).body.display.logoVersion
+    h.getWidgetLogoVersion.mockResolvedValue({ etag: 'fedcba9876543210' })
+    const second = (await lookup(TOKEN)).body.display.logoVersion
+    expect(second).not.toBe(first)
+  })
+
+  it('never returns a path or address for the logo, only a number or null', async () => {
+    for (const [feature, logo] of [
+      [true, { etag: VERSION }],
+      [true, null],
+      [false, { etag: VERSION }],
+    ] as const) {
+      h.orgHasFeature.mockResolvedValue(feature)
+      h.getWidgetLogoVersion.mockResolvedValue(logo)
+      const res = await call(TOKEN)
+      const raw = await res.text()
+      const { display } = JSON.parse(raw) as { display: Record<string, unknown> }
+      expect(display.logoVersion === null || typeof display.logoVersion === 'number').toBe(true)
+      expect(Object.keys(display)).not.toContain('logoPath')
+      expect(raw).not.toContain('/api/widget/logo')
+    }
   })
 
   it('gives none when the workspace has no logo', async () => {
     const { body } = await lookup(TOKEN)
-    expect(body.display.logoPath).toBeNull()
+    expect(body.display.logoVersion).toBeNull()
   })
 
   it('gives none on a plan without customization, and does not even look for one', async () => {
     h.orgHasFeature.mockResolvedValue(false)
     h.getWidgetLogoVersion.mockResolvedValue({ etag: VERSION })
     const { body } = await lookup(TOKEN)
-    expect(body.display.logoPath).toBeNull()
+    expect(body.display.logoVersion).toBeNull()
     expect(h.getWidgetLogoVersion).not.toHaveBeenCalled()
   })
 

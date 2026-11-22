@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { getOrgByWidgetSlug, getOrgByWidgetToken, type WidgetOrg } from '@/lib/db/queries/widgets'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { getWidgetLogoVersion } from '@/lib/db/queries/widget-logos'
-import { widgetLogoPath } from '@/lib/widget/logo'
+import { widgetLogoVersionNumber } from '@/lib/widget/logo'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
@@ -100,7 +100,7 @@ export async function GET(request: Request): Promise<Response> {
         display: resolveWidgetDisplay(
           {
             bubbleColor: org.widget_appearance.brandColor,
-            logoPath: logo && org.widget_token ? widgetLogoPath(org.widget_token, logo.etag) : null,
+            logoVersion: logo && org.widget_token ? widgetLogoVersionNumber(logo.etag) : null,
           },
           { customization }
         ),

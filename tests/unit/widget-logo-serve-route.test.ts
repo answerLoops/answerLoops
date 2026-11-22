@@ -65,6 +65,16 @@ describe('serving the logo', () => {
     expect(h.getWidgetLogo).toHaveBeenCalledWith(8)
   })
 
+  it('treats the version number form of the current version like the fingerprint', async () => {
+    const number = String(parseInt(ETAG.slice(0, 10), 16))
+    const numeric = (await get(TOKEN, `?v=${number}`)).headers.get('cache-control') ?? ''
+    const plain = (await get(TOKEN)).headers.get('cache-control') ?? ''
+    expect(numeric).toContain('max-age=3600')
+    expect(numeric).not.toBe(plain)
+    expect((await get(TOKEN, '?v=1')).headers.get('cache-control')).toBe(plain)
+    expect((await get(TOKEN, `?v=${number}9999999`)).headers.get('cache-control')).toBe(plain)
+  })
+
   it('keeps a request for the current version for longer than one without', async () => {
     const versioned = (await get(TOKEN, `?v=${ETAG}`)).headers.get('cache-control') ?? ''
     const plain = (await get(TOKEN)).headers.get('cache-control') ?? ''

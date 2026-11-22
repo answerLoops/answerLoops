@@ -152,7 +152,7 @@ describe('GET /api/widget/config: slug routing and rate-limit key', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.token).toBeNull()
-    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoPath: null })
+    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoVersion: null })
     expect(h.orgHasFeature).not.toHaveBeenCalled()
   })
 
