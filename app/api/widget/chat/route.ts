@@ -10,6 +10,7 @@ import { chatModel, DEFAULT_FAST_MODEL, NoAIProviderConfiguredError } from '@/li
 import { embedQueryCached } from '@/lib/widget/embed-cache'
 import { buildGenuiTools } from '@/lib/widget/genui-tools'
 import { followUpsAvailable, groundFollowUps } from '@/lib/widget/follow-ups'
+import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { flattenMastraStream } from '@/lib/widget/mastra-stream'
 import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 import { getKBContext } from '@/lib/db/queries/kb'
@@ -426,10 +427,14 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   }
   const { org, widgetToken, turnId, model, query, visitorId, reservationId } = run
 
-  // Checked alongside retrieval so the plan lookup adds no waiting of its own.
-  const [allContext, followUps] = await Promise.all([
+  // Checked alongside retrieval so the plan lookups add no waiting of their own.
+  // Whether visitors can flag this workspace's answers is the same plan check the
+  // panel page makes (app/widget/[widgetToken]/page.tsx); a lookup that fails
+  // counts as no, so the answer itself is never held up by it.
+  const [allContext, followUps, flagsAvailable] = await Promise.all([
     run.context ?? retrieveContext(query, org.id),
     followUpsAvailable({ id: org.id, followUpsEnabled: org.widget_appearance?.followUpsEnabled !== false }),
+    orgHasFeature(org.id, 'kb_review_queue').catch(() => false),
   ])
   const contextBlock = allContext.length
     ? `\n\nKnowledge base context — use this to answer. ${REFERENCE_MATERIAL_NOTICE}\n${renderReferenceBlock(
@@ -509,13 +514,18 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
       // The recorded answer this turn produced, with the question and reply,
       // held for the same short window so the widget can ask for a signed
       // reference to it and let the visitor flag it (app/api/widget/lead-signal,
-      // app/api/widget/flag). Nothing is kept past that window for an answer
+      // app/api/widget/flag). Written here, synchronously and before the awaited
+      // work below, for the same reason as the signal above: the widget's lookup
+      // arrives as soon as the stream closes. Only for a workspace whose plan
+      // lets visitors flag, and nothing is kept past that window for an answer
       // nobody flags.
-      setTurnAnswer(widgetToken, visitorId, turnId, {
-        answerId,
-        question: query,
-        answer: typeof event?.text === 'string' ? event.text : '',
-      })
+      if (flagsAvailable) {
+        setTurnAnswer(widgetToken, visitorId, turnId, {
+          answerId,
+          question: query,
+          answer: typeof event?.text === 'string' ? event.text : '',
+        })
+      }
 
       await commitDeflection(org.id, reservationId).catch((e) => {
         logger.error('widget chat commitDeflection failed', { module: MOD, orgId: org.id, error: e })
