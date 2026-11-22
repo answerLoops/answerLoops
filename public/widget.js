@@ -136,7 +136,7 @@
         logoFailed = true;
         if (!isOpen) showClosedBubble();
       };
-      img.src = baseUrl + '/api/widget/logo/' + panelToken + '?v=' + String(logoVersion);
+      img.src = baseUrl + '/api/widget/logo/' + encodeURIComponent(panelToken) + '?v=' + encodeURIComponent(String(logoVersion));
       bubble.appendChild(img);
     } else {
       setBubbleIcon(24, CHAT_ICON_PATH);
