@@ -118,6 +118,16 @@ export function serializeStarterEnabled(enabled: boolean): boolean | null {
   return enabled ? null : false
 }
 
+/**
+ * Whether suggested follow-up questions are switched on. On by default: a missing
+ * or unreadable value, and anything other than an explicit off, leaves them on.
+ * Same reading as the starter questions switch.
+ */
+export const readFollowUpsEnabled = readStarterEnabled
+
+/** The value stored in the column: false when switched off, null (the default, on) otherwise. */
+export const serializeFollowUpsEnabled = serializeStarterEnabled
+
 /** The text stored in the column: one question per line, or null for none. */
 export function serializeStarterQuestions(questions: string[]): string | null {
   return questions.length > 0 ? questions.join('\n') : null
@@ -293,6 +303,8 @@ export interface WidgetAppearance {
   starterQuestions: string[]
   /** Whether the starter questions are shown. On by default; off keeps the questions saved. */
   starterEnabled: boolean
+  /** Whether the assistant may suggest follow-up questions after an answer. On by default. */
+  followUpsEnabled: boolean
 }
 
 export const EMPTY_WIDGET_APPEARANCE: WidgetAppearance = {
@@ -301,6 +313,7 @@ export const EMPTY_WIDGET_APPEARANCE: WidgetAppearance = {
   brandColor: null,
   starterQuestions: [],
   starterEnabled: true,
+  followUpsEnabled: true,
 }
 
 /**
@@ -314,6 +327,7 @@ export function readWidgetAppearance(stored: {
   brandColor?: unknown
   starterQuestions?: unknown
   starterEnabled?: unknown
+  followUpsEnabled?: unknown
 }): WidgetAppearance {
   const title = normalizeWidgetTitle(stored.title)
   const welcome = normalizeWidgetWelcome(stored.welcome)
@@ -324,5 +338,6 @@ export function readWidgetAppearance(stored: {
     brandColor: color.ok ? color.value : null,
     starterQuestions: readStarterQuestions(stored.starterQuestions),
     starterEnabled: readStarterEnabled(stored.starterEnabled),
+    followUpsEnabled: readFollowUpsEnabled(stored.followUpsEnabled),
   }
 }

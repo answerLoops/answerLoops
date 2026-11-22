@@ -27,7 +27,7 @@ vi.mock('next/link', () => ({
   ),
 }))
 
-const NONE = { title: null, welcome: null, brandColor: null, starterQuestions: [] as string[], starterEnabled: true }
+const NONE = { title: null, welcome: null, brandColor: null, starterQuestions: [] as string[], starterEnabled: true, followUpsEnabled: true }
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -37,6 +37,7 @@ const title = () => screen.getByLabelText('Chat title') as HTMLInputElement
 const welcome = () => screen.getByLabelText('Welcome message') as HTMLTextAreaElement
 const starters = () => screen.getByLabelText('Starter questions') as HTMLTextAreaElement
 const toggle = () => screen.getByRole('switch', { name: /show starter questions/i }) as HTMLInputElement
+const followUps = () => screen.getByRole('switch', { name: /suggest follow-up questions/i }) as HTMLInputElement
 const colorText = () => screen.getByLabelText('Brand color') as HTMLInputElement
 const colorPicker = () => screen.getByLabelText('Pick a brand color') as HTMLInputElement
 const save = () => screen.getByRole('button', { name: /save appearance|saving/i }) as HTMLButtonElement
@@ -49,7 +50,7 @@ describe('the color preview', () => {
       <WidgetAppearanceSettings
         canManage
         customizationAvailable
-        initialAppearance={{ title: null, welcome: null, brandColor: '#0f7f93', starterQuestions: [], starterEnabled: true }}
+        initialAppearance={{ title: null, welcome: null, brandColor: '#0f7f93', starterQuestions: [], starterEnabled: true, followUpsEnabled: true }}
       />
     )
     expect(screen.getByText('Preview')).toBeTruthy()
@@ -67,7 +68,7 @@ describe('a Pro or above owner or admin', () => {
       <WidgetAppearanceSettings
         canManage
         customizationAvailable
-        initialAppearance={{ title: 'Acme Help', welcome: 'Hello there', brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true }}
+        initialAppearance={{ title: 'Acme Help', welcome: 'Hello there', brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true, followUpsEnabled: true }}
       />
     )
     expect(title().value).toBe('Acme Help')
@@ -90,7 +91,7 @@ describe('a Pro or above owner or admin', () => {
 
   it('keeps Save off until something changes, then sends the form and shows what was stored', async () => {
     h.saveWidgetAppearanceAction.mockResolvedValue({
-      appearance: { title: 'Acme Help', welcome: null, brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true },
+      appearance: { title: 'Acme Help', welcome: null, brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true, followUpsEnabled: true },
     })
     render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
     expect(save().disabled).toBe(true)
@@ -161,7 +162,7 @@ describe('a Pro or above owner or admin', () => {
       <WidgetAppearanceSettings
         canManage
         customizationAvailable
-        initialAppearance={{ title: 'Acme Help', welcome: 'Hello', brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true }}
+        initialAppearance={{ title: 'Acme Help', welcome: 'Hello', brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true, followUpsEnabled: true }}
       />
     )
     await userEvent.click(reset())
@@ -299,7 +300,7 @@ describe('the starter questions switch', () => {
       <WidgetAppearanceSettings
         canManage
         customizationAvailable
-        initialAppearance={{ ...NONE, starterQuestions: QS, starterEnabled: false }}
+        initialAppearance={{ ...NONE, starterQuestions: QS, starterEnabled: false, followUpsEnabled: true }}
       />
     )
     expect(toggle().checked).toBe(false)
@@ -311,13 +312,13 @@ describe('the starter questions switch', () => {
 
   it('turns Save on when flipped, sends the choice with the form, and shows what was stored', async () => {
     h.saveWidgetAppearanceAction.mockResolvedValue({
-      appearance: { ...NONE, starterQuestions: QS, starterEnabled: false },
+      appearance: { ...NONE, starterQuestions: QS, starterEnabled: false, followUpsEnabled: true },
     })
     render(
       <WidgetAppearanceSettings
         canManage
         customizationAvailable
-        initialAppearance={{ ...NONE, starterQuestions: QS, starterEnabled: true }}
+        initialAppearance={{ ...NONE, starterQuestions: QS, starterEnabled: true, followUpsEnabled: true }}
       />
     )
     expect(save().disabled).toBe(true)
@@ -348,7 +349,7 @@ describe('the starter questions switch', () => {
       <WidgetAppearanceSettings
         canManage
         customizationAvailable
-        initialAppearance={{ ...NONE, starterQuestions: QS, starterEnabled: false }}
+        initialAppearance={{ ...NONE, starterQuestions: QS, starterEnabled: false, followUpsEnabled: true }}
       />
     )
     expect(reset().disabled).toBe(false)
@@ -362,7 +363,7 @@ describe('the starter questions switch', () => {
       <WidgetAppearanceSettings
         canManage
         customizationAvailable
-        initialAppearance={{ ...NONE, starterEnabled: false }}
+        initialAppearance={{ ...NONE, starterEnabled: false, followUpsEnabled: true }}
       />
     )
     expect(reset().disabled).toBe(false)
@@ -376,6 +377,69 @@ describe('the starter questions switch', () => {
     unmount()
     render(<WidgetAppearanceSettings canManage={false} customizationAvailable initialAppearance={NONE} />)
     expect(toggle().disabled).toBe(true)
+  })
+})
+
+describe('the follow-up suggestions switch', () => {
+  it('is on by default, labelled, and a comfortable size to tap', () => {
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    expect(followUps().checked).toBe(true)
+    expect(followUps().getAttribute('aria-checked')).toBe('true')
+    expect(followUps().closest('label')?.className).toMatch(/min-h-11/)
+    expect(screen.getByText(/questions the visitor might ask next, taken from your knowledge base/i)).toBeTruthy()
+  })
+
+  it('turns Save on when flipped, sends the choice with the form, and shows what was stored', async () => {
+    h.saveWidgetAppearanceAction.mockResolvedValue({ appearance: { ...NONE, followUpsEnabled: false } })
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    expect(save().disabled).toBe(true)
+    await userEvent.click(followUps())
+    expect(followUps().checked).toBe(false)
+    expect(followUps().getAttribute('aria-checked')).toBe('false')
+    expect(save().disabled).toBe(false)
+    await userEvent.click(save())
+    await waitFor(() => expect(screen.getByRole('status').textContent).toMatch(/within about a minute/))
+    expect((h.saveWidgetAppearanceAction.mock.calls[0][1] as FormData).get('followUpsEnabled')).toBe('false')
+    expect(followUps().checked).toBe(false)
+    expect(save().disabled).toBe(true)
+  })
+
+  it('sends "true" when on', async () => {
+    h.saveWidgetAppearanceAction.mockResolvedValue({ appearance: { ...NONE, title: 'Acme' } })
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    await userEvent.type(title(), 'Acme')
+    await userEvent.click(save())
+    await waitFor(() => expect(h.saveWidgetAppearanceAction).toHaveBeenCalled())
+    expect((h.saveWidgetAppearanceAction.mock.calls[0][1] as FormData).get('followUpsEnabled')).toBe('true')
+  })
+
+  it('is independent of the starter questions switch', async () => {
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={NONE} />)
+    await userEvent.click(followUps())
+    expect(toggle().checked).toBe(true)
+    await userEvent.click(toggle())
+    expect(followUps().checked).toBe(false)
+  })
+
+  it('is back on after Reset to default', async () => {
+    h.resetWidgetAppearanceAction.mockResolvedValue({ appearance: NONE })
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={{ ...NONE, followUpsEnabled: false }} />)
+    expect(reset().disabled).toBe(false)
+    await userEvent.click(reset())
+    await waitFor(() => expect(followUps().checked).toBe(true))
+  })
+
+  it('counts as something to reset when it is the only thing switched off', () => {
+    render(<WidgetAppearanceSettings canManage customizationAvailable initialAppearance={{ ...NONE, followUpsEnabled: false }} />)
+    expect(reset().disabled).toBe(false)
+  })
+
+  it('is locked on a plan without customization and for a member', () => {
+    const { unmount } = render(<WidgetAppearanceSettings canManage customizationAvailable={false} initialAppearance={NONE} />)
+    expect(followUps().disabled).toBe(true)
+    unmount()
+    render(<WidgetAppearanceSettings canManage={false} customizationAvailable initialAppearance={NONE} />)
+    expect(followUps().disabled).toBe(true)
   })
 })
 
@@ -401,7 +465,7 @@ describe('a member who is not an owner or admin', () => {
       <WidgetAppearanceSettings
         canManage={false}
         customizationAvailable
-        initialAppearance={{ title: 'Acme Help', welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true }}
+        initialAppearance={{ title: 'Acme Help', welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true, followUpsEnabled: true }}
       />
     )
     expect(screen.getByText(/only owners and admins can change this/i)).toBeTruthy()

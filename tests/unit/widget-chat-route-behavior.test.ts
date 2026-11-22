@@ -18,6 +18,7 @@ const h = vi.hoisted(() => ({
   commitDeflection: vi.fn(async () => {}),
   rateLimitShared: vi.fn(),
   getOrgByWidgetToken: vi.fn(),
+  orgHasFeature: vi.fn(),
   chatModel: vi.fn(),
   embedText: vi.fn(),
   getKBContext: vi.fn(),
@@ -36,6 +37,7 @@ vi.mock('@/lib/billing/usage', () => ({
 }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/db/queries/widgets', () => ({ getOrgByWidgetToken: h.getOrgByWidgetToken }))
+vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
 vi.mock('@/lib/ai/models', () => ({
   chatModel: h.chatModel,
   DEFAULT_FAST_MODEL: 'fake-model',
@@ -90,6 +92,8 @@ beforeEach(async () => {
   clearEmbedQueryCache()
   h.rateLimitShared.mockResolvedValue({ ok: true })
   h.getOrgByWidgetToken.mockResolvedValue({ id: 77, name: 'Acme', widget_token: VALID_TOKEN })
+  // Follow-up suggestions are a Pro feature: off unless a test turns the plan on.
+  h.orgHasFeature.mockResolvedValue(false)
   h.reserveGeneration.mockResolvedValue({ granted: true, generationId: 9 })
   h.chatModel.mockResolvedValue({ id: 'fake-model' })
   h.embedText.mockResolvedValue([0.1, 0.2])
@@ -166,6 +170,44 @@ describe('widget chat route: genui tools are grounded in the same context block 
     expect(Object.keys(h.agentConfigs[0].tools).sort()).toEqual(
       ['show_callout', 'show_choices', 'show_contact_options', 'show_link_card', 'show_steps'].sort()
     )
+  })
+
+  describe('follow-up suggestions', () => {
+    const FIVE = ['show_callout', 'show_choices', 'show_contact_options', 'show_link_card', 'show_steps']
+
+    it('on a plan that includes them, adds the sixth tool and tells the assistant about it', async () => {
+      h.orgHasFeature.mockResolvedValue(true)
+      const res = await callRoute('follow ups on')
+      await drain(res)
+      const config = h.agentConfigs[0]
+      expect(Object.keys(config.tools).sort()).toEqual([...FIVE, 'show_follow_ups'].sort())
+      expect(config.instructions).toContain('show_follow_ups')
+      expect(h.orgHasFeature).toHaveBeenCalledWith(77, 'white_label_widget')
+    })
+
+    it('without the plan, never registers the tool or mentions it in the instructions', async () => {
+      h.orgHasFeature.mockResolvedValue(false)
+      const res = await callRoute('no plan')
+      await drain(res)
+      const config = h.agentConfigs[0]
+      expect(Object.keys(config.tools)).not.toContain('show_follow_ups')
+      expect(config.instructions).not.toContain('show_follow_ups')
+    })
+
+    it('with the owner switch off, never registers the tool even on the plan', async () => {
+      h.orgHasFeature.mockResolvedValue(true)
+      h.getOrgByWidgetToken.mockResolvedValue({
+        id: 77,
+        name: 'Acme',
+        widget_token: VALID_TOKEN,
+        widget_appearance: { followUpsEnabled: false },
+      })
+      const res = await callRoute('switched off')
+      await drain(res)
+      const config = h.agentConfigs[0]
+      expect(Object.keys(config.tools)).not.toContain('show_follow_ups')
+      expect(config.instructions).not.toContain('show_follow_ups')
+    })
   })
 
   it('allows a URL from the KB context through show_link_card and refuses one that is not', async () => {

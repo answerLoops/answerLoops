@@ -328,7 +328,7 @@ describe('WidgetChat: rich cards', () => {
   it('registers renderers for the whole card catalog and a silent fallback for anything else', async () => {
     await renderWidget(makeFakeAgent())
     expect(new Set(h2.registered)).toEqual(
-      new Set(['show_steps', 'show_choices', 'show_callout', 'show_link_card', 'show_contact_options', '*'])
+      new Set(['show_steps', 'show_choices', 'show_callout', 'show_link_card', 'show_contact_options', 'show_follow_ups', '*'])
     )
   })
 

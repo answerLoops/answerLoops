@@ -11,6 +11,7 @@ import {
   calloutSchema,
   choicesSchema,
   contactSchema,
+  followUpsSchema,
   linkCardSchema,
   parseGenuiResult,
   stepsSchema,
@@ -20,12 +21,14 @@ import {
   CardSkeleton,
   ChoicesCard,
   ContactCard,
+  FollowUpsCard,
   LinkCard,
   StepsCard,
   WidgetActionsProvider,
 } from './genui-cards'
 import { ChatMarkdown } from './chat-markdown'
 import { WelcomeAvatar } from './welcome-avatar'
+import { followUpCallIds, latestFollowUpCallId } from '@/lib/widget/follow-up-thread'
 import {
   isWidgetLeadSignal,
   type WidgetLeadCaptureMode,
@@ -106,6 +109,20 @@ function useGenuiRenderers() {
         if (status !== 'complete') return <CardSkeleton />
         const data = parseGenuiResult(result, choicesSchema)
         return data ? <ChoicesCard data={data} /> : null
+      },
+    },
+    []
+  )
+  useRenderTool(
+    {
+      name: GENUI_TOOL_NAMES.followUps,
+      parameters: followUpsSchema,
+      render: ({ status, result, toolCallId }) => {
+        // No placeholder while it loads: the suggestions are optional, so a
+        // skeleton that then disappears would only be noise.
+        if (status !== 'complete') return null
+        const data = parseGenuiResult(result, followUpsSchema)
+        return data ? <FollowUpsCard data={data} toolCallId={toolCallId} /> : null
       },
     },
     []
@@ -556,7 +573,17 @@ function WidgetChatBody({
     [agent, isLoading, stored, widgetToken, renderToken, visitorId, isSelfPreview]
   )
 
-  const actions = useMemo(() => ({ send: sendMessage, canReply: !isLoading }), [sendMessage, isLoading])
+  // Follow-up suggestions are pressable only under the newest reply, before the
+  // visitor has typed or answered, and never from a conversation restored from
+  // an earlier visit.
+  const restoredFollowUpIds = useMemo(() => followUpCallIds(stored.restored), [stored.restored])
+  const liveFollowUpId = useMemo(() => latestFollowUpCallId(messages), [messages])
+  const activeFollowUpId =
+    !isLoading && input.trim() === '' && liveFollowUpId && !restoredFollowUpIds.has(liveFollowUpId) ? liveFollowUpId : null
+  const actions = useMemo(
+    () => ({ send: sendMessage, canReply: !isLoading, activeFollowUpId }),
+    [sendMessage, isLoading, activeFollowUpId]
+  )
 
   // After a reload caused by a refused call, send the held question once.
   const resentRef = useRef(false)
