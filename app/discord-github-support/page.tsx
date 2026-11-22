@@ -21,8 +21,8 @@ export default async function Page() {
     <IntentPage
       navState={await resolveNavState()}
       eyebrow="Use case"
-      title="Answer support questions in Discord and GitHub"
-      intro="Receive Discord conversations and GitHub Issues or Discussions in one ticket queue. Draft replies from the documentation and knowledge your team maintains."
+      title="Help developers keep moving in Discord and GitHub"
+      intro="Draft answers from your project docs in Discord and GitHub. Follow up on questions from chat, Issues, and Discussions from one queue."
       audience="Maintainers and developer-support teams that handle questions in both community chat and GitHub."
       highlights={[
         {

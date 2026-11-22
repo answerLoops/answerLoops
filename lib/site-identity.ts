@@ -24,7 +24,7 @@ export const siteIdentityJsonLd = {
         url: 'https://answerloops.com/logo.png',
       },
       description:
-        'Open-source support software for preparing and reviewing answers from workspace documentation across connected community channels.',
+        'Open-source community support software that helps teams give members timely answers from their documentation and follow up on questions that need a person.',
       sameAs: [GITHUB_URL],
       contactPoint: {
         '@type': 'ContactPoint',

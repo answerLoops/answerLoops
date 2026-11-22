@@ -117,13 +117,13 @@ export default async function PricingPage({
       />
       <PricingStructuredData />
       <PageHero
-        title="Choose a plan for the number of answers you need"
+        title="Give your community the support it needs"
         compact
       >
         <p>
-          No seats to count and no model account to set up. Every plan
-          includes AI usage that renews each month. Save 20% with annual
-          billing.
+          Start by helping members get answers in the channels they already use.
+          As your community grows, find gaps in your docs and route harder
+          questions to the right people.
         </p>
       </PageHero>
       <section
@@ -182,10 +182,10 @@ export default async function PricingPage({
         className="marketing-section marketing-soft scroll-mt-24"
       >
         <div className="marketing-container">
-          <h2>Compare features and limits</h2>
+          <h2>Find the right plan for your community</h2>
           <p className="marketing-lead">
-            The table shows where the plans differ. Everything listed under
-            it is included in every plan.
+            Compare plans based on how you want to answer questions, improve
+            your docs, and follow up with members.
           </p>
           <PricingComparisonTable />
           <p className="marketing-note">

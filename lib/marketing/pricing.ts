@@ -27,7 +27,7 @@ export const PLAN_COPY: Record<
 > = {
   standard: {
     description:
-      'Answer repeat questions automatically on every channel, from your own docs.',
+      'Give members timely answers in the channels they already use.',
     features: [
       'All support channels and website widget',
       'Knowledge imports and ticket review',
@@ -39,7 +39,7 @@ export const PLAN_COPY: Record<
   },
   pro: {
     description:
-      'Improve answer quality: spot knowledge gaps, test changes, and route hard questions.',
+      'Improve the answers members get and route tougher questions to your team.',
     features: [
       'Everything in Standard',
       'Customer satisfaction ratings',
@@ -52,7 +52,7 @@ export const PLAN_COPY: Record<
   },
   enterprise: {
     description:
-      'For large volumes: local models, unlimited retention, and hands-on migration.',
+      'Support more members with help moving your existing support and configuring the models you need.',
     features: [
       'Everything in Pro',
       'Bring local or custom models, like Ollama or vLLM',

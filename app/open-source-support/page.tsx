@@ -22,8 +22,8 @@ export default async function Page() {
     <IntentPage
       navState={await resolveNavState()}
       eyebrow="Use case"
-      title="Support your project across community channels"
-      intro="Collect questions from Discord, GitHub, forums, and other connected channels. Prepare answers from your project documentation and keep requests that need maintainer judgment in the ticket queue."
+      title="Help contributors get unstuck and stay involved"
+      intro="Answer questions from your project docs in Discord, GitHub, and connected forums. Give maintainers one queue for questions that need their judgment."
       audience="Open-source maintainers and developer-relations teams managing documentation, community questions, and issue triage."
       highlights={[
         {

@@ -2363,22 +2363,7 @@
     order: 2;
   }
 }
-.feature-showcase-copy .marketing-eyebrow {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.feature-showcase-plan {
-  border: 1px solid var(--marketing-border);
-  border-radius: 999px;
-  background: #fff;
-  padding: 0.1rem 0.55rem;
-  font-size: 0.6875rem;
-  letter-spacing: 0.02em;
-  text-transform: none;
-}
 .feature-showcase-copy h3 {
-  margin-top: 0.75rem;
   font-size: clamp(1.5rem, 2.4vw, 2rem);
   line-height: 1.15;
   text-wrap: wrap;

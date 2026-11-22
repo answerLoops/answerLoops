@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'About answerLoops',
   description:
-    'Nathan and Faith Tarbert built answerLoops to manage support for their online communities.',
+    'Why Nathan and Faith Tarbert created answerLoops to give members better support as their communities grew.',
   path: '/about',
 })
 export default function AboutPage() {
@@ -25,16 +25,16 @@ export default function AboutPage() {
     <MarketingPage>
       <PageSchema
         name="About answerLoops"
-        description="The founders and the problem behind answerLoops."
+        description="Why Nathan and Faith Tarbert created answerLoops to give members better support as their communities grew."
         path="/about"
       />
       <PageHero
         eyebrow="About"
-        title="We kept answering the same questions"
+        title="Better support for growing communities"
       >
         <p>
-          We built answerLoops after answering the same support questions across
-          the communities we managed.
+          We started answerLoops to give the members of our own communities
+          a better way to get help and keep participating.
         </p>
       </PageHero>
       <section className="marketing-section">
@@ -57,7 +57,7 @@ export default function AboutPage() {
             question, prepare a reply from existing knowledge, review it, and
             keep useful resolutions available for the next person.
           </p>
-          <h2>How we build it</h2>
+          <h2>How we run answerLoops</h2>
           <p>
             We still run the company and use answerLoops in our own communities.
             The source is available under AGPL-3.0, and teams can use the hosted

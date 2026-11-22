@@ -21,8 +21,8 @@ export default async function Page() {
     <IntentPage
       navState={await resolveNavState()}
       eyebrow="Integration"
-      title="Add AI-reviewed answers to your Discourse forum"
-      intro="answerLoops connects to Discourse you already run — it doesn't replace it. New topics and posts are drafted from your documentation, checked by a separate review agent, and sent automatically once you trust the pattern."
+      title="Give forum members timely answers in Discourse"
+      intro="Bring timely answers from your docs into Discourse topics and replies. Your team reviews drafts and chooses when to enable automatic replies."
       audience="Discourse admins and community managers who want AI answers without moving their forum to a new platform."
       highlights={[
         {
@@ -30,15 +30,15 @@ export default async function Page() {
           body: 'answerLoops reads new topics and posts through Discourse’s API — no migration, no new platform for your members to learn.',
         },
         {
-          title: 'Answers drafted from your docs',
+          title: 'Help members find the guidance they need',
           body: 'Connect your documentation, past resolutions, and other sources so replies are grounded in what your team actually maintains.',
         },
         {
-          title: 'A second agent checks every draft',
+          title: 'Review answers before they reach members',
           body: 'A separate review agent checks each draft against its sources and assigns a confidence score before anything posts automatically.',
         },
         {
-          title: 'One queue across every channel',
+          title: 'Follow up on questions that need a person',
           body: 'Discourse tickets sit in the same queue as Discord, Slack, Circle, and every other connected channel — one place to review what needs a person.',
         },
       ]}

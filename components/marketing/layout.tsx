@@ -73,8 +73,8 @@ export function PageHero({
 }
 
 export function TrialCta({
-  title = 'Try it with the questions your team gets every week',
-  description = 'Add a few support articles and connect a channel, then review the replies before deciding what to automate.',
+  title = 'Start with your community’s questions',
+  description = 'Connect a channel your members already use and review answers drafted from your own guides.',
 }: {
   title?: string
   description?: string
