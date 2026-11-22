@@ -41,7 +41,7 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
       return `"${column.name}" ${column.getSQLType()}`
     })
     await client.unsafe(`CREATE TABLE tickets (${columns.join(', ')})`)
-    await client.unsafe(await readFile('drizzle/0081_ticket_reply_transaction.sql', 'utf8'))
+    await client.unsafe(await readFile('drizzle/0082_ticket_reply_transaction.sql', 'utf8'))
     await client`CREATE TABLE notifications (
       id serial primary key, org_id int not null, ticket_id int references tickets(id),
       type text, message text CHECK (message NOT LIKE '%Rejected reply%'),
