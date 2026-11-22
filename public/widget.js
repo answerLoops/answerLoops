@@ -9,8 +9,30 @@
   var widgetId = script.getAttribute('data-widget-id');
   if (!widgetId) return;
 
-  var baseUrl = script.getAttribute('data-base-url') ||
-    (script.src ? script.src.replace('/widget.js', '') : window.location.origin);
+  // The address everything is loaded from: the one the snippet names, or this
+  // script's own. Only a full http or https address is accepted, and it is
+  // rebuilt from its origin and path, so nothing else the attribute holds is
+  // carried along. Anything else and the widget does not start.
+  function webAddress(raw) {
+    if (typeof raw !== 'string') return null;
+    var text = raw.replace(/^\s+|\s+$/g, '');
+    if (!/^https?:\/\//i.test(text)) return null;
+    if (typeof URL === 'function') {
+      try {
+        var parsed = new URL(text);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return null;
+        return parsed.origin + parsed.pathname.replace(/\/+$/, '');
+      } catch (e) {
+        return null;
+      }
+    }
+    var plain = text.split(/[?#]/)[0];
+    return /^https?:\/\/[^\s"'<>\\]+$/i.test(plain) ? plain.replace(/\/+$/, '') : null;
+  }
+
+  var baseUrl = webAddress(script.getAttribute('data-base-url') ||
+    (script.src ? script.src.replace('/widget.js', '') : window.location.origin));
+  if (!baseUrl) return;
 
   var BUBBLE_SIZE = 56;
   // Window sizes a business can pick (small is today's size and the default).

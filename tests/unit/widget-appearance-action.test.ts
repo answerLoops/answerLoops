@@ -58,7 +58,7 @@ beforeEach(() => {
   h.orgHasFeature.mockResolvedValue(true)
   h.ensureWidgetToken.mockResolvedValue({ token: 'a'.repeat(48), expiresAt: '2099-01-01T00:00:00.000Z' })
   h.getWidgetAllowedOrigins.mockResolvedValue(null)
-  h.getWidgetAppearance.mockResolvedValue({ title: 'Acme Help', welcome: null, brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true })
+  h.getWidgetAppearance.mockResolvedValue({ title: 'Acme Help', welcome: null, brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true, followUpsEnabled: true })
   h.setWidgetAppearance.mockImplementation(async (_org: number, v: { title: string | null; welcome: string | null; brandColor: string | null; starterQuestions: string[]; starterEnabled: boolean }) => v)
 })
 
@@ -82,6 +82,14 @@ describe('saveWidgetAppearanceAction', () => {
     expect(h.setWidgetAppearance).not.toHaveBeenCalled()
   })
 
+  it('refuses a plan without customization even when only the follow-up switch is being changed', async () => {
+    h.orgHasFeature.mockResolvedValue(false)
+    const { saveWidgetAppearanceAction } = await import('@/lib/actions/widget')
+    const result = await saveWidgetAppearanceAction(null, form({ followUpsEnabled: 'false' }))
+    expect(result.error).toMatch(/Pro and above/)
+    expect(h.setWidgetAppearance).not.toHaveBeenCalled()
+  })
+
   it('saves the cleaned values for the caller’s own workspace and reports what was stored', async () => {
     const { saveWidgetAppearanceAction } = await import('@/lib/actions/widget')
     const result = await saveWidgetAppearanceAction(
@@ -99,6 +107,7 @@ describe('saveWidgetAppearanceAction', () => {
       brandColor: '#ffd60a',
       starterQuestions: ['How does it work?', 'What does it cost?'],
       starterEnabled: true,
+      followUpsEnabled: true,
     })
     expect(result).toEqual({
       appearance: {
@@ -107,6 +116,7 @@ describe('saveWidgetAppearanceAction', () => {
         brandColor: '#ffd60a',
         starterQuestions: ['How does it work?', 'What does it cost?'],
         starterEnabled: true,
+        followUpsEnabled: true,
       },
     })
   })
@@ -120,7 +130,18 @@ describe('saveWidgetAppearanceAction', () => {
       brandColor: null,
       starterQuestions: [],
       starterEnabled: true,
+      followUpsEnabled: true,
     })
+  })
+
+  it('saves the follow-up suggestions switch: off only when the form says so, on otherwise', async () => {
+    const { saveWidgetAppearanceAction } = await import('@/lib/actions/widget')
+    await saveWidgetAppearanceAction(null, form({ followUpsEnabled: 'false' }))
+    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(5, expect.objectContaining({ followUpsEnabled: false }))
+    await saveWidgetAppearanceAction(null, form({ followUpsEnabled: 'true' }))
+    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(5, expect.objectContaining({ followUpsEnabled: true }))
+    await saveWidgetAppearanceAction(null, form({}))
+    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(5, expect.objectContaining({ followUpsEnabled: true }))
   })
 
   it('saves the starter-question switch: off only when the form says so, on otherwise', async () => {
@@ -128,12 +149,12 @@ describe('saveWidgetAppearanceAction', () => {
     await saveWidgetAppearanceAction(null, form({ starterQuestions: 'How does it work?', starterEnabled: 'false' }))
     expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(
       5,
-      expect.objectContaining({ starterQuestions: ['How does it work?'], starterEnabled: false })
+      expect.objectContaining({ starterQuestions: ['How does it work?'], starterEnabled: false, followUpsEnabled: true })
     )
     await saveWidgetAppearanceAction(null, form({ starterQuestions: 'How does it work?', starterEnabled: 'true' }))
-    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(5, expect.objectContaining({ starterEnabled: true }))
+    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(5, expect.objectContaining({ starterEnabled: true, followUpsEnabled: true }))
     await saveWidgetAppearanceAction(null, form({ starterQuestions: 'How does it work?' }))
-    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(5, expect.objectContaining({ starterEnabled: true }))
+    expect(h.setWidgetAppearance).toHaveBeenLastCalledWith(5, expect.objectContaining({ starterEnabled: true, followUpsEnabled: true }))
   })
 
   it('names the field and gives a plain message for each kind of bad input, without writing', async () => {
@@ -197,9 +218,10 @@ describe('resetWidgetAppearanceAction', () => {
       brandColor: null,
       starterQuestions: [],
       starterEnabled: true,
+      followUpsEnabled: true,
     })
     expect(result).toEqual({
-      appearance: { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true },
+      appearance: { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true, followUpsEnabled: true },
     })
   })
 })
@@ -208,7 +230,7 @@ describe('getWidgetTokenAction', () => {
   it('reports the saved appearance and whether the plan includes customization', async () => {
     const { getWidgetTokenAction } = await import('@/lib/actions/widget')
     const result = await getWidgetTokenAction()
-    expect(result.appearance).toEqual({ title: 'Acme Help', welcome: null, brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true })
+    expect(result.appearance).toEqual({ title: 'Acme Help', welcome: null, brandColor: '#ffd60a', starterQuestions: [], starterEnabled: true, followUpsEnabled: true })
     expect(result.customizationAvailable).toBe(true)
     expect(h.orgHasFeature).toHaveBeenCalledWith(5, 'white_label_widget')
   })

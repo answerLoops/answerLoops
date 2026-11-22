@@ -209,6 +209,7 @@ describe('reading stored values', () => {
       brandColor: '#ffd60a',
       starterQuestions: [],
       starterEnabled: true,
+      followUpsEnabled: true,
     })
     expect(
       readWidgetAppearance({
@@ -216,8 +217,8 @@ describe('reading stored values', () => {
         welcome: 'w'.repeat(WIDGET_WELCOME_MAX_CHARS + 5),
         brandColor: 'red;}',
       })
-    ).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true })
-    expect(readWidgetAppearance({})).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true })
+    ).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true, followUpsEnabled: true })
+    expect(readWidgetAppearance({})).toEqual({ title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true, followUpsEnabled: true })
   })
 })
 

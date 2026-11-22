@@ -23,6 +23,7 @@ import {
   normalizeBrandColor,
   normalizeStarterQuestions,
   normalizeWidgetTitle,
+  readFollowUpsEnabled,
   readStarterEnabled,
   normalizeWidgetWelcome,
   type WidgetAppearance,
@@ -275,6 +276,7 @@ export async function saveWidgetAppearanceAction(
     brandColor: color.value,
     starterQuestions: starters.value,
     starterEnabled: readStarterEnabled(formData.get('starterEnabled')),
+    followUpsEnabled: readFollowUpsEnabled(formData.get('followUpsEnabled')),
   })
   return { appearance }
 }
@@ -286,7 +288,7 @@ export async function resetWidgetAppearanceAction(): Promise<WidgetAppearanceRes
   if (!(await orgHasFeature(access.orgId, 'white_label_widget'))) {
     return { error: CUSTOMIZATION_REQUIRES_PRO }
   }
-  const appearance = await setWidgetAppearance(access.orgId, { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true })
+  const appearance = await setWidgetAppearance(access.orgId, { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true, followUpsEnabled: true })
   // Back to the answerLoops look includes the answerLoops mark.
   await deleteWidgetLogo(access.orgId)
   return { appearance }

@@ -20,8 +20,10 @@ import {
   normalizeWidgetTitle,
   normalizeWidgetWelcome,
   normalizeStarterQuestions,
+  readFollowUpsEnabled,
   readStarterEnabled,
   readWidgetAppearance,
+  serializeFollowUpsEnabled,
   serializeStarterEnabled,
   serializeStarterQuestions,
   type WidgetAppearance,
@@ -73,6 +75,7 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       widget_brand_color: orgs.widgetBrandColor,
       widget_starter_questions: orgs.widgetStarterQuestions,
       widget_starter_enabled: orgs.widgetStarterEnabled,
+      widget_follow_ups_enabled: orgs.widgetFollowUpsEnabled,
       plan_id: subscriptions.planId,
     })
     .from(orgs)
@@ -124,6 +127,7 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       brandColor: row.widget_brand_color,
       starterQuestions: row.widget_starter_questions,
       starterEnabled: row.widget_starter_enabled,
+      followUpsEnabled: row.widget_follow_ups_enabled,
     }),
   }
 }
@@ -256,6 +260,7 @@ export async function getWidgetAppearance(orgId: number): Promise<WidgetAppearan
       brandColor: orgs.widgetBrandColor,
       starterQuestions: orgs.widgetStarterQuestions,
       starterEnabled: orgs.widgetStarterEnabled,
+      followUpsEnabled: orgs.widgetFollowUpsEnabled,
     })
     .from(orgs)
     .where(eq(orgs.id, orgId))
@@ -266,6 +271,7 @@ export async function getWidgetAppearance(orgId: number): Promise<WidgetAppearan
     brandColor: row?.brandColor,
     starterQuestions: row?.starterQuestions,
     starterEnabled: row?.starterEnabled,
+    followUpsEnabled: row?.followUpsEnabled,
   })
 }
 
@@ -276,7 +282,7 @@ export async function getWidgetAppearance(orgId: number): Promise<WidgetAppearan
  */
 export async function setWidgetAppearance(
   orgId: number,
-  input: { title: unknown; welcome: unknown; brandColor: unknown; starterQuestions?: unknown; starterEnabled?: unknown }
+  input: { title: unknown; welcome: unknown; brandColor: unknown; starterQuestions?: unknown; starterEnabled?: unknown; followUpsEnabled?: unknown }
 ): Promise<WidgetAppearance> {
   const title = normalizeWidgetTitle(input.title)
   if (!title.ok) throw new Error(title.error)
@@ -287,6 +293,7 @@ export async function setWidgetAppearance(
   const starters = normalizeStarterQuestions(input.starterQuestions)
   if (!starters.ok) throw new Error(starters.error)
   const starterEnabled = readStarterEnabled(input.starterEnabled)
+  const followUpsEnabled = readFollowUpsEnabled(input.followUpsEnabled)
   await getDb()
     .update(orgs)
     .set({
@@ -295,9 +302,10 @@ export async function setWidgetAppearance(
       widgetBrandColor: color.value,
       widgetStarterQuestions: serializeStarterQuestions(starters.value),
       widgetStarterEnabled: serializeStarterEnabled(starterEnabled),
+      widgetFollowUpsEnabled: serializeFollowUpsEnabled(followUpsEnabled),
     })
     .where(eq(orgs.id, orgId))
-  return { title: title.value, welcome: welcome.value, brandColor: color.value, starterQuestions: starters.value, starterEnabled }
+  return { title: title.value, welcome: welcome.value, brandColor: color.value, starterQuestions: starters.value, starterEnabled, followUpsEnabled }
 }
 
 /** The org's current public slug, or null when none has been chosen. */
