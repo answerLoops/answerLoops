@@ -375,6 +375,8 @@ The lead-capture endpoint, used when a visitor leaves an email address, is limit
 
 The on-failure check — a small lookup the widget makes right after a turn finishes, to decide whether to show the lead-capture prompt — is limited at **100/minute per token** and **20/minute per visitor**, the same shape as the chat endpoint next to it.
 
+The answer-flag endpoint, used when a visitor flags an answer and adds a reason or an email, is limited at **60/minute per token** and **10/minute per visitor**, with a 32KB body cap. A workspace can collect at most **200 flags a day**. A flag can only be made on an answer the widget really gave, and the question and reply stored with it have emails, phone numbers and long digit runs replaced, and are cleared after 90 days.
+
 Requests over these limits return `429 Too Many Requests`. The chat and lead-capture limits are enforced across every running instance rather than per process, so those numbers are the real ceiling. The on-failure check is the one exception — see the single-instance callout under Lead capture above. None of these limits are currently configurable.
 
 Separately from rate limits, every widget answer counts toward your plan's monthly AI reply allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).

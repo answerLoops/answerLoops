@@ -1,5 +1,6 @@
-import { getLeadSignal } from '@/lib/widget/lead-signal-stash'
+import { getLeadSignal, getTurnAnswer } from '@/lib/widget/lead-signal-stash'
 import { mintLeadQuestionToken } from '@/lib/widget/lead-question-token'
+import { mintAnswerToken } from '@/lib/widget/answer-token'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clientIp } from '@/lib/http/client-ip'
@@ -80,5 +81,16 @@ export async function POST(request: Request) {
   // server recorded, which the widget returns with the visitor's email so the
   // saved lead carries that exact question — see lib/widget/lead-question-token.ts.
   const questionToken = signal === 'none' ? null : mintLeadQuestionToken(widgetToken, question)
-  return Response.json({ signal, ...(questionToken ? { questionToken } : {}) })
+  // And, when the turn produced a recorded answer, a signed reference to it,
+  // with the question and reply, that the widget returns with a visitor's flag
+  // on that answer — see lib/widget/answer-token.ts. The flag route never takes
+  // an answer id or text as a bare value, so a visitor can only flag an answer
+  // this widget really gave, and a team member reads what was really said.
+  const answer = getTurnAnswer(widgetToken, visitorId, turnId)
+  const answerToken = answer ? mintAnswerToken(widgetToken, answer) : null
+  return Response.json({
+    signal,
+    ...(questionToken ? { questionToken } : {}),
+    ...(answerToken ? { answerToken } : {}),
+  })
 }

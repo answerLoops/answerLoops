@@ -53,6 +53,16 @@ export async function saveWidgetLead(
   return { isNew: rows[0]?.inserted === true }
 }
 
+/** The id of the lead saved for this workspace and (already normalised) address, or null. */
+export async function getWidgetLeadId(orgId: number, email: string): Promise<number | null> {
+  const [row] = await getDb()
+    .select({ id: widgetLeads.id })
+    .from(widgetLeads)
+    .where(and(eq(widgetLeads.orgId, orgId), eq(widgetLeads.email, email)))
+    .limit(1)
+  return row?.id ?? null
+}
+
 /** A lead that has not been included in an email to the team yet. */
 export interface PendingWidgetLead {
   id: number
