@@ -138,7 +138,7 @@
   // The closed bubble shows the workspace's logo in a white circle when there is
   // one and it loads, otherwise the chat icon.
   function showClosedBubble() {
-    if (logoVersion !== null && !logoFailed && TOKEN_PATTERN.test(panelToken)) {
+    if (logoVersion !== null && !logoFailed && TOKEN_PATTERN.test(panelToken) && /^\d+$/.test(String(logoVersion))) {
       bubble.textContent = '';
       var img = document.createElement('img');
       img.className = 'cp-logo';

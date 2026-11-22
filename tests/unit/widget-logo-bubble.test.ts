@@ -179,6 +179,13 @@ describe('widget.js: the launcher bubble and a workspace logo', () => {
     expect(pathOf(w.icon())).toBe(CHAT_PATH)
   })
 
+  it('shows the chat icon for a version too large to print as plain digits', async () => {
+    const w = run(withLogo(1e21))
+    await ready(w)
+    expect(w.logoImage()).toBeUndefined()
+    expect(pathOf(w.icon())).toBe(CHAT_PATH)
+  })
+
   it('rounds a fractional version down to a whole number', async () => {
     const w = run(withLogo(42.9))
     await ready(w)
