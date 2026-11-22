@@ -18,12 +18,12 @@ import { isCustomPriced } from '@/lib/marketing/pricing'
 import { INCLUDED_AI_SUMMARY, TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
 import { marketingSiteEnabled } from '@/lib/site'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
-import { ArrowRight, MessageCircle, Terminal, GraduationCap, Users, Palette, Blocks, Building2 } from 'lucide-react'
+import { ArrowRight, MessageCircle, Terminal, Users, GraduationCap, Headphones, Palette, MessagesSquare } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
-const PAGE_TITLE = 'AI community support from your docs | answerLoops'
+const PAGE_TITLE = 'Community support for growing teams | answerLoops'
 const PAGE_DESCRIPTION =
-  'Answer community questions from your documentation, add chat to your website, and connect your own AI agent through skills, MCP, or the REST API.'
+  'Give members timely answers so they can stay involved and keep coming back. Answer questions from your docs across chat, forums, email, and your website.'
 export const metadata: Metadata = {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
@@ -62,8 +62,8 @@ const FAQ_ITEMS = [
     a: 'Yes. Add the embed snippet to any website or documentation platform that supports custom JavaScript, and configure its allowed domains in Settings. The widget answers from published knowledge-base articles, and visitors do not need an account.',
   },
   {
-    q: 'Is answerLoops only for developer communities?',
-    a: 'No. It can use your guides and FAQs to answer questions in art, crypto, course, membership, and general-interest communities, as well as developer communities. The answers depend on the documentation you provide.',
+    q: 'Who uses answerLoops?',
+    a: 'Community managers, course and membership teams, open-source maintainers, and customer support teams use answerLoops to answer recurring questions from their own guides and FAQs.',
   },
   {
     q: 'How do I onboard an AI agent? (optional)',
@@ -85,6 +85,7 @@ export default function LandingPage() {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: 'answerLoops',
+    description: PAGE_DESCRIPTION,
     applicationCategory: 'BusinessApplication',
     operatingSystem: 'Web',
     provider: { '@id': ORGANIZATION_ID },
@@ -127,13 +128,11 @@ export default function LandingPage() {
         <div className="marketing-container marketing-home-grid home-hero-stacked">
           <div className="home-hero-copy">
             <h1>
-              AI community support from your docs
+              Help your community grow
             </h1>
-            {/* One sentence on purpose: the overview below shows the steps and
-                the channel row, so the intro only states the outcome. */}
             <p className="marketing-intro">
-              Every reply in your community channels is drafted from your docs
-              and checked by a second AI.
+              Give members timely answers they can trust and a reason to come
+              back.
             </p>
             <div className="marketing-actions">
               <Link
@@ -163,7 +162,7 @@ export default function LandingPage() {
               />
               Website chat widget
             </p>
-            <h2>Add a support chatbot to any website or documentation site</h2>
+            <h2>Give visitors a way to get unstuck</h2>
             <p className="chat-section-lead">
               Visitors get answers from the articles you publish, right on the
               page they’re reading. Paste one snippet into your site and choose
@@ -180,10 +179,11 @@ export default function LandingPage() {
       <section id="how-it-works" className="marketing-section marketing-soft scroll-mt-20">
         <div className="marketing-container chat-section chat-section-flip">
           <div className="chat-section-copy">
-            <h2>Answers are verified before they reach your community</h2>
+            <h2>Give members answers your team can stand behind</h2>
             <p className="chat-section-lead">
-              Every answer is written from your docs, then checked against them
-              by a second AI agent before anyone sees it.
+              AI drafts replies from your documentation, then a separate AI
+              review checks them against their sources. Your team decides
+              which channels can send qualifying replies automatically.
             </p>
             <VerifiedAnswerSteps />
             <Link className="marketing-text-link" href="/support-workflow">
@@ -198,11 +198,13 @@ export default function LandingPage() {
           <div className="marketing-section-heading">
             <div>
               <p className="marketing-eyebrow">Inside the workspace</p>
-              <h2>Everything your team needs to run community support</h2>
+              <h2>Turn resolved questions into reusable answers</h2>
             </div>
             <p>
-              One workspace for every channel, from the first question to the
-              article that answers the next one.
+              Manage questions from connected channels in one queue. When your
+              team resolves a recurring question, save the answer as a
+              knowledge base article that answerLoops can draw on for future
+              member and customer questions.
             </p>
           </div>
           <FeatureShowcase />
@@ -211,7 +213,7 @@ export default function LandingPage() {
       <section className="mid-cta" aria-labelledby="mid-cta-title">
         <div className="marketing-container mid-cta-inner">
           <div>
-            <h2 id="mid-cta-title">Try it with your own community</h2>
+            <h2 id="mid-cta-title">Try answerLoops with real member questions</h2>
             <p>{TRIAL_CTA_NOTE}</p>
           </div>
           <Link href={START_HREF} className="marketing-button marketing-button-hero">
@@ -283,43 +285,43 @@ export default function LandingPage() {
       <section id="who-its-for" className="marketing-section audience-section scroll-mt-20">
         <div className="marketing-container">
           <div className="audience-heading">
-            <h2>Support for any community</h2>
+            <h2>Built for the teams behind communities</h2>
             <p>
-              If your members ask the same questions and you have docs that
-              answer them, answerLoops fits.
+              Help new members get started and give people a place to turn
+              when they need support.
             </p>
           </div>
           <div className="audience-grid">
             {[
               {
-                icon: Terminal,
-                title: 'Developer communities',
-                body: 'Use your setup guides and troubleshooting docs to answer recurring questions in Discord, Slack, and website chat.',
+                icon: Users,
+                title: 'Community managers',
+                body: 'Answer recurring questions about getting started, community rules, and events in the spaces your members already use.',
               },
               {
                 icon: GraduationCap,
-                title: 'Courses and membership groups',
-                body: 'Help students find course instructions and answers in Discord and Circle, with questions that need your attention kept in the team queue.',
+                title: 'Course and membership teams',
+                body: 'Point members to the right lesson, course instructions, or membership information from the materials you already publish.',
               },
               {
-                icon: Users,
-                title: 'General-interest communities',
-                body: 'Answer questions about community rules, events, and getting started in Discourse and Circle using the guides your moderators maintain.',
+                icon: Headphones,
+                title: 'Customer support teams',
+                body: 'Bring questions from email, chat, and your website into one queue so your team can see what still needs a reply.',
+              },
+              {
+                icon: Terminal,
+                title: 'DevRel and open-source teams',
+                body: 'Use your quickstarts and troubleshooting guides to answer setup questions in GitHub, Discord, and on your docs site.',
               },
               {
                 icon: Palette,
-                title: 'Art and creative communities',
-                body: 'Help members find submission rules, workshop instructions, and print specifications from your community guides.',
+                title: 'Creators and creative communities',
+                body: 'Give members answers about submissions, workshop instructions, and participation from the guides you maintain.',
               },
               {
-                icon: Blocks,
-                title: 'Crypto and Web3 communities',
-                body: 'Answer questions about project documentation, participation rules, and getting started in Telegram and Discord.',
-              },
-              {
-                icon: Building2,
-                title: 'Businesses and organizations',
-                body: 'Use your service documentation to answer common client questions in email and website chat.',
+                icon: MessagesSquare,
+                title: 'Forum and group moderators',
+                body: 'Turn useful resolutions into knowledge you can reuse when the same question comes up in another thread.',
               },
             ].map(({ icon: Icon, title, body }) => (
               <article className="audience-card" key={title}>

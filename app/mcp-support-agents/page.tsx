@@ -21,8 +21,8 @@ export default async function Page() {
     <IntentPage
       navState={await resolveNavState()}
       eyebrow="MCP and REST API"
-      title="An MCP server for your support knowledge"
-      intro="Connect an MCP-compatible client or use the REST API to search your knowledge base, generate reviewed answers, and create support tickets."
+      title="Give your agents the knowledge your community relies on"
+      intro="Connect through MCP or the REST API to search your support knowledge, generate reviewed answers, and create tickets for your team."
       audience="Teams connecting coding assistants, internal tools, or support automations to their existing documentation and ticket queue."
       highlights={[
         {

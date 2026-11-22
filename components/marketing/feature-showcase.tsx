@@ -4,9 +4,6 @@ import { getShot } from '@/components/docs/shots'
 
 type Feature = {
   shot: string
-  eyebrow: string
-  /** Set when the feature needs a paid tier, so nobody signs up for Standard expecting it. */
-  plan?: string
   title: string
   body: string
   href: string
@@ -18,15 +15,13 @@ type Feature = {
 const FEATURES: Feature[] = [
   {
     shot: 'ticket-detail',
-    eyebrow: 'Tickets',
-    title: 'Every conversation becomes a ticket',
-    body: 'Each question from Discord, Slack, email, or any connected channel becomes one ticket. It keeps the original message, the AI’s answer and confidence score, every reply, and the response deadline, so your team works from one inbox instead of checking every app.',
+    title: 'See which questions still need an answer',
+    body: 'See member questions from connected channels in one inbox. Each ticket keeps the original question, replies, and any deadline together so teammates can pick up the conversation.',
     href: '/docs/product/tickets',
     linkLabel: 'How tickets work',
   },
   {
     shot: 'dashboard',
-    eyebrow: 'Dashboard and SLAs',
     title: 'See what’s urgent before it’s late',
     body: 'Set response and resolution targets for your team. The dashboard shows what the AI answered on its own, what still needs a person, and every ticket that has missed its target, kept apart from the rest of the queue.',
     href: '/docs/product/dashboard',
@@ -34,18 +29,15 @@ const FEATURES: Feature[] = [
   },
   {
     shot: 'knowledge-gaps',
-    eyebrow: 'Knowledge gaps',
-    plan: 'Pro',
     title: 'Find the gaps in your docs',
-    body: 'See the questions the AI couldn’t answer, most-asked first, and why: it needed a person, it wasn’t confident, or no article covers it. Start the missing article from the question in one click, so the next person gets an answer.',
+    body: 'See the questions the AI couldn’t answer, most-asked first, and why: it needed a person, it wasn’t confident, or no article covers it. Start the missing article from the question in one click. Available on Pro and Enterprise.',
     href: '/docs/product/knowledge-gaps',
     linkLabel: 'How knowledge gaps work',
   },
   {
     shot: 'analytics',
-    eyebrow: 'Analytics',
-    title: 'Know what the AI saves you',
-    body: 'Track staff time saved, the share of questions the AI resolved on its own, and how that changes day by day. On Pro and Enterprise, see how customers rate the answers too.',
+    title: 'See where your support is improving',
+    body: 'Track how many questions AI resolves and how much time it saves your team. On Pro and Enterprise, see how customers rate the answers.',
     href: '/docs/product/analytics',
     linkLabel: 'Read about analytics',
   },
@@ -63,12 +55,6 @@ export function FeatureShowcase() {
             data-flip={index % 2 === 1 || undefined}
           >
             <div className="feature-showcase-copy">
-              <p className="marketing-eyebrow">
-                {feature.eyebrow}
-                {feature.plan && (
-                  <span className="feature-showcase-plan">{feature.plan}</span>
-                )}
-              </p>
               <h3>{feature.title}</h3>
               <p>{feature.body}</p>
               <Link href={feature.href} className="marketing-text-link">

@@ -21,8 +21,8 @@ export default async function Page() {
     <IntentPage
       navState={await resolveNavState()}
       eyebrow="Integration"
-      title="Add AI-reviewed answers to your Circle community"
-      intro="answerLoops connects to the Circle community you already run through Circle Workflows — it doesn't replace it. New posts and comments are drafted from your knowledge base, checked by a separate review agent, and sent automatically once you trust the pattern."
+      title="Keep Circle members learning and participating"
+      intro="Answer questions from your course materials and guides right in Circle. Your team can review drafts and choose when to enable automatic replies."
       audience="Circle community operators and course creators who want AI answers without moving members to a new platform."
       highlights={[
         {
@@ -30,15 +30,15 @@ export default async function Page() {
           body: 'answerLoops connects through Circle Workflows — no migration, no new platform for your members to learn.',
         },
         {
-          title: 'Answers drafted from your knowledge base',
+          title: 'Help members get back to learning',
           body: 'Connect your course materials, documentation, and past resolutions so replies are grounded in what you actually maintain.',
         },
         {
-          title: 'A second agent checks every draft',
+          title: 'Check replies against your course materials',
           body: 'A separate review agent checks each draft against its sources and assigns a confidence score before anything posts automatically — off by default, so nothing goes out unreviewed until you trust it.',
         },
         {
-          title: 'One queue across every channel',
+          title: 'Follow up on questions that need your team',
           body: 'Circle tickets sit in the same queue as Discord, Slack, Discourse, and every other connected channel — one place to review what needs a person.',
         },
       ]}

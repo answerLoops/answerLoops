@@ -121,7 +121,7 @@ describe('answer loop overview', () => {
 
     expect(examplesShown()).toEqual(['true', 'false', 'false', 'false'])
     expect(
-      screen.getByText('Webhook retries made duplicate orders. How do we stop it?'),
+      screen.getByText('Where can I watch the workshop replay?'),
     ).toBeVisible()
     const hidden = document.querySelectorAll('.loop-example')[1]
     expect(hidden).toHaveAttribute('aria-hidden', 'true')
@@ -130,7 +130,7 @@ describe('answer loop overview', () => {
     expect(examplesShown()).toEqual(['true', 'true', 'false', 'false'])
     expect(hidden).not.toHaveAttribute('aria-hidden')
     expect(screen.getByRole('list', { name: 'Sources used' })).toHaveTextContent(
-      '[1] Webhook delivery[2] Idempotency guide',
+      '[1] Workshop replay guide[2] Member resource library',
     )
 
     steps(2)
@@ -168,13 +168,13 @@ describe('answer loop overview', () => {
     expect(stepStates()).toEqual(['active', 'idle', 'idle', 'idle'])
     expect(examplesShown()).toEqual(['true', 'false', 'false', 'false'])
     expect(
-      screen.queryByText('Webhook retries made duplicate orders. How do we stop it?'),
+      screen.queryByText('Where can I watch the workshop replay?'),
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Answered from docs' }))
     expect(pressedRun()).toEqual(['Answered from docs'])
     expect(
-      screen.getByText('Webhook retries made duplicate orders. How do we stop it?'),
+      screen.getByText('Where can I watch the workshop replay?'),
     ).toBeVisible()
   })
 

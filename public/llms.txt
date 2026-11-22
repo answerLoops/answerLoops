@@ -1,6 +1,6 @@
 # answerLoops
 
-> answerLoops prepares support answers from workspace documentation and reviews them before sending. Teams can use the hosted service or operate the AGPL-3.0 application themselves.
+> answerLoops helps communities grow by giving members timely support across chat, forums, email, issue trackers, and a website widget. It drafts and reviews replies from the team’s knowledge. Teams can save useful support resolutions as knowledge for future questions. Teams can use the hosted service or operate the AGPL-3.0 application themselves.
 
 ## What it does
 
@@ -8,7 +8,7 @@ Questions from connected channels become tickets. The AI retrieves relevant know
 
 ## Who it is for
 
-Teams supporting developer, art, crypto, course, membership, and general-interest communities across chat, forums, issue trackers, and email. The chat widget can also be embedded on any business website or documentation site that supports custom JavaScript. Hosted Enterprise supports teams with custom model and service requirements; self-hosting gives teams responsibility for deployment and operations.
+Community managers and moderators, course and membership teams, creators, DevRel and open-source teams, and customer support teams. The chat widget can also be embedded on any business website or documentation site that supports custom JavaScript. Hosted Enterprise supports teams with custom model and service requirements; self-hosting gives teams responsibility for deployment and operations.
 
 ## Core capabilities
 

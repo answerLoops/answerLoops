@@ -55,11 +55,11 @@ const RUNS: { label: string; examples: Example[] }[] = [
     examples: [
       {
         kind: 'question',
-        text: 'Webhook retries made duplicate orders. How do we stop it?',
-        where: 'Discord · #dev-support',
+        text: 'Where can I watch the workshop replay?',
+        where: 'Discord · #member-help',
       },
-      { kind: 'sources', sources: ['Webhook delivery', 'Idempotency guide'] },
-      { kind: 'note', tone: 'ok', text: 'Every step matches a cited source' },
+      { kind: 'sources', sources: ['Workshop replay guide', 'Member resource library'] },
+      { kind: 'note', tone: 'ok', text: 'Reply matches the cited guides' },
       { kind: 'note', tone: 'ok', text: 'Posted with 2 cited sources' },
     ],
   },
@@ -238,7 +238,6 @@ export function AnswerLoopOverview() {
         </span>
       </div>
       
-      //issue 372 supported channel
       <div
         id="integrations"
         className="loop-channels scroll-mt-20"
