@@ -23,7 +23,7 @@ import { ArrowRight, MessageCircle, Terminal, Users, GraduationCap, Headphones, 
 export const dynamic = 'force-dynamic'
 const PAGE_TITLE = 'Community support for growing teams | answerLoops'
 const PAGE_DESCRIPTION =
-  'Give members timely answers so they can stay involved and keep coming back. Answer questions from your docs across chat, forums, email, and your website.'
+  'Members stay. Visitors convert. One knowledge base.'
 export const metadata: Metadata = {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
@@ -131,8 +131,7 @@ export default function LandingPage() {
               Help your community grow
             </h1>
             <p className="marketing-intro">
-              Give members timely answers they can trust and a reason to come
-              back.
+              Members stay. Visitors convert. One knowledge base.
             </p>
             <div className="marketing-actions">
               <Link
@@ -162,11 +161,11 @@ export default function LandingPage() {
               />
               Website chat widget
             </p>
-            <h2>Give visitors a way to get unstuck</h2>
+            <h2>Answer visitors right on your website</h2>
             <p className="chat-section-lead">
-              Visitors get answers from the articles you publish, right on the
-              page they’re reading. Paste one snippet into your site and choose
-              which domains it runs on.
+              Help visitors take the next step without leaving your site. The
+              widget uses published articles from the same knowledge base
+              that supports your community.
             </p>
             <WebsiteChatSteps />
             <Link href="/docs/product/chat-widget" className="marketing-text-link">
