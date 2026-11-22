@@ -75,6 +75,9 @@ export const orgs = pgTable('orgs', {
   // Whether those buttons are shown. NULL and true mean shown; only an explicit
   // false hides them, so an owner can switch them off and keep the questions.
   widgetStarterEnabled: boolean('widget_starter_enabled'),
+  // Whether the assistant may suggest follow-up questions after an answer
+  // (migration 0081). NULL and true mean on; only an explicit false turns it off.
+  widgetFollowUpsEnabled: boolean('widget_follow_ups_enabled'),
   // When this workspace was last emailed about new website chat leads; limits
   // it to one email per window. See lib/widget/lead-notifications.ts.
   widgetLeadsEmailedAt: timestamp('widget_leads_emailed_at', { withTimezone: true }),

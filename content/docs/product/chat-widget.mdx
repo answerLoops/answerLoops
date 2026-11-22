@@ -206,13 +206,14 @@ On Pro and above, **Settings → Widget → Widget appearance** lets you make th
 | Chat title | Replaces the default header, your workspace name followed by "Support", for example "Acme Help Desk". | Up to 60 characters. |
 | Welcome message | Replaces the default greeting shown in an empty chat, and above the email box when the widget asks for an email first. | Up to 200 characters. |
 | Starter questions | Up to four short questions shown as buttons under the greeting when the chat opens. Tapping one sends it as the visitor's first question, and the buttons disappear once the conversation has started. A **Show starter questions** switch hides them without deleting your questions, so you can turn them back on later. | One per line, up to 4, each up to 80 characters. |
+| Follow-up questions | A **Suggest follow-up questions** switch, on by default. After some answers the chat offers two or three questions the visitor might ask next. See [Follow-up questions](#follow-up-questions). | On or off. |
 | Brand color | Used for the chat header icon, the visitor's message bubbles, buttons, answer cards and the chat bubble that opens the widget. | A full hex color such as `#1a73e8`. |
 
 The title, welcome message and starter questions are shown as plain text, so any markup you type appears exactly as written. The text that sits on top of your color is chosen automatically, white or dark, whichever reads better, so a very light or very dark color never produces text that is hard to read. The settings page shows a sample of it as you choose.
 
-**Save appearance** applies your choices to the live widget within about a minute, with no change to the snippet on your site. **Reset to default** returns the title, welcome message, starter questions and color to the answerLoops defaults, and turns the starter-questions switch back on. Only owners and admins can change these settings.
+**Save appearance** applies your choices to the live widget within about a minute, with no change to the snippet on your site. **Reset to default** returns the title, welcome message, starter questions and color to the answerLoops defaults, and turns the starter-questions and follow-up switches back on. Only owners and admins can change these settings.
 
-On Standard the controls are shown locked with an upgrade button, the widget keeps the answerLoops look and shows no starter questions, whatever the switch says. Pro and Enterprise include it, together with removing the answerLoops branding. Self-hosted installs have it unlocked.
+On Standard the controls are shown locked with an upgrade button, the widget keeps the answerLoops look and shows no starter questions or follow-up questions, whatever the switches say. Pro and Enterprise include it, together with removing the answerLoops branding. Self-hosted installs have it unlocked.
 
 ## Restricting where the widget works
 
@@ -321,6 +322,17 @@ Reply text shows bold, italic, inline code, short lists and links as formatted t
 The chat keeps the conversation in the visitor's own browser, so refreshing the page or moving to another page of your site does not lose it. It is forgotten a day after the last message, and nothing extra is sent to anyone to bring it back. The most recent messages are kept, up to a few dozen. A **New chat** button in the chat header clears it and starts again. If the browser blocks storage (some private windows do), the chat still works and simply starts fresh each time.
 
 The chat refreshes itself when it has been left open for a while: the visitor's next question is sent again automatically after a quick reload, with the conversation still on screen. Only if that fails twice in a row does the chat show "This chat session timed out" with a **Start a new session** button.
+
+## Follow-up questions
+
+After some answers the chat can offer two or three short questions the visitor might ask next, as buttons under the reply, for example "How does the AI check its answers?" after a general answer about how answerLoops works. Tapping one sends it as the visitor's next question. On Pro and above, turn them on or off with **Suggest follow-up questions** in **Settings → Widget → Widget appearance**. They are on by default.
+
+- **Only questions your knowledge base can answer.** Before a suggestion is shown, answerLoops checks that your knowledge base has an article close enough to answer it, using the same match the chat uses. A suggestion that would lead to "I don't have that information" is dropped, and if fewer than two remain, none are shown.
+- **Not on every reply.** The assistant offers them only when there is a natural next question. A short factual answer, a pointer to contact or support, an "I don't know" and a reply that already has a card get none.
+- **Only the newest reply's.** The buttons disappear as soon as the visitor taps one, starts typing or sends their own message, and they never come back in a conversation restored from an earlier visit.
+- **Plain text, in the chat's own look.** The questions use the same buttons as quick replies, in your brand color, and are shown as plain text.
+
+On Standard the switch is shown locked and the chat never offers follow-up questions. Turning the switch off, or a plan without it, means the assistant is not told about the feature at all.
 
 ## Rich answer cards
 

@@ -18,6 +18,7 @@ export const GENUI_TOOL_NAMES = {
   callout: 'show_callout',
   linkCard: 'show_link_card',
   contact: 'show_contact_options',
+  followUps: 'show_follow_ups',
 } as const
 
 export const stepsSchema = z.object({
@@ -31,6 +32,17 @@ export const stepsSchema = z.object({
 export const choicesSchema = z.object({
   prompt: z.string().min(1).max(160),
   options: z.array(z.object({ label: z.string().min(1).max(60) })).min(2).max(5),
+})
+
+/**
+ * Two or three suggested next questions, offered after an answer. Each is a
+ * short question a visitor might ask; the server keeps only the ones the
+ * knowledge base can answer (see lib/widget/follow-ups.ts).
+ */
+export const FOLLOW_UP_QUESTION_MAX_CHARS = 60
+export const followUpsSchema = z.object({
+  prompt: z.string().min(1).max(60).optional(),
+  questions: z.array(z.object({ label: z.string().min(1).max(FOLLOW_UP_QUESTION_MAX_CHARS) })).min(2).max(3),
 })
 
 export const calloutSchema = z.object({
@@ -62,6 +74,7 @@ export const contactSchema = z.object({
 
 export type StepsData = z.infer<typeof stepsSchema>
 export type ChoicesData = z.infer<typeof choicesSchema>
+export type FollowUpsData = z.infer<typeof followUpsSchema>
 export type CalloutData = z.infer<typeof calloutSchema>
 export type LinkCardData = z.infer<typeof linkCardSchema>
 export type ContactData = z.infer<typeof contactSchema>

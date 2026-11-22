@@ -42,6 +42,8 @@ export function WidgetAppearanceSettings({
   const [starters, setStarters] = useState(initialAppearance.starterQuestions.join('\n'))
   // Off hides the buttons on the live widget and keeps the questions saved.
   const [startersOn, setStartersOn] = useState(initialAppearance.starterEnabled)
+  // Whether the assistant may suggest follow-up questions after an answer.
+  const [followUpsOn, setFollowUpsOn] = useState(initialAppearance.followUpsEnabled)
   // The hex field holds what is typed, including a half-typed value. An empty
   // field means the answerLoops blue.
   const [color, setColor] = useState(initialAppearance.brandColor ?? '')
@@ -68,7 +70,8 @@ export function WidgetAppearanceSettings({
     colorTrimmed.toLowerCase() === (saved.brandColor ?? '') &&
     startersResult.ok &&
     startersResult.value.join('\n') === saved.starterQuestions.join('\n') &&
-    startersOn === saved.starterEnabled
+    startersOn === saved.starterEnabled &&
+    followUpsOn === saved.followUpsEnabled
 
   function applyStored(appearance: WidgetAppearance) {
     // Show what was actually stored, which may differ from what was typed
@@ -78,6 +81,7 @@ export function WidgetAppearanceSettings({
     setWelcome(appearance.welcome ?? '')
     setStarters(appearance.starterQuestions.join('\n'))
     setStartersOn(appearance.starterEnabled)
+    setFollowUpsOn(appearance.followUpsEnabled)
     setColor(appearance.brandColor ?? '')
   }
 
@@ -90,6 +94,7 @@ export function WidgetAppearanceSettings({
     fd.set('welcome', welcome)
     fd.set('starterQuestions', starters)
     fd.set('starterEnabled', startersOn ? 'true' : 'false')
+    fd.set('followUpsEnabled', followUpsOn ? 'true' : 'false')
     fd.set('brandColor', colorTrimmed)
     const result = await saveWidgetAppearanceAction(null, fd)
     if (result.error) {
@@ -121,7 +126,8 @@ export function WidgetAppearanceSettings({
     !saved.welcome &&
     !saved.brandColor &&
     saved.starterQuestions.length === 0 &&
-    saved.starterEnabled
+    saved.starterEnabled &&
+    saved.followUpsEnabled
   const inputClass =
     'w-full rounded border border-gray-200 bg-white px-3 py-2 text-base text-gray-700 disabled:bg-gray-50 disabled:text-gray-400 sm:text-xs'
 
@@ -254,6 +260,30 @@ export function WidgetAppearanceSettings({
             <p className="break-words text-[0.6875rem] text-red-600">{fieldError.error}</p>
           )}
         </div>
+      </div>
+
+      <div className="space-y-1">
+        <label
+          htmlFor="widget-follow-ups-enabled"
+          className={`flex min-h-11 items-center gap-3 rounded-lg border border-gray-200 bg-white px-3 py-2 ${editable ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}
+        >
+          <input
+            id="widget-follow-ups-enabled"
+            type="checkbox"
+            role="switch"
+            aria-checked={followUpsOn}
+            checked={followUpsOn}
+            onChange={(e) => setFollowUpsOn(e.target.checked)}
+            disabled={!editable}
+            className="h-5 w-5 shrink-0 accent-brand-600"
+          />
+          <span className="min-w-0 text-xs text-gray-800">
+            Suggest follow-up questions
+            <span className="block text-[0.6875rem] text-gray-500">
+              After some answers, the chat offers a few questions the visitor might ask next, taken from your knowledge base.
+            </span>
+          </span>
+        </label>
       </div>
 
       <div className="space-y-1">

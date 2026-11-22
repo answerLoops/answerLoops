@@ -337,7 +337,7 @@ describe('lib/db/queries/widgets: compiled SQL', () => {
     // widget_starter_questions, widget_starter_enabled, plan_id.
     rowsFor.push({
       match: 'select',
-      rows: [[7, 'Acme', 'tok-abc', null, 'example.com', 'on-failure', 'general', null, null, null, null, null, null, 'pro']],
+      rows: [[7, 'Acme', 'tok-abc', null, 'example.com', 'on-failure', 'general', null, null, null, null, null, null, null, 'pro']],
     })
 
     const org = await getOrgByWidgetToken('tok-abc')
@@ -362,7 +362,7 @@ describe('lib/db/queries/widgets: compiled SQL', () => {
       widget_lead_capture_mode: 'on-failure',
       widget_answer_scope: 'general',
       widget_guidance: null,
-      widget_appearance: { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true },
+      widget_appearance: { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true, followUpsEnabled: true },
     })
   })
 
