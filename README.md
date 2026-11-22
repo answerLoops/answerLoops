@@ -6,19 +6,15 @@
 
 <h1 align="center">answerLoops</h1>
 
-<p align="center"><strong>Turn your documentation into answers for your community.</strong></p>
+<p align="center"><strong>Help your community grow</strong></p>
 
-<p align="center">Self-hostable AI support for your community. Source-backed replies, checked by a second AI Agent, and approved by your team before it's sent. Run it on your own infrastructure with your preferred LLM model, connect your own agents or use the hosted app.</p>
+<p align="center">Give members a reason to come back and website visitors answers before they leave. One knowledge base powers both.</p>
 
 <p align="center">
   <a href="#get-started"><strong>Self-host →</strong></a> ·
   <a href="https://answerloops.com/login?plan=standard&amp;interval=monthly&amp;utm_source=github&amp;utm_medium=readme&amp;utm_campaign=repo&amp;utm_content=hero&amp;ref=readme"><strong>Try hosted →</strong></a> ·
   <a href="https://answerloops.com/docs/integrations/agent-skills?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=repo&amp;utm_content=hero">Connect your agent</a> ·
   <a href="https://answerloops.com/docs?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=repo&amp;utm_content=hero">Docs</a>
-</p>
-
-<p align="center">
-  <img src="./.github/readme/overview.svg" alt="A question becomes a source-backed draft, checked by a second AI Agent, then approved by your team or sent automatically when enabled. Useful resolutions become knowledge.  Works with Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, Google Chat, and a website widget." width="100%" />
 </p>
 
 <div align="center">
@@ -33,36 +29,37 @@
 
 <a id="why-answerloops"></a>
 
-## Stop answering the same question from scratch
+## Give members help where they already ask
 
-Your docs already cover setup, troubleshooting, and the questions people ask frequently. answerLoops puts that knowledge to work where the conversation happens.
+answerLoops is open-source AI support for online communities and customer teams. Give a new member a clear next step, help a learner get back to a course, or pick up a question that needs a personal reply. Connect the channels you already use and answer from the guides your team maintains.
 
-- **Integrations.** Discord, Slack, Discourse, Circle, GitHub, Telegram, Email, Google Chat, and a website widget.
-- **Knowledge.** Import your documentation, files, GitHub repositories, and Notion pages. Every reply comes with its sources attached.
-- **Review.** A second AI Agent checks each draft against its sources. Your team approves it, or you turn on auto-reply for questions that pass.
-- **Tickets.** One shared inbox for every channel, with triage, SLAs, human escalation, CSAT, and analytics.
-- **Agents.** MCP, REST, OpenAPI, a TypeScript SDK, and Claude Code skills for your own AI tools.
-- **AI providers.** OpenAI, Anthropic, Google Gemini, Groq, Mistral, Ollama, or any OpenAI-compatible endpoint, including local models.
-- **Learning.** Save useful resolutions as knowledge articles, and use knowledge gaps and FAQ digests to see what your docs are missing.
+- **Keep the conversation in the community.** Connect Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and a website widget.
+- **Keep your team in the loop.** Review drafts and see which questions still need attention in one shared inbox. Pro and Enterprise add escalation routing, customer satisfaction ratings, and knowledge gap reports.
+- **Make useful answers available again.** Import guides from URLs, files, GitHub, and Notion. Save a useful resolution as a knowledge base article that can inform future replies.
+- **Use your own infrastructure and tools.** Self-host with a supported model or use the hosted app. Connect your own agents through MCP, the REST API, or the TypeScript SDK.
 
-<p align="center">
-  <a href="https://answerloops.com/?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=answer-loop#main-content">
-    <img src="./.github/readme/answer-loop.gif" alt="Example Discord question moves through knowledge retrieval, answer drafting, source review, and an automatic reply with auto-reply enabled." width="100%" />
-  </a>
-</p>
+## How a member gets an answer
 
-<br />
-<img src="./.github/readme/dashboard-framed.svg" alt="answerLoops dashboard showing answered questions, open tickets, AI drafts, and support activity" width="100%" />
-<div align="center">
-One dashboard for every support channel
-</div>
+For connected support channels, answerLoops drafts from your knowledge base and checks the draft against its sources in a separate AI review. Automatic replies are off by default. Your team chooses which channels can send qualifying replies automatically.
 
-<br />
-<img src="./.github/readme/ticket-detail-framed.svg" alt="answerLoops ticket detail with AI confidence review, evidence, and human escalation" width="100%" />
-<div align="center">
-See why the AI answered, and hand off when it shouldn't
-</div>
+![A member asks where to watch a workshop replay. AnswerLoops drafts from the replay guide and checks the answer against it. A qualifying reply can post automatically when enabled. Otherwise the question waits for your team.](./.github/readme/member-answer-workflow.svg)
 
+## Give website visitors answers without leaving the page
+
+Add the AnswerLoops chat widget to a website or docs site that supports custom JavaScript. Visitors get answers without signing up, using published articles from the same knowledge base that supports your community.
+
+![Example website chat showing how a learner can download a certificate, with a link to the course certificates guide.](./.github/readme/website-chat-widget.svg)
+
+When your articles don’t cover a question, the widget can ask for an email so your team can follow up. [Install the website chat widget](https://answerloops.com/docs/product/chat-widget#set-it-up).
+
+<details>
+<summary><strong>See the workspace</strong></summary>
+
+![answerLoops dashboard with the shared support queue and ticket status](./.github/readme/dashboard.png)
+
+![A support ticket with the original question, drafted answer, and AI review](./.github/readme/ticket-detail.png)
+
+</details>
 
 ## Get started
 
@@ -91,6 +88,8 @@ This installs two Claude Code skills, one to set up a new instance and one to op
 
 ## How it compares
 
+Read our [comparison with Kapa.ai](https://answerloops.com/vs/kapa-ai), or see how answerLoops handles [support across community platforms](https://answerloops.com/blog/managing-every-community-platform-from-one-place) and what we learned [running an AI support bot on a local model](https://answerloops.com/blog/run-an-ai-support-bot-on-a-local-model).
+
 | | answerLoops | Chatwoot | Zammad | Kapa.ai |
 | --- | --- | --- | --- | --- |
 | **License (self-hosted)** | AGPL-3.0 | AGPL-3.0 | AGPL-3.0 | No public self-hosted option |
@@ -106,7 +105,7 @@ Sources: [Chatwoot](https://www.chatwoot.com/pricing/self-hosted-plans), [Zammad
 
 **Can I run answerLoops fully self-hosted with my own LLM?** Yes. It's AGPL-3.0 and ships as a Docker Compose stack. Connect OpenAI, Anthropic, Google Gemini, Groq, Mistral, Ollama, or any OpenAI-compatible endpoint, including a local model.
 
-**Does an AI-drafted answer get reviewed before it's sent?** Yes, always. A separate review agent checks every draft against its sources and assigns a confidence score. Automatic replies are off by default per channel. Even a high-confidence draft waits for a person to approve it until you turn that setting on.
+**When does answerLoops reply automatically?** Automatic replies are off by default on connected support channels. A separate review step checks drafts against their sources. When you enable automatic replies for a channel, drafts can post if they meet its confidence threshold. Other drafts wait for your team.
 
 **Does answerLoops support MCP?** Yes. An MCP server at `/api/mcp` lets any MCP-compatible agent search knowledge, read the FAQ digest, list and create tickets, and generate answers. REST, OpenAPI, and a TypeScript SDK expose the same operations. See the [Agent API reference](https://answerloops.com/docs/integrations/agent-api?utm_source=github&utm_medium=readme&utm_campaign=repo&utm_content=faq).
 </details>
