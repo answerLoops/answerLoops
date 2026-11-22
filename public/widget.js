@@ -30,8 +30,20 @@
     return /^https?:\/\/[^\s"'<>\\]+$/i.test(plain) ? plain.replace(/\/+$/, '') : null;
   }
 
-  var baseUrl = webAddress(script.getAttribute('data-base-url') ||
-    (script.src ? script.src.replace('/widget.js', '') : window.location.origin));
+  // Normalizes the percent-encoding of the accepted address (decode, then
+  // encode again), so it is safe to join other path pieces onto. A well-formed
+  // address comes back unchanged; one that cannot be decoded is refused.
+  function encodedAddress(address) {
+    if (!address) return null;
+    try {
+      return encodeURI(decodeURI(address));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  var baseUrl = encodedAddress(webAddress(script.getAttribute('data-base-url') ||
+    (script.src ? script.src.replace('/widget.js', '') : window.location.origin)));
   if (!baseUrl) return;
 
   var BUBBLE_SIZE = 56;
