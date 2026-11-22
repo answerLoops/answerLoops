@@ -1105,6 +1105,41 @@ export const widgetLeads = pgTable(
   ]
 )
 
+// A visitor's verdict on one widget answer: a thumbs-down with an optional
+// reason and note (drizzle/0084). One row per answer. The question, answer and
+// note are scrubbed before they are stored and cleared after the retention
+// window; the row, the reason and the cited article ids stay. The cited ids are
+// copied from the answer's recorded references when the flag is made, and
+// answer_id is nulled rather than cascaded when the answer record is pruned, so
+// an unreviewed flag is never deleted with it. Shape checks live in the migration.
+export const widgetAnswerFlags = pgTable(
+  'widget_answer_flags',
+  {
+    id: serial('id').primaryKey(),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    answerId: uuid('answer_id').references(() => kbAnswers.id, { onDelete: 'set null' }),
+    // 'up' | 'down'
+    verdict: text('verdict').notNull(),
+    // 'wrong_information' | 'outdated' | 'did_not_answer' | 'other'
+    reason: text('reason'),
+    note: text('note'),
+    question: text('question').notNull().default(''),
+    answer: text('answer').notNull().default(''),
+    citedArticleIds: integer('cited_article_ids').array().notNull().default(sql`'{}'::integer[]`),
+    leadId: integer('lead_id').references(() => widgetLeads.id, { onDelete: 'set null' }),
+    // 'open' | 'resolved' | 'dismissed'
+    status: text('status').notNull().default('open'),
+    resolvedBy: integer('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true, mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('uq_widget_answer_flags_answer').on(t.answerId).where(sql`${t.answerId} IS NOT NULL`),
+    index('idx_widget_answer_flags_org_status').on(t.orgId, t.status, t.createdAt),
+  ]
+)
+
 // A workspace's chat widget logo: the small square the upload step produced,
 // never the original upload. At most one per workspace. Served by
 // app/api/widget/logo/[id]; see lib/images/logo-pipeline.ts.

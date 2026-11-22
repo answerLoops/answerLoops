@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { verifyLeadQuestionToken } from '@/lib/widget/lead-question-token'
+import { verifyAnswerToken } from '@/lib/widget/answer-token'
 
 /**
  * Coverage for app/api/widget/lead-signal/route.ts — the endpoint the widget
@@ -21,13 +22,17 @@ import { verifyLeadQuestionToken } from '@/lib/widget/lead-question-token'
 
 const h = vi.hoisted(() => ({
   getLeadSignal: vi.fn(),
+  getTurnAnswer: vi.fn(),
   verifyRenderToken: vi.fn(),
 }))
 
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: vi.fn(async () => ({ ok: true })) }))
-vi.mock('@/lib/widget/lead-signal-stash', () => ({ getLeadSignal: h.getLeadSignal }))
+vi.mock('@/lib/widget/lead-signal-stash', () => ({
+  getLeadSignal: h.getLeadSignal,
+  getTurnAnswer: h.getTurnAnswer,
+}))
 vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: h.verifyRenderToken }))
 
 const VALID_TOKEN = 'f'.repeat(48)
@@ -45,6 +50,7 @@ beforeEach(() => {
   process.env.AUTH_SECRET = 'test-auth-secret-value'
   h.verifyRenderToken.mockReturnValue(true)
   h.getLeadSignal.mockReturnValue({ signal: 'none', question: '' })
+  h.getTurnAnswer.mockReturnValue(null)
 })
 
 afterEach(() => {
@@ -151,6 +157,30 @@ describe('POST /api/widget/lead-signal: success', () => {
     expect(JSON.stringify(body)).not.toContain('how do I export')
     expect(verifyLeadQuestionToken(body.questionToken, VALID_TOKEN)).toBe('how do I export my data?')
     expect(verifyLeadQuestionToken(body.questionToken, 'e'.repeat(48))).toBeNull()
+  })
+
+  it('hands back a signed answer reference when the turn produced a recorded answer, even with no lead signal', async () => {
+    const answerId = '3f0c2b9e-5d1a-4c7e-9a43-0b6d8e2f1a77'
+    h.getTurnAnswer.mockReturnValue({ answerId, question: 'how do I export?', answer: 'Use Settings > Export.' })
+    const { POST } = await import('@/app/api/widget/lead-signal/route')
+    const res = await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-1' }))
+    const body = await res.json()
+    expect(body.signal).toBe('none')
+    expect(body.questionToken).toBeUndefined()
+    // The id itself is never echoed, only a token bound to this widget.
+    expect(JSON.stringify(body)).not.toContain(answerId)
+    expect(verifyAnswerToken(body.answerToken, VALID_TOKEN)).toEqual({
+      answerId,
+      question: 'how do I export?',
+      answer: 'Use Settings > Export.',
+    })
+    expect(verifyAnswerToken(body.answerToken, 'e'.repeat(48))).toBeNull()
+  })
+
+  it('looks the answer up by this turn only, scoped to the widget token and visitor', async () => {
+    const { POST } = await import('@/app/api/widget/lead-signal/route')
+    await POST(leadSignalRequest({ widgetToken: VALID_TOKEN, renderToken: 'x', visitorId: 'visitor-1', turnId: 'turn-9' }))
+    expect(h.getTurnAnswer).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-1', 'turn-9')
   })
 
   it('asking twice for the same turn gives the same answer (the route itself holds no state)', async () => {

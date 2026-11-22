@@ -27,7 +27,7 @@ import { reserveGeneration, commitDeflection, releaseGeneration } from '@/lib/bi
 import { logger } from '@/lib/logger'
 import { requestsHuman, isGreetingOrAck, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import { isValidWidgetToken, isValidVisitorId, isValidTurnId } from '@/lib/widget/request-validation'
-import { setLeadSignal } from '@/lib/widget/lead-signal-stash'
+import { setLeadSignal, setTurnAnswer } from '@/lib/widget/lead-signal-stash'
 import { buildWidgetInstructions } from '@/lib/widget/instructions'
 import type { WidgetAnswerScope } from '@/lib/widget/answer-scope'
 
@@ -506,6 +506,16 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
           query
         )
       }
+      // The recorded answer this turn produced, with the question and reply,
+      // held for the same short window so the widget can ask for a signed
+      // reference to it and let the visitor flag it (app/api/widget/lead-signal,
+      // app/api/widget/flag). Nothing is kept past that window for an answer
+      // nobody flags.
+      setTurnAnswer(widgetToken, visitorId, turnId, {
+        answerId,
+        question: query,
+        answer: typeof event?.text === 'string' ? event.text : '',
+      })
 
       await commitDeflection(org.id, reservationId).catch((e) => {
         logger.error('widget chat commitDeflection failed', { module: MOD, orgId: org.id, error: e })

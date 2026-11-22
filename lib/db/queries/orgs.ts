@@ -36,6 +36,7 @@ import {
   subscriptions,
   platformAiUsage,
   widgetLeads,
+  widgetAnswerFlags,
   widgetLogos,
   slaConfigs,
   productFeedback,
@@ -184,6 +185,9 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     await tx.delete(kbSupportFlags).where(eq(kbSupportFlags.orgId, orgId))
     await tx.delete(kbSupportAssessments).where(eq(kbSupportAssessments.orgId, orgId))
     await tx.delete(kbSupportSettings).where(eq(kbSupportSettings.orgId, orgId))
+    // Visitor flags on widget answers (they point at an answer and at a lead),
+    // before the answers and leads they link to.
+    await tx.delete(widgetAnswerFlags).where(eq(widgetAnswerFlags.orgId, orgId))
     // References go with their answers, before the articles they point at.
     await tx.delete(kbAnswers).where(eq(kbAnswers.orgId, orgId))
     await tx.delete(kbArticles).where(eq(kbArticles.orgId, orgId))

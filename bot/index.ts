@@ -31,6 +31,7 @@ import { getOrgsPendingPurge, hardPurgeOrg } from '../lib/db/queries/orgs'
 import { getStuckPendingTickets } from '../lib/db/queries/tickets'
 import { claimNextKbSyncJob, reclaimStuckKbSyncJobs } from '../lib/db/queries/kb-sync-jobs'
 import { purgeExpiredReviewText } from '../lib/db/queries/kb-review'
+import { purgeExpiredFlagText } from '../lib/db/queries/widget-answer-flags'
 import { pruneArticleUsage } from '../lib/db/queries/kb-usage'
 import { pruneAnswerReferences } from '../lib/db/queries/kb-answers'
 import { sweepSupportAssessments } from '../lib/db/queries/kb-support'
@@ -54,15 +55,18 @@ function startKbRetentionSweep(): void {
   const sweep = async () => {
     try {
       const cleared = await purgeExpiredReviewText()
+      // Visitor text on answer flags: dismissed ones at once, the rest after their window.
+      const clearedFlags = await purgeExpiredFlagText()
       const pruned = await pruneArticleUsage()
       // Source-support evidence first: expired text goes, then assessments past the window,
       // then the answers they hang from (which would remove any left anyway).
       const support = await sweepSupportAssessments()
       const prunedAnswers = await pruneAnswerReferences()
-      if (cleared > 0 || pruned > 0 || prunedAnswers > 0 || support.excerptsCleared > 0 || support.assessmentsDeleted > 0) {
+      if (cleared > 0 || clearedFlags > 0 || pruned > 0 || prunedAnswers > 0 || support.excerptsCleared > 0 || support.assessmentsDeleted > 0) {
         logger.info('kb retention sweep complete', {
           module: MOD,
           cleared,
+          clearedFlags,
           pruned,
           prunedAnswers,
           supportExcerptsCleared: support.excerptsCleared,
