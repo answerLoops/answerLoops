@@ -106,6 +106,11 @@ export default async function WidgetPage({ params }: Props) {
   // same browser, so a token copied elsewhere does not verify.
   const renderToken = mintRenderToken(widgetToken, ip)
 
+  // Visitors can flag an answer on the plans that have the Review queue, which
+  // is where those flags are read. Never in the owner's own preview: a test
+  // question there would otherwise be flagged into their real list.
+  const answerFlagsEnabled = !isSelfPreview && (await orgHasFeature(org.id, 'kb_review_queue'))
+
   return (
     <WidgetChat
       widgetToken={widgetToken}
@@ -119,6 +124,7 @@ export default async function WidgetPage({ params }: Props) {
       starterQuestions={appearance?.starterEnabled ? appearance.starterQuestions : []}
       brandStyle={brandStyle}
       logoUrl={logoUrl}
+      answerFlagsEnabled={answerFlagsEnabled}
     />
   )
 }

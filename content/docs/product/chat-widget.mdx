@@ -283,7 +283,7 @@ When a visitor leaves their email in the chat, answerLoops emails the workspace'
 - **Never in the way.** The email is sent after the visitor's request has finished. If sending fails, the lead is still saved and is included in the next email.
 
 <Callout type="warn" title="Architecture: the on-failure check is single-instance only">
-  "Only if it can't help" works by having the widget poll a small lookup right after a turn finishes, asking whether that turn just failed. The answer to that lookup is recorded under that turn's own id in the memory of whichever application server process handled the chat request — it is never written to the database or to shared cache, and it is only recorded for workspaces set to "Only if it can't help". Because each turn has its own entry, asking again returns the same answer, so the widget can safely retry the lookup if a response is lost, and a turn that failed or was rejected before it recorded anything can never be mistaken for an earlier turn's result. If your deployment runs more than one application instance behind a load balancer (self-hosters scaling horizontally; this does not apply to the standard answerLoops Cloud deployment), the visitor's follow-up poll can land on a *different* instance than the one that just answered. That instance has nothing in its memory for this turn, so the lookup simply returns "no prompt needed" — the on-failure email ask silently never appears for that turn. Nothing errors, no data is lost, and the conversation itself is unaffected; the visitor is just never asked for an email on that particular miss. A single-instance deployment never hits this. If you run multiple instances and need the prompt to appear reliably, use **"Before the conversation starts"** or **"Never"** instead, both of which have no cross-instance dependency.
+  "Only if it can't help" works by having the widget poll a small lookup right after a turn finishes, asking whether that turn just failed. The answer to that lookup is recorded under that turn's own id in the memory of whichever application server process handled the chat request — it is never written to the database or to shared cache, and it is only recorded for workspaces set to "Only if it can't help" or on a plan where visitors can [flag an answer](#flagging-an-answer). Because each turn has its own entry, asking again returns the same answer, so the widget can safely retry the lookup if a response is lost, and a turn that failed or was rejected before it recorded anything can never be mistaken for an earlier turn's result. If your deployment runs more than one application instance behind a load balancer (self-hosters scaling horizontally; this does not apply to the standard answerLoops Cloud deployment), the visitor's follow-up poll can land on a *different* instance than the one that just answered. That instance has nothing in its memory for this turn, so the lookup simply returns "no prompt needed" — the on-failure email ask silently never appears for that turn. Nothing errors, no data is lost, and the conversation itself is unaffected; the visitor is just never asked for an email on that particular miss. A single-instance deployment never hits this. If you run multiple instances and need the prompt to appear reliably, use **"Before the conversation starts"** or **"Never"** instead, both of which have no cross-instance dependency.
 </Callout>
 
 ## What the widget answers from
@@ -344,6 +344,25 @@ After some answers the chat can offer two or three short questions the visitor m
 - **Plain text, in the chat's own look.** The questions use the same buttons as quick replies, in your brand color, and are shown as plain text.
 
 On Standard the switch is shown locked and the chat never offers follow-up questions. Turning the switch off, or a plan without it, means the assistant is not told about the feature at all.
+
+## Flagging an answer
+
+On Pro and above, each answer in the chat has a thumbs-up and a thumbs-down under it, so a visitor can say when an answer helped or when it was wrong, even if it cited one of your articles.
+
+- **Thumbs-up** is one tap and nothing else is asked.
+- **Thumbs-down** is saved the moment it is tapped, so it counts even if the visitor goes no further. A short panel then asks what went wrong (wrong information, out of date, didn't answer my question, or something else), with an optional note.
+- **An email, only if you allow it.** When **Settings → Widget → Ask for an email** is anything other than **Never**, the panel also offers an optional field: "Want someone to follow up? Leave your email." The address is saved as a lead, the same as any other lead, and is not tied to the question. With **Never** the field is not shown, and a server that is sent an address anyway refuses it.
+- **Each answer once.** After a visitor flags an answer the thumbs are replaced by a short thank-you. A conversation restored from an earlier visit, and your own preview of the widget, show no thumbs.
+
+### What is saved with a flag
+
+A flag keeps the question the visitor asked, the reply they were given, which of your articles were supplied to that reply, the reason and the note. It does not keep who the visitor is. The question and reply are never taken from the visitor's browser at the time of the flag: the widget gets a short-lived signed reference to the answer the server recorded for that turn, with the question and reply inside it, and sends it back when the visitor flags, and the server checks it before saving. A made-up or altered reference is refused and nothing is saved. Email addresses, phone numbers and long digit runs in the saved text are replaced with markers, and the text is cleared 90 days after the flag was made (the flag, its reason and the articles it cited stay). Treat the note as customer-supplied text that may contain personal details.
+
+A workspace can collect at most 200 flags a day.
+
+<Callout type="warn" title="Architecture: the answer reference is single-instance only">
+  The signed reference is minted from a short note the application server keeps in memory about each turn, the same note the on-failure check reads. If your deployment runs more than one application instance behind a load balancer (self-hosters scaling horizontally; this does not apply to the standard answerLoops Cloud deployment), the visitor's follow-up lookup can land on a different instance than the one that answered. That answer then shows no thumbs. Nothing errors and the conversation is unaffected.
+</Callout>
 
 ## Rich answer cards
 
