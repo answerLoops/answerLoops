@@ -1,5 +1,7 @@
-import { eq, and, or, inArray, sql, desc, lt, ne, isNotNull, isNull, gt, type SQL } from 'drizzle-orm'
+import { eq, and, or, inArray, sql, desc, lt, ne, isNotNull, isNull, gt, getTableColumns, type SQL } from 'drizzle-orm'
+import { ticketActivityMessage } from '@/lib/tickets/activity'
 import { getDb } from '../drizzle'
+import { lockTicketActivity } from '../locks'
 import {
   tickets,
   ticketReplies,
@@ -241,26 +243,26 @@ const unseenActivityCondition = and(
   or(isNull(tickets.lastSeenAt), gt(tickets.lastCustomerReplyAt, tickets.lastSeenAt))
 )!
 
-/**
- * Tickets with customer replies the team hasn't opened yet, most recent reply
- * first. Feeds the dashboard's Activity panel.
- */
-export async function getUnseenActivityTickets(orgId: number, limit = 8): Promise<Ticket[]> {
-  const rows = await getDb()
-    .select()
-    .from(tickets)
-    .where(and(eq(tickets.orgId, orgId), unseenActivityCondition))
-    .orderBy(desc(tickets.lastCustomerReplyAt), desc(tickets.id))
-    .limit(limit)
-  return rows.map(toTicket)
+/** Unseen activity whose latest customer reply is no newer than `cutoff`. */
+function unseenActivityThrough(cutoff: SQL | string): SQL {
+  return and(unseenActivityCondition, sql`${tickets.lastCustomerReplyAt} <= ${cutoff}::timestamptz`)!
 }
 
-export async function countUnseenActivityTickets(orgId: number): Promise<number> {
-  const [row] = await getDb()
-    .select({ n: sql<number>`COUNT(*)::int` })
+/** The preview, total and visibility boundary come from the same statement snapshot. */
+export async function getUnseenActivityTickets(orgId: number, limit = 8) {
+  const cutoff = sql`statement_timestamp()`
+  const rows = await getDb()
+    .select({
+      ...getTableColumns(tickets),
+      snapshot: sql<string>`to_char(${cutoff} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
+        || '|' || pg_current_snapshot()::text`,
+      total: sql<number>`count(*) OVER ()::int`,
+    })
     .from(tickets)
-    .where(and(eq(tickets.orgId, orgId), unseenActivityCondition))
-  return row?.n ?? 0
+    .where(and(eq(tickets.orgId, orgId), unseenActivityThrough(cutoff)))
+    .orderBy(desc(tickets.lastCustomerReplyAt), desc(tickets.id))
+    .limit(limit)
+  return { tickets: rows.map(toTicket), total: rows[0]?.total ?? 0, snapshot: rows[0]?.snapshot }
 }
 
 /** Records that something happened on the conversation, without marking it as customer activity. */
@@ -277,7 +279,7 @@ export async function markTicketSeen(ticketId: number, orgId: number): Promise<b
   const db = getDb()
   const updated = await db
     .update(tickets)
-    .set({ lastSeenAt: new Date() })
+    .set({ lastSeenAt: sql`greatest(clock_timestamp(), ${tickets.lastCustomerReplyAt})` })
     .where(and(eq(tickets.id, ticketId), eq(tickets.orgId, orgId)))
     .returning({ id: tickets.id })
   if (updated.length === 0) return false
@@ -288,11 +290,42 @@ export async function markTicketSeen(ticketId: number, orgId: number): Promise<b
   return true
 }
 
+export async function markAllTicketsSeen(orgId: number, snapshot: string): Promise<number> {
+  const [cutoff, visibility] = snapshot.split('|')
+  return getDb().transaction(async (tx) => {
+    // Wait before taking the UPDATE snapshot so it includes bell inserts
+    // already published alongside their customer replies.
+    await lockTicketActivity(tx, orgId, 'exclusive')
+    // At READ COMMITTED the UPDATE rechecks eligibility after waiting for
+    // another writer on the ticket. The saved transaction ID belongs to the
+    // latest customer reply, even if another write changed the ticket since.
+    const [row] = await tx.execute<{ count: number }>(sql`
+      WITH seen AS (
+        UPDATE ${tickets}
+        SET last_seen_at = greatest(clock_timestamp(), ${tickets.lastCustomerReplyAt})
+        WHERE ${eq(tickets.orgId, orgId)} AND ${unseenActivityThrough(cutoff)}
+          AND (${tickets.lastCustomerReplyXid} IS NULL OR
+            pg_visible_in_snapshot(${tickets.lastCustomerReplyXid}::xid8, ${visibility}::pg_snapshot))
+        RETURNING id
+      ), cleared AS (
+        UPDATE ${notifications}
+        SET read = 1
+        WHERE ${eq(notifications.orgId, orgId)} AND ${eq(notifications.read, 0)}
+          AND ${eq(notifications.type, 'ticket_activity')}
+          AND ${notifications.ticketId} IN (SELECT id FROM seen)
+      )
+      SELECT count(*)::int AS count FROM seen
+    `)
+    return row.count
+  }, { isolationLevel: 'read committed' })
+}
+
 export async function getTickets(
   filters: TicketFilters = {},
   orgId: number,
   limit?: number,
-  cursor?: TicketCursor
+  cursor?: TicketCursor,
+  includeActivityState = false
 ): Promise<Ticket[]> {
   const conditions = [eq(tickets.orgId, orgId)]
   if (filters.status) conditions.push(eq(tickets.status, filters.status))
@@ -328,7 +361,10 @@ export async function getTickets(
   }
 
   let query = getDb()
-    .select()
+    .select({
+      ...getTableColumns(tickets),
+      ...(includeActivityState ? { hasNewActivity: sql<boolean>`coalesce(${unseenActivityCondition}, false)` } : {}),
+    })
     .from(tickets)
     .where(and(...conditions))
     .orderBy(...(byActivity ? [desc(tickets.lastActivityAt), desc(tickets.id)] : [desc(tickets.createdAt), desc(tickets.id)]))
@@ -336,7 +372,9 @@ export async function getTickets(
   if (limit) query = query.limit(limit)
 
   const rows = await query
-  return rows.map(toTicket)
+  return rows.map((row) => row.hasNewActivity === undefined
+    ? toTicket(row)
+    : { ...toTicket(row), has_new_activity: row.hasNewActivity })
 }
 
 export async function getTicketById(id: number, orgId: number): Promise<Ticket | null> {
@@ -699,53 +737,64 @@ export interface ThreadMessageInput {
  * an email reply, or a message in a chat/forum/issue thread the ticket came
  * from. Reopens the ticket if it was resolved/closed — a reply means the issue
  * isn't actually done. System path (webhook ingest), so unscoped by design.
- * Returns false, changing nothing, when this exact message is already stored.
+ * Returns false for a duplicate, or null if the ticket no longer exists.
  */
 export async function recordCustomerReply(
   ticketId: number,
   content: string,
   input: ThreadMessageInput = {}
-): Promise<boolean> {
-  const ticket = await getTicketByIdUnscoped(ticketId)
-  if (!ticket) throw new Error('Ticket not found')
+): Promise<boolean | null> {
+  const [workspace] = await getDb().select({ orgId: tickets.orgId }).from(tickets).where(eq(tickets.id, ticketId)).limit(1)
+  if (!workspace) return null
 
-  const db = getDb()
   const authorName = input.authorName ?? 'Customer'
-  const inserted = await db
-    .insert(ticketReplies)
-    .values({
+  return getDb().transaction(async (tx) => {
+    // Reply writers can proceed together. Bulk clear takes the exclusive
+    // lock before reading either the tickets or the bell notifications.
+    await lockTicketActivity(tx, workspace.orgId, 'shared')
+    const [row] = await tx.select().from(tickets)
+      .where(and(eq(tickets.id, ticketId), eq(tickets.orgId, workspace.orgId))).limit(1)
+    if (!row) return null
+    const ticket = toTicket(row)
+    const inserted = await tx.insert(ticketReplies).values({
       ticketId,
       staffName: authorName,
       content,
       authorRole: 'customer',
       sourceMessageId: input.messageId ?? null,
+    }).onConflictDoNothing().returning({ id: ticketReplies.id })
+    if (inserted.length === 0) return false
+
+    const at = new Date()
+    const wasClosed = ticket.status === 'resolved' || ticket.status === 'closed'
+    await tx.update(tickets).set({
+      ...(wasClosed ? { status: 'open' } : {}),
+      updatedAt: at.toISOString(),
+      lastActivityAt: at,
+      // Persist the top-level transaction ID for dashboard visibility checks.
+      lastCustomerReplyXid: sql`pg_current_xact_id()::text`,
+      lastCustomerReplyAt: sql`greatest(
+        clock_timestamp(),
+        ${tickets.lastSeenAt} + interval '1 microsecond',
+        ${tickets.lastCustomerReplyAt}
+      )`,
+    }).where(eq(tickets.id, ticketId))
+
+    await tx.insert(ticketEvents).values({
+      ticketId,
+      eventType: 'customer_reply',
+      oldValue: wasClosed ? ticket.status : null,
+      newValue: wasClosed ? 'open' : null,
+      actor: 'customer',
     })
-    .onConflictDoNothing()
-    .returning({ id: ticketReplies.id })
-  if (inserted.length === 0) return false
-
-  const at = new Date()
-  const now = at.toISOString()
-  const wasClosed = ticket.status === 'resolved' || ticket.status === 'closed'
-  // The customer writing is the one kind of activity the team has not seen.
-  const activity = { updatedAt: now, lastActivityAt: at, lastCustomerReplyAt: at }
-  if (wasClosed) {
-    await db
-      .update(tickets)
-      .set({ status: 'open', ...activity })
-      .where(eq(tickets.id, ticketId))
-  } else {
-    await db.update(tickets).set(activity).where(eq(tickets.id, ticketId))
-  }
-
-  await db.insert(ticketEvents).values({
-    ticketId,
-    eventType: 'customer_reply',
-    oldValue: wasClosed ? ticket.status : null,
-    newValue: wasClosed ? 'open' : null,
-    actor: 'customer',
-  })
-  return true
+    await tx.insert(notifications).values({
+      ticketId,
+      orgId: row.orgId,
+      type: 'ticket_activity',
+      message: ticketActivityMessage(ticket, authorName, content),
+    })
+    return true
+  }, { isolationLevel: 'read committed' })
 }
 
 /**
@@ -819,6 +868,12 @@ export async function recordThreadContext(
 export async function deleteTicket(id: number): Promise<void> {
   const db = getDb()
   await db.transaction(async (tx) => {
+    const [ticket] = await tx.select({ orgId: tickets.orgId }).from(tickets).where(eq(tickets.id, id)).limit(1)
+    if (!ticket) return
+
+    // Deletion removes dependents before the ticket. Exclude bulk updates
+    // and new reply writes before taking any of those row locks.
+    await lockTicketActivity(tx, ticket.orgId, 'exclusive')
     await tx.update(kbArticles).set({ sourceTicketId: null }).where(eq(kbArticles.sourceTicketId, id))
     await tx.delete(notifications).where(eq(notifications.ticketId, id))
     await tx.delete(ticketEmbeddings).where(eq(ticketEmbeddings.ticketId, id))
@@ -832,5 +887,5 @@ export async function deleteTicket(id: number): Promise<void> {
     await tx.delete(ticketEvents).where(eq(ticketEvents.ticketId, id))
     await tx.delete(aiAssessments).where(eq(aiAssessments.ticketId, id))
     await tx.delete(tickets).where(eq(tickets.id, id))
-  })
+  }, { isolationLevel: 'read committed' })
 }

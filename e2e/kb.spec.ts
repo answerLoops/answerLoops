@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 import type { Page, APIRequestContext } from '@playwright/test'
-import { ingest, waitForPipeline, waitForTicketField, waitFor } from './helpers'
+import { ingest, waitForPipeline, waitForTicketField, waitFor, ticketDetailPath } from './helpers'
 
 interface KBArticle {
   id: number
@@ -14,9 +14,10 @@ interface KBArticle {
 async function promotedTicket(page: Page, request: APIRequestContext): Promise<number> {
   const ticketId = await ingest(request, { content: 'How do I configure the client connection?' })
   await waitForPipeline(request, ticketId)
+  const ticketPath = await ticketDetailPath(request, ticketId)
 
   // Resolve via the status form.
-  await page.goto(`/tickets/${ticketId}`)
+  await page.goto(ticketPath)
   const statusForm = page.locator('form:has(select[name="status"])')
   await statusForm.locator('input[name="staffName"]').fill('Sarah')
   await statusForm.locator('select[name="status"]').selectOption('resolved')
@@ -25,7 +26,7 @@ async function promotedTicket(page: Page, request: APIRequestContext): Promise<n
 
   // Reload so the page renders the KB section (only shown for resolved tickets).
   await waitForTicketField(request, ticketId, 'status', 'resolved')
-  await page.goto(`/tickets/${ticketId}`)
+  await page.goto(ticketPath)
   await page.getByRole('button', { name: 'Promote to KB' }).click()
 
   return ticketId

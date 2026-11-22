@@ -12,7 +12,7 @@ const root = process.cwd()
 const read = (rel: string) => fs.readFileSync(path.join(root, rel), 'utf8')
 
 describe('the migration', () => {
-  const sql = read('drizzle/0082_widget_logos.sql')
+  const sql = read('drizzle/0083_widget_logos.sql')
   const executable = sql
     .split('\n')
     .filter((line) => !line.trim().startsWith('--'))
@@ -20,7 +20,7 @@ describe('the migration', () => {
 
   it('is the next one after the follow-up suggestions migration', () => {
     const files = fs.readdirSync(path.join(root, 'drizzle')).filter((f) => /^\d{4}_.*\.sql$/.test(f)).sort()
-    expect(files.indexOf('0082_widget_logos.sql')).toBe(files.indexOf('0081_widget_follow_up_suggestions.sql') + 1)
+    expect(files.indexOf('0083_widget_logos.sql')).toBe(files.indexOf('0082_ticket_reply_transaction.sql') + 1)
   })
 
   it('creates one table, only if it is missing, so applying it twice is harmless', () => {
