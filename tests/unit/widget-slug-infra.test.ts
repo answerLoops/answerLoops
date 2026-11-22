@@ -25,6 +25,12 @@ vi.mock('@/lib/db/queries/widgets', () => ({
   getOrgByWidgetSlug: h.getOrgByWidgetSlug,
 }))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
+vi.mock('@/lib/db/queries/widget-logos', () => ({
+  getWidgetLogoVersion: vi.fn(async () => null),
+  getWidgetLogo: vi.fn(async () => null),
+  setWidgetLogo: vi.fn(async () => ({ etag: '0123456789abcdef' })),
+  deleteWidgetLogo: vi.fn(async () => undefined),
+}))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
@@ -146,7 +152,7 @@ describe('GET /api/widget/config: slug routing and rate-limit key', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.token).toBeNull()
-    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff' })
+    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoVersion: null })
     expect(h.orgHasFeature).not.toHaveBeenCalled()
   })
 
@@ -181,6 +187,7 @@ describe('public/widget.js: using the resolved token', () => {
   const RESOLVED = 'd4'.repeat(24)
 
   interface El {
+    tag: string
     id: string
     src: string
     textContent: string
@@ -189,8 +196,9 @@ describe('public/widget.js: using the resolved token', () => {
     listeners: Record<string, () => void>
     [k: string]: unknown
   }
-  const el = (): El => {
+  const el = (tag = ''): El => {
     const e: El = {
+      tag,
       id: '',
       src: '',
       textContent: '',
@@ -211,6 +219,14 @@ describe('public/widget.js: using the resolved token', () => {
       },
       classList: { add() {}, remove() {} },
     }
+    let text = ''
+    Object.defineProperty(e, 'textContent', {
+      get: () => text,
+      set: (v: string) => {
+        text = v
+        if (v === '') e.children.length = 0
+      },
+    })
     return e
   }
 
@@ -226,7 +242,8 @@ describe('public/widget.js: using the resolved token', () => {
         readyState: 'complete',
         head,
         body,
-        createElement: () => el(),
+        createElement: (tag: string) => el(tag),
+        createElementNS: (_ns: string, tag: string) => el(tag),
         getElementsByTagName: () => [script],
         addEventListener: () => {},
       },

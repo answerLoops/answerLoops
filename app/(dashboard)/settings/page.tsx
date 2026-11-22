@@ -894,6 +894,7 @@ export function WidgetSection() {
   const [guidance, setGuidance] = useState<string | null>(null)
   const [appearance, setAppearance] = useState<WidgetAppearance>(EMPTY_WIDGET_APPEARANCE)
   const [customizationAvailable, setCustomizationAvailable] = useState(false)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   // The saved slug is what the snippet carries; the draft is what's in the box.
   const [slug, setSlug] = useState<string | null>(null)
   const [slugDraft, setSlugDraft] = useState('')
@@ -975,6 +976,7 @@ export function WidgetSection() {
           setGuidance(result.guidance ?? null)
           setAppearance(result.appearance ?? EMPTY_WIDGET_APPEARANCE)
           setCustomizationAvailable(result.customizationAvailable === true)
+          setLogoUrl(result.logoUrl ?? null)
           setSlug(result.slug ?? null)
           setSlugDraft(result.slug ?? '')
         }
@@ -1220,6 +1222,7 @@ export function WidgetSection() {
             canManage={canManage}
             customizationAvailable={customizationAvailable}
             initialAppearance={appearance}
+            initialLogoUrl={logoUrl}
           />
         </div>
       )}

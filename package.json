@@ -79,6 +79,7 @@
     "react-markdown": "9.0.3",
     "remark-gfm": "4.0.1",
     "resend": "^6.32.1",
+    "sharp": "^0.35.5",
     "stripe": "^23.0.0",
     "web-push": "^3.6.7",
     "zod": "^4.6.7"

@@ -16,10 +16,18 @@ import {
   vector,
   uuid,
   unique,
+  customType,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 
 const now = sql`now()`
+
+// Raw bytes, read and written as a Node Buffer.
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return 'bytea'
+  },
+})
 
 export const orgs = pgTable('orgs', {
   id: serial('id').primaryKey(),
@@ -1096,6 +1104,18 @@ export const widgetLeads = pgTable(
     uniqueIndex('widget_leads_org_email').on(t.orgId, t.email),
   ]
 )
+
+// A workspace's chat widget logo: the small square the upload step produced,
+// never the original upload. At most one per workspace. Served by
+// app/api/widget/logo/[id]; see lib/images/logo-pipeline.ts.
+export const widgetLogos = pgTable('widget_logos', {
+  orgId: integer('org_id').primaryKey().references(() => orgs.id),
+  contentType: text('content_type').notNull(),
+  bytes: bytea('bytes').notNull(),
+  // A short fingerprint of the bytes; it versions the logo's address.
+  etag: text('etag').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().default(now),
+})
 
 export const csatMessages = pgTable('csat_messages', {
   messageId: text('message_id').primaryKey(),

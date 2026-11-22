@@ -15,10 +15,18 @@ const h = vi.hoisted(() => ({
   getWidgetAppearance: vi.fn(),
   ensureWidgetToken: vi.fn(),
   getWidgetAllowedOrigins: vi.fn(),
+  getWidgetLogoVersion: vi.fn(),
+  deleteWidgetLogo: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
+vi.mock('@/lib/db/queries/widget-logos', () => ({
+  getWidgetLogoVersion: h.getWidgetLogoVersion,
+  getWidgetLogo: vi.fn(async () => null),
+  setWidgetLogo: vi.fn(async () => ({ etag: '0123456789abcdef' })),
+  deleteWidgetLogo: h.deleteWidgetLogo,
+}))
 vi.mock('@/lib/db/queries/widgets', () => ({
   setWidgetAppearance: h.setWidgetAppearance,
   getWidgetAppearance: h.getWidgetAppearance,
@@ -43,6 +51,8 @@ const form = (values: Record<string, string>) => {
 }
 
 beforeEach(() => {
+  h.getWidgetLogoVersion.mockResolvedValue(null)
+  h.deleteWidgetLogo.mockResolvedValue(undefined)
   vi.clearAllMocks()
   h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 5, role: 'owner' })
   h.orgHasFeature.mockResolvedValue(true)
@@ -229,5 +239,42 @@ describe('getWidgetTokenAction', () => {
     h.orgHasFeature.mockResolvedValue(false)
     const { getWidgetTokenAction } = await import('@/lib/actions/widget')
     expect((await getWidgetTokenAction()).customizationAvailable).toBe(false)
+  })
+})
+
+
+describe('the logo, in the reset and in the settings lookup', () => {
+  it('Reset to default also removes the logo, for the caller\'s workspace only', async () => {
+    const { resetWidgetAppearanceAction } = await import('@/lib/actions/widget')
+    await resetWidgetAppearanceAction()
+    expect(h.deleteWidgetLogo).toHaveBeenCalledTimes(1)
+    expect(h.deleteWidgetLogo).toHaveBeenCalledWith(5)
+  })
+
+  it('a refused reset leaves the logo alone', async () => {
+    h.orgHasFeature.mockResolvedValue(false)
+    const { resetWidgetAppearanceAction } = await import('@/lib/actions/widget')
+    await resetWidgetAppearanceAction()
+    expect(h.deleteWidgetLogo).not.toHaveBeenCalled()
+  })
+
+  it('reports the logo\'s address to Settings when the plan includes customization', async () => {
+    h.ensureWidgetToken.mockResolvedValue({ token: 'd4'.repeat(24), expiresAt: '2036-01-01T00:00:00.000Z' })
+    h.getWidgetLogoVersion.mockResolvedValue({ etag: '0123456789abcdef' })
+    const { getWidgetTokenAction } = await import('@/lib/actions/widget')
+    expect((await getWidgetTokenAction()).logoUrl).toBe(`/api/widget/logo/${'d4'.repeat(24)}?v=0123456789abcdef`)
+  })
+
+  it('reports none when the workspace has no logo', async () => {
+    const { getWidgetTokenAction } = await import('@/lib/actions/widget')
+    expect((await getWidgetTokenAction()).logoUrl).toBeNull()
+  })
+
+  it('reports none, and does not look, on a plan without customization', async () => {
+    h.orgHasFeature.mockResolvedValue(false)
+    h.getWidgetLogoVersion.mockResolvedValue({ etag: '0123456789abcdef' })
+    const { getWidgetTokenAction } = await import('@/lib/actions/widget')
+    expect((await getWidgetTokenAction()).logoUrl).toBeNull()
+    expect(h.getWidgetLogoVersion).not.toHaveBeenCalled()
   })
 })

@@ -69,6 +69,14 @@ function el(tag: string): El {
       remove: (c) => void e.classes.delete(c),
     },
   }
+  let text = ''
+  Object.defineProperty(e, 'textContent', {
+    get: () => text,
+    set: (v: string) => {
+      text = v
+      if (v === '') e.children.length = 0
+    },
+  })
   return e
 }
 
@@ -86,6 +94,7 @@ function run() {
       head,
       body,
       createElement: (tag: string) => el(tag),
+      createElementNS: (_ns: string, tag: string) => el(tag),
       getElementsByTagName: () => [script],
       addEventListener: () => {},
     },

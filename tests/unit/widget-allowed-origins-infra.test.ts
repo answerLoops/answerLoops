@@ -442,6 +442,14 @@ function makeElement(tag: string): FakeElement {
     },
     classList: { add() {}, remove() {} },
   }
+  let text = ''
+  Object.defineProperty(el, 'textContent', {
+    get: () => text,
+    set: (v: string) => {
+      text = v
+      if (v === '') el.children.length = 0
+    },
+  })
   return el
 }
 
@@ -476,6 +484,7 @@ function runWidgetScript(opts: { origin: string | null | 'throw'; widgetId?: str
       head,
       body,
       createElement: (tag: string) => makeElement(tag),
+      createElementNS: (_ns: string, tag: string) => makeElement(tag),
       getElementsByTagName: () => [scriptEl],
       addEventListener: () => {},
     },

@@ -5,7 +5,6 @@ import { useAgent, useRenderTool, useRenderToolCall } from '@copilotkit/react-co
 import type { Message } from '@ag-ui/client'
 import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import type { CSSProperties, ReactElement } from 'react'
-import Image from 'next/image'
 import {
   GENUI_TOOL_NAMES,
   calloutSchema,
@@ -27,7 +26,7 @@ import {
   WidgetActionsProvider,
 } from './genui-cards'
 import { ChatMarkdown } from './chat-markdown'
-import { WelcomeAvatar } from './welcome-avatar'
+import { LogoAvatar, WelcomeAvatar } from './welcome-avatar'
 import { followUpCallIds, latestFollowUpCallId } from '@/lib/widget/follow-up-thread'
 import {
   isWidgetLeadSignal,
@@ -194,14 +193,8 @@ type ToolCallLike = NonNullable<Extract<Message, { role: 'assistant' }>['toolCal
 
 const EMPTY_QUESTIONS: string[] = []
 
-const BotIcon = ({ size = 14 }: { size?: number }) => (
-  <Image src="/logo.png" alt="" width={size} height={size} className="object-contain" />
-)
-
-const AssistantAvatar = () => (
-  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-100 mr-2 mt-0.5">
-    <BotIcon size={12} />
-  </div>
+const AssistantAvatar = ({ logoUrl }: { logoUrl: string | null }) => (
+  <LogoAvatar logoUrl={logoUrl} size={24} className="mr-2 mt-0.5" testId="reply-avatar" />
 )
 
 interface MessageRowProps {
@@ -209,6 +202,8 @@ interface MessageRowProps {
   // Result payloads for this message's tool calls, keyed by toolCallId.
   toolResults: Record<string, string>
   canReply: boolean
+  // The workspace's logo for the avatar beside the reply, or null for the answerLoops mark.
+  logoUrl: string | null
 }
 
 /**
@@ -217,7 +212,7 @@ interface MessageRowProps {
  * instead of the whole thread re-rendering on each token.
  */
 const MessageRow = memo(
-  function MessageRow({ message, toolResults }: MessageRowProps) {
+  function MessageRow({ message, toolResults, logoUrl }: MessageRowProps) {
     const renderToolCall = useRenderToolCall()
 
     if (message.role === 'user') {
@@ -247,7 +242,7 @@ const MessageRow = memo(
       <>
         {text && (
           <div className="flex justify-start">
-            <AssistantAvatar />
+            <AssistantAvatar logoUrl={logoUrl} />
             <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-gray-100 px-3 py-2 text-xs leading-relaxed break-words text-gray-800">
               <ChatMarkdown text={text} />
             </div>
@@ -258,7 +253,7 @@ const MessageRow = memo(
     )
   },
   (prev, next) => {
-    if (prev.canReply !== next.canReply) return false
+    if (prev.canReply !== next.canReply || prev.logoUrl !== next.logoUrl) return false
     if (prev.message === next.message && prev.toolResults === next.toolResults) return true
     const a = prev.message
     const b = next.message
@@ -691,9 +686,7 @@ function WidgetChatBody({
       <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-white shrink-0">
         {/* A light tint of the brand color, like the reply avatars: the logo mark is dark,
               so it stays visible on any brand color, including a very dark one. */}
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 shrink-0">
-          <BotIcon />
-        </div>
+        <LogoAvatar logoUrl={logoUrl} size={28} testId="header-avatar" />
         <div className="min-w-0 flex-1">
           <p className="font-semibold text-gray-900 text-sm truncate">{title ?? `${orgName} Support`}</p>
           <p className="text-xs text-green-500 font-medium">Online</p>
@@ -720,8 +713,8 @@ function WidgetChatBody({
       ) : /* Email gate — shown before first message if email not submitted */
       !gatePassed ? (
         <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 mb-4">
-            <BotIcon />
+          <div className="mb-4">
+            <WelcomeAvatar logoUrl={logoUrl} />
           </div>
           <h2 className="text-sm font-semibold text-gray-900 mb-1 break-words">{welcome ?? '👋 Hi! How can we help?'}</h2>
           <p className="text-xs text-gray-400 mb-6">Drop your email to get started — we&apos;ll follow up if needed.</p>
@@ -789,12 +782,13 @@ function WidgetChatBody({
                 message={m}
                 toolResults={toolResultsByMessage.get(m.id) ?? EMPTY_RESULTS}
                 canReply={!isLoading}
+                logoUrl={logoUrl}
               />
             ))}
 
             {showTyping && (
               <div className="flex justify-start">
-                <AssistantAvatar />
+                <AssistantAvatar logoUrl={logoUrl} />
                 <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-3 py-2">
                   <span className="flex gap-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />

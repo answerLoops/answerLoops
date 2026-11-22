@@ -55,6 +55,14 @@ function el(tag: string): El {
     },
     classList: { add() {}, remove() {} },
   }
+  let text = ''
+  Object.defineProperty(e, 'textContent', {
+    get: () => text,
+    set: (v: string) => {
+      text = v
+      if (v === '') e.children.length = 0
+    },
+  })
   return e
 }
 
@@ -73,6 +81,7 @@ function run(widgetId: string | null, fetchImpl?: FakeFetch) {
       head,
       body,
       createElement: (tag: string) => el(tag),
+      createElementNS: (_ns: string, tag: string) => el(tag),
       getElementsByTagName: () => [script],
       addEventListener: () => {},
     },
@@ -224,17 +233,19 @@ describe('widget.js: applying display settings', () => {
   it('draws the bubble icon in the served icon color, and white when none is served', async () => {
     const dark = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#ffd60a', bubbleIconColor: '#111827' } }))
     await vi.waitFor(() => expect(dark.panel()).toBeDefined())
-    expect(dark.bubble()?.innerHTML).toContain('fill="#111827"')
+    expect(dark.bubble()?.children.find((c) => c.tag === 'svg')?.attrs.fill).toBe('#111827')
     const plain = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#aa00ff' } }))
     await vi.waitFor(() => expect(plain.panel()).toBeDefined())
-    expect(plain.bubble()?.innerHTML).toContain('fill="#ffffff"')
+    expect(plain.bubble()?.children.find((c) => c.tag === 'svg')?.attrs.fill).toBe('#ffffff')
   })
 
   it('ignores an icon color that is not a plain #rrggbb', async () => {
     const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#aa00ff', bubbleIconColor: '"><script>x</script>' } }))
     await vi.waitFor(() => expect(w.panel()).toBeDefined())
-    expect(w.bubble()?.innerHTML).not.toContain('script')
-    expect(w.bubble()?.innerHTML).toContain('fill="#ffffff"')
+    const svgs = w.bubble()?.children.filter((c) => c.tag === 'svg') ?? []
+    expect(svgs).toHaveLength(1)
+    expect(svgs[0].attrs.fill).toBe('#ffffff')
+    expect(w.bubble()?.children.some((c) => c.tag === 'script')).toBe(false)
   })
 
   it('shows a keyboard focus ring that reads on any brand color', async () => {

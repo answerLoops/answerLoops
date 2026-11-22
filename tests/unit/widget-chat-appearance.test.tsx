@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { brandPalette } from '@/lib/widget/appearance'
 
@@ -264,5 +264,66 @@ describe('with the starter questions switched off', () => {
     await renderChat({ starterQuestions: [] })
     expect(screen.getByTestId('welcome-card')).toBeTruthy()
     expect(screen.queryByTestId('starter-questions')).toBeNull()
+  })
+})
+
+
+describe('a workspace logo in the chat', () => {
+  const LOGO = `/api/widget/logo/${'a'.repeat(48)}?v=0123456789abcdef`
+  const srcOf = (id: string) => (screen.getByTestId(id).querySelector('img') as HTMLImageElement).getAttribute('src') ?? ''
+
+  it('shows it in the header, as well as on the welcome card', async () => {
+    await renderChat({ logoUrl: LOGO })
+    expect(srcOf('header-avatar')).toBe(LOGO)
+    expect(srcOf('welcome-avatar')).toBe(LOGO)
+  })
+
+  it('shows the answerLoops mark in both places without one', async () => {
+    await renderChat()
+    expect(srcOf('header-avatar')).toContain('logo.png')
+    expect(srcOf('welcome-avatar')).toContain('logo.png')
+  })
+
+  it('shows it beside every assistant reply, and not beside the visitor\'s own messages', async () => {
+    fake.agent.messages = [
+      { id: 'u1', role: 'user', content: 'How does it work?' },
+      { id: 'a1', role: 'assistant', content: 'It answers from your docs.' },
+      { id: 'u2', role: 'user', content: 'And the price?' },
+      { id: 'a2', role: 'assistant', content: 'See the pricing page.' },
+    ]
+    await renderChat({ logoUrl: LOGO })
+    const replies = screen.getAllByTestId('reply-avatar')
+    expect(replies).toHaveLength(2)
+    for (const reply of replies) expect(reply.querySelector('img')?.getAttribute('src')).toBe(LOGO)
+    fake.agent.messages = []
+  })
+
+  it('shows it on the email screen too', async () => {
+    await renderChat({ logoUrl: LOGO, leadCaptureMode: 'up-front' })
+    expect(srcOf('welcome-avatar')).toBe(LOGO)
+  })
+
+  it('falls back to the answerLoops mark, in every place, when the image cannot load', async () => {
+    await renderChat({ logoUrl: LOGO })
+    const headerImg = screen.getByTestId('header-avatar').querySelector('img') as HTMLImageElement
+    fireEvent.error(headerImg)
+    expect(srcOf('header-avatar')).toContain('logo.png')
+    const welcomeImg = screen.getByTestId('welcome-avatar').querySelector('img') as HTMLImageElement
+    fireEvent.error(welcomeImg)
+    expect(srcOf('welcome-avatar')).toContain('logo.png')
+  })
+
+  it('draws no logo for an address that is not a path on this site or an https address', async () => {
+    for (const bad of ['javascript:alert(1)', '//evil.example.com/a.png', 'data:image/png;base64,AAAA', 'http://insecure.example.com/a.png']) {
+      const { unmount } = await renderChat({ logoUrl: bad })
+      expect(srcOf('header-avatar'), bad).toContain('logo.png')
+      unmount()
+    }
+  })
+
+  it('draws the logo as a picture only, with no text for a screen reader to read twice', async () => {
+    await renderChat({ logoUrl: LOGO })
+    const img = screen.getByTestId('header-avatar').querySelector('img') as HTMLImageElement
+    expect(img.getAttribute('alt')).toBe('')
   })
 })

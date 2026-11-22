@@ -302,3 +302,12 @@ describe('the allowlist is enforced where the parent origin is visible', () => {
     expect(s).not.toContain('searchParams')
   })
 })
+
+describe('public/widget.js: builds the page from DOM nodes', () => {
+  it.each(['innerHTML', 'outerHTML', 'insertAdjacentHTML', 'document.write', 'eval(', 'new Function'])(
+    'does not use %s',
+    (api) => {
+      expect(read('public/widget.js')).not.toContain(api)
+    },
+  )
+})

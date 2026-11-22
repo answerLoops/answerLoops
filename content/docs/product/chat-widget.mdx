@@ -183,7 +183,7 @@ Where you paste the snippet depends on how your site is built. Find your platfor
 | Setting | Where | Notes |
 |---|---|---|
 | Branding | **Settings → Widget** | Standard shows the answerLoops logo and a "Powered by answerLoops" line. Pro and Enterprise can remove the answerLoops branding; **Settings → Widget** shows an upgrade option when your plan does not include it. Self-hosted installs have it unlocked. |
-| Title, welcome message and color | **Settings → Widget** | Pro and above. The title in the chat header, the first message visitors see, and your brand color. See [Widget appearance](#widget-appearance). |
+| Title, welcome message, logo and color | **Settings → Widget** | Pro and above. The title in the chat header, the first message visitors see, your logo and your brand color. See [Widget appearance](#widget-appearance). |
 | Allowed domains | **Settings → Widget** | The domains the widget may load on. Subdomains are included. |
 | Embed token | **Settings → Widget** | Issued per workspace and expires after 90 days; **Regenerate token** issues a new one. |
 | Public name | **Settings → Widget** | An optional stable name for the snippet, so regenerating the token never breaks a page. See [Rotating the token](#rotating-the-token). |
@@ -206,6 +206,7 @@ On Pro and above, **Settings → Widget → Widget appearance** lets you make th
 | Chat title | Replaces the default header, your workspace name followed by "Support", for example "Acme Help Desk". | Up to 60 characters. |
 | Welcome message | Replaces the default greeting shown in an empty chat, and above the email box when the widget asks for an email first. | Up to 200 characters. |
 | Starter questions | Up to four short questions shown as buttons under the greeting when the chat opens. Tapping one sends it as the visitor's first question, and the buttons disappear once the conversation has started. A **Show starter questions** switch hides them without deleting your questions, so you can turn them back on later. | One per line, up to 4, each up to 80 characters. |
+| Logo | Your own picture in place of the answerLoops mark: in the chat header, at the top of the welcome screen, beside every reply and on the chat bubble that opens the widget. | PNG, JPEG or WebP, up to 1 MB. See [Your logo](#your-logo). |
 | Follow-up questions | A **Suggest follow-up questions** switch, on by default. After some answers the chat offers two or three questions the visitor might ask next. See [Follow-up questions](#follow-up-questions). | On or off. |
 | Brand color | Used for the chat header icon, the visitor's message bubbles, buttons, answer cards and the chat bubble that opens the widget. | A full hex color such as `#1a73e8`. |
 
@@ -214,6 +215,16 @@ The title, welcome message and starter questions are shown as plain text, so any
 **Save appearance** applies your choices to the live widget within about a minute, with no change to the snippet on your site. **Reset to default** returns the title, welcome message, starter questions and color to the answerLoops defaults, and turns the starter-questions and follow-up switches back on. Only owners and admins can change these settings.
 
 On Standard the controls are shown locked with an upgrade button, the widget keeps the answerLoops look and shows no starter questions or follow-up questions, whatever the switches say. Pro and Enterprise include it, together with removing the answerLoops branding. Self-hosted installs have it unlocked.
+
+### Your logo
+
+Choose **Upload logo** in the appearance section and pick a picture. It is applied the moment it uploads, without pressing Save, and shows on the widget within about a minute. **Replace logo** swaps it for another and **Remove** goes back to the answerLoops mark.
+
+- **What you can upload.** A PNG, JPEG or WebP picture up to 1 MB. SVG, GIF and other formats are not accepted. The file is checked by what it contains, not by its name, so a renamed file is refused.
+- **What we do with it.** We crop it to a centred square, shrink it to at most 256 by 256 pixels, remove any hidden information the file carried (camera details, location and the like) and keep only that small version. The original is never stored. Transparency is kept, and an animated WebP is reduced to its first frame. A picture smaller than 256 pixels is not enlarged, and one under 16 pixels is refused.
+- **Where it shows.** In the chat header, at the top of the welcome screen, beside each assistant reply and on the round chat bubble, where it sits inside a white circle so it stays readable on any brand color. If the picture ever fails to load, the chat shows the answerLoops mark instead.
+- **Plans.** Pro and above. On Standard the control is locked and the chat keeps the answerLoops mark. If a workspace moves to a plan without customization, its logo is kept but not shown, and it returns if the plan does. **Reset to default** also removes the logo. Owners and admins can upload and remove; other members can only see it.
+- **Self-hosted installs** store the logo in the same database as everything else, so no extra storage service is needed.
 
 ## Restricting where the widget works
 
