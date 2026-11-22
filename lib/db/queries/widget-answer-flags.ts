@@ -186,6 +186,49 @@ export async function countFlags(orgId: number): Promise<FlagCounts> {
   return counts
 }
 
+export interface LeadFlag {
+  flag_id: number
+  lead_id: number
+  reason: FlagReason | null
+  /** The question and reply as flagged; empty once the retention window has cleared them. */
+  question: string
+  answer: string
+}
+
+/**
+ * The thumbs-down flag each lead came from, for the workspace's Leads page. A
+ * lead that was not left through a flag has none. Where one address flagged
+ * several answers, the newest flag is the one shown.
+ */
+export async function listFlagsForLeads(orgId: number): Promise<Map<number, LeadFlag>> {
+  const rows = await getDb()
+    .select({
+      id: widgetAnswerFlags.id,
+      leadId: widgetAnswerFlags.leadId,
+      reason: widgetAnswerFlags.reason,
+      question: widgetAnswerFlags.question,
+      answer: widgetAnswerFlags.answer,
+    })
+    .from(widgetAnswerFlags)
+    .where(
+      and(eq(widgetAnswerFlags.orgId, orgId), eq(widgetAnswerFlags.verdict, 'down'), sql`${widgetAnswerFlags.leadId} IS NOT NULL`)
+    )
+    // Oldest first, so a later row for the same lead replaces an earlier one below.
+    .orderBy(asc(widgetAnswerFlags.createdAt), asc(widgetAnswerFlags.id))
+  const byLead = new Map<number, LeadFlag>()
+  for (const r of rows) {
+    if (r.leadId == null) continue
+    byLead.set(r.leadId, {
+      flag_id: r.id,
+      lead_id: r.leadId,
+      reason: (r.reason as FlagReason | null) ?? null,
+      question: r.question,
+      answer: r.answer,
+    })
+  }
+  return byLead
+}
+
 /** Thumbs-down flags in one status, newest first, with the articles each answer cited. */
 export async function listFlags(orgId: number, status: FlagStatus, limit = 100): Promise<AnswerFlag[]> {
   const db = getDb()
