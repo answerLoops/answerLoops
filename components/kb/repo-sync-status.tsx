@@ -1,10 +1,11 @@
 import type { GitHubRepo } from '@/types'
 import { commitLinkInfo } from '@/lib/github/commit-link'
-import { DOCS_FOLDERS_NUDGE, folderLabel, missingFolderLine, syncShortfalls } from '@/lib/github/sync-summary'
+import { DOCS_FOLDERS_NUDGE, describeFileChanges, folderLabel, missingFolderLine, syncShortfalls } from '@/lib/github/sync-summary'
 
 /**
  * "N chunks · last synced <date> · docs at <sha>" for a connected repo, then
- * the docs folders it syncs (or a nudge to choose them), any chosen folder
+ * the docs folders it syncs (or a nudge to choose them), what the last sync
+ * changed, any chosen folder
  * that has gone from the repo, and files the last sync left out. The sha is
  * the commit the last files sync read, linked to that commit on GitHub. Repos
  * synced before the sha was recorded show the date alone until their next
@@ -18,6 +19,7 @@ export function RepoSyncStatus({
   const commit = commitLinkInfo(repo.owner, repo.repo, repo.kb_synced_commit)
   const result = repo.kb_sync_result
   const shortfalls = result ? syncShortfalls(result) : []
+  const changes = result ? describeFileChanges(result) : null
   return (
     <>
       {repo.kb_chunk_count <= 0 && !repo.kb_last_synced ? (
@@ -45,6 +47,7 @@ export function RepoSyncStatus({
       <span className="block break-words">
         {repo.kb_paths ? `Docs folders: ${repo.kb_paths.map(folderLabel).join(', ')}` : DOCS_FOLDERS_NUDGE}
       </span>
+      {changes && <span className="block">Last sync: {changes}</span>}
       {result?.missingFolders.map((folder) => (
         <span key={folder} className="block break-words text-amber-700">
           {missingFolderLine(folder)}
