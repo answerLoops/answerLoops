@@ -1,14 +1,11 @@
 import { embedMany } from 'ai'
 import { sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/drizzle'
-import { getOrgAIConfig } from '@/lib/db/queries/ai-config'
 import { recordArticleEvent } from '@/lib/db/queries/kb-events'
-import { embeddingTargetFor } from '@/lib/ai/embedding-pin'
-import { getPlatformModel, KB_EMBEDDING_DIMENSIONS } from '@/lib/ai/platform-models'
-import { DEFAULT_EMBEDDING_MODEL } from '@/lib/ai/model-defaults'
-import { getDeploymentMode } from '@/lib/billing/plans'
+import { KB_EMBEDDING_DIMENSIONS } from '@/lib/ai/platform-models'
 import { getBillingTier } from '@/lib/billing/platform-ai-budget'
 import { EmbeddingConfigError, passEmbeddingModel } from '@/lib/kb/embedding-migration'
+import { isMigrating, resolvePassWorkspace } from '@/lib/kb/pass-embedder'
 import { retitledQuestion } from '@/lib/kb/retitle'
 import { contentHash } from '@/lib/kb/revision'
 import { logger } from '@/lib/logger'
@@ -84,17 +81,9 @@ async function countRemaining(orgId: number): Promise<number> {
   return Number(rows[0]?.n ?? 0)
 }
 
-/** Which embedding model this workspace would re-title with, and who may run it. */
-async function resolveWorkspace(orgId: number) {
-  const cfg = await getOrgAIConfig(orgId)
-  const selfHosted = getDeploymentMode() === 'self-hosted'
-  const target = embeddingTargetFor(cfg, selfHosted ? DEFAULT_EMBEDDING_MODEL : getPlatformModel('embedding'))
-  return { cfg, selfHosted, target, ownerRuns: !!target && (target.own || selfHosted) }
-}
-
 /** What the owner's Settings action shows: whether it applies to this workspace, and how many pages are waiting. */
 export async function retitleStatus(orgId: number): Promise<{ eligibleForOwnerRun: boolean; remainingSources: number }> {
-  const { ownerRuns } = await resolveWorkspace(orgId)
+  const { ownerRuns } = await resolvePassWorkspace(orgId)
   return { eligibleForOwnerRun: ownerRuns, remainingSources: await countRemaining(orgId) }
 }
 
@@ -132,23 +121,6 @@ async function releaseLease(orgId: number, lease: Lease, ok: boolean): Promise<v
   )
 }
 
-/**
- * Whether the workspace is part-way through moving to another embedding model:
- * its target differs from its pin, some article is off the pin, or the
- * re-embed job holds its lease. Re-embedding now would race that job.
- */
-async function isMigrating(orgId: number, targetModel: string): Promise<{ migrating: boolean; pinned: string | null }> {
-  const rows = (await getDb().execute(sql`
-    SELECT o.embedding_model_in_use AS pinned,
-      (o.embedding_migration_lease_until IS NOT NULL AND o.embedding_migration_lease_until > now()) AS leased,
-      EXISTS (SELECT 1 FROM kb_articles a WHERE a.org_id = o.id AND a.model IS DISTINCT FROM o.embedding_model_in_use) AS stray
-    FROM orgs o WHERE o.id = ${orgId}
-  `)) as unknown as { pinned: string | null; leased: boolean; stray: boolean }[]
-  const row = rows[0]
-  if (!row || !row.pinned) return { migrating: true, pinned: null }
-  return { migrating: row.pinned !== targetModel || row.leased || row.stray, pinned: row.pinned }
-}
-
 export async function runRetitlePass(orgId: number, opts: { mode: RetitleMode; maxSources?: number }): Promise<RetitleResult> {
   const remainingAtStart = () => countRemaining(orgId)
 
@@ -159,7 +131,7 @@ export async function runRetitlePass(orgId: number, opts: { mode: RetitleMode; m
   if (!lease) return { retitled: 0, sourcesDone: 0, remainingSources: await remainingAtStart(), skipped: 'busy' }
   let ok = false
   try {
-    const { cfg, selfHosted, target, ownerRuns } = await resolveWorkspace(orgId)
+    const { cfg, selfHosted, target, ownerRuns } = await resolvePassWorkspace(orgId)
     // Scheduled runs cover subscribed platform-model workspaces only; anything
     // else is the owner's to run. Not a failure, so no backoff.
     const scheduledRuns = !!target && !ownerRuns
