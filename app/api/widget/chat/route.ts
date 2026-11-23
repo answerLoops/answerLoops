@@ -12,8 +12,8 @@ import { buildGenuiTools } from '@/lib/widget/genui-tools'
 import { followUpsAvailable, groundFollowUps } from '@/lib/widget/follow-ups'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { flattenMastraStream } from '@/lib/widget/mastra-stream'
-import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
-import { getKBContext } from '@/lib/db/queries/kb'
+import { getWidgetKBContext } from '@/lib/db/queries/kb'
+import type { WidgetKBContext } from '@/types'
 import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
 import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
 import { scheduleSourceSupport } from '@/lib/kb/support/runner'
@@ -29,7 +29,7 @@ import { logger } from '@/lib/logger'
 import { requestsHuman, isGreetingOrAck, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import { isValidWidgetToken, isValidVisitorId, isValidTurnId } from '@/lib/widget/request-validation'
 import { setLeadSignal, setTurnAnswer } from '@/lib/widget/lead-signal-stash'
-import { buildWidgetInstructions } from '@/lib/widget/instructions'
+import { buildWidgetInstructions, widgetContextBlock } from '@/lib/widget/instructions'
 import type { WidgetAnswerScope } from '@/lib/widget/answer-scope'
 
 const MOD = 'api/widget/chat'
@@ -86,7 +86,7 @@ const MAX_CONTEXT_ARTICLES = 5
 // whole-message cap.
 const MAX_QUERY_CHARS = MAX_MESSAGE_CHARS
 
-type KBContext = { summary: string; answer: string; articleId?: number }[]
+const NO_CONTEXT: WidgetKBContext = { articles: [], matched: false }
 
 export interface PendingRun {
   org: {
@@ -113,19 +113,19 @@ export interface PendingRun {
   // Knowledge-base retrieval, started in the onRequest hook so it overlaps
   // model resolution instead of queuing behind it. Never rejects. Absent when
   // a caller stashes a run without one (the factory then retrieves itself).
-  context?: Promise<KBContext>
+  context?: Promise<WidgetKBContext>
   // performance.now() at request arrival, for the timing log line.
   startedAt?: number
 }
 
 // Retrieval is best-effort: an embedding or search failure means the model
 // answers without context rather than the visitor seeing an error.
-async function retrieveContext(query: string, orgId: number): Promise<KBContext> {
+async function retrieveContext(query: string, orgId: number): Promise<WidgetKBContext> {
   try {
     const vector = await embedQueryCached(query, orgId)
-    return await getKBContext(vector, MAX_CONTEXT_ARTICLES, orgId)
+    return await getWidgetKBContext(vector, MAX_CONTEXT_ARTICLES, orgId)
   } catch {
-    return []
+    return NO_CONTEXT
   }
 }
 
@@ -431,16 +431,15 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   // Whether visitors can flag this workspace's answers is the same plan check the
   // panel page makes (app/widget/[widgetToken]/page.tsx); a lookup that fails
   // counts as no, so the answer itself is never held up by it.
-  const [allContext, followUps, flagsAvailable] = await Promise.all([
+  const [retrieved, followUps, flagsAvailable] = await Promise.all([
     run.context ?? retrieveContext(query, org.id),
     followUpsAvailable({ id: org.id, followUpsEnabled: org.widget_appearance?.followUpsEnabled !== false }),
     orgHasFeature(org.id, 'kb_review_queue').catch(() => false),
   ])
-  const contextBlock = allContext.length
-    ? `\n\nKnowledge base context — use this to answer. ${REFERENCE_MATERIAL_NOTICE}\n${renderReferenceBlock(
-        allContext.map((c) => ({ question: c.summary, answer: c.answer }))
-      )}`
-    : ''
+  // Everything the model was given, strong matches or near misses alike: usage
+  // counts, answer sources and the support check all describe what was supplied.
+  const allContext = retrieved.articles
+  const contextBlock = widgetContextBlock(retrieved)
 
   // resourceId scopes memory to this org+visitor; threadId reuses the same
   // id since the widget has no "start a new conversation" affordance — a
@@ -505,7 +504,10 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
           turnId,
           requestsHuman(query)
             ? 'human-requested'
-            : allContext.length === 0 && !isGreetingOrAck(query)
+            : // Near misses count as found: the model may well have answered from
+              // them, and offering "we couldn't find anything" under an answer
+              // reads as broken. Only an empty search is a failed answer here.
+              allContext.length === 0 && !isGreetingOrAck(query)
               ? 'no-kb-match'
               : 'none',
           query
@@ -543,9 +545,10 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
         context: allContext,
       })
       // No article matched, so whatever was just said came from general
-      // knowledge. Queue the question (never the visitor's identity) for a
-      // person to review before anything like it is treated as a KB answer.
-      if (allContext.length === 0) {
+      // knowledge or from a near miss. Queue the question (never the visitor's
+      // identity) for a person to review before anything like it is treated as
+      // a KB answer; a near-miss answer is exactly the kind worth a closer look.
+      if (!retrieved.matched) {
         await captureUnansweredQuestion({
           orgId: org.id,
           source: 'widget',

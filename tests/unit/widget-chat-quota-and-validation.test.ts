@@ -63,7 +63,7 @@ vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
 vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: () => true }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.7' }))
 vi.mock('@/lib/ai/embed', () => ({ embedText: vi.fn(async () => [0.1]) }))
-vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: vi.fn(async () => []) }))
+vi.mock('@/lib/db/queries/kb', () => ({ getWidgetKBContext: vi.fn(async () => ({ articles: [], matched: false })) }))
 vi.mock('@/lib/db/queries/embeddings', () => ({
   getPriorAnswers: vi.fn(async () => []),
   getCandidateVectors: vi.fn(async () => []),

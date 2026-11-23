@@ -48,7 +48,7 @@ describe('the chat route', () => {
   const route = read('app/api/widget/chat/route.ts')
 
   it('builds the instructions through buildWidgetInstructions, from the resolved workspace', () => {
-    expect(route).toContain("import { buildWidgetInstructions } from '@/lib/widget/instructions'")
+    expect(route).toMatch(/import \{ buildWidgetInstructions(, widgetContextBlock)? \} from '@\/lib\/widget\/instructions'/)
     expect(route).toMatch(/answerScope: org\.widget_answer_scope/)
     expect(route).toMatch(/guidance: org\.widget_guidance/)
   })

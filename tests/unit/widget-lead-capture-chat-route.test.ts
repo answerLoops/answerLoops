@@ -44,7 +44,7 @@ const h = vi.hoisted(() => ({
       widget_lead_capture_mode: 'on-failure',
     })
   ),
-  getKBContext: vi.fn(async () => [] as { summary: string; answer: string; articleId?: number }[]),
+  getWidgetKBContext: vi.fn(async () => ({ articles: [] as { summary: string; answer: string; articleId?: number }[], matched: false })),
   setLeadSignal: vi.fn(),
 }))
 
@@ -67,7 +67,7 @@ vi.mock('@/lib/ai/embed', () => ({
   embedTextWithModel: vi.fn(async () => ({ embedding: [0.1], model: 'test-embed-model' })),
 }))
 vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => 'test-embed-model' }))
-vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
+vi.mock('@/lib/db/queries/kb', () => ({ getWidgetKBContext: h.getWidgetKBContext }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
 vi.mock('@/lib/widget/lead-signal-stash', async (importOriginal) => ({
   ...await importOriginal<typeof import('@/lib/widget/lead-signal-stash')>(),
@@ -99,12 +99,12 @@ beforeEach(() => {
     widget_token: VALID_TOKEN,
     widget_lead_capture_mode: 'on-failure',
   })
-  h.getKBContext.mockResolvedValue([])
+  h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
 })
 
 describe('widget chat route onFinish: lead signal', () => {
   it('stashes "no-kb-match" when the KB context came back empty and no human was requested', async () => {
-    h.getKBContext.mockResolvedValue([])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
     const res = await ask('how do I reset my password?', 'visitor-1')
     expect(res.status).toBe(200)
     expect(h.setLeadSignal).toHaveBeenCalledTimes(1)
@@ -112,42 +112,49 @@ describe('widget chat route onFinish: lead signal', () => {
   })
 
   it('stashes "none" when KB context was found and no human was requested', async () => {
-    h.getKBContext.mockResolvedValue([{ summary: 'Install', answer: 'Run npm i' }])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [{ summary: 'Install', answer: 'Run npm i' }], matched: true })
     const res = await ask('how do I install this?', 'visitor-2')
     expect(res.status).toBe(200)
     expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-2', 'turn-1', 'none', expect.any(String))
   })
 
+  it('stashes "none" when only near misses were supplied, so the card never sits under an answer built from one', async () => {
+    h.getWidgetKBContext.mockResolvedValue({ articles: [{ summary: 'Pricing › Pro', answer: '$49 a month.' }], matched: false })
+    const res = await ask('what does it cost?', 'visitor-4')
+    expect(res.status).toBe(200)
+    expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-4', 'turn-1', 'none', expect.any(String))
+  })
+
   it('stashes "human-requested" even when KB context was found, taking priority over a clean answer', async () => {
-    h.getKBContext.mockResolvedValue([{ summary: 'Install', answer: 'Run npm i' }])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [{ summary: 'Install', answer: 'Run npm i' }], matched: true })
     const res = await ask('can you connect me with a representative', 'visitor-3')
     expect(res.status).toBe(200)
     expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-3', 'turn-1', 'human-requested', expect.any(String))
   })
 
   it('stashes "human-requested" when KB context was empty too, taking priority over "no-kb-match"', async () => {
-    h.getKBContext.mockResolvedValue([])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
     const res = await ask('please transfer me to a representative', 'visitor-4')
     expect(res.status).toBe(200)
     expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-4', 'turn-1', 'human-requested', expect.any(String))
   })
 
   it('stashes "human-requested" for "connect me to an agent" — aimed at the visitor, so it is a request for a person', async () => {
-    h.getKBContext.mockResolvedValue([{ summary: 'API', answer: 'Use the REST API' }])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [{ summary: 'API', answer: 'Use the REST API' }], matched: true })
     const res = await ask('connect me to an agent', 'visitor-me')
     expect(res.status).toBe(200)
     expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-me', 'turn-1', 'human-requested', expect.any(String))
   })
 
   it('does not match "connect to an agent" API-style phrasing as a request for a human', async () => {
-    h.getKBContext.mockResolvedValue([{ summary: 'API', answer: 'Use the REST API' }])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [{ summary: 'API', answer: 'Use the REST API' }], matched: true })
     const res = await ask('how do I connect to an agent through the API', 'visitor-api')
     expect(res.status).toBe(200)
     expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-api', 'turn-1', 'none', expect.any(String))
   })
 
   it('records the visitor\'s own message with the signal, under this turn\'s id', async () => {
-    h.getKBContext.mockResolvedValue([])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
     await ask('how do I export my data?', 'visitor-xyz', 'turn-77')
     expect(h.setLeadSignal).toHaveBeenCalledWith(
       VALID_TOKEN,
@@ -159,7 +166,7 @@ describe('widget chat route onFinish: lead signal', () => {
   })
 
   it('falls into a shared "legacy" turn id when the page sent none or a malformed one', async () => {
-    h.getKBContext.mockResolvedValue([])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
     await ask('any question', 'visitor-old', null)
     await ask('any question', 'visitor-bad', 'has:colon')
     expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-old', 'legacy', 'no-kb-match', 'any question')
@@ -167,7 +174,7 @@ describe('widget chat route onFinish: lead signal', () => {
   })
 
   it('records nothing for a workspace that is not in on-failure mode', async () => {
-    h.getKBContext.mockResolvedValue([])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
     for (const mode of ['off', 'up-front']) {
       h.getOrgByWidgetToken.mockResolvedValue({
         id: 7,
@@ -182,7 +189,7 @@ describe('widget chat route onFinish: lead signal', () => {
   })
 
   it('does not stash "no-kb-match" for a bare greeting or acknowledgement with no KB match', async () => {
-    h.getKBContext.mockResolvedValue([])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
     for (const greeting of ['hi', 'Hello!', 'thanks', 'ok cool', 'good morning', 'no thanks', 'thank you so much']) {
       h.setLeadSignal.mockClear()
       await ask(greeting, 'visitor-greet')
@@ -194,7 +201,7 @@ describe('widget chat route onFinish: lead signal', () => {
     // Confirms the greeting check is anchored to the whole message, not a
     // blanket "short messages don't count" rule — a real miss should still
     // surface the prompt regardless of length.
-    h.getKBContext.mockResolvedValue([])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
     await ask('pricing?', 'visitor-short-q')
     expect(h.setLeadSignal).toHaveBeenCalledWith(VALID_TOKEN, 'visitor-short-q', 'turn-1', 'no-kb-match', expect.any(String))
   })

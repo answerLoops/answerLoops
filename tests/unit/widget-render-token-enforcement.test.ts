@@ -38,7 +38,7 @@ vi.mock('@/lib/ai/models', () => ({
 }))
 vi.mock('@/lib/ai/embed', () => ({ embedText: vi.fn(async () => [0.1]) }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
-vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: vi.fn(async () => []) }))
+vi.mock('@/lib/db/queries/kb', () => ({ getWidgetKBContext: vi.fn(async () => ({ articles: [], matched: false })) }))
 vi.mock('@mastra/core/agent', () => ({
   Agent: class {
     async stream() {

@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, or, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbArticles } from '../schema'
 import { isExactDuplicate } from '@/lib/kb/duplicates'
@@ -27,23 +27,62 @@ export class DuplicateArticleError extends Error {
  * can only miss, never wrongly match: text with unusual whitespace that the
  * database treats differently from the fingerprint is simply not found here,
  * and retrieval still never supplies the same text twice.
+ *
+ * An imported section passes `sectionHeading`, the heading its title was built
+ * from. Imported titles carry the page or file in front ("Pricing › Pro", see
+ * chunkMarkdown), so the same section uploaded under another file name, or
+ * repeated across the pages of a site crawl, would otherwise never count as a
+ * copy. For a section, a copy is the same heading over the same body, whatever
+ * page title is in front of it, including an article imported before titles
+ * carried the page at all (a bare "Pro").
  */
 export async function findExactDuplicate(
   executor: Executor,
   orgId: number,
   question: string,
-  answer: string
+  answer: string,
+  opts?: { sectionHeading?: string }
 ): Promise<number | null> {
+  // The doubled backslash reaches Postgres as the single-backslash regex escape for whitespace.
+  const storedQuestion = sql`btrim(regexp_replace(${kbArticles.question}, '\\s+', ' ', 'g'))`
+  const full = normalizeForHash(question)
+  const heading = opts?.sectionHeading === undefined ? '' : normalizeForHash(opts.sectionHeading)
+  const asSection = heading !== '' && heading !== full
+
   const candidates = await executor
     .select({ id: kbArticles.id, question: kbArticles.question, answer: kbArticles.answer })
     .from(kbArticles)
     .where(
       and(
         eq(kbArticles.orgId, orgId),
-        // The doubled backslash reaches Postgres as the single-backslash regex escape for whitespace.
-        sql`btrim(regexp_replace(${kbArticles.question}, '\\s+', ' ', 'g')) = ${normalizeForHash(question)}`
+        asSection
+          ? or(
+              sql`${storedQuestion} = ${full}`,
+              sql`${storedQuestion} = ${heading}`,
+              sql`${storedQuestion} LIKE ${`%${SECTION_SEPARATOR}${escapeLike(heading)}`}`
+            )
+          : sql`${storedQuestion} = ${full}`
       )
     )
-  const match = candidates.find((c) => isExactDuplicate(c, { question, answer }))
+  const match = candidates.find((c) =>
+    asSection
+      ? isExactDuplicate({ question: '', answer: c.answer }, { question: '', answer }) && isSameSection(c.question, full, heading)
+      : isExactDuplicate(c, { question, answer })
+  )
   return match?.id ?? null
+}
+
+// What chunkMarkdown puts between a page title and a section heading.
+const SECTION_SEPARATOR = ' › '
+
+function escapeLike(text: string): string {
+  return text.replace(/[\\%_]/g, (c) => `\\${c}`)
+}
+
+// The database narrowing is a LIKE, which also matches a heading that merely
+// ends the same way ("Not getting started" for "getting started"); this keeps
+// only the same title, the bare heading, or the heading after a page title.
+function isSameSection(storedQuestion: string, full: string, heading: string): boolean {
+  const stored = normalizeForHash(storedQuestion)
+  return stored === full || stored === heading || stored.endsWith(`${SECTION_SEPARATOR}${heading}`)
 }
