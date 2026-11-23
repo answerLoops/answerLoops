@@ -228,3 +228,36 @@ describe('runEmbeddingMigration', () => {
     expect(leaseFns.match(/extract\(epoch from embedding_migration_lease_until\)::text = \$\{lease\.token\}/g)?.length).toBe(3)
   })
 })
+
+describe('passEmbeddingModel', () => {
+  beforeEach(() => vi.resetModules())
+
+  async function load() {
+    vi.doMock('@/lib/ai/models', async (orig) => ({
+      ...(await orig<typeof import('@/lib/ai/models')>()),
+      ownEmbeddingModel: (_cfg: unknown, id: string) => ({ kind: 'own', id }),
+    }))
+    vi.doMock('@/lib/ai/platform-models', async (orig) => ({
+      ...(await orig<typeof import('@/lib/ai/platform-models')>()),
+      platformEmbedding: (id: string) => ({ kind: 'platform', id }),
+    }))
+    vi.doMock('@ai-sdk/openai', () => ({ openai: { embedding: (id: string) => ({ kind: 'env-openai', id }) } }))
+    return (await import('@/lib/kb/embedding-migration')).passEmbeddingModel
+  }
+  const cfg = { embedding_model: 'm' } as never
+
+  it("uses the workspace's own provider when the target is its own model", async () => {
+    const pass = await load()
+    expect(pass(cfg, { modelId: 'own-model', own: true }, false)).toEqual({ kind: 'own', id: 'own-model' })
+  })
+
+  it("uses the install's own OpenAI key on a self-hosted install", async () => {
+    const pass = await load()
+    expect(pass(null, { modelId: 'text-embedding-3-small', own: false }, true)).toEqual({ kind: 'env-openai', id: 'text-embedding-3-small' })
+  })
+
+  it('uses the platform model, never charged to included usage, otherwise', async () => {
+    const pass = await load()
+    expect(pass(null, { modelId: 'text-embedding-3-large', own: false }, false)).toEqual({ kind: 'platform', id: 'text-embedding-3-large' })
+  })
+})

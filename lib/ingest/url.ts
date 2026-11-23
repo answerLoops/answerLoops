@@ -85,7 +85,7 @@ interface Chunk {
 // "Pricing › Pro": a visitor asking "what does it cost?" never says "Pro", but
 // the page title puts the section near that question. The heading alone is
 // used when there is no page title or it would only repeat the heading.
-function sectionTitle(pageTitle: string, heading: string): string {
+export function sectionTitle(pageTitle: string, heading: string): string {
   const page = pageTitle.trim()
   const head = heading.trim()
   if (!head) return clampQuestion(page)
