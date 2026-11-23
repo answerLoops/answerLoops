@@ -6,7 +6,7 @@
 
 <h1 align="center">answerLoops</h1>
 
-<p align="center"><strong>Make Your Community More Valuable to Members.</strong></p>
+<h2 align="center"><strong>Make Your Community More Valuable to Members.</strong></h2>
 
 <p align="center">Turn your existing knowledge into trusted answers that keep members engaged.</p>
 
@@ -30,7 +30,7 @@
 
 <a id="why-answerloops"></a>
 
-## Give members a reason to come back
+![A member asks where to watch a workshop replay. AnswerLoops drafts from the replay guide and checks the answer against it. A qualifying reply can post automatically when enabled. Otherwise the question waits for your team.](./.github/readme/member-answer-workflow.svg)
 
 People join a community to learn something, solve a problem, or connect with others. A useful answer helps them do what they came for. Getting that help in the conversation they’re already in makes it easier to take part again. answerLoops is open-source AI support built around that idea.
 
@@ -43,7 +43,6 @@ People join a community to learn something, solve a problem, or connect with oth
 
 When a member asks where to watch a workshop replay, answerLoops can find the right guide and draft a reply with the link. Your team can review the draft before it goes out or enable automatic replies for answers that qualify. Automatic replies are off by default. If the guides don’t cover the question, your team can follow up.
 
-![A member asks where to watch a workshop replay. AnswerLoops drafts from the replay guide and checks the answer against it. A qualifying reply can post automatically when enabled. Otherwise the question waits for your team.](./.github/readme/member-answer-workflow.svg)
 
 ## Give website visitors answers without leaving the page
 
