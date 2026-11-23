@@ -12,6 +12,12 @@ describe('chunkMarkdown', () => {
     expect(chunks[0].answer).toContain('$49 a month')
   })
 
+  it('keeps the bare heading beside the title, so the same section under another page title is still recognised', () => {
+    const md = `## Pro\n\n${body('$49 a month.')}`
+    expect(chunkMarkdown(md, 'Pricing')[0]).toMatchObject({ question: 'Pricing › Pro', heading: 'Pro' })
+    expect(chunkMarkdown(md, '')[0]).toMatchObject({ question: 'Pro', heading: 'Pro' })
+  })
+
   it('does not repeat the page title when the heading already is the page title', () => {
     const md = `## Pricing\n\n${body('Plans start at $49 a month.')}`
     expect(chunkMarkdown(md, 'Pricing').map((c) => c.question)).toEqual(['Pricing'])

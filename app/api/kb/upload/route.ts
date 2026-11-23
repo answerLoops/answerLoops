@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
     try {
       // Checked before embedding so a section already in the knowledge base
       // costs nothing; the insert checks again under the workspace lock.
-      if ((await findExactDuplicate(getDb(), orgId, chunk.question, chunk.answer)) !== null) {
+      if ((await findExactDuplicate(getDb(), orgId, chunk.question, chunk.answer, { sectionHeading: chunk.heading })) !== null) {
         duplicates++
         continue
       }
@@ -146,6 +146,7 @@ export async function POST(req: NextRequest) {
       const row = await createArticleFromSourceWithinCap({
         question: chunk.question,
         answer: chunk.answer,
+        sectionHeading: chunk.heading,
         embedding,
         model,
         sourceId: source.id,

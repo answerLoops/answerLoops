@@ -53,6 +53,8 @@ export async function createArticleFromSourceWithinCap(
   input: {
     question: string
     answer: string
+    /** The bare heading of an imported section, so a copy under another page title is caught (see findExactDuplicate). */
+    sectionHeading?: string
     embedding: number[]
     model: string
     sourceId: number
@@ -70,7 +72,7 @@ export async function createArticleFromSourceWithinCap(
       throw err
     }
 
-    const duplicateOf = await findExactDuplicate(tx, orgId, input.question, input.answer)
+    const duplicateOf = await findExactDuplicate(tx, orgId, input.question, input.answer, { sectionHeading: input.sectionHeading })
     if (duplicateOf !== null) return { duplicateOf }
 
     const [created] = await tx
