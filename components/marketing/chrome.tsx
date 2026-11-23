@@ -5,6 +5,7 @@ import { LogoMark } from '@/components/logo'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
 import { NavCta } from './nav-cta'
 import { CYCODE_URL, GITHUB_SOURCE_URL, X_URL } from '@/lib/site'
+import { PRODUCT_HEADLINE, PRODUCT_TAGLINE } from '@/lib/site-identity'
 import type { NavState } from './nav-shared'
 export { GITHUB_SOURCE_URL } from '@/lib/site'
 export { navState } from './nav-shared'
@@ -161,11 +162,10 @@ export function Footer() {
           <div className="flex flex-col items-start">
             <NavWordmark />
             <p className="mt-4 max-w-xs text-sm font-semibold text-slate-900">
-              Help your community grow.
+              {PRODUCT_HEADLINE}.
             </p>
             <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
-              Give members timely answers so they can stay involved and keep
-              coming back.
+              {PRODUCT_TAGLINE}
             </p>
             <Link
               href={GITHUB_SOURCE_URL}

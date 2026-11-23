@@ -131,7 +131,7 @@ describe('the redirect is scoped to the resume flow, not to /pricing', () => {
     expect(mocks.redirect).not.toHaveBeenCalled()
     expect(
       screen.getByRole('heading', {
-        name: /give your community the support it needs/i,
+        name: /find a plan for your community and website/i,
       }),
     ).toBeTruthy()
   })

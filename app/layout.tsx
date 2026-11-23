@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
-import { siteIdentityJsonLd } from '@/lib/site-identity'
+import { PRODUCT_HEADLINE, PRODUCT_TAGLINE, siteIdentityJsonLd } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import './globals.css'
 
@@ -18,21 +18,19 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://answerloops.com'),
   title: 'answerLoops',
   description:
-    'Give members timely answers from your docs and keep questions that need your team in one place. Hosted and self-hosted options.',
+    'Give community members and website visitors answers from one knowledge base. Hosted and self-hosted options.',
   openGraph: {
     type: 'website',
     siteName: 'answerLoops',
-    title: 'answerLoops — Help your community grow',
-    description:
-      'Give members timely answers so they can stay involved and keep coming back.',
+    title: `answerLoops — ${PRODUCT_HEADLINE}`,
+    description: PRODUCT_TAGLINE,
     // Social card image comes from app/opengraph-image.png (1200×630) via the
     // Next file convention — it fills both openGraph and twitter automatically.
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'answerLoops — Help your community grow',
-    description:
-      'Give members timely answers so they can stay involved and keep coming back.',
+    title: `answerLoops — ${PRODUCT_HEADLINE}`,
+    description: PRODUCT_TAGLINE,
   },
   // Icons are generated from app/favicon.ico, app/icon.png, and app/apple-icon.png.
   // File-based metadata keeps their dimensions and cache versions in sync.

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { POST, PENDING_RUN_TTL_MS, stashPendingRun, takePendingRun } from '@/app/api/widget/chat/route'
 import { widgetChatRequest, drain, userMsg, assistantMsg } from './support/widget-chat-envelope'
 
 /**
@@ -42,7 +43,7 @@ const h = vi.hoisted(() => ({
   streamCalls: [] as { query: string }[],
 }))
 
-class FakeNoProviderError extends Error {}
+const FakeNoProviderError = vi.hoisted(() => class extends Error {})
 
 vi.mock('@/lib/billing/usage', () => ({
   reserveGeneration: h.reserveGeneration,
@@ -84,7 +85,6 @@ vi.mock('@mastra/core/agent', () => ({
 }))
 
 async function callRoute(body: { widgetToken?: unknown; visitorId?: unknown; messages?: unknown }) {
-  const { POST } = await import('@/app/api/widget/chat/route')
   return POST(widgetChatRequest(body))
 }
 
@@ -126,7 +126,6 @@ describe('widget chat: the request body is capped before it is parsed', () => {
         },
       }),
     })
-    const { POST } = await import('@/app/api/widget/chat/route')
     const res = await POST(req)
     expect(res.status).toBe(413)
     expect(h.reserveGeneration).not.toHaveBeenCalled()
@@ -187,7 +186,6 @@ describe('widget chat: a request shaped as anything other than agent/run is stil
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ method: 'info', params: {} }),
     })
-    const { POST } = await import('@/app/api/widget/chat/route')
     const res = await POST(req)
     expect(res.status).toBe(429)
     expect(h.getOrgByWidgetToken).not.toHaveBeenCalled()
@@ -199,7 +197,6 @@ describe('widget chat: a request shaped as anything other than agent/run is stil
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ method: 'info', params: {} }),
     })
-    const { POST } = await import('@/app/api/widget/chat/route')
     const res = await POST(req)
     // Not a 429 and not one of this route's own validation rejections —
     // whatever status comes back is CopilotKit's own handling of `info`,
@@ -292,7 +289,6 @@ describe('widget chat: a reservation whose run never gets dispatched still gets 
   it('releases the reservation once PENDING_RUN_TTL_MS elapses with no dispatch', async () => {
     vi.useFakeTimers()
     try {
-      const { stashPendingRun, PENDING_RUN_TTL_MS } = await import('@/app/api/widget/chat/route')
       stashPendingRun({ org: { id: 42, name: 'Acme', widget_lead_capture_mode: 'on-failure', widget_answer_scope: 'general', widget_guidance: null }, widgetToken: VALID_TOKEN, turnId: 't', model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
 
       expect(h.releaseGeneration).not.toHaveBeenCalled()
@@ -306,7 +302,6 @@ describe('widget chat: a reservation whose run never gets dispatched still gets 
   it('does not double-release when takePendingRun already consumed the entry', async () => {
     vi.useFakeTimers()
     try {
-      const { stashPendingRun, takePendingRun, PENDING_RUN_TTL_MS } = await import('@/app/api/widget/chat/route')
       const requestId = stashPendingRun({ org: { id: 42, name: 'Acme', widget_lead_capture_mode: 'on-failure', widget_answer_scope: 'general', widget_guidance: null }, widgetToken: VALID_TOKEN, turnId: 't', model: {} as unknown as import('@/app/api/widget/chat/route').PendingRun['model'], query: 'hi', visitorId: 'v', reservationId: 7 })
 
       const run = takePendingRun(requestId)

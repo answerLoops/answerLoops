@@ -1,10 +1,10 @@
 # answerLoops
 
-> answerLoops helps communities grow by giving members timely support across chat, forums, email, issue trackers, and a website widget. It drafts and reviews replies from the team’s knowledge. Teams can save useful support resolutions as knowledge for future questions. Teams can use the hosted service or operate the AGPL-3.0 application themselves.
+> answerLoops helps communities grow by giving members and website visitors answers from one knowledge base. Members get help in connected channels, and visitors can get answers on the page they are reading through the website widget. Teams can use the hosted service or operate the AGPL-3.0 application themselves.
 
 ## What it does
 
-Questions from connected channels become tickets. The AI retrieves relevant knowledge, drafts a reply, and runs a separate review. Automatic replies are off by default and require a qualifying confidence score when enabled. Other drafts remain in the team queue. Useful resolved answers can be promoted into the knowledge base.
+Questions from connected channels become tickets. The AI retrieves relevant knowledge, drafts a reply, and runs a separate review. Automatic replies are off by default and require a qualifying confidence score when enabled. Other drafts remain in the team queue. Teams can save useful resolutions as knowledge base articles. The website widget uses published articles from that same knowledge base and can collect an email for follow-up when the articles don’t cover a question.
 
 ## Who it is for
 
