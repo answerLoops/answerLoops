@@ -13,7 +13,7 @@ Community managers and moderators, course and membership teams, creators, DevRel
 ## Core capabilities
 
 - **Connected channels:** Discord, Slack, Discourse, Circle, GitHub Issues and Discussions, Telegram, email, Google Chat, and a website widget.
-- **Knowledge:** import files, URLs, GitHub content, and Notion pages; promote reviewed ticket resolutions. Notion content is initially unpublished.
+- **Knowledge:** import files, URLs, the docs folders of a GitHub repository (Markdown, MDX, and text files, kept in sync on every push), and Notion pages; promote reviewed ticket resolutions. Notion content is initially unpublished.
 - **Answer review:** a separate AI assessment and configurable automatic-reply settings. Confidence scores do not guarantee correctness.
 - **Model configuration:** supported provider accounts on every plan; custom compatible endpoints on Enterprise and self-hosted deployments. Chat and embeddings can require separate credentials.
 - **Agent access:** MCP at `POST /api/mcp` and a REST API. Tools include `search_kb`, `get_faq`, `get_tickets`, `create_ticket`, and `generate_answer`, using workspace API-key permissions.
