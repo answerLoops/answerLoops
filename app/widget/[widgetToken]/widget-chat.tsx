@@ -6,6 +6,7 @@ import type { Message } from '@ag-ui/client'
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import Image from 'next/image'
+import { X } from 'lucide-react'
 import {
   GENUI_TOOL_NAMES,
   calloutSchema,
@@ -508,9 +509,15 @@ function WidgetChatBody({
     setLeadHandled(true)
   }
 
+
   function dismissFailurePrompt() {
     setFailurePrompt(null)
     setLeadHandled(true)
+  }
+  function closeWidget() {
+    if (typeof window !== 'undefined' && window.parent !== window) {
+      window.parent.postMessage({ type: 'cp-widget-close' }, '*')
+    }
   }
 
   const lastMessage = messages[messages.length - 1]
@@ -520,151 +527,159 @@ function WidgetChatBody({
 
   return (
     <WidgetActionsProvider value={actions}>
-    <div className="flex flex-col h-screen bg-white font-sans text-sm">
-      {/* Header */}
-      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-white shrink-0">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 shrink-0">
-          <BotIcon />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-semibold text-gray-900 text-xs truncate">{orgName} Support</p>
-          <p className="text-[0.625rem] text-green-500 font-medium">Online</p>
-        </div>
-      </div>
-
-      {/* Email gate — shown before first message if email not submitted */}
-      {!emailSubmitted ? (
-        <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 mb-4">
+      <div className="flex flex-col h-[100dvh] overflow-x-hidden bg-white font-sans text-sm">
+        {/* Header */}
+        <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-white shrink-0">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-600 shrink-0">
             <BotIcon />
           </div>
-          <h2 className="text-sm font-semibold text-gray-900 mb-1">👋 Hi! How can we help?</h2>
-          <p className="text-xs text-gray-400 mb-6">Drop your email to get started — we&apos;ll follow up if needed.</p>
-          <form onSubmit={handleEmailSubmit} className="w-full space-y-3">
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
-            />
-            {emailError && <p className="break-words text-[0.625rem] text-red-500">{emailError}</p>}
-            <button
-              type="submit"
-              disabled={emailPending}
-              className="w-full rounded-lg bg-brand-600 py-2.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
-            >
-              {emailPending ? 'Starting…' : 'Start chat'}
-            </button>
-            <button
-              type="button"
-              onClick={() => setEmailSubmitted(true)}
-              className="w-full text-[0.625rem] text-gray-400 hover:text-gray-600 transition-colors"
-            >
-              Skip
-            </button>
-          </form>
-        </div>
-      ) : (
-        <>
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-            {messages.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-400 text-xs">👋 Hi! How can I help you today?</p>
-              </div>
-            )}
-
-            {messages.map((m) => (
-              <MessageRow
-                key={m.id}
-                message={m}
-                toolResults={toolResultsByMessage.get(m.id) ?? EMPTY_RESULTS}
-                canReply={!isLoading}
-              />
-            ))}
-
-            {showTyping && (
-              <div className="flex justify-start">
-                <AssistantAvatar />
-                <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-3 py-2">
-                  <span className="flex gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <p className="break-words text-center text-xs text-red-400">{error}</p>
-            )}
-
-            {failurePrompt && (
-              <div className="rounded-xl border border-brand-100 bg-brand-50 px-3 py-2.5 space-y-2" data-testid="failure-lead-prompt">
-                <p className="break-words text-xs text-gray-700">{ON_FAILURE_PROMPT_COPY[failurePrompt.signal]}</p>
-                {failureEmailError && (
-                  <p className="break-words text-[0.6875rem] text-red-500">{failureEmailError}</p>
-                )}
-                <form onSubmit={handleFailurePromptSubmit} className="flex flex-col gap-1.5">
-                  <input
-                    type="email"
-                    value={failureEmail}
-                    onChange={(e) => setFailureEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
-                  />
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="submit"
-                      disabled={failureEmailPending || !failureEmail.trim()}
-                      className="min-w-[4.5rem] shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-center text-[0.6875rem] font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
-                    >
-                      {failureEmailPending ? 'Sending…' : 'Send'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={dismissFailurePrompt}
-                      className="shrink-0 text-[0.6875rem] text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      No thanks
-                    </button>
-                  </div>
-                </form>
-              </div>
-            )}
-
-            <div ref={bottomRef} />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-gray-900 text-xs truncate">{orgName} Support</p>
+            <p className="text-[0.625rem] text-green-500 font-medium">Online</p>
           </div>
+          <button
+            type="button"
+            onClick={closeWidget}
+            aria-label="Close support chat"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 min-[481px]:hidden"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
-          {/* Input */}
-          <div className="border-t border-gray-100 px-3 py-3 shrink-0">
-            <form onSubmit={handleSubmit} className="flex items-center gap-2">
+        {/* Email gate — shown before first message if email not submitted */}
+        {!emailSubmitted ? (
+          <div className="flex flex-1 flex-col items-center justify-center px-6 py-8 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 mb-4">
+              <BotIcon />
+            </div>
+            <h2 className="text-sm font-semibold text-gray-900 mb-1">👋 Hi! How can we help?</h2>
+            <p className="text-xs text-gray-400 mb-6">Drop your email to get started — we&apos;ll follow up if needed.</p>
+            <form onSubmit={handleEmailSubmit} className="w-full space-y-3">
               <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask a question…"
-                className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
-                disabled={isLoading}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
               />
+              {emailError && <p className="break-words text-[0.625rem] text-red-500">{emailError}</p>}
               <button
                 type="submit"
-                disabled={isLoading || !input.trim()}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white disabled:opacity-40 hover:bg-brand-700 transition-colors"
+                disabled={emailPending}
+                className="w-full rounded-lg bg-brand-600 py-2.5 text-xs font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
               >
-                <svg className="h-3.5 w-3.5 rotate-90" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                </svg>
+                {emailPending ? 'Starting…' : 'Start chat'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmailSubmitted(true)}
+                className="w-full text-[0.625rem] text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                Skip
               </button>
             </form>
-            {showBranding && (
-              <p className="text-center text-[0.625rem] text-gray-300 mt-2">Powered by answerLoops</p>
-            )}
           </div>
-        </>
-      )}
-    </div>
+        ) : (
+          <>
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+              {messages.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-400 text-xs">👋 Hi! How can I help you today?</p>
+                </div>
+              )}
+
+              {messages.map((m) => (
+                <MessageRow
+                  key={m.id}
+                  message={m}
+                  toolResults={toolResultsByMessage.get(m.id) ?? EMPTY_RESULTS}
+                  canReply={!isLoading}
+                />
+              ))}
+
+              {showTyping && (
+                <div className="flex justify-start">
+                  <AssistantAvatar />
+                  <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-3 py-2">
+                    <span className="flex gap-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
+                      <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <p className="break-words text-center text-xs text-red-400">{error}</p>
+              )}
+
+              {failurePrompt && (
+                <div className="rounded-xl border border-brand-100 bg-brand-50 px-3 py-2.5 space-y-2" data-testid="failure-lead-prompt">
+                  <p className="break-words text-xs text-gray-700">{ON_FAILURE_PROMPT_COPY[failurePrompt.signal]}</p>
+                  {failureEmailError && (
+                    <p className="break-words text-[0.6875rem] text-red-500">{failureEmailError}</p>
+                  )}
+                  <form onSubmit={handleFailurePromptSubmit} className="flex flex-col gap-1.5">
+                    <input
+                      type="email"
+                      value={failureEmail}
+                      onChange={(e) => setFailureEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
+                    />
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="submit"
+                        disabled={failureEmailPending || !failureEmail.trim()}
+                        className="min-w-[4.5rem] shrink-0 rounded-lg bg-brand-600 px-3 py-1.5 text-center text-[0.6875rem] font-medium text-white hover:bg-brand-700 disabled:opacity-50 transition-colors"
+                      >
+                        {failureEmailPending ? 'Sending…' : 'Send'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={dismissFailurePrompt}
+                        className="shrink-0 text-[0.6875rem] text-gray-400 hover:text-gray-600 transition-colors"
+                      >
+                        No thanks
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              <div ref={bottomRef} />
+            </div>
+
+            {/* Input */}
+            <div className="border-t border-gray-100 px-3 py-3 shrink-0">
+              <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="Ask a question…"
+                  className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
+                  disabled={isLoading}
+                />
+                <button
+                  type="submit"
+                  disabled={isLoading || !input.trim()}
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 text-white disabled:opacity-40 hover:bg-brand-700 transition-colors"
+                >
+                  <svg className="h-3.5 w-3.5 rotate-90" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                </button>
+              </form>
+              {showBranding && (
+                <p className="text-center text-[0.625rem] text-gray-300 mt-2">Powered by answerLoops</p>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </WidgetActionsProvider>
   )
 }

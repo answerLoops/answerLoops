@@ -31,7 +31,7 @@
   var panel = null;
   var bubble = null;
 
-  function createStyles() {
+    function createStyles() {
     var style = document.createElement('style');
     style.textContent = [
       '#cp-widget-bubble{position:fixed;bottom:24px;right:24px;z-index:2147483646;width:' + BUBBLE_SIZE + 'px;height:' + BUBBLE_SIZE + 'px;border-radius:50%;background:' + bubbleColor + ';box-shadow:0 4px 16px rgba(79,70,229,.4);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;}',
@@ -39,6 +39,7 @@
       '#cp-widget-panel{position:fixed;bottom:' + (BUBBLE_SIZE + 32) + 'px;right:24px;z-index:2147483645;width:' + PANEL_W + 'px;height:' + PANEL_H + 'px;max-width:calc(100vw - 48px);max-height:calc(100vh - ' + (BUBBLE_SIZE + 56) + 'px);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);border:1px solid #e5e7eb;overflow:hidden;transform-origin:bottom right;transition:transform .2s cubic-bezier(.34,1.56,.64,1),opacity .15s;transform:scale(.85);opacity:0;pointer-events:none;}',
       '#cp-widget-panel.cp-open{transform:scale(1);opacity:1;pointer-events:all;}',
       '#cp-widget-panel iframe{width:100%;height:100%;border:none;display:block;}',
+      '@media (max-width:480px){#cp-widget-panel{inset:0;width:100%;height:100%;max-width:100vw;max-height:100dvh;border-radius:0;border:none;transform-origin:bottom center;}#cp-widget-bubble.cp-hidden-mobile{display:none;}}',
     ].join('');
     document.head.appendChild(style);
   }
@@ -72,18 +73,25 @@
     document.body.appendChild(panel);
   }
 
-  function togglePanel() {
-    isOpen = !isOpen;
+    function setOpen(nextOpen) {
+    isOpen = Boolean(nextOpen);
     if (isOpen) {
       panel.classList.add('cp-open');
+      bubble.classList.add('cp-hidden-mobile');
       bubble.setAttribute('aria-label', 'Close support chat');
       bubble.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
     } else {
       panel.classList.remove('cp-open');
+      bubble.classList.remove('cp-hidden-mobile');
       bubble.setAttribute('aria-label', 'Open support chat');
       bubble.innerHTML = '<svg width="24" height="24" viewBox="0 0 24 24" fill="white"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>';
     }
   }
+
+  function togglePanel() {
+    setOpen(!isOpen);
+  }
+
 
   function applyConfig(config) {
     if (!config || typeof config !== 'object') return;
@@ -139,10 +147,15 @@
       createStyles();
       createBubble();
       createPanel();
+      window.addEventListener('message', function (event) {
+        if (event.origin !== baseUrl) return;
+        if (event.data && event.data.type === 'cp-widget-close' && isOpen) {
+          setOpen(false);
+        }
     });
+  });
   }
-
-  if (document.readyState === 'loading') {
+   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
     init();
