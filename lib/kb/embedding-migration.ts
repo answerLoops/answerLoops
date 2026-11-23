@@ -222,6 +222,22 @@ async function switchIfComplete(orgId: number, target: string): Promise<boolean>
   })
 }
 
+/**
+ * The embedding model a background pass over stored text uses: the
+ * workspace's own provider when the target is its own model, the install's
+ * key on a self-hosted install, and otherwise the platform model through a
+ * handle that is never charged to the workspace's included usage (the change
+ * is ours to pay for). Shared with the re-title pass (lib/kb/retitle-imports.ts).
+ */
+export function passEmbeddingModel(
+  cfg: Awaited<ReturnType<typeof getOrgAIConfig>>,
+  target: { modelId: string; own: boolean },
+  selfHosted: boolean
+): EmbeddingModel {
+  if (target.own && cfg) return ownEmbeddingModel(cfg, target.modelId)
+  return selfHosted ? openai.embedding(target.modelId) : platformEmbedding(target.modelId)
+}
+
 export async function runEmbeddingMigration(orgId: number): Promise<{ staged: number; switched: boolean }> {
   const lease = await acquireLease(orgId)
   if (!lease) return { staged: 0, switched: false }
@@ -240,12 +256,7 @@ export async function runEmbeddingMigration(orgId: number): Promise<{ staged: nu
       return { staged: 0, switched: false }
     }
 
-    let model: EmbeddingModel
-    if (target.own && cfg) {
-      model = ownEmbeddingModel(cfg, target.modelId)
-    } else {
-      model = selfHosted ? openai.embedding(target.modelId) : platformEmbedding(target.modelId)
-    }
+    const model = passEmbeddingModel(cfg, target, selfHosted)
 
     const staged = (await stageArticles(orgId, lease, target.modelId, model)) + (await stageTickets(orgId, lease, target.modelId, model))
     const switched = await switchIfComplete(orgId, target.modelId)

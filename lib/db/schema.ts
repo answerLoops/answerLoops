@@ -125,6 +125,11 @@ export const orgs = pgTable('orgs', {
   embeddingMigrationLeaseUntil: timestamp('embedding_migration_lease_until', { withTimezone: true }),
   embeddingMigrationAttemptedAt: timestamp('embedding_migration_attempted_at', { withTimezone: true }),
   embeddingMigrationFailures: integer('embedding_migration_failures').notNull().default(0),
+  // Re-title pass bookkeeping (lib/kb/retitle-imports.ts), the same shape as
+  // the re-embed job's above.
+  kbRetitleLeaseUntil: timestamp('kb_retitle_lease_until', { withTimezone: true }),
+  kbRetitleAttemptedAt: timestamp('kb_retitle_attempted_at', { withTimezone: true }),
+  kbRetitleFailures: integer('kb_retitle_failures').notNull().default(0),
   createdAt: text('created_at').notNull().default(now),
 })
 
@@ -449,11 +454,17 @@ export const kbSources = pgTable(
     // out of retrieval until the customer publishes it. Kept in lockstep with
     // kb_articles.published by setKBSourcePublished().
     published: integer('published').notNull().default(1),
+    // 0 for a URL source imported before section titles carried the page; the
+    // re-title pass (lib/kb/retitle-imports.ts) moves it to 1. Every other
+    // source is 1 (migration 0086).
+    titlesVersion: integer('titles_version').notNull().default(1),
     createdAt: text('created_at').notNull().default(now),
     updatedAt: text('updated_at').notNull().default(now),
   },
   (t) => [
     index('idx_kb_sources_org').on(t.orgId),
+    // URL sources still waiting for the re-title pass (migration 0086).
+    index('idx_kb_sources_retitle_pending').on(t.orgId).where(sql`${t.fileType} = 'url' AND ${t.titlesVersion} = 0`),
     index('idx_kb_sources_published').on(t.published),
   ]
 )
