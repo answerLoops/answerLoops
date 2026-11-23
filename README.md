@@ -44,21 +44,23 @@ People join a community to learn something, solve a problem, or connect with oth
 When a member asks where to watch a workshop replay, answerLoops can find the right guide and draft a reply with the link. Your team can review the draft before it goes out or enable automatic replies for answers that qualify. Automatic replies are off by default. If the guides don’t cover the question, your team can follow up.
 
 
-## Give website visitors answers without leaving the page
+## Answer questions directly from your knowledge source on your website or docs
 
-Give people answers right on your website, without making them sign up. Website chat uses the same guides that support your community.
-
-Custom branding is available so the chat can match your site’s look and feel.
-
-![Animated example: a player opens Lanternfall’s branded chat and asks about playing with friends on another platform. The assistant pauses, explains how to join, and links to the cross-play guide.](./.github/readme/website-chat-widget.svg)
-
-When your articles don’t cover a question, the widget can ask for an email so your team can follow up.
+Give people answers without making them sign up. Website chat uses the same guides that support your community. Try it [here](https://answerloops.com?ref=README).
 
 **Add chat to your website in three easy steps**
 
 1. Choose the guides visitors can get answers from.
 2. Add the chat bubble to your website.
 3. Ask a question to see what visitors will get.
+
+
+![Animated example: a player opens Lanternfall’s branded chat and asks about playing with friends on another platform. The assistant pauses, explains how to join, and links to the cross-play guide.](./.github/readme/website-chat-widget.svg)
+
+_Custom branding is available so the chat can match your site’s look and feel._
+
+When your articles don’t cover a question, the widget can ask for an email so your team can follow up.
+
 
 [Install the website chat widget](https://answerloops.com/docs/product/chat-widget#set-it-up).
 
