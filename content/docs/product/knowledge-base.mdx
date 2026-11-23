@@ -38,7 +38,7 @@ Pick the method that matches where your knowledge already lives. Importing, uplo
 
 <Tabs items={['Web page or site', 'File upload', 'GitHub repository', 'Notion workspace']}>
   <Tab value="Web page or site">
-    Best for a public help center or documentation site. Importing reads each page, splits it by its headings, and saves each section as an article titled with the page title and the heading, for example **Pricing › Pro**. The page title is what lets a loosely worded question like "what does it cost?" find a section headed only "Pro". A page imported before section titles included the page title keeps its original titles until you remove it and import it again.
+    Best for a public help center or documentation site. Importing reads each page, splits it by its headings, and saves each section as an article titled with the page title and the heading, for example **Pricing › Pro**. The page title is what lets a loosely worded question like "what does it cost?" find a section headed only "Pro". Pages imported before section titles included the page are updated for you. Their sections get the page in front, taken from the page's address (for example **pricing › Pro**), and are re-indexed in the background. Only the title changes, never the section's text. If your workspace uses its own embedding key, or you self-host, run the update yourself from **Settings → AI Model → Update imported page titles**. It processes those sections with your key.
 
     <Steps>
       <Step>

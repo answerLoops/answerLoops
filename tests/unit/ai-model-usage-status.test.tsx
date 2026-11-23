@@ -59,6 +59,7 @@ vi.mock('@/lib/actions/account', () => ({
   getCurrentOrgName: vi.fn(async () => null),
 }))
 vi.mock('@/components/settings/source-support', () => ({ SourceSupportSection: () => null }))
+vi.mock('@/components/settings/kb-page-titles', () => ({ KbPageTitlesSection: () => null }))
 
 function mockFetchSequence(aiConfig: unknown, usageStatus: unknown) {
   global.fetch = vi.fn((url: string) => {

@@ -24,6 +24,7 @@ import type { SLAConfig } from '@/types'
 import { subscribeLiveEvents } from '@/lib/live-events'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
 import { SourceSupportSection } from '@/components/settings/source-support'
+import { KbPageTitlesSection } from '@/components/settings/kb-page-titles'
 
 interface Member {
   membership_id: number
@@ -1740,6 +1741,7 @@ export default function SettingsPage() {
       {activeTab === 'ai' && (
         <section>
           <AIModelSection />
+          <KbPageTitlesSection />
         </section>
       )}
 
