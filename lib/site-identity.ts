@@ -3,6 +3,9 @@ import { GITHUB_URL } from '@/lib/site'
 export const ORGANIZATION_ID = 'https://answerloops.com/#organization'
 export const WEBSITE_ID = 'https://answerloops.com/#website'
 
+export const PRODUCT_HEADLINE = 'Help your community grow'
+export const PRODUCT_TAGLINE = 'Members stay. Visitors convert. One knowledge base.'
+
 /**
  * The canonical public identity graph shared by every crawlable route.
  *
@@ -24,7 +27,7 @@ export const siteIdentityJsonLd = {
         url: 'https://answerloops.com/logo.png',
       },
       description:
-        'Open-source community support software that helps teams give members timely answers from their documentation and follow up on questions that need a person.',
+        'Open-source software that helps teams keep community members engaged and give website visitors answers using one knowledge base.',
       sameAs: [GITHUB_URL],
       contactPoint: {
         '@type': 'ContactPoint',

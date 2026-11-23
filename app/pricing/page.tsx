@@ -117,13 +117,12 @@ export default async function PricingPage({
       />
       <PricingStructuredData />
       <PageHero
-        title="Give your community the support it needs"
+        title="Find a plan for your community and website"
         compact
       >
         <p>
-          Start by helping members get answers in the channels they already use.
-          As your community grows, find gaps in your docs and route harder
-          questions to the right people.
+          Give members answers in the channels they use and help website visitors
+          take their next step. Both use the same knowledge base.
         </p>
       </PageHero>
       <section

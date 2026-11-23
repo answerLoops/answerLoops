@@ -17,13 +17,12 @@ import { ORDERED_PLANS } from '@/lib/billing/plans'
 import { isCustomPriced } from '@/lib/marketing/pricing'
 import { INCLUDED_AI_SUMMARY, TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
 import { marketingSiteEnabled } from '@/lib/site'
-import { ORGANIZATION_ID } from '@/lib/site-identity'
+import { ORGANIZATION_ID, PRODUCT_HEADLINE, PRODUCT_TAGLINE } from '@/lib/site-identity'
 import { ArrowRight, MessageCircle, Terminal, Users, GraduationCap, Headphones, Palette, MessagesSquare } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 const PAGE_TITLE = 'Community support for growing teams | answerLoops'
-const PAGE_DESCRIPTION =
-  'Members stay. Visitors convert. One knowledge base.'
+const PAGE_DESCRIPTION = PRODUCT_TAGLINE
 export const metadata: Metadata = {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
@@ -128,10 +127,10 @@ export default function LandingPage() {
         <div className="marketing-container marketing-home-grid home-hero-stacked">
           <div className="home-hero-copy">
             <h1>
-              Help your community grow
+              {PRODUCT_HEADLINE}
             </h1>
             <p className="marketing-intro">
-              Members stay. Visitors convert. One knowledge base.
+              {PRODUCT_TAGLINE}
             </p>
             <div className="marketing-actions">
               <Link

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { POST } from '@/app/api/widget/chat/route'
 import fs from 'node:fs'
 import path from 'node:path'
 import { widgetChatRequest, drain, userMsg } from './support/widget-chat-envelope'
@@ -68,7 +69,8 @@ vi.mock('@/lib/ai/embed', () => ({
 vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => 'test-embed-model' }))
 vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
-vi.mock('@/lib/widget/lead-signal-stash', () => ({
+vi.mock('@/lib/widget/lead-signal-stash', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/widget/lead-signal-stash')>(),
   setLeadSignal: h.setLeadSignal,
 }))
 vi.mock('@mastra/core/agent', () => ({
@@ -81,7 +83,6 @@ vi.mock('@mastra/core/agent', () => ({
 }))
 
 async function ask(question: string, visitorId = 'v1', turnId: unknown = 'turn-1') {
-  const { POST } = await import('@/app/api/widget/chat/route')
   const res = await POST(
     widgetChatRequest({ widgetToken: VALID_TOKEN, visitorId, turnId, messages: [userMsg(question)] })
   )
@@ -206,7 +207,6 @@ describe('widget chat route: a turn that never answers leaves no signal behind',
   // turn's entry.
   it('records nothing when the workspace cannot be found (404)', async () => {
     h.getOrgByWidgetToken.mockResolvedValue(null)
-    const { POST } = await import('@/app/api/widget/chat/route')
     const res = await POST(
       widgetChatRequest({
         widgetToken: VALID_TOKEN,

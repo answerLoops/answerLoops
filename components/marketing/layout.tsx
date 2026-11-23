@@ -73,8 +73,8 @@ export function PageHero({
 }
 
 export function TrialCta({
-  title = 'Start with your community’s questions',
-  description = 'Connect a channel your members already use and review answers drafted from your own guides.',
+  title = 'Start with the questions people already ask',
+  description = 'Connect a community channel or add website chat. See how both can use the guides you already maintain.',
 }: {
   title?: string
   description?: string

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="570" viewBox="0 0 1200 570" role="img" aria-labelledby="title desc">
-  <title id="title">Good answers start with your knowledge</title>
-  <desc id="desc">A question arrives from Discord. AnswerLoops finds relevant guides, drafts an answer, and checks it against the sources. With auto-reply enabled, a qualifying answer can post in the channel. If the guides don’t cover the question, it waits for the team. Teams can save useful resolutions as knowledge for future questions. Supported channels include Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and website chat.</desc>
+  <title id="title">How AnswerLoops Makes Every Interaction Count</title>
+  <desc id="desc">A member asks in community chat or a forum. AnswerLoops finds relevant guides, drafts an answer, and checks it against the sources. With auto-reply enabled, a qualifying answer can post in the channel. Teams can save useful resolutions as knowledge for future questions. Supported channels include Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and website chat.</desc>
   <defs>
     <linearGradient id="surface" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop stop-color="#f7f0e4"/>
@@ -16,8 +16,8 @@
   </defs>
   <style>
     text{font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif}
-    .heading{fill:#082e50;font-size:31px;font-weight:750;letter-spacing:-.6px}
-    .card-title{fill:#082e50;font-size:21px;font-weight:750;letter-spacing:-.3px}
+    .heading{fill:#082e50;font-size:29px;font-weight:750;letter-spacing:-.6px}
+    .card-title{fill:#082e50;font-size:19px;font-weight:750;letter-spacing:-.3px}
     .body{fill:#36576c;font-size:15px;font-weight:500}
     .sample{fill:#082e50;font-size:15px;font-weight:650}
     .label{fill:#315e81;font-size:12px;font-weight:750;letter-spacing:.75px}
@@ -25,30 +25,13 @@
     .final .body{fill:#d6e7ee}
     .final .label{fill:#b3dce3}
     .channel{fill:#164365;font-size:14px;font-weight:650;text-anchor:middle}
-    .held,.pulse{opacity:0}
-    @media(prefers-reduced-motion:no-preference){
-      .answered{animation:answered 20s both}
-      .held{animation:held 20s both}
-      .pulse{animation:highlight 10s 2 both}
-      .step-2 .pulse{animation-delay:1.65s}
-      .step-3 .pulse{animation-delay:3.3s}
-      .step-4 .pulse{animation-delay:4.95s}
-    }
-    @keyframes answered{0%,49%,97%,100%{opacity:1}51%,95%{opacity:0}}
-    @keyframes held{0%,49%,97%,100%{opacity:0}51%,95%{opacity:1}}
-    @keyframes highlight{0%,2%{opacity:0}6%,16%{opacity:1}21%,100%{opacity:0}}
   </style>
   <rect x="1" y="1" width="1198" height="568" rx="27" fill="url(#surface)" stroke="#cbdade"/>
-  <text x="42" y="62" class="heading">Good answers start with your knowledge.</text>
-  <g class="answered">
+  <text x="42" y="62" class="heading">How AnswerLoops Makes Every Interaction Count</text>
+  <g>
     <rect x="902" y="32" width="256" height="40" rx="20" fill="#fff" fill-opacity=".9"/>
     <circle cx="927" cy="52" r="4" fill="#168fa3"/>
     <text x="941" y="57" class="label">ANSWERED FROM YOUR DOCS</text>
-  </g>
-  <g class="held">
-    <rect x="902" y="32" width="256" height="40" rx="20" fill="#fff4e7"/>
-    <circle cx="927" cy="52" r="4" fill="#a35b24"/>
-    <text x="941" y="57" class="label">YOUR TEAM STEPS IN</text>
   </g>
   <g fill="none" stroke="#168fa3" stroke-width="2" marker-end="url(#arrow)">
     <path d="M307 214h15"/><path d="M591 214h15"/><path d="M875 214h15"/>
@@ -56,46 +39,38 @@
   </g>
   <g class="step-1" transform="translate(42 96)">
     <rect width="264" height="244" rx="18" fill="#fff" filter="url(#shadow)"/>
-    <rect class="pulse" x="1.5" y="1.5" width="261" height="241" rx="17" fill="none" stroke="#168fa3" stroke-width="3"/>
     <g transform="translate(20 17)" fill="none" stroke="#168fa3" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h22v15H11l-7 6v-6H4z"/></g>
-    <text x="20" y="74" class="card-title"><tspan x="20" dy="0">Question arrives</tspan></text>
-    <text x="20" y="103" class="body"><tspan x="20" dy="0">A member asks where your</tspan><tspan x="20" dy="22">community already talks.</tspan></text>
+    <text x="20" y="70" class="card-title"><tspan x="20" dy="0">Ask in the community</tspan></text>
+    <text x="20" y="117" class="body"><tspan x="20" dy="0">Members ask in the channels</tspan><tspan x="20" dy="22">they already use.</tspan></text>
     <rect x="18" y="151" width="228" height="74" rx="11" fill="#edf5f6"/>
-    <g class="answered"><text x="31" y="179" class="sample"><tspan x="31" dy="0">Where can I watch the</tspan><tspan x="31" dy="22">workshop replay?</tspan></text></g>
-    <g class="held"><text x="31" y="179" class="sample"><tspan x="31" dy="0">Can I move my enrollment</tspan><tspan x="31" dy="22">to another cohort?</tspan></text></g>
+    <g><text x="31" y="179" class="sample"><tspan x="31" dy="0">Where can I watch the</tspan><tspan x="31" dy="22">workshop replay?</tspan></text></g>
   </g>
   <g class="step-2" transform="translate(326 96)">
     <rect width="264" height="244" rx="18" fill="#fff" filter="url(#shadow)"/>
-    <rect class="pulse" x="1.5" y="1.5" width="261" height="241" rx="17" fill="none" stroke="#168fa3" stroke-width="3"/>
     <g transform="translate(20 17)" fill="none" stroke="#168fa3" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h12l7 7v17H7z M19 3v7h7 M12 15h9 M12 20h9"/></g>
-    <text x="20" y="74" class="card-title"><tspan x="20" dy="0">Draft from your docs</tspan></text>
-    <text x="20" y="103" class="body"><tspan x="20" dy="0">AnswerLoops looks for the</tspan><tspan x="20" dy="22">guides that cover it.</tspan></text>
+    <text x="20" y="70" class="card-title"><tspan x="20" dy="0">Get an answer</tspan><tspan x="20" dy="23">from your guides</tspan></text>
+    <text x="20" y="117" class="body"><tspan x="20" dy="0">AnswerLoops finds relevant</tspan><tspan x="20" dy="22">articles and drafts a reply.</tspan></text>
     <rect x="18" y="151" width="228" height="74" rx="11" fill="#edf5f6"/>
-    <g class="answered"><text x="31" y="179" class="sample"><tspan x="31" dy="0">Workshop replay guide</tspan><tspan x="31" dy="22">Member resource library</tspan></text></g>
-    <g class="held"><text x="31" y="179" class="sample"><tspan x="31" dy="0">No article covers</tspan><tspan x="31" dy="22">cohort transfers</tspan></text></g>
+    <g><text x="31" y="179" class="sample"><tspan x="31" dy="0">Workshop replay guide</tspan><tspan x="31" dy="22">Member resource library</tspan></text></g>
   </g>
   <g class="step-3" transform="translate(610 96)">
     <rect width="264" height="244" rx="18" fill="#fff" filter="url(#shadow)"/>
-    <rect class="pulse" x="1.5" y="1.5" width="261" height="241" rx="17" fill="none" stroke="#168fa3" stroke-width="3"/>
     <g transform="translate(20 17)" fill="none" stroke="#168fa3" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3c4 3 8 4 11 5v7c0 6-5 10-11 13C9 25 4 21 4 15V8c3-1 7-2 11-5z M10 15l4 4 7-8"/></g>
-    <text x="20" y="74" class="card-title"><tspan x="20" dy="0">Check the answer</tspan></text>
-    <text x="20" y="103" class="body"><tspan x="20" dy="0">A second AI checks the draft</tspan><tspan x="20" dy="22">against the sources.</tspan></text>
+    <text x="20" y="70" class="card-title"><tspan x="20" dy="0">See the sources</tspan></text>
+    <text x="20" y="117" class="body"><tspan x="20" dy="0">A second AI checks the draft</tspan><tspan x="20" dy="22">against the sources.</tspan></text>
     <rect x="18" y="151" width="228" height="74" rx="11" fill="#edf5f6"/>
-    <g class="answered"><text x="31" y="179" class="sample"><tspan x="31" dy="0">The guides confirm where</tspan><tspan x="31" dy="22">to find the replay</tspan></text></g>
-    <g class="held"><text x="31" y="179" class="sample"><tspan x="31" dy="0">There’s no source to</tspan><tspan x="31" dy="22">verify an answer</tspan></text></g>
+    <g><text x="31" y="179" class="sample"><tspan x="31" dy="0">Reply matches</tspan><tspan x="31" dy="22">the cited guides</tspan></text></g>
   </g>
   <g class="step-4 final" transform="translate(894 96)">
     <rect width="264" height="244" rx="18" fill="#082e50" filter="url(#shadow)"/>
-    <rect class="pulse" x="1.5" y="1.5" width="261" height="241" rx="17" fill="none" stroke="#8edfe6" stroke-width="3"/>
     <g transform="translate(20 17)" fill="none" stroke="#a4dbe1" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13 27 3 17 27l-4-10z M13 17 27 3"/></g>
-    <text x="20" y="74" class="card-title"><tspan x="20" dy="0">Reply or follow up</tspan></text>
-    <text x="20" y="103" class="body"><tspan x="20" dy="0">Your team can approve a draft</tspan><tspan x="20" dy="22">or enable qualifying auto-replies.</tspan></text>
+    <text x="20" y="70" class="card-title"><tspan x="20" dy="0">Get help and move forward</tspan></text>
+    <text x="20" y="117" class="body"><tspan x="20" dy="0">Members get a reply, or your</tspan><tspan x="20" dy="22">team takes over.</tspan></text>
     <rect x="18" y="151" width="228" height="74" rx="11" fill="#234762"/>
-    <g class="answered"><text x="31" y="179" class="sample"><tspan x="31" dy="0">Auto-reply posts with</tspan><tspan x="31" dy="22">links to the guides</tspan></text></g>
-    <g class="held"><text x="31" y="179" class="sample"><tspan x="31" dy="0">Held for your team</tspan><tspan x="31" dy="22">to review or follow up</tspan></text></g>
+    <g><text x="31" y="179" class="sample"><tspan x="31" dy="0">Member gets a link</tspan><tspan x="31" dy="22">to the replay</tspan></text></g>
   </g>
-  <rect x="589" y="361" width="332" height="36" rx="18" fill="#e6f3f2" stroke="#c5e3e3"/>
-  <text x="755" y="384" text-anchor="middle" class="body">Save useful resolutions as knowledge</text>
+  <rect x="557" y="361" width="396" height="36" rx="18" fill="#e6f3f2" stroke="#c5e3e3"/>
+  <text x="755" y="384" text-anchor="middle" class="body">Turn useful answers into guides for future questions</text>
   <text x="600" y="442" text-anchor="middle" class="card-title">Works wherever your community asks</text>
   <g transform="translate(42 461)">
     <rect width="116" height="76" rx="13" fill="#fff" fill-opacity=".9" stroke="#fff"/>

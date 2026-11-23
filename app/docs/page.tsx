@@ -19,7 +19,7 @@ import { channelListSentence } from '@/lib/marketing/channels'
 
 const TITLE = 'answerLoops documentation'
 const DESCRIPTION =
-  'Set up answerLoops, connect your support channels, and run AI-drafted, AI-reviewed answers for your community.'
+  'Set up one knowledge base for answers in your community channels and on your website.'
 
 export const metadata: Metadata = publicPageMetadata({
   title: TITLE,
@@ -40,11 +40,11 @@ export default function DocsHomePage() {
         <section className="not-prose rounded-2xl border border-fd-border bg-fd-accent px-6 py-10 sm:px-10">
           <p className="text-sm font-medium text-fd-primary">Documentation</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-            Answer your community, faster and with a second opinion
+            Set up answers for your community and website
           </h1>
           <p className="mt-3 max-w-2xl text-fd-muted-foreground">
-            answerLoops drafts answers from your knowledge, has a separate AI review them, and
-            brings in your team when it should. It works across {channelListSentence()}.
+            Connect the places your members and visitors ask for help, and use one knowledge
+            base to answer across {channelListSentence()}.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link
