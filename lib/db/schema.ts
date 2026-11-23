@@ -19,6 +19,7 @@ import {
   customType,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
+import type { RepoSyncResult } from '../../types'
 
 const now = sql`now()`
 
@@ -323,6 +324,11 @@ export const githubRepos = pgTable('github_repos', {
   // this column existed (migration 0074).
   kbSyncedCommit: text('kb_synced_commit'),
   kbChunkCount: integer('kb_chunk_count').notNull().default(0),
+  // Docs folders an owner picked for the knowledge base sync; NULL means none
+  // were picked and every Markdown file is read (migration 0087).
+  kbPaths: text('kb_paths').array(),
+  // Counts from the last files sync, shown on the repo row (migration 0087).
+  kbSyncResult: jsonb('kb_sync_result').$type<RepoSyncResult>(),
   // Automatic Deflections for this repo — same meaning/default as
   // integrations.autoDeflectEnabled, but GitHub has no integrations row
   // (repos are connected per-repo, not one row per platform), so it lives

@@ -94,14 +94,18 @@ Pick the method that matches where your knowledge already lives. Importing, uplo
         Install the GitHub App for the repository. Self-hosted operators also need to configure the app credentials; see [GitHub setup](/docs/integrations/github).
       </Step>
       <Step>
-        In **Integrations → GitHub**, switch on **Knowledge Base** for the repository.
+        In **Integrations → GitHub**, switch on **Knowledge Base** for the repository. A list of the repository's folders opens, each with the number of docs files inside it. Folders with no docs files are greyed out. Common docs folders such as `docs` and `content/docs` are ticked for you.
       </Step>
       <Step>
-        Back on the **Manage** tab, the repository now appears under **GitHub Repositories**. Click **Sync now**.
+        Tick the folders that hold your docs and click **Save and sync**. The first sync starts straight away. To change the folders later, click **Change folders** on the repository.
       </Step>
     </Steps>
 
-    A sync reads up to 100 `.md` and `.mdx` files from the repository. It skips folders such as `node_modules`, `vendor`, `.github`, `test`, `tests`, `__tests__`, and `spec`, plus `CHANGELOG`, `LICENSE.md`, and `CODE_OF_CONDUCT.md`. Every file is read from the repository's head commit at the start of the sync, and that commit is shown next to the last-synced time as a short link to it on GitHub. The whole repository is one entry in the Sources list, and its answered Discussions are a second one (type `github-discussion`).
+    A sync reads every `.md`, `.mdx`, and `.txt` file in the folders you chose, including their subfolders. There is no file limit; the only limit is the number of articles a workspace can hold. Each page is cleaned before it is split into sections: frontmatter is removed and its `title` names the page, so a section reads **Knowledge Base › Add content** rather than the file path, and MDX `import` lines and component tags such as `<Callout>` are removed while the text inside them is kept. Code blocks are left exactly as written. Files larger than 1 MB are skipped.
+
+    A repository switched on before you chose folders reads every `.md` and `.mdx` file in the repository, skipping folders such as `node_modules`, `vendor`, `.github`, `test`, `tests`, `__tests__`, and `spec`, plus `CHANGELOG`, `LICENSE.md`, and `CODE_OF_CONDUCT.md`. Its row in Integrations shows **Choose your docs folders so only your docs are synced.** until you pick them.
+
+    After each sync the repository's row shows the folders it reads and anything the sync left out: files skipped because the knowledge base is full (they are added by a later sync once there is room), files that couldn't be read (tried again next time), files too large to sync, and any chosen folder that no longer exists in the repository. Every file is read from the repository's head commit at the start of the sync, and that commit is shown next to the last-synced time as a short link to it on GitHub. The whole repository is one entry in the Sources list, and its answered Discussions are a second one (type `github-discussion`).
 
     With **Knowledge Base** switched on, answerLoops also re-syncs automatically on every push to the default branch, and a Discussion is added the moment it is marked as answered.
   </Tab>
@@ -370,7 +374,7 @@ Anything short of every target is a no-go, with what is missing listed. Until a 
     | URL import, per run | Up to 25 new pages, 150 sections, and about 600,000 characters in total across all pages. Section titles are shortened to 300 characters. |
     | URL import rate | 10 imports every 10 minutes per workspace |
     | File upload | 10 MB per file, 2 MB of extracted text, 300 PDF pages, up to 200 sections per file, 10 uploads every 10 minutes. File names are shortened to 200 characters. |
-    | GitHub sync | Up to 100 Markdown files, plus up to 300 answered Discussions |
+    | GitHub sync | Every `.md`, `.mdx`, and `.txt` file in the chosen folders (files up to 1 MB each), plus up to 300 answered Discussions. **Sync now** can be used 10 times every 10 minutes per workspace. |
     | Write or promote | 30 every 10 minutes per workspace |
     | Review queue | 500 unreviewed items |
 

@@ -22,6 +22,10 @@ import {
 import { updateRepoSettings } from '@/lib/db/queries/github'
 import { KbSyncUserError, KbSyncLeaseLostError } from '@/lib/kb-sync/errors'
 import { logger } from '@/lib/logger'
+import { selectDocFiles, toTreeEntries, MAX_DOC_FILE_BYTES, ROOT_FOLDER, type TreeEntry } from './doc-folders'
+import { cleanDocsFile } from '@/lib/ingest/docs-file'
+import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
+import type { RepoSyncResult } from '@/types'
 
 /**
  * Failure cleanup for a staging source this worker created. After a lease loss
@@ -44,24 +48,8 @@ async function assertStagingPresent(orgId: number, staging: string, sourceId: nu
   }
 }
 
-const MOD =  'github/kb-sync'
-const MAX_FILES = 100
-const MAX_ARTICLES_PER_ORG = 2000
+const MOD = 'github/kb-sync'
 const MAX_DISCUSSIONS = 300
-
-const EXCLUDE_PATHS = ['node_modules', 'vendor', '.github', 'test', 'tests', '__tests__', 'spec']
-const EXCLUDE_FILES = ['CHANGELOG.md', 'CHANGELOG.mdx', 'LICENSE.md', 'CODE_OF_CONDUCT.md']
-
-function shouldInclude(path: string): boolean {
-  const lower = path.toLowerCase()
-  if (!lower.endsWith('.md') && !lower.endsWith('.mdx')) return false
-  for (const excl of EXCLUDE_PATHS) {
-    if (lower.includes(`/${excl}/`) || lower.startsWith(`${excl}/`)) return false
-  }
-  const filename = path.split('/').pop() ?? ''
-  if (EXCLUDE_FILES.includes(filename)) return false
-  return true
-}
 
 /**
  * Filename a replacement source is built under before it is swapped into
@@ -75,14 +63,25 @@ function stagingFilename(filename: string): string {
 const NOTHING_IMPORTED_MESSAGE =
   'Nothing could be imported from the repository this time, so the existing knowledge base content was kept. Try again shortly.'
 
+export { describeRepoSync } from './sync-summary'
+
+/**
+ * Rebuilds the repo's files source from the folders the owner picked
+ * (`kbPaths`), or from every Markdown file when none were picked. Each file is
+ * cleaned (lib/ingest/docs-file.ts) and split into sections titled by its
+ * page. There is no file cap: the knowledge base's article limit is the only
+ * bound, and once it is reached the remaining files are counted as skipped
+ * without being downloaded. Files over MAX_DOC_FILE_BYTES are skipped unread.
+ */
 export async function syncRepoToKB(
   repoId: number,
   owner: string,
   repo: string,
   installationId: number,
   orgId: number,
+  kbPaths: string[] | null,
   opts: KbSyncProgressOpts = {}
-): Promise<number> {
+): Promise<{ chunks: number; result: RepoSyncResult }> {
   const octokit = await getInstallationOctokit(owner, repo, orgId)
 
   // Resolve the head once and read everything from that commit. Without this a
@@ -91,7 +90,6 @@ export async function syncRepoToKB(
   const { data: head } = await octokit.rest.repos.getCommit({ owner, repo, ref: 'HEAD' })
   const commitSha = head.sha
 
-  // Get full file tree
   const { data: tree } = await octokit.rest.git.getTree({
     owner,
     repo,
@@ -99,11 +97,23 @@ export async function syncRepoToKB(
     recursive: '1',
   })
 
-  const mdFiles = (tree.tree ?? [])
-    .filter((f) => f.type === 'blob' && f.path && shouldInclude(f.path))
-    .slice(0, MAX_FILES)
+  // GitHub cuts the recursive tree short on very large repositories. With
+  // folders chosen, each one is then read on its own so none goes missing;
+  // without them there is nothing narrower to read.
+  let entries = toTreeEntries(tree.tree)
+  let truncated = !!tree.truncated
+  if (truncated && kbPaths) ({ entries, truncated } = await readChosenFolders(octokit, owner, repo, commitSha, kbPaths))
 
-  logger.info('github kb sync started', { module: MOD, owner, repo, fileCount: mdFiles.length })
+  const selection = selectDocFiles(entries, kbPaths)
+  // A tree that is still incomplete may simply not show a folder, so it is
+  // never used to say a folder is gone.
+  const missingFolders = truncated ? [] : selection.missingFolders
+  const tooLarge = selection.files.filter((f) => (f.size ?? 0) > MAX_DOC_FILE_BYTES).length
+  // Empty files have nothing to add; neither is downloaded.
+  const mdFiles = selection.files.filter((f) => f.size === undefined || (f.size > 0 && f.size <= MAX_DOC_FILE_BYTES))
+  const result: RepoSyncResult = { synced: 0, skippedForRoom: 0, failed: 0, tooLarge, missingFolders }
+
+  logger.info('github kb sync started', { module: MOD, owner, repo, fileCount: mdFiles.length, chosenFolders: kbPaths?.length ?? 0 })
 
   // The replacement is built under a staging filename and swapped in last, so
   // the live source stays intact until the new one is complete.
@@ -112,6 +122,14 @@ export async function syncRepoToKB(
   const existing = await getKBSourceByFilename(orgId, sourceFilename)
   const existingCount = existing ? await countArticlesForSource(existing.id, orgId) : 0
 
+  // Every chosen folder is gone (renamed or moved, usually): keep what is
+  // live rather than swapping in nothing, and say why on the repo row.
+  if (kbPaths && kbPaths.length > 0 && missingFolders.length === kbPaths.length && existingCount > 0) {
+    logger.warn('github kb sync — no chosen docs folder exists, keeping live docs', { module: MOD, orgId, owner, repo })
+    await updateRepoSettings(repoId, orgId, { kbSyncResult: result })
+    return { chunks: existingCount, result }
+  }
+
   // Clear any leftover staging row first so its chunks do not count against the budget.
   await deleteKBSourcesByFilename(orgId, staging)
 
@@ -119,7 +137,9 @@ export async function syncRepoToKB(
   const budget = Math.max(0, MAX_ARTICLES_PER_ORG - ((await countArticles(orgId)) - existingCount))
   if (budget === 0) {
     logger.warn('kb full — skipping github sync', { module: MOD, orgId })
-    return existingCount
+    result.skippedForRoom = mdFiles.length
+    await updateRepoSettings(repoId, orgId, { kbSyncResult: result })
+    return { chunks: existingCount, result }
   }
 
   const source = await createKBSource({
@@ -135,13 +155,20 @@ export async function syncRepoToKB(
     for (let fi = 0; fi < mdFiles.length; fi++) {
       const file = mdFiles[fi]
       opts.onProgress?.(fi, mdFiles.length)
-      if (created >= budget) break
+      if (created >= budget) {
+        result.skippedForRoom = mdFiles.length - fi
+        break
+      }
+      let written = 0
       try {
-        const { data } = await octokit.rest.repos.getContent({ owner, repo, path: file.path!, ref: commitSha })
-        if (Array.isArray(data) || data.type !== 'file') continue
+        const { data } = await octokit.rest.repos.getContent({ owner, repo, path: file.path, ref: commitSha })
+        if (Array.isArray(data) || data.type !== 'file') {
+          result.failed++
+          continue
+        }
 
-        const content = Buffer.from(data.content, 'base64').toString('utf8')
-        const chunks = chunkMarkdown(content, file.path!.replace(/\.[^.]+$/, ''))
+        const { title, markdown } = cleanDocsFile(file.path, Buffer.from(data.content, 'base64').toString('utf8'))
+        const chunks = chunkMarkdown(markdown, title)
 
         for (const chunk of chunks) {
           if (created >= budget) break
@@ -149,21 +176,27 @@ export async function syncRepoToKB(
             const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
             await createArticleFromSource({ question: chunk.question, answer: chunk.answer, embedding, model, sourceId: source.id, published: 0 }, orgId)
             created++
+            written++
           } catch (err) {
             if (err instanceof NoAIProviderConfiguredError) throw err
             logger.warn('chunk embed failed', { module: MOD, path: file.path, error: err })
           }
         }
+        if (written > 0) result.synced++
+        else if (chunks.length > 0) result.failed++
       } catch (err) {
         if (err instanceof NoAIProviderConfiguredError) throw err
         logger.warn('file fetch failed', { module: MOD, path: file.path, error: err })
+        result.failed++
       }
     }
     opts.onProgress?.(mdFiles.length, mdFiles.length)
 
     // Files were found but not one chunk made it in (provider or network
     // trouble on every call): keep what is live rather than swapping in nothing.
-    if (created === 0 && existingCount > 0 && mdFiles.length > 0) {
+    // A folder of pages too short to become sections is a real result, not a
+    // failure to retry, so it only counts when files actually failed.
+    if (created === 0 && existingCount > 0 && mdFiles.length > 0 && result.failed > 0) {
       throw new KbSyncUserError(NOTHING_IMPORTED_MESSAGE)
     }
   } catch (err) {
@@ -187,10 +220,57 @@ export async function syncRepoToKB(
     kbLastSynced: new Date().toISOString(),
     kbSyncedCommit: commitSha,
     kbChunkCount: created + (discussionsSource?.chunk_count ?? 0),
+    kbSyncResult: result,
   })
 
-  logger.info('github kb sync done', { module: MOD, owner, repo, created })
-  return created
+  logger.info('github kb sync done', { module: MOD, owner, repo, created, ...result, missingFolders: missingFolders.length })
+  return { chunks: created, result }
+}
+
+type Octokit = Awaited<ReturnType<typeof getInstallationOctokit>>
+
+/**
+ * The chosen folders' files, read folder by folder: walk down to each folder
+ * with one-level listings, then read that folder recursively. Used when the
+ * whole repository's tree was too large for GitHub to return in full. A
+ * folder that isn't found is left out, so it is reported as gone.
+ */
+async function readChosenFolders(
+  octokit: Octokit,
+  owner: string,
+  repo: string,
+  commitSha: string,
+  kbPaths: string[]
+): Promise<{ entries: TreeEntry[]; truncated: boolean }> {
+  const listings = new Map<string, TreeEntry[]>()
+  const list = async (sha: string) => {
+    if (!listings.has(sha)) {
+      const { data } = await octokit.rest.git.getTree({ owner, repo, tree_sha: sha })
+      listings.set(sha, toTreeEntries(data.tree))
+    }
+    return listings.get(sha)!
+  }
+
+  const entries: TreeEntry[] = []
+  let truncated = false
+  for (const folder of kbPaths) {
+    if (folder === ROOT_FOLDER) {
+      entries.push(...(await list(commitSha)).filter((e) => e.type === 'blob'))
+      continue
+    }
+    let sha: string | null = commitSha
+    for (const segment of folder.split('/')) {
+      const found: TreeEntry | undefined = (await list(sha!)).find((e) => e.type === 'tree' && e.path === segment)
+      sha = found ? found.sha : null
+      if (!sha) break
+    }
+    if (!sha) continue
+    const { data } = await octokit.rest.git.getTree({ owner, repo, tree_sha: sha, recursive: '1' })
+    if (data.truncated) truncated = true
+    entries.push({ path: folder, type: 'tree', sha })
+    for (const e of toTreeEntries(data.tree)) entries.push({ ...e, path: `${folder}/${e.path}` })
+  }
+  return { entries, truncated }
 }
 
 // ── GitHub Discussions → KB ────────────────────────────────────────────────

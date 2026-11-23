@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { getRepoById } from '@/lib/db/queries/github'
 import { enqueueKbSyncJob } from '@/lib/db/queries/kb-sync-jobs'
+import { rateLimitShared } from '@/lib/ratelimit'
 import { logger } from '@/lib/logger'
 
 const MOD = 'api/github/sync-kb'
@@ -13,6 +14,13 @@ export async function POST(req: NextRequest) {
   const access = await requireOrgAccess(['owner', 'admin'])
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.error === 'Unauthorized' ? 401 : 403 })
 
+  // Webhook-triggered syncs don't pass through here, so only clicks count.
+  const limit = await rateLimitShared(`kb-sync-now:${access.orgId}`, 10, 10 * 60_000)
+  if (!limit.ok) {
+    const mins = Math.ceil(limit.retryAfterMs / 60_000)
+    return NextResponse.json({ error: `Rate limit reached. Try again in ${mins} minute${mins === 1 ? '' : 's'}.` }, { status: 429 })
+  }
+
   const repoId = Number(req.nextUrl.searchParams.get('repo_id'))
   if (!repoId) return NextResponse.json({ error: 'Missing repo_id' }, { status: 400 })
 
@@ -20,7 +28,15 @@ export async function POST(req: NextRequest) {
   if (!repo) return NextResponse.json({ error: 'Repo not found' }, { status: 404 })
 
   try {
-    const job = await enqueueKbSyncJob({ orgId: access.orgId, kind: 'github_repo', repoId: repo.id, pullForward: true })
+    const job = await enqueueKbSyncJob({
+      orgId: access.orgId,
+      kind: 'github_repo',
+      repoId: repo.id,
+      pullForward: true,
+      // A click during a running sync (for example right after the docs
+      // folders changed) gets one follow-up run, so the change is picked up.
+      rerunIfRunning: true,
+    })
     return NextResponse.json({ jobId: job.id, status: job.status, alreadyQueued: !job.created })
   } catch (err) {
     logger.error('failed to enqueue github kb sync', { module: MOD, orgId: access.orgId, repoId, error: err })
