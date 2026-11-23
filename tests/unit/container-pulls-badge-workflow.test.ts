@@ -29,5 +29,6 @@ describe('container pulls badge workflow', () => {
     expect(yml).toMatch(/^permissions: \{\}$/m)
     expect(yml).toContain('secrets.PULLS_GIST_TOKEN')
     expect(yml).not.toMatch(/uses:/)
+    expect(yml).toContain('environment: container-pulls-badge')
   })
 })

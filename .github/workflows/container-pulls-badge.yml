@@ -18,6 +18,8 @@ jobs:
   update:
     name: Update the pulls gist
     runs-on: ubuntu-latest
+    # The gist secrets live in this environment, not at repo level.
+    environment: container-pulls-badge
     permissions: {}
 
     steps:
