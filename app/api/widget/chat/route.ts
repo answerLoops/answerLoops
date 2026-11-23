@@ -29,7 +29,10 @@ import { logger } from '@/lib/logger'
 import { requestsHuman, isGreetingOrAck, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import { isValidWidgetToken, isValidVisitorId, isValidTurnId } from '@/lib/widget/request-validation'
 import { setLeadSignal, setTurnAnswer } from '@/lib/widget/lead-signal-stash'
-import { buildWidgetInstructions, widgetContextBlock } from '@/lib/widget/instructions'
+import { buildWidgetInstructions } from '@/lib/widget/instructions'
+import { createTurnContext } from '@/lib/widget/turn-context'
+import { buildSearchTool, SEARCH_TOOL_NAME } from '@/lib/widget/search-tool'
+import { ToolCallFilter } from '@mastra/core/processors'
 import type { WidgetAnswerScope } from '@/lib/widget/answer-scope'
 
 const MOD = 'api/widget/chat'
@@ -118,16 +121,29 @@ export interface PendingRun {
   startedAt?: number
 }
 
-// Retrieval is best-effort: an embedding or search failure means the model
-// answers without context rather than the visitor seeing an error.
+// One knowledge-base search for the widget. Throws on an embedding or database
+// failure; the model's own searches (lib/widget/search-tool.ts) report that to
+// the model as "search unavailable".
+async function searchKnowledgeBase(query: string, orgId: number): Promise<WidgetKBContext> {
+  const vector = await embedQueryCached(query, orgId)
+  return getWidgetKBContext(vector, MAX_CONTEXT_ARTICLES, orgId)
+}
+
+// The search before the model runs is best-effort: an embedding or search
+// failure means the model answers without context rather than the visitor
+// seeing an error.
 async function retrieveContext(query: string, orgId: number): Promise<WidgetKBContext> {
   try {
-    const vector = await embedQueryCached(query, orgId)
-    return await getWidgetKBContext(vector, MAX_CONTEXT_ARTICLES, orgId)
+    return await searchKnowledgeBase(query, orgId)
   } catch {
     return NO_CONTEXT
   }
 }
+
+// Room for two knowledge-base searches, a refused third attempt, one card and
+// the reply itself, with one step to spare. Set here rather than left to the
+// library default.
+const MAX_AGENT_STEPS = 6
 
 // Validated request context, handed from the `onRequest` hook to the AI SDK
 // factory below by reference (org rows and resolved model objects aren't
@@ -436,10 +452,11 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
     followUpsAvailable({ id: org.id, followUpsEnabled: org.widget_appearance?.followUpsEnabled !== false }),
     orgHasFeature(org.id, 'kb_review_queue').catch(() => false),
   ])
-  // Everything the model was given, strong matches or near misses alike: usage
-  // counts, answer sources and the support check all describe what was supplied.
-  const allContext = retrieved.articles
-  const contextBlock = widgetContextBlock(retrieved)
+  // Everything the model is given this turn: what was found up front plus
+  // whatever its own searches add. Strong matches and near misses alike; usage
+  // counts, answer sources, the support check and card grounding all read it.
+  const turn = createTurnContext(retrieved)
+  const contextBlock = turn.groundedText()
 
   // resourceId scopes memory to this org+visitor; threadId reuses the same
   // id since the widget has no "start a new conversation" affordance — a
@@ -459,10 +476,20 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
       guidance: org.widget_guidance,
       contextBlock,
       followUps,
+      search: true,
     }),
     model: model as MastraModelConfig,
     memory: getWidgetChatMemory(),
-    tools: buildGenuiTools(contextBlock, followUps ? { followUps: { ground: (labels) => groundFollowUps(org.id, labels) } } : {}),
+    // Earlier turns' search results stay in the saved conversation but are not
+    // sent to the model again, so a later message never pays to re-read them.
+    inputProcessors: [new ToolCallFilter({ exclude: [SEARCH_TOOL_NAME] })],
+    tools: {
+      ...buildGenuiTools(
+        () => turn.groundedText(),
+        followUps ? { followUps: { ground: (labels) => groundFollowUps(org.id, labels) } } : {}
+      ),
+      [SEARCH_TOOL_NAME]: buildSearchTool({ turn, search: (q) => searchKnowledgeBase(q, org.id) }),
+    },
   })
 
   // One id for this generation, so a repeated completion callback records the
@@ -476,10 +503,11 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   const result = await widgetAgent.stream(query, {
     memory: { thread: resourceId, resource: resourceId },
     modelSettings: { maxOutputTokens: 600 },
+    maxSteps: MAX_AGENT_STEPS,
     // The stream failed after it started: record what was supplied with the
     // outcome failed. If onFinish already recorded this answer, this is a no-op.
     onError: async () => {
-      await recordAnswerSources({ orgId: org.id, answerId, surface: 'widget', outcome: 'failed', context: allContext })
+      await recordAnswerSources({ orgId: org.id, answerId, surface: 'widget', outcome: 'failed', context: turn.articles() })
     },
     // Billed unconditionally once the stream completes — this endpoint has
     // no confidence-assessment step like the MCP/ticket pipelines do, so a
@@ -507,7 +535,7 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
             : // Near misses count as found: the model may well have answered from
               // them, and offering "we couldn't find anything" under an answer
               // reads as broken. Only an empty search is a failed answer here.
-              allContext.length === 0 && !isGreetingOrAck(query)
+              turn.articles().length === 0 && !isGreetingOrAck(query)
               ? 'no-kb-match'
               : 'none',
           query
@@ -532,8 +560,9 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
       await commitDeflection(org.id, reservationId).catch((e) => {
         logger.error('widget chat commitDeflection failed', { module: MOD, orgId: org.id, error: e })
       })
-      await countArticleUsage(org.id, allContext)
-      await recordAnswerSources({ orgId: org.id, answerId, surface: 'widget', outcome: 'generated', context: allContext })
+      const supplied = turn.articles()
+      await countArticleUsage(org.id, supplied)
+      await recordAnswerSources({ orgId: org.id, answerId, surface: 'widget', outcome: 'generated', context: supplied })
       // Scheduled, never awaited: assesses how well the supplied articles
       // support this reply once the response has finished, and cannot change it.
       scheduleSourceSupport({
@@ -542,19 +571,25 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
         surface: 'widget',
         question: query,
         answer: typeof event?.text === 'string' ? event.text : '',
-        context: allContext,
+        context: supplied,
       })
       // No article matched, so whatever was just said came from general
       // knowledge or from a near miss. Queue the question (never the visitor's
       // identity) for a person to review before anything like it is treated as
       // a KB answer; a near-miss answer is exactly the kind worth a closer look.
-      if (!retrieved.matched) {
+      //
+      // After a follow-up search, the model's standalone question ("Team plan
+      // price") is what a reviewer can act on; the visitor's own words ("and
+      // for teams?") are kept beside it.
+      if (!turn.matched()) {
+        const reviewQuestion = turn.lastSearchQuery ?? query
         await captureUnansweredQuestion({
           orgId: org.id,
           source: 'widget',
-          question: query,
+          question: reviewQuestion,
+          ...(turn.lastSearchQuery ? { visitorMessage: query } : {}),
           answer: typeof event?.text === 'string' ? event.text : '',
-          embedding: await embedQueryCached(query, org.id).catch(() => undefined),
+          embedding: await embedQueryCached(reviewQuestion, org.id).catch(() => undefined),
         })
       }
     },
@@ -573,7 +608,9 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
       ttftMs: Math.round(performance.now() - run.startedAt),
     })
   }
-  return { fullStream: flattenMastraStream(result.fullStream as unknown as AsyncIterable<unknown>, onFirstText) }
+  // Search calls stay on the server: their results are whole articles, which
+  // the browser would otherwise keep and resend with every later message.
+  return { fullStream: flattenMastraStream(result.fullStream as unknown as AsyncIterable<unknown>, onFirstText, [SEARCH_TOOL_NAME]) }
 }
 
 const runtime = new CopilotRuntime({

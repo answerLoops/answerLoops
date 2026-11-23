@@ -123,6 +123,30 @@ describe('genui tools ground links and contact details in the knowledge base', (
   })
 })
 
+describe('genui tools read grounded text that grows during the turn', () => {
+  type Exec = (input: unknown) => Promise<unknown>
+  it('allows a link and contact value that only arrive after the tools were built', async () => {
+    let grounded = 'Answer: nothing linkable yet.'
+    const tools = buildGenuiTools(() => grounded)
+    const link = (tools.show_link_card as unknown as { execute: Exec }).execute
+    const contact = (tools.show_contact_options as unknown as { execute: Exec }).execute
+    expect(await link({ title: 'Teams', url: 'https://acme.test/teams' })).toEqual({ ok: false })
+    grounded += ' See https://acme.test/teams or email teams@acme.test.'
+    expect(((await link({ title: 'Teams', url: 'https://acme.test/teams' })) as { ok: boolean }).ok).toBe(true)
+    const r = (await contact({
+      message: 'Reach us',
+      options: [{ kind: 'email', label: 'Email', value: 'teams@acme.test' }],
+    })) as { ok: boolean }
+    expect(r.ok).toBe(true)
+  })
+
+  it('still refuses a URL no supplied article mentions', async () => {
+    const tools = buildGenuiTools(() => 'See https://acme.test/teams')
+    const link = (tools.show_link_card as unknown as { execute: Exec }).execute
+    expect(await link({ title: 'x', url: 'https://evil.test/phish' })).toEqual({ ok: false })
+  })
+})
+
 describe('flattenMastraStream', () => {
   const chunk = (type: string, payload: Record<string, unknown>) => ({ type, payload, runId: 'r', from: 'AGENT' })
 
@@ -167,6 +191,40 @@ describe('flattenMastraStream', () => {
     expect(events[0].toolCallName).toBe('show_steps')
     expect(events.filter((e) => e.type === 'TOOL_CALL_ARGS').map((e) => e.delta).join('')).toBe('{"title":"Setup"}')
     expect(JSON.parse(events[4].content!)).toEqual({ ok: true, data: { title: 'Setup' } })
+  })
+
+  it('never sends a hidden tool to the browser, streamed or not, while cards and text still go through', async () => {
+    const longArticle = 'x'.repeat(6000)
+    const flat = flattenMastraStream(
+      from([
+        chunk('tool-call-input-streaming-start', { toolCallId: 's1', toolName: 'search_knowledge_base' }),
+        chunk('tool-call-delta', { toolCallId: 's1', argsTextDelta: '{"query":"Team plan price"}' }),
+        chunk('tool-call-input-streaming-end', { toolCallId: 's1' }),
+        chunk('tool-call', { toolCallId: 's1', toolName: 'search_knowledge_base', args: { query: 'Team plan price' } }),
+        chunk('tool-result', { toolCallId: 's1', toolName: 'search_knowledge_base', result: longArticle }),
+        // Not streamed: only the call and the result arrive.
+        chunk('tool-call', { toolCallId: 's2', toolName: 'search_knowledge_base', args: { query: 'Team seats' } }),
+        chunk('tool-result', { toolCallId: 's2', toolName: 'search_knowledge_base', result: longArticle }),
+        chunk('tool-call', { toolCallId: 't3', toolName: 'show_callout', args: { tone: 'info' } }),
+        chunk('tool-result', { toolCallId: 't3', toolName: 'show_callout', result: { ok: true, data: { tone: 'info' } } }),
+        chunk('text-delta', { id: '1', text: 'Team is $149.' }),
+        chunk('finish', {}),
+      ]),
+      undefined,
+      ['search_knowledge_base']
+    )
+    const events = (await collect(convertAISDKStream(flat, new AbortController().signal))) as {
+      type: string
+      toolCallId?: string
+      toolCallName?: string
+      content?: string
+      delta?: string
+    }[]
+    expect(events.some((e) => e.toolCallId === 's1' || e.toolCallId === 's2')).toBe(false)
+    expect(events.some((e) => e.toolCallName === 'search_knowledge_base')).toBe(false)
+    expect(JSON.stringify(events)).not.toContain(longArticle)
+    expect(events.filter((e) => e.toolCallId === 't3').map((e) => e.type)).toContain('TOOL_CALL_RESULT')
+    expect(events.filter((e) => e.type === 'TEXT_MESSAGE_CHUNK').map((e) => e.delta).join('')).toBe('Team is $149.')
   })
 
   it('sends args once at the end when the provider did not stream them', async () => {

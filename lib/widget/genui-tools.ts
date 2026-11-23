@@ -62,10 +62,13 @@ export interface GenuiToolOptions {
 
 /**
  * @param groundedText the knowledge-base context block the answer is built
- *   from — the only source links and contact details may come from.
+ *   from — the only source links and contact details may come from. Pass a
+ *   function when the context can grow during the turn (the model's own
+ *   searches add articles); it is read again on every card call, so a link
+ *   from an article found mid-turn is allowed and nothing else is.
  */
-export function buildGenuiTools(groundedText: string, options: GenuiToolOptions = {}) {
-  const grounded = makeGroundingCheck(groundedText)
+export function buildGenuiTools(groundedText: string | (() => string), options: GenuiToolOptions = {}) {
+  const grounding = () => makeGroundingCheck(typeof groundedText === 'function' ? groundedText() : groundedText)
   const followUps = options.followUps
 
   return {
@@ -97,7 +100,7 @@ export function buildGenuiTools(groundedText: string, options: GenuiToolOptions 
       execute: async (input) => {
         const parsed = linkCardSchema.parse(input)
         const url = safeHttpsUrl(parsed.url)
-        if (!url || !grounded.url(parsed.url)) return refused
+        if (!url || !grounding().url(parsed.url)) return refused
         return ok({ ...parsed, url })
       },
     }),
@@ -108,6 +111,7 @@ export function buildGenuiTools(groundedText: string, options: GenuiToolOptions 
       inputSchema: contactSchema,
       execute: async (input) => {
         const parsed = contactSchema.parse(input)
+        const grounded = grounding()
         const options = parsed.options.filter((o) => {
           if (!safeContactHref(o.kind, o.value)) return false
           if (o.kind === 'email') return grounded.email(o.value)

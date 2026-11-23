@@ -93,7 +93,7 @@ describe('the widget schedules inside onFinish, beside the generated record', ()
     const args = s.slice(call, s.indexOf('})', call))
     expect(args).toContain("answer: typeof event?.text === 'string' ? event.text : ''")
     expect(args).toContain('question: query')
-    expect(args).toContain('context: allContext')
+    expect(args).toContain('context: supplied')
   })
 })
 
