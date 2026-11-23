@@ -125,7 +125,7 @@ describe('KB sync worker backfills discussions too', () => {
   // enqueues a job, and the bot-driven run route does both syncs.
   it('the enqueue route no longer runs the sync inline', () => {
     const src = read('app/api/github/sync-kb/route.ts')
-    expect(src).toContain("enqueueKbSyncJob({ orgId: access.orgId, kind: 'github_repo', repoId: repo.id, pullForward: true })")
+    expect(src).toMatch(/enqueueKbSyncJob\(\{\s*orgId: access\.orgId,\s*kind: 'github_repo',\s*repoId: repo\.id,\s*pullForward: true,/)
     expect(src).not.toContain('syncRepoToKB')
     expect(src).not.toContain('syncDiscussionsToKB')
   })
