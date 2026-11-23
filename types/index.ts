@@ -124,8 +124,26 @@ export interface GitHubRepo {
   /** Full sha of the commit the last repo files sync read; null before the first sync. */
   kb_synced_commit: string | null
   kb_chunk_count: number
+  /** Docs folders the owner picked for the knowledge base; null when none were picked. */
+  kb_paths: string[] | null
+  /** Counts from the last files sync; null before the first sync that recorded them. */
+  kb_sync_result: RepoSyncResult | null
   auto_deflect_enabled: 0 | 1
   added_at: string
+}
+
+/** What the last repository files sync did, counted in files. */
+export interface RepoSyncResult {
+  /** Files with at least one section in the knowledge base after the sync. */
+  synced: number
+  /** Files left out because the knowledge base reached its article limit. */
+  skippedForRoom: number
+  /** Files that could not be read or processed; the next sync tries them again. */
+  failed: number
+  /** Files over the size limit, skipped without being downloaded. */
+  tooLarge: number
+  /** Chosen folders that no longer exist in the repository. */
+  missingFolders: string[]
 }
 
 export interface Notification {

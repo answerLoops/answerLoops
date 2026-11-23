@@ -1,7 +1,7 @@
 import { eq, and, desc } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { githubRepos } from '../schema'
-import type { GitHubRepo } from '@/types'
+import type { GitHubRepo, RepoSyncResult } from '@/types'
 
 function toRepo(row: typeof githubRepos.$inferSelect): GitHubRepo {
   return {
@@ -16,6 +16,8 @@ function toRepo(row: typeof githubRepos.$inferSelect): GitHubRepo {
     kb_last_synced: row.kbLastSynced ?? null,
     kb_synced_commit: row.kbSyncedCommit ?? null,
     kb_chunk_count: row.kbChunkCount,
+    kb_paths: row.kbPaths ?? null,
+    kb_sync_result: row.kbSyncResult ?? null,
     auto_deflect_enabled: row.autoDeflectEnabled as 0 | 1,
     added_at: row.addedAt,
   }
@@ -100,6 +102,8 @@ export async function updateRepoSettings(
     kbLastSynced?: string
     kbSyncedCommit?: string
     kbChunkCount?: number
+    kbPaths?: string[]
+    kbSyncResult?: RepoSyncResult
     autoDeflectEnabled?: number
   }
 ): Promise<void> {
@@ -111,6 +115,8 @@ export async function updateRepoSettings(
       ...(settings.kbLastSynced !== undefined && { kbLastSynced: settings.kbLastSynced }),
       ...(settings.kbSyncedCommit !== undefined && { kbSyncedCommit: settings.kbSyncedCommit }),
       ...(settings.kbChunkCount !== undefined && { kbChunkCount: settings.kbChunkCount }),
+      ...(settings.kbPaths !== undefined && { kbPaths: settings.kbPaths }),
+      ...(settings.kbSyncResult !== undefined && { kbSyncResult: settings.kbSyncResult }),
       ...(settings.autoDeflectEnabled !== undefined && { autoDeflectEnabled: settings.autoDeflectEnabled }),
     })
     .where(and(eq(githubRepos.id, id), eq(githubRepos.orgId, orgId)))
