@@ -26,6 +26,8 @@ const h = vi.hoisted(() => ({
   fetch: vi.fn(),
 }))
 
+// What the sync wrote, one entry per file (lib/db/queries/kb-source-files.ts).
+const written: { path: string; sourceId: number; sections: { question: string; answer: string }[] }[] = []
 vi.mock('@/lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() } }))
 vi.mock('@/lib/github/app', () => ({ getInstallationOctokit: h.getInstallationOctokit }))
 vi.mock('@/lib/ai/embed', () => ({
@@ -48,6 +50,16 @@ vi.mock('@/lib/db/queries/kb', () => ({
   countArticles: h.countArticles,
   countArticlesForSource: h.countArticlesForSource,
 }))
+vi.mock('@/lib/db/queries/kb-source-files', () => ({
+  listSourceFiles: async () => [],
+  removeSourceFile: async () => 0,
+  replaceFileSections: async (input: { sections: unknown[] }) => {
+    written.push(input as never)
+    return { fileId: written.length, flagged: 0 }
+  },
+}))
+// Nobody pays for re-processing here, so every write uses the normal embedder.
+vi.mock('@/lib/kb/pass-embedder', () => ({ reprocessEmbedder: async () => null }))
 vi.mock('@/lib/db/queries/github', () => ({ updateRepoSettings: h.updateRepoSettings }))
 
 const LIVE = 'acme/docs'
@@ -64,6 +76,7 @@ function sourceFor(filename: string) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  written.length = 0
   vi.resetModules()
   h.getInstallationOctokit.mockResolvedValue({
     rest: { git: { getTree: h.getTree }, repos: { getContent: h.getContent, getCommit: h.getCommit } },
@@ -103,7 +116,7 @@ describe('syncRepoToKB — staged rebuild', () => {
     const created = await runRepo()
     expect(created).toBe(2)
     expect(h.createKBSource).toHaveBeenCalledWith(expect.objectContaining({ filename: STAGING, published: 0 }))
-    expect(h.createArticleFromSource).toHaveBeenCalledWith(expect.objectContaining({ sourceId: 200, published: 0 }), 7)
+    expect(written).toEqual([expect.objectContaining({ sourceId: 200, published: 0, flag: null })])
     expect(h.swapKBSource).toHaveBeenCalledTimes(1)
     expect(h.swapKBSource).toHaveBeenCalledWith({ orgId: 7, newSourceId: 200, targetFilename: LIVE, published: 1, flagRelatedResolutions: true })
     // chunk count is recorded before the swap
@@ -134,10 +147,20 @@ describe('syncRepoToKB — staged rebuild', () => {
   it('does not count the source being replaced against the article cap', async () => {
     // 2000 articles in the org, 12 of them in this source: 12 slots are free.
     h.countArticles.mockResolvedValue(2000)
-    h.chunkMarkdown.mockReturnValue(Array.from({ length: 20 }, (_, i) => ({ question: `Q${i}`, answer: 'A' })))
+    h.chunkMarkdown.mockReturnValue(Array.from({ length: 12 }, (_, i) => ({ question: `Q${i}`, answer: 'A' })))
     const created = await runRepo()
     expect(created).toBe(12)
     expect(h.swapKBSource).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the live source when no file fits in the room left', async () => {
+    // 12 slots free, and the only file has 20 sections: files go in whole or not at all.
+    h.countArticles.mockResolvedValue(2000)
+    h.chunkMarkdown.mockReturnValue(Array.from({ length: 20 }, (_, i) => ({ question: `Q${i}`, answer: 'A' })))
+    expect(await runRepo()).toBe(12)
+    expect(h.swapKBSource).not.toHaveBeenCalled()
+    expect(h.deleteKBSource).toHaveBeenCalledWith(200, 7)
+    expect(h.updateRepoSettings).toHaveBeenCalledWith(5, 7, { kbSyncResult: expect.objectContaining({ skippedForRoom: 1 }) })
   })
 
   it('a full knowledge base leaves the live source untouched and returns its current size', async () => {
@@ -160,11 +183,15 @@ describe('syncRepoToKB — staged rebuild', () => {
     expect(h.swapKBSource).toHaveBeenCalledWith(expect.objectContaining({ published: 0 }))
   })
 
-  it('a first sync (nothing live) swaps in as published', async () => {
+  it('a first sync (nothing live) writes straight into a new published source, with no swap', async () => {
     h.getKBSourceByFilename.mockImplementation(async (_o: number, f: string) => (f === STAGING ? { id: 200, published: 0, chunk_count: 0 } : null))
     h.countArticlesForSource.mockResolvedValue(0)
+    h.createKBSource.mockResolvedValue({ id: 300, published: 1 })
     await runRepo()
-    expect(h.swapKBSource).toHaveBeenCalledWith(expect.objectContaining({ published: 1 }))
+    expect(h.createKBSource).toHaveBeenCalledWith(expect.objectContaining({ filename: LIVE, fileType: 'github' }))
+    expect(h.createKBSource.mock.calls[0][0].published).toBeUndefined()
+    expect(written).toEqual([expect.objectContaining({ sourceId: 300, published: 1, flag: null })])
+    expect(h.swapKBSource).not.toHaveBeenCalled()
   })
 })
 

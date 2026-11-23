@@ -164,6 +164,15 @@ describe('syncRepoToKB / syncDiscussionsToKB record the synced commit', () => {
       countArticlesForSource: h.countArticlesForSource,
     }))
     vi.doMock('@/lib/db/queries/github', () => ({ updateRepoSettings: h.updateRepoSettings }))
+    // The live source predates file records, so each sync here is the
+    // one-time rebuild; nobody pays for re-processing, so the normal
+    // embedder runs.
+    vi.doMock('@/lib/db/queries/kb-source-files', () => ({
+      listSourceFiles: async () => [],
+      removeSourceFile: async () => 0,
+      replaceFileSections: async () => ({ fileId: 1, flagged: 0 }),
+    }))
+    vi.doMock('@/lib/kb/pass-embedder', () => ({ reprocessEmbedder: async () => null }))
 
     h.getInstallationOctokit.mockResolvedValue({
       rest: { git: { getTree: h.getTree }, repos: { getContent: h.getContent, getCommit: h.getCommit } },

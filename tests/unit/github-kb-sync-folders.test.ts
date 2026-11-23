@@ -46,6 +46,17 @@ vi.mock('@/lib/db/queries/kb', () => ({
   countArticlesForSource: h.countArticlesForSource,
 }))
 vi.mock('@/lib/db/queries/github', () => ({ updateRepoSettings: h.updateRepoSettings }))
+// What the sync wrote, one entry per file (lib/db/queries/kb-source-files.ts).
+const written: { path: string; sourceId: number; sections: { question: string; answer: string }[] }[] = []
+vi.mock('@/lib/db/queries/kb-source-files', () => ({
+  listSourceFiles: async () => [],
+  removeSourceFile: async () => 0,
+  replaceFileSections: async (input: (typeof written)[number]) => {
+    written.push(input)
+    return { fileId: written.length, flagged: 0 }
+  },
+}))
+vi.mock('@/lib/kb/pass-embedder', () => ({ reprocessEmbedder: async () => null }))
 
 type Blob = { path: string; size?: number }
 
@@ -76,6 +87,7 @@ function content(text: string) {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  written.length = 0
   vi.resetModules()
   h.getInstallationOctokit.mockResolvedValue({
     rest: { git: { getTree: h.getTree }, repos: { getContent: h.getContent, getCommit: h.getCommit } },
@@ -101,10 +113,10 @@ describe('syncRepoToKB — folders and cleanup', () => {
     setTree([{ path: 'content/docs/product/knowledge-base.mdx' }])
     h.getContent.mockResolvedValue(content(`---\ntitle: Knowledge Base\n---\n\n<Callout>${PARA}</Callout>\n\n## Add content\n\n${PARA}`))
     await run(['content/docs'])
-    const questions = h.createArticleFromSource.mock.calls.map((c) => c[0].question)
+    const questions = written.flatMap((w) => w.sections.map((x) => x.question))
     expect(questions).toContain('Knowledge Base › Add content')
     expect(questions.every((q: string) => !q.includes('content/docs'))).toBe(true)
-    const answers = h.createArticleFromSource.mock.calls.map((c) => c[0].answer).join('\n')
+    const answers = written.flatMap((w) => w.sections.map((x) => x.answer)).join('\n')
     expect(answers).not.toContain('<Callout>')
   })
 
@@ -130,8 +142,8 @@ describe('syncRepoToKB — folders and cleanup', () => {
   it('article limit still bounds the sync', async () => {
     setTree(Array.from({ length: 30 }, (_, k) => ({ path: `docs/p${String(k).padStart(2, '0')}.md` })))
     h.countArticles.mockResolvedValue(1990) // room for 10 sections, 2 per file
-    const { chunks, result } = await run(['docs'])
-    expect(chunks).toBe(10)
+    const { result } = await run(['docs'])
+    expect(written.reduce((n, w) => n + w.sections.length, 0)).toBe(10)
     expect(result.synced).toBe(5)
     expect(result.skippedForRoom).toBe(25)
   })
@@ -170,7 +182,7 @@ describe('syncRepoToKB — folders and cleanup', () => {
   it('records missing folders on the repo', async () => {
     setTree([{ path: 'docs/a.md' }])
     await run(['docs', 'guide'])
-    expect(savedResult()).toEqual({ synced: 1, skippedForRoom: 0, failed: 0, tooLarge: 0, missingFolders: ['guide'] })
+    expect(savedResult()).toMatchObject({ synced: 1, skippedForRoom: 0, failed: 0, tooLarge: 0, missingFolders: ['guide'] })
     expect(h.updateRepoSettings.mock.calls.at(-1)![2].kbSyncedCommit).toBe('c'.repeat(40))
   })
 
@@ -186,7 +198,7 @@ describe('syncRepoToKB — folders and cleanup', () => {
     expect(h.getContent.mock.calls.map((c) => c[0].path)).toEqual(['docs/a.md', 'docs/api/b.md'])
     expect(result.synced).toBe(2)
     expect(result.missingFolders).toEqual(['guide'])
-    expect(h.swapKBSource).toHaveBeenCalled()
+    expect(written.map((w) => w.path)).toEqual(['docs/a.md', 'docs/api/b.md'])
   })
 
   it('keeps the live docs when none of the chosen folders exist any more', async () => {

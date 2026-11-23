@@ -144,6 +144,15 @@ export interface RepoSyncResult {
   tooLarge: number
   /** Chosen folders that no longer exist in the repository. */
   missingFolders: string[]
+  /**
+   * What an incremental sync did, in files. Absent on a full rebuild (the
+   * first sync after files were recorded) and on results stored before
+   * syncs became incremental.
+   */
+  updated?: number
+  added?: number
+  removed?: number
+  unchanged?: number
 }
 
 export interface Notification {
