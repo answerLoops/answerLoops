@@ -21,6 +21,7 @@ import {
   notifications,
   pushSubscriptions,
   kbSources,
+  kbSourceFiles,
   kbArticles,
   kbReviewItems,
   kbArticleUsage,
@@ -191,6 +192,8 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     // References go with their answers, before the articles they point at.
     await tx.delete(kbAnswers).where(eq(kbAnswers.orgId, orgId))
     await tx.delete(kbArticles).where(eq(kbArticles.orgId, orgId))
+    // Synced repository file records, after the sections that point at them.
+    await tx.delete(kbSourceFiles).where(eq(kbSourceFiles.orgId, orgId))
     await tx.delete(notifications).where(eq(notifications.orgId, orgId))
     await tx.delete(csatRatings).where(eq(csatRatings.orgId, orgId))
     await tx.delete(apiGenerations).where(eq(apiGenerations.orgId, orgId))
