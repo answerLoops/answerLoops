@@ -72,10 +72,38 @@ describe('widget page: answer flagging', () => {
     expect((await renderPage()).answerFlagsEnabled).toBe(false)
   })
 
-  it('leaves it off in the owner\'s own preview, without even checking the plan', async () => {
+  it('leaves it off in the owner\'s own preview tab, without even checking the plan', async () => {
+    // The Settings link, opened as its own tab: same host by referer, a top-level document request.
     h.headers.set('referer', 'https://app.test/settings')
+    h.headers.set('sec-fetch-dest', 'document')
     const props = await renderPage()
     expect(props.answerFlagsEnabled).toBe(false)
     expect(h.orgHasFeature).not.toHaveBeenCalledWith(7, 'kb_review_queue')
+  })
+
+  it('keeps it on for the widget embedded in a page on the same instance, such as our own site and docs', async () => {
+    h.headers.set('referer', 'https://app.test/pricing')
+    h.headers.set('sec-fetch-dest', 'iframe')
+    const props = await renderPage()
+    expect(h.orgHasFeature).toHaveBeenCalledWith(7, 'kb_review_queue')
+    expect(props.answerFlagsEnabled).toBe(true)
+  })
+
+  it('keeps it on for a same-instance embed when the browser sends no fetch-destination header', async () => {
+    h.headers.set('referer', 'https://app.test/docs')
+    h.headers.delete('sec-fetch-dest')
+    expect((await renderPage()).answerFlagsEnabled).toBe(true)
+  })
+
+  it('still needs the plan on a same-instance embed', async () => {
+    h.headers.set('referer', 'https://app.test/pricing')
+    h.headers.set('sec-fetch-dest', 'iframe')
+    h.orgHasFeature.mockImplementation(async (_id: number, feature: string) => feature !== 'kb_review_queue')
+    expect((await renderPage()).answerFlagsEnabled).toBe(false)
+  })
+
+  it('is not tied to the preview rule for a customer\'s site, whatever the destination', async () => {
+    h.headers.set('sec-fetch-dest', 'document')
+    expect((await renderPage()).answerFlagsEnabled).toBe(true)
   })
 })

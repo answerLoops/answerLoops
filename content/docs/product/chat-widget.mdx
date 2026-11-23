@@ -7,7 +7,7 @@ icon: MessageSquare
 The answerLoops chat widget adds a support chatbot to any website or documentation site that accepts custom JavaScript. Visitors ask questions about your community, business, or product and get answers from your published knowledge-base articles, without creating an account.
 
 <Callout type="info" title="Availability">
-  The widget is included on every hosted plan and on self-hosted installs. The Standard plan shows a "Powered by answerLoops" line; Pro and Enterprise can remove it and also capture unanswered widget questions in the [Review queue](/docs/product/knowledge-base#review-queue). Each widget answer counts toward your plan's monthly AI reply allowance. See [Billing plans](/docs/reference/billing-plans).
+  The widget is included on every hosted plan and on self-hosted installs. The Standard plan shows a "Powered by answerLoops" line; Pro and Enterprise can remove it, capture unanswered widget questions in the [Review queue](/docs/product/knowledge-base#review-queue), and collect answers visitors flag as wrong in [Flagged answers](/docs/product/knowledge-base#flagged-answers). Each widget answer counts toward your plan's monthly AI reply allowance. See [Billing plans](/docs/reference/billing-plans).
 </Callout>
 
 ## How it works
@@ -33,7 +33,8 @@ The answerLoops chat widget adds a support chatbot to any website or documentati
   outcomes={[
     { tone: 'post', title: 'Answer in the chat', text: 'The visitor reads the reply as it is written, with steps, quick replies, a callout, a link card, or contact options when they help.' },
     { tone: 'info', title: 'Lead captured', text: 'When an answer misses, the panel asks for an email address, which the visitor can skip. Addresses appear on the Leads page. See Lead capture below for the other timing options.' },
-    { tone: 'review', title: 'Gap queued for review', text: 'When no article matched, Pro and above add the question, without any record of the visitor, to the Review queue so you can turn it into an article.' },
+    { tone: 'review', title: 'Unanswered question queued for review', text: 'When no article matched, Pro and above add the question, without any record of the visitor, to the Review queue so you can turn it into an article. An answer that did cite an article is not queued here.' },
+    { tone: 'review', title: 'Wrong answer flagged', text: 'On Pro and above a visitor can give an answer a thumbs-down. The flag, with the question, the reply and the articles it cited, goes to Flagged answers, not the Review queue.' },
   ]}
   replyLabel="The answer streams back into the same chat panel"
 />
@@ -43,6 +44,19 @@ The widget answers from **published knowledge-base articles only**. Unlike your 
 <Callout type="warn" title="Thin knowledge, thin answers">
   A workspace with an empty knowledge base gets thin widget answers. Promoting a few resolved tickets into the knowledge base is what makes the widget useful, and it is the same step that generalises an answer so it is safe for anyone to read.
 </Callout>
+
+## Unanswered questions and wrong answers
+
+Two different things can go wrong in a widget chat, and they are collected in two different places on the **Knowledge base** page, both for Pro and above and for owners and admins only.
+
+| What happened | Where it goes | What you do |
+| --- | --- | --- |
+| No article matched the question, so the assistant answered from general knowledge (or said it did not know). | The [Review queue](/docs/product/knowledge-base#review-queue), automatically. | Edit the answer and approve it as a new article. |
+| An answer was given, even one that cited an article, and the visitor says it was wrong. | [Flagged answers](/docs/product/knowledge-base#flagged-answers), when the visitor taps the thumbs-down. | Fix the article the answer cited, then mark the flag resolved. |
+
+The Review queue never captures an answer that cited an article, because the assistant had something to go on. Whether that answer was right is something only a visitor can tell you, which is what the thumbs are for; see [Flagging an answer](#flagging-an-answer). A visitor who leaves an email through the thumbs-down panel, or after a miss under **Ask for an email**, shows up on the **Leads** page. A lead from a flag shows the answer it flagged next to the address.
+
+On Standard there is no thumbs-down and no Review queue, so neither is collected.
 
 ## Set it up
 
