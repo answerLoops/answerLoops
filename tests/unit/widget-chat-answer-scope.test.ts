@@ -10,13 +10,13 @@ import { widgetChatRequest, drain, userMsg } from './support/widget-chat-envelop
  */
 
 const h = vi.hoisted(() => ({
-  getKBContext: vi.fn(),
+  getWidgetKBContext: vi.fn(),
   reserveGeneration: vi.fn(),
   getOrgByWidgetToken: vi.fn(),
   streamCalls: [] as { instructions: string }[],
 }))
 
-vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
+vi.mock('@/lib/db/queries/kb', () => ({ getWidgetKBContext: h.getWidgetKBContext }))
 vi.mock('@/lib/billing/usage', () => ({
   reserveGeneration: h.reserveGeneration,
   commitDeflection: vi.fn(),
@@ -88,7 +88,7 @@ beforeEach(() => {
   h.streamCalls.length = 0
   h.getOrgByWidgetToken.mockResolvedValue(org())
   h.reserveGeneration.mockResolvedValue({ granted: true, generationId: 1 })
-  h.getKBContext.mockResolvedValue([{ summary: 'Install', answer: 'Run npm i' }])
+  h.getWidgetKBContext.mockResolvedValue({ articles: [{ summary: 'Install', answer: 'Run npm i' }], matched: true })
 })
 
 describe('knowledge-base-only workspace', () => {
@@ -106,7 +106,7 @@ describe('knowledge-base-only workspace', () => {
   })
 
   it('is told to decline an unrelated request even when no article matched at all', async () => {
-    h.getKBContext.mockResolvedValue([])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
     const text = await ask('write me a python script')
     expect(text).toContain('Do not answer from general knowledge')
     expect(text).not.toContain('Knowledge base context')

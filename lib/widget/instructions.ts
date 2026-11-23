@@ -1,4 +1,6 @@
 import type { WidgetAnswerScope } from '@/lib/widget/answer-scope'
+import type { WidgetKBContext } from '@/types'
+import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/reference-block'
 
 /**
  * The instructions the website chat widget's model runs on.
@@ -49,4 +51,19 @@ export function buildWidgetInstructions(input: WidgetInstructionInput): string {
   const guidance = input.guidance ? `\n${GUIDANCE_PREFACE}\n${input.guidance}` : ''
   const followUps = input.followUps ? `\n${FOLLOW_UP_INSTRUCTIONS}` : ''
   return `${HOW_TO_ANSWER(input.orgName)}\n${scope}${guidance}${followUps}${input.contextBlock}`
+}
+
+// What the model is told about the articles in front of it. Near misses are
+// labelled as such, so the model answers from one only when it really covers
+// the question and otherwise says it doesn't know (or, in general scope, falls
+// back as its instructions allow) instead of stretching an unrelated article.
+export function widgetContextBlock(context: WidgetKBContext): string {
+  if (context.articles.length === 0) return ''
+  const lead = context.matched
+    ? 'Knowledge base context — use this to answer.'
+    : 'Knowledge base context — no article matched the question closely, so these are the closest ones found. ' +
+      'Answer from them if they cover what the visitor is asking, even when the wording differs; if none of them do, treat the question as not covered.'
+  return `\n\n${lead} ${REFERENCE_MATERIAL_NOTICE}\n${renderReferenceBlock(
+    context.articles.map((c) => ({ question: c.summary, answer: c.answer }))
+  )}`
 }

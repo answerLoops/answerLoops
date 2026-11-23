@@ -19,7 +19,7 @@ const h = vi.hoisted(() => ({
   orgHasFeature: vi.fn(async (_orgId: number, _feature: string) => true),
   setLeadSignal: vi.fn(),
   setTurnAnswer: vi.fn(),
-  getKBContext: vi.fn(async () => [] as { summary: string; answer: string; articleId?: number }[]),
+  getWidgetKBContext: vi.fn(async () => ({ articles: [] as { summary: string; answer: string; articleId?: number }[], matched: false })),
 }))
 
 vi.mock('@/lib/billing/usage', () => ({
@@ -49,7 +49,7 @@ vi.mock('@/lib/ai/embed', () => ({
   embedTextWithModel: vi.fn(async () => ({ embedding: [0.1], model: 'test-embed-model' })),
 }))
 vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => 'test-embed-model' }))
-vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
+vi.mock('@/lib/db/queries/kb', () => ({ getWidgetKBContext: h.getWidgetKBContext }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
 vi.mock('@/lib/widget/lead-signal-stash', () => ({
   setLeadSignal: h.setLeadSignal,
@@ -74,7 +74,7 @@ async function ask(question: string, visitorId = 'v1', turnId: unknown = 'turn-1
 beforeEach(() => {
   vi.clearAllMocks()
   h.orgHasFeature.mockResolvedValue(true)
-  h.getKBContext.mockResolvedValue([])
+  h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
 })
 
 describe('widget chat route onFinish: the answer held for flagging', () => {

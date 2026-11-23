@@ -23,7 +23,7 @@ import { widgetChatRequest, drain, userMsg } from './support/widget-chat-envelop
  */
 
 const h = vi.hoisted(() => ({
-  getKBContext: vi.fn(),
+  getWidgetKBContext: vi.fn(),
   getPriorAnswers: vi.fn(),
   getCandidateVectors: vi.fn(),
   reserveGeneration: vi.fn(),
@@ -31,7 +31,7 @@ const h = vi.hoisted(() => ({
   streamCalls: [] as { instructions: string }[],
 }))
 
-vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
+vi.mock('@/lib/db/queries/kb', () => ({ getWidgetKBContext: h.getWidgetKBContext }))
 // Mocked so that a reintroduced import would be observable rather than silently
 // hitting a real query.
 vi.mock('@/lib/db/queries/embeddings', () => ({
@@ -97,23 +97,23 @@ beforeEach(() => {
     widget_allowed_origins: null,
   })
   h.reserveGeneration.mockResolvedValue({ granted: true, generationId: 1 })
-  h.getKBContext.mockResolvedValue([])
+  h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
 })
 
 describe('the widget grounds answers in published KB articles only', () => {
   it('never consults ticket-derived context', async () => {
-    h.getKBContext.mockResolvedValue([{ summary: 'Install', answer: 'Run npm i' }])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [{ summary: 'Install', answer: 'Run npm i' }], matched: true })
 
     await ask()
 
-    expect(h.getKBContext).toHaveBeenCalledOnce()
+    expect(h.getWidgetKBContext).toHaveBeenCalledOnce()
     // These return resolution notes and AI drafts from real tickets.
     expect(h.getPriorAnswers, 'ticket-derived context reached the widget').not.toHaveBeenCalled()
     expect(h.getCandidateVectors).not.toHaveBeenCalled()
   })
 
   it('puts the KB article into the prompt it sends', async () => {
-    h.getKBContext.mockResolvedValue([{ summary: 'Install', answer: 'Run npm i' }])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [{ summary: 'Install', answer: 'Run npm i' }], matched: true })
 
     await ask()
 
@@ -126,7 +126,7 @@ describe('the widget grounds answers in published KB articles only', () => {
     // Previously the KB was capped at 4 of 5 slots with the tail left for a
     // prior answer. With that source gone the budget should not stay shrunk.
     await ask()
-    const [, k] = h.getKBContext.mock.calls[0]
+    const [, k] = h.getWidgetKBContext.mock.calls[0]
     expect(k).toBe(5)
   })
 
@@ -135,7 +135,7 @@ describe('the widget grounds answers in published KB articles only', () => {
     // knowledge base gets an ungrounded answer rather than one grounded in
     // other people's ticket history. That is the intended trade, and it must
     // not regress into quietly reading tickets again.
-    h.getKBContext.mockResolvedValue([])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
 
     const res = await ask()
 
@@ -147,7 +147,7 @@ describe('the widget grounds answers in published KB articles only', () => {
   })
 
   it('does not break when KB retrieval throws', async () => {
-    h.getKBContext.mockRejectedValue(new Error('embedding down'))
+    h.getWidgetKBContext.mockRejectedValue(new Error('embedding down'))
     const res = await ask()
     expect(res.status).toBe(200)
   })

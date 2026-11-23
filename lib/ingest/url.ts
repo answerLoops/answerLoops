@@ -73,6 +73,20 @@ interface Chunk {
   answer: string
 }
 
+// An article's title is what gets embedded alongside its text (and what the
+// re-embed job and manual edits embed again later), so it carries the page the
+// section came from. A section headed "Pro" on a pricing page is stored as
+// "Pricing › Pro": a visitor asking "what does it cost?" never says "Pro", but
+// the page title puts the section near that question. The heading alone is
+// used when there is no page title or it would only repeat the heading.
+function sectionTitle(pageTitle: string, heading: string): string {
+  const page = pageTitle.trim()
+  const head = heading.trim()
+  if (!head) return clampQuestion(page)
+  if (!page || page.toLowerCase() === head.toLowerCase()) return clampQuestion(head)
+  return clampQuestion(`${page} › ${head}`)
+}
+
 export function chunkMarkdown(markdown: string, pageTitle: string): Chunk[] {
   // Split on h2/h3 headings; each section = one KB article
   const sections = markdown.split(/\n(?=#{2,3} )/)
@@ -81,7 +95,7 @@ export function chunkMarkdown(markdown: string, pageTitle: string): Chunk[] {
 
   for (const section of sections) {
     const lines = section.trim().split('\n')
-    const heading = clampQuestion(lines[0].replace(/^#+\s*/, ''))
+    const question = sectionTitle(pageTitle, lines[0].replace(/^#+\s*/, ''))
     const body = lines.slice(1).join('\n').trim()
 
     if (body.length < MIN_CHUNK_CHARS) continue
@@ -92,17 +106,17 @@ export function chunkMarkdown(markdown: string, pageTitle: string): Chunk[] {
       let current = ''
       for (const para of paras) {
         if ((current + para).length > MAX_CHUNK_CHARS && current) {
-          chunks.push({ question: heading || fallbackTitle, answer: current.trim() })
+          chunks.push({ question, answer: current.trim() })
           current = para
         } else {
           current = current ? `${current}\n\n${para}` : para
         }
       }
       if (current.trim().length >= MIN_CHUNK_CHARS) {
-        chunks.push({ question: heading || fallbackTitle, answer: current.trim() })
+        chunks.push({ question, answer: current.trim() })
       }
     } else {
-      chunks.push({ question: heading || fallbackTitle, answer: body })
+      chunks.push({ question, answer: body })
     }
   }
 

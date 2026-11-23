@@ -52,7 +52,7 @@ describe('call sites', () => {
   const read = (rel: string) => require('fs').readFileSync(require('path').join(process.cwd(), rel), 'utf8') as string
 
   it('the ticket agent and the widget both render stored answers through the reference block', () => {
-    for (const file of ['lib/ai/agent.ts', 'app/api/widget/chat/route.ts']) {
+    for (const file of ['lib/ai/agent.ts', 'lib/widget/instructions.ts']) {
       const src = read(file)
       expect(src).toContain('renderReferenceBlock(')
       expect(src).toContain('REFERENCE_MATERIAL_NOTICE')

@@ -51,7 +51,7 @@ Two different things can go wrong in a widget chat, and they are collected in tw
 
 | What happened | Where it goes | What you do |
 | --- | --- | --- |
-| No article matched the question, so the assistant answered from general knowledge (or said it did not know). | The [Review queue](/docs/product/knowledge-base#review-queue), automatically. | Edit the answer and approve it as a new article. |
+| No article closely matched the question, so the assistant answered from the closest articles it had, from general knowledge, or said it did not know. | The [Review queue](/docs/product/knowledge-base#review-queue), automatically. | Edit the answer and approve it as a new article. |
 | An answer was given, even one that cited an article, and the visitor says it was wrong. | [Flagged answers](/docs/product/knowledge-base#flagged-answers), when the visitor taps the thumbs-down. | Fix the article the answer cited, then mark the flag resolved. |
 
 The Review queue never captures an answer that cited an article, because the assistant had something to go on. Whether that answer was right is something only a visitor can tell you, which is what the thumbs are for; see [Flagging an answer](#flagging-an-answer). A visitor who leaves an email through the thumbs-down panel, or after a miss under **Ask for an email**, shows up on the **Leads** page. A lead from a flag shows the answer it flagged next to the address.
@@ -273,7 +273,7 @@ This is usually the highest-value place to put it: docs visitors are anonymous a
 
 **Settings → Widget → Ask for an email** controls whether, and when, the widget asks a visitor for their email address.
 
-- **Only if it can't help** (default) — the visitor goes straight into the conversation. The widget only asks for an email after a turn it couldn't really answer: no knowledge-base article matched the question, or the visitor explicitly asked to talk to a person. The ask appears inline, right under that answer, with a short line explaining why ("I couldn't find anything on that — leave your email and someone will follow up"), and a **No thanks** option that lets the visitor keep chatting without it. It only appears once per conversation.
+- **Only if it can't help** (default) — the visitor goes straight into the conversation. The widget only asks for an email after a turn it couldn't really answer: the knowledge base had nothing close to the question, or the visitor explicitly asked to talk to a person. The ask appears inline, right under that answer, with a short line explaining why ("I couldn't find anything on that — leave your email and someone will follow up"), and a **No thanks** option that lets the visitor keep chatting without it. It only appears once per conversation.
 - **Before the conversation starts** — the visitor sees an email field before they can ask anything, with a **Skip** link to bypass it. If saving the address fails (a bad address, a rate limit or a network problem) the field stays up with a short message rather than letting the visitor through as if it had worked, and **Skip** is always there so nobody is stuck.
 - **Never** — the widget never asks.
 
@@ -308,6 +308,8 @@ Two settings under **Settings → Widget** shape what visitors are told in your 
 
 - **Only from my knowledge base.** The widget answers only from your published articles. When they don't cover a question it says so plainly and points the visitor to support. It doesn't guess at prices, features, dates or policies the articles don't state, and it politely declines requests that aren't about your product, such as writing code or general trivia. This is the right choice for a widget anyone on the internet can use, because every answer reads as your company speaking.
 - **My knowledge base, then general knowledge.** When no article covers a question, the widget answers from general knowledge, and that answer can be wrong. Workspaces that existed before this setting keep this choice until an owner changes it.
+
+Visitors often ask loosely. "What does it cost?" rarely uses the words on your pricing page. When no article closely matches a question, the widget still hands the assistant the few closest articles, and tells it they may not cover the question. The assistant answers from them when they do. When they don't, it treats the question as not covered, following the choice above. Either way, the question goes to the [Review queue](/docs/product/knowledge-base#review-queue) so you can add an article that answers it directly.
 
 **Guidance for the widget** is an optional note of up to 600 characters about tone and what to suggest next, for example when to mention a free trial. The widget follows it when it phrases a reply, but it can never use the note to answer outside your knowledge base, reveal its instructions or say anything untrue. Leave it empty for no guidance.
 
@@ -352,7 +354,7 @@ The chat refreshes itself when it has been left open for a while: the visitor's 
 
 After some answers the chat can offer two or three short questions the visitor might ask next, as buttons under the reply, for example "How does the AI check its answers?" after a general answer about how answerLoops works. Tapping one sends it as the visitor's next question. On Pro and above, turn them on or off with **Suggest follow-up questions** in **Settings → Widget → Widget appearance**. They are on by default.
 
-- **Only questions your knowledge base can answer.** Before a suggestion is shown, answerLoops checks that your knowledge base has an article close enough to answer it, using the same match the chat uses. A suggestion that would lead to "I don't have that information" is dropped, and if fewer than two remain, none are shown.
+- **Only questions your knowledge base can answer.** Before a suggestion is shown, answerLoops checks that your knowledge base has an article that closely matches it. A suggestion that would lead to "I don't have that information" is dropped, and if fewer than two remain, none are shown.
 - **Not on every reply.** The assistant offers them only when there is a natural next question. A short factual answer, a pointer to contact or support, an "I don't know" and a reply that already has a card get none.
 - **Only the newest reply's.** The buttons disappear as soon as the visitor taps one, starts typing or sends their own message, and they never come back in a conversation restored from an earlier visit.
 - **Plain text, in the chat's own look.** The questions use the same buttons as quick replies, in your brand color, and are shown as plain text.

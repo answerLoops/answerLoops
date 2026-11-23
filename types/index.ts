@@ -172,6 +172,18 @@ export interface PriorAnswer {
   articleId?: number
 }
 
+/** What the website widget's knowledge-base search hands the model (lib/db/queries/kb.ts getWidgetKBContext). */
+export interface WidgetKBContext {
+  /** The articles put in front of the model. Empty when nothing came close. */
+  articles: PriorAnswer[]
+  /**
+   * Whether `articles` cleared the match bar. False with articles present means
+   * they are near misses: the closest the knowledge base has, which may or may
+   * not cover the question.
+   */
+  matched: boolean
+}
+
 /**
  * Whether a person has checked an article, judged against its current text:
  * 'verified' while the content still matches what was checked, 'changed' once

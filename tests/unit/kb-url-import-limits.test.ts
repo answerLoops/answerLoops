@@ -93,9 +93,9 @@ describe('chunkMarkdown: heading and title length', () => {
     expect(chunks[0].question.length).toBe(300)
   })
 
-  it('leaves normal headings untouched', () => {
+  it('leaves normal headings untouched, after the page title', () => {
     const [chunk] = chunkMarkdown(`## Reset your password\n\n${para(30)}`, 'T')
-    expect(chunk.question).toBe('Reset your password')
+    expect(chunk.question).toBe('T › Reset your password')
   })
 })
 
@@ -374,7 +374,7 @@ describe('rate-limit keys', () => {
 describe('exact duplicates in an import', () => {
   it('leaves out a section whose exact text is already in the knowledge base, without embedding it', async () => {
     h.scrapeUrl.mockResolvedValue({ ...page(3, 'https://docs.example.com/x') })
-    h.findExactDuplicate.mockImplementation(async (_db: unknown, _org: number, q: string) => (q === 'Section 1' ? 9 : null))
+    h.findExactDuplicate.mockImplementation(async (_db: unknown, _org: number, q: string) => (q === 'T › Section 1' ? 9 : null))
     const result = await ingestUrl('https://docs.example.com/x', 1)
     expect(result).toMatchObject({ created: 2, duplicates: 1 })
     expect(h.embed).toHaveBeenCalledTimes(2)

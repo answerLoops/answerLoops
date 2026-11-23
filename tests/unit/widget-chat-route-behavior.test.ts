@@ -21,7 +21,7 @@ const h = vi.hoisted(() => ({
   orgHasFeature: vi.fn(),
   chatModel: vi.fn(),
   embedText: vi.fn(),
-  getKBContext: vi.fn(),
+  getWidgetKBContext: vi.fn(),
   loggerInfo: vi.fn(),
   agentConfigs: [] as Record<string, any>[],
   streamCalls: [] as { query: string }[],
@@ -50,7 +50,7 @@ vi.mock('@/lib/ai/embed', () => ({
   embedTextWithModel: async (text: string, orgId?: number) => ({ embedding: await h.embedText(text, orgId), model: 'test-embed-model' }),
 }))
 vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => 'test-embed-model' }))
-vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
+vi.mock('@/lib/db/queries/kb', () => ({ getWidgetKBContext: h.getWidgetKBContext }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
 vi.mock('@/lib/logger', () => ({
   logger: { info: h.loggerInfo, warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -97,7 +97,7 @@ beforeEach(async () => {
   h.reserveGeneration.mockResolvedValue({ granted: true, generationId: 9 })
   h.chatModel.mockResolvedValue({ id: 'fake-model' })
   h.embedText.mockResolvedValue([0.1, 0.2])
-  h.getKBContext.mockResolvedValue([])
+  h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
 })
 
 describe('widget chat route: retrieval only starts after the quota grant', () => {
@@ -106,7 +106,7 @@ describe('widget chat route: retrieval only starts after the quota grant', () =>
     const res = await callRoute('refused question')
     expect(res.status).toBe(402)
     expect(h.embedText).not.toHaveBeenCalled()
-    expect(h.getKBContext).not.toHaveBeenCalled()
+    expect(h.getWidgetKBContext).not.toHaveBeenCalled()
     expect(h.chatModel).not.toHaveBeenCalled()
     expect(h.agentConfigs).toHaveLength(0)
   })
@@ -116,7 +116,7 @@ describe('widget chat route: retrieval only starts after the quota grant', () =>
     expect(res.status).toBe(200)
     await drain(res)
     expect(h.embedText).toHaveBeenCalledWith('granted question', 77)
-    expect(h.getKBContext).toHaveBeenCalledWith([0.1, 0.2], 5, 77)
+    expect(h.getWidgetKBContext).toHaveBeenCalledWith([0.1, 0.2], 5, 77)
   })
 })
 
@@ -141,13 +141,13 @@ describe('widget chat route: retrieval failure is non-fatal', () => {
     await drain(res)
     expect(h.streamCalls).toHaveLength(1)
     expect(h.agentConfigs[0].instructions).not.toContain('Knowledge base context')
-    expect(h.getKBContext).not.toHaveBeenCalled()
+    expect(h.getWidgetKBContext).not.toHaveBeenCalled()
     expect(h.releaseGeneration).not.toHaveBeenCalled()
     expect(h.commitDeflection).toHaveBeenCalledWith(77, 9)
   })
 
   it('still streams when the KB search throws', async () => {
-    h.getKBContext.mockRejectedValueOnce(new Error('db down'))
+    h.getWidgetKBContext.mockRejectedValueOnce(new Error('db down'))
     const res = await callRoute('kb failure question')
     expect(res.status).toBe(200)
     await drain(res)
@@ -211,7 +211,7 @@ describe('widget chat route: genui tools are grounded in the same context block 
   })
 
   it('allows a URL from the KB context through show_link_card and refuses one that is not', async () => {
-    h.getKBContext.mockResolvedValueOnce(KB)
+    h.getWidgetKBContext.mockResolvedValueOnce({ articles: KB, matched: true })
     const res = await callRoute('billing link question')
     await drain(res)
     const config = h.agentConfigs[0]
@@ -232,7 +232,7 @@ describe('widget chat route: genui tools are grounded in the same context block 
   })
 
   it('keeps only contact values present in the KB context', async () => {
-    h.getKBContext.mockResolvedValueOnce(KB)
+    h.getWidgetKBContext.mockResolvedValueOnce({ articles: KB, matched: true })
     const res = await callRoute('contact question')
     await drain(res)
     const result = await h.agentConfigs[0].tools.show_contact_options.execute(
