@@ -107,9 +107,15 @@ export default async function WidgetPage({ params }: Props) {
   const renderToken = mintRenderToken(widgetToken, ip)
 
   // Visitors can flag an answer on the plans that have the Review queue, which
-  // is where those flags are read. Never in the owner's own preview: a test
-  // question there would otherwise be flagged into their real list.
-  const answerFlagsEnabled = !isSelfPreview && (await orgHasFeature(org.id, 'kb_review_queue'))
+  // is where those flags are read. Not in the owner's own preview, where a test
+  // question would otherwise be flagged into their real list. That preview is
+  // the Settings link opened as its own tab, which the browser reports as a
+  // top-level "document" request. A widget embedded in a page on this same
+  // instance (our own marketing and docs pages, or a self-host's own site) is
+  // also "self" by referer, but is a real visitor in an iframe, so it keeps the
+  // thumbs. The browser sets this header and a page cannot change it.
+  const openedAsOwnTab = isSelfPreview && headerList.get('sec-fetch-dest') === 'document'
+  const answerFlagsEnabled = !openedAsOwnTab && (await orgHasFeature(org.id, 'kb_review_queue'))
 
   return (
     <WidgetChat
