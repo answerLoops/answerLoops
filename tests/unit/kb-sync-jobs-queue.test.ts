@@ -39,7 +39,7 @@ describe('lib/db/queries/kb-sync-jobs.ts', () => {
     expect(src).toContain("status = 'running'")
     expect(src).toContain('attempts = attempts + 1')
     expect(src).toContain('FOR UPDATE SKIP LOCKED')
-    expect(src).toMatch(/ORDER BY created_at\s+LIMIT 1/)
+    expect(src).toMatch(/ORDER BY reprocess_only, created_at\s+LIMIT 1/)
   })
 
   it('reclaim requeues a stuck job, or fails it once attempts are exhausted', () => {
