@@ -173,9 +173,9 @@ describe('syncRepoToKB / syncDiscussionsToKB record the synced commit', () => {
     h.getTree.mockResolvedValue({
       data: {
         tree: [
-          { type: 'blob', path: 'docs/guide.md' },
-          { type: 'blob', path: 'docs/setup.md' },
-          { type: 'blob', path: 'README.md' },
+          { type: 'blob', path: 'docs/guide.md', sha: 'sha-docs/guide.md' },
+          { type: 'blob', path: 'docs/setup.md', sha: 'sha-docs/setup.md' },
+          { type: 'blob', path: 'README.md', sha: 'sha-README.md' },
         ],
       },
     })
@@ -199,7 +199,7 @@ describe('syncRepoToKB / syncDiscussionsToKB record the synced commit', () => {
 
   async function runRepo() {
     const { syncRepoToKB } = await import('@/lib/github/kb-sync')
-    return syncRepoToKB(5, 'acme', 'docs', 1, 7)
+    return syncRepoToKB(5, 'acme', 'docs', 1, 7, null)
   }
 
   const settingsKeys = () => h.updateRepoSettings.mock.calls.flatMap((c) => Object.keys(c[2] as object))
@@ -254,10 +254,12 @@ describe('syncRepoToKB / syncDiscussionsToKB record the synced commit', () => {
     expect(h.updateRepoSettings).not.toHaveBeenCalled()
   })
 
-  it('does not record a commit when the knowledge base is full', async () => {
+  it('does not record a commit when the knowledge base is full, only that files were skipped', async () => {
     h.countArticles.mockResolvedValue(2012)
-    expect(await runRepo()).toBe(12)
-    expect(h.updateRepoSettings).not.toHaveBeenCalled()
+    const { chunks, result } = await runRepo()
+    expect(chunks).toBe(12)
+    expect(result.skippedForRoom).toBeGreaterThan(0)
+    expect(settingsKeys()).toEqual(['kbSyncResult'])
   })
 
   it('does not record a commit when the commit lookup itself fails', async () => {

@@ -70,7 +70,7 @@ beforeEach(() => {
     auth: async () => ({ token: 'tok' }),
   })
   h.getCommit.mockResolvedValue({ data: { sha: 'a'.repeat(40) } })
-  h.getTree.mockResolvedValue({ data: { tree: [{ type: 'blob', path: 'docs/guide.md' }] } })
+  h.getTree.mockResolvedValue({ data: { tree: [{ type: 'blob', path: 'docs/guide.md', sha: 'sha-docs/guide.md' }] } })
   h.getContent.mockResolvedValue({ data: { type: 'file', content: Buffer.from('# Guide').toString('base64') } })
   h.chunkMarkdown.mockReturnValue([{ question: 'Q1', answer: 'A1' }, { question: 'Q2', answer: 'A2' }])
   h.getKBSourceByFilename.mockImplementation(async (_org: number, filename: string) => sourceFor(filename))
@@ -83,7 +83,7 @@ beforeEach(() => {
 
 async function runRepo() {
   const { syncRepoToKB } = await import('@/lib/github/kb-sync')
-  return syncRepoToKB(5, 'acme', 'docs', 1, 7)
+  return (await syncRepoToKB(5, 'acme', 'docs', 1, 7, null)).chunks
 }
 
 async function runDiscussions() {
@@ -224,7 +224,7 @@ describe('staging cleanup and lease loss', () => {
     const { KbSyncLeaseLostError } = await import('@/lib/kb-sync/errors')
     h.embedText.mockRejectedValue(new KbSyncLeaseLostError(1))
     const { syncRepoToKB } = await import('@/lib/github/kb-sync')
-    await expect(syncRepoToKB(5, 'acme', 'docs', 1, 7, {
+    await expect(syncRepoToKB(5, 'acme', 'docs', 1, 7, null, {
       onProgress: () => { throw new KbSyncLeaseLostError(1) },
     })).rejects.toBeInstanceOf(KbSyncLeaseLostError)
     expect(h.deleteKBSource).not.toHaveBeenCalled()

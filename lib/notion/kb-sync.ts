@@ -23,9 +23,9 @@ import {
 } from '@/lib/notion/client'
 import { blocksToMarkdown } from '@/lib/notion/blocks-to-markdown'
 import type { KbSyncProgressOpts } from '@/lib/kb-sync/progress'
+import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
 
 const MOD = 'notion/kb-sync'
-const MAX_ARTICLES_PER_ORG = 2000
 
 /** The stable dedup key for the single per-workspace kb_sources row. */
 export const NOTION_SOURCE_FILENAME = 'notion:workspace'

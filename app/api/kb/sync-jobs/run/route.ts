@@ -9,7 +9,7 @@ import { KbSyncUserError, KbSyncLeaseLostError, KB_SYNC_GENERIC_FAILURE } from '
 import { throttleProgress } from '@/lib/kb-sync/progress'
 import { getRepoById } from '@/lib/db/queries/github'
 import { syncNotionToKB } from '@/lib/notion/kb-sync'
-import { syncRepoToKB, syncDiscussionsToKB } from '@/lib/github/kb-sync'
+import { syncRepoToKB, syncDiscussionsToKB, describeRepoSync } from '@/lib/github/kb-sync'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { isPlatformBotRequest } from '@/lib/http/bearer-auth'
@@ -101,14 +101,14 @@ export async function POST(request: Request) {
       // Discussion progress is offset past the repo-files total so the KB
       // page's bar keeps climbing across the two phases.
       let filesTotal = 0
-      const docs = await syncRepoToKB(repo.id, repo.owner, repo.repo, repo.installation_id, job.org_id, {
+      const docs = await syncRepoToKB(repo.id, repo.owner, repo.repo, repo.installation_id, job.org_id, repo.kb_paths, {
         onProgress: (d, t) => { filesTotal = t; progress(d, t) },
       })
       const discussions = await syncDiscussionsToKB(repo.id, repo.owner, repo.repo, repo.installation_id, job.org_id, {
         onProgress: (d, t) => progress(filesTotal + d, filesTotal + t),
       })
-      syncedCount = docs + discussions
-      detail = `Synced ${docs} doc chunk${docs === 1 ? '' : 's'} and ${discussions} discussion chunk${discussions === 1 ? '' : 's'}`
+      syncedCount = docs.chunks + discussions
+      detail = describeRepoSync(docs.result, discussions)
     } else {
       throw new Error(`unknown kb sync job kind: ${job.kind}`)
     }
