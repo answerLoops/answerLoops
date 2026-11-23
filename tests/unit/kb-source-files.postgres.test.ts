@@ -3,6 +3,7 @@ import { getTableColumns } from 'drizzle-orm'
 import type { PgTable } from 'drizzle-orm/pg-core'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
+import { ensureVectorExtension } from './helpers/pg-vector'
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { kbArticleEvents, kbArticles, kbSources, orgs } from '@/lib/db/schema'
 
@@ -34,7 +35,7 @@ describe.skipIf(!url)('synced repository files on PostgreSQL', () => {
 
   beforeAll(async () => {
     admin = postgres(url!, { max: 1, onnotice: () => {} })
-    await admin`CREATE EXTENSION IF NOT EXISTS vector`
+    await ensureVectorExtension(admin)
     await admin`CREATE SCHEMA ${admin(schema)}`
     client = postgres(url!, {
       prepare: false,
