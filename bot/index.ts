@@ -192,6 +192,43 @@ function startEmbeddingMigrationSweep(): void {
   setInterval(() => { sweep().catch(() => {}) }, EMBEDDING_MIGRATION_SWEEP_INTERVAL_MS)
 }
 
+// Re-titles sections from pages imported before section titles carried the
+// page ("Pro" becomes "pricing › Pro") and re-embeds them, for workspaces on
+// the platform embedding model. The app route lists them and does the work;
+// this process just keeps the sweep running. Same cadence and bounds as the
+// re-embed sweep above.
+const RETITLE_IMPORTS_SWEEP_INTERVAL_MS = 5 * 60 * 1000
+const RETITLE_IMPORTS_REQUEST_TIMEOUT_MS = 10 * 60 * 1000
+
+function startRetitleImportsSweep(): void {
+  const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
+  const botSecret = process.env.BOT_SECRET
+  let inFlight = false
+
+  const sweep = async () => {
+    if (!botSecret) return // the route requires BOT_SECRET; nothing to do without it
+    if (inFlight) return // the previous sweep is still running; never overlap
+    inFlight = true
+    try {
+      const res = await fetch(`${targetUrl}/api/kb/retitle-imports/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${botSecret}` },
+        signal: AbortSignal.timeout(RETITLE_IMPORTS_REQUEST_TIMEOUT_MS),
+      })
+      if (!res.ok) {
+        logger.warn('re-title sweep: request failed', { module: MOD, status: res.status })
+      }
+    } catch (err) {
+      // Must not crash the bot process; it retries on the next sweep.
+      logger.error('re-title sweep failed', { module: MOD, error: err })
+    } finally {
+      inFlight = false
+    }
+  }
+  sweep().catch(() => {})
+  setInterval(() => { sweep().catch(() => {}) }, RETITLE_IMPORTS_SWEEP_INTERVAL_MS)
+}
+
 // Trial-ending reminder emails (3 days and 1 day before a card-free trial
 // ends). The app route decides who is due and sends; this process only keeps
 // the sweep running. Hourly is fine-grained enough for notices counted in days,
@@ -907,6 +944,7 @@ async function main() {
   startKbRetentionSweep()
   startStuckTicketSweep()
   startEmbeddingMigrationSweep()
+  startRetitleImportsSweep()
   startTrialReminderSweep()
   startWidgetLeadSweep()
 
