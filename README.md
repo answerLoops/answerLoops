@@ -24,7 +24,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/security.yml?branch=main&label=security&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/security.yml)
 [![License](https://img.shields.io/github/license/answerLoops/answerLoops?style=flat-square&label=license&color=082e50)](./LICENSE)
-[![Container](https://img.shields.io/badge/container-ghcr.io-2496ED?style=flat-square&logo=docker&logoColor=white)](https://github.com/answerLoops/answerLoops/pkgs/container/answerloops)
+[![Container pulls](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2FNathanTarbert%2F8d1e6d38ed17fc9dd63ba87ff11887c2%2Fraw%2Fcontainer-pulls.json&style=flat-square)](https://github.com/answerLoops/answerLoops/pkgs/container/answerloops)
 [![Secured by Cycode](./.github/readme/cycode-badge.svg)](https://cycode.com)
 </div>
 
