@@ -38,6 +38,7 @@ describe('captureUnansweredQuestion', () => {
         source: 'ticket',
         ticketId: 11,
         question: 'How do I export data?',
+        visitorMessage: null,
         answer: 'Use Settings > Export.',
         embedding: [1, 2, 3],
         confidence: 0.4,
@@ -73,6 +74,24 @@ describe('captureUnansweredQuestion', () => {
     await capture({ question: '   ' })
     await capture({ question: '[Attachment: screenshot.png] — https://example.com/a.png' })
     expect(h.recordReviewItem).not.toHaveBeenCalled()
+  })
+
+  it('keeps the visitor words beside a rewritten follow-up, scrubbed and bounded', async () => {
+    await capture({ source: 'widget', question: 'Team plan price', visitorMessage: 'and for teams? order #1234567 ' + 'x'.repeat(600) })
+    const stored = h.recordReviewItem.mock.calls[0][0]
+    expect(stored.question).toBe('Team plan price')
+    expect(stored.visitorMessage.startsWith('and for teams? order #[number]')).toBe(true)
+    expect(stored.visitorMessage).toHaveLength(500)
+  })
+
+  it('stores no visitor words when the rewrite is the same as what the visitor typed', async () => {
+    await capture({ source: 'widget', question: 'Do you have SSO?', visitorMessage: '  Do you   have SSO? ' })
+    expect(h.recordReviewItem.mock.calls[0][0].visitorMessage).toBeNull()
+  })
+
+  it('stores no visitor words when the question is already the visitor own', async () => {
+    await capture({ source: 'widget' })
+    expect(h.recordReviewItem.mock.calls[0][0].visitorMessage).toBeNull()
   })
 
   it('bounds stored question and answer length', async () => {

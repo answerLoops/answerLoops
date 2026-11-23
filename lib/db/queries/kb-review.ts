@@ -14,6 +14,8 @@ export interface KBReviewItem {
   ticket_id: number | null
   question: string
   answer: string
+  /** The visitor's own words when `question` is the assistant's rewrite of a follow-up; null otherwise. */
+  visitor_message: string | null
   confidence: number | null
   occurrences: number
   status: ReviewStatus
@@ -54,6 +56,7 @@ function toItem(row: typeof kbReviewItems.$inferSelect): KBReviewItem {
     ticket_id: row.ticketId ?? null,
     question: row.question,
     answer: row.answer,
+    visitor_message: row.visitorMessage ?? null,
     confidence: row.confidence ?? null,
     occurrences: row.occurrences,
     status: row.status as ReviewStatus,
@@ -107,6 +110,8 @@ export async function recordReviewItem(
     source: ReviewSource
     ticketId?: number | null
     question: string
+    /** The visitor's own words beside a rewritten follow-up (already scrubbed). A merge keeps the existing item's. */
+    visitorMessage?: string | null
     answer: string
     embedding: number[]
     confidence?: number | null
@@ -166,8 +171,8 @@ export async function recordReviewItem(
   const inserted = await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT pg_advisory_xact_lock(${REVIEW_INSERT_LOCK_KEY}, ${orgId})`)
     const rows = (await tx.execute(sql`
-      INSERT INTO kb_review_items (org_id, source, ticket_id, question, answer, embedding_vec, model, confidence)
-      SELECT ${orgId}, ${input.source}, ${input.ticketId ?? null}, ${input.question}, ${input.answer},
+      INSERT INTO kb_review_items (org_id, source, ticket_id, question, visitor_message, answer, embedding_vec, model, confidence)
+      SELECT ${orgId}, ${input.source}, ${input.ticketId ?? null}, ${input.question}, ${input.visitorMessage ?? null}, ${input.answer},
              ${JSON.stringify(input.embedding)}::vector,
              (SELECT embedding_model_in_use FROM orgs WHERE id = ${orgId}),
              ${input.confidence ?? null}
@@ -190,14 +195,14 @@ export async function purgeExpiredReviewText(now: Date = new Date()): Promise<nu
   const cutoff = new Date(now.getTime() - REVIEW_TEXT_RETENTION_DAYS * 86_400_000).toISOString()
   const rows = await getDb()
     .update(kbReviewItems)
-    .set({ question: '', answer: '' })
+    .set({ question: '', answer: '', visitorMessage: null })
     .where(
       and(
         or(
           eq(kbReviewItems.status, 'rejected'),
           and(eq(kbReviewItems.status, 'approved'), lt(kbReviewItems.reviewedAt, cutoff))
         ),
-        or(sql`${kbReviewItems.question} <> ''`, sql`${kbReviewItems.answer} <> ''`)
+        or(sql`${kbReviewItems.question} <> ''`, sql`${kbReviewItems.answer} <> ''`, isNotNull(kbReviewItems.visitorMessage))
       )
     )
     .returning({ id: kbReviewItems.id })

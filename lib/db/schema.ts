@@ -765,6 +765,9 @@ export const kbReviewItems = pgTable(
     ticketId: integer('ticket_id').references(() => tickets.id, { onDelete: 'set null' }),
     question: text('question').notNull(),
     answer: text('answer').notNull(),
+    // The visitor's own words when `question` is the assistant's standalone
+    // rewrite of a widget follow-up; null otherwise. Cleared with the text.
+    visitorMessage: text('visitor_message'),
     // Same fixed platform-wide dimension as kb_articles.embedding_vec; used
     // only to fold near-duplicate questions together.
     embeddingVec: vector('embedding_vec', { dimensions: 1536 }),

@@ -131,6 +131,15 @@ describe('recordReviewItem', () => {
     expect(ins.params).toContain('widget')
   })
 
+  it('stores the visitor words beside a rewritten follow-up', async () => {
+    respond = (c) => (c.sql.startsWith('insert into kb_review_items') ? [[1]] : [])
+    const { recordReviewItem } = await import('@/lib/db/queries/kb-review')
+    await recordReviewItem({ ...input(), visitorMessage: 'and for teams?' }, 3)
+    const ins = calls.find((c) => c.sql.startsWith('insert into kb_review_items'))!
+    expect(ins.sql).toContain('visitor_message')
+    expect(ins.params).toContain('and for teams?')
+  })
+
   it('exposes the duplicate threshold and queue ceiling the capture path relies on', async () => {
     const m = await import('@/lib/db/queries/kb-review')
     expect(m.REVIEW_DUPLICATE_SIMILARITY).toBe(0.85)
@@ -329,5 +338,8 @@ describe('purgeExpiredReviewText', () => {
     expect(upd.params).toContain(cutoff)
     // idempotent: only rows that still hold text are touched
     expect(upd.sql).toContain(`"question" <> ''`)
+    // the visitor's own words on a follow-up go with the rest of the text
+    expect(upd.sql).toContain('"visitor_message" = $')
+    expect(upd.sql).toContain('"visitor_message" is not null')
   })
 })

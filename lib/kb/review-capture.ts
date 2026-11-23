@@ -1,3 +1,4 @@
+import { normalizeForHash } from '@/lib/kb/revision'
 import { embedText } from '@/lib/ai/embed'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { recordReviewItem, type ReviewSource } from '@/lib/db/queries/kb-review'
@@ -70,6 +71,8 @@ export async function captureUnansweredQuestion(input: {
   orgId: number
   source: ReviewSource
   question: string
+  /** The visitor's own words when `question` is the assistant's standalone rewrite of a follow-up. */
+  visitorMessage?: string
   answer: string
   ticketId?: number
   confidence?: number
@@ -80,6 +83,15 @@ export async function captureUnansweredQuestion(input: {
   try {
     const question = scrubPersonalData(parseAttachmentLines(input.question).text).trim().slice(0, MAX_QUESTION_CHARS)
     const answer = scrubPersonalData(input.answer).trim().slice(0, MAX_ANSWER_CHARS)
+    const scrubbedVisitor = input.visitorMessage
+      ? scrubPersonalData(parseAttachmentLines(input.visitorMessage).text).trim().slice(0, MAX_QUESTION_CHARS)
+      : ''
+    // Kept only when it says something the question doesn't: a rewrite that
+    // repeats the visitor's words would show the same sentence twice.
+    const visitorMessage =
+      scrubbedVisitor && normalizeForHash(scrubbedVisitor).toLowerCase() !== normalizeForHash(question).toLowerCase()
+        ? scrubbedVisitor
+        : null
     // An empty answer is valid: the assistant had nothing usable, so the
     // reviewer writes one. Only the question is required.
     if (!question) return
@@ -91,6 +103,7 @@ export async function captureUnansweredQuestion(input: {
         source: input.source,
         ticketId: input.ticketId ?? null,
         question,
+        visitorMessage,
         answer,
         embedding,
         confidence: input.confidence ?? null,
