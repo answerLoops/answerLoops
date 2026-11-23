@@ -475,6 +475,28 @@ export const kbSources = pgTable(
   ]
 )
 
+// One row per repository file a docs sync has written (migration 0088). The
+// blob sha and processing version let a sync skip files that haven't changed
+// and redo files processed under older cleanup rules (lib/ingest/docs-file.ts).
+export const kbSourceFiles = pgTable(
+  'kb_source_files',
+  {
+    id: serial('id').primaryKey(),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    sourceId: integer('source_id').notNull().references(() => kbSources.id, { onDelete: 'cascade' }),
+    path: text('path').notNull(),
+    blobSha: text('blob_sha').notNull(),
+    title: text('title').notNull(),
+    chunkCount: integer('chunk_count').notNull().default(0),
+    processingVersion: integer('processing_version').notNull(),
+    syncedAt: text('synced_at').notNull().default(now),
+  },
+  (t) => [
+    uniqueIndex('kb_source_files_source_id_path_key').on(t.sourceId, t.path),
+    index('idx_kb_source_files_org').on(t.orgId),
+  ]
+)
+
 // Background queue for KB syncs (Notion workspace, GitHub repo). The enqueue
 // points ("Sync now", GitHub push webhook) insert a row and return; the bot
 // process sweeps `queued` rows and drives each via POST /api/kb/sync-jobs/run.
@@ -505,6 +527,10 @@ export const kbSyncJobs = pgTable(
     // Another trigger arrived while this job was running; finishing it queues
     // exactly one follow-up run.
     rerunRequested: boolean('rerun_requested').notNull().default(false),
+    // Queued in the background to re-process docs under the current cleanup
+    // rules (migration 0088); claimed after other syncs, and turned into a
+    // full sync if a push or click arrives while it waits.
+    reprocessOnly: boolean('reprocess_only').notNull().default(false),
   },
   (t) => [
     index('idx_kb_sync_jobs_status').on(t.status, t.createdAt),
@@ -557,6 +583,9 @@ export const kbArticles = pgTable(
     sourceTicketId: integer('source_ticket_id').references(() => tickets.id),
     sourceId: integer('source_id'),
     sourcePage: integer('source_page'),
+    // The repository file this section came from, for docs synced from GitHub
+    // (migration 0088). Removing the file's row removes its sections.
+    sourceFileId: integer('source_file_id').references(() => kbSourceFiles.id, { onDelete: 'cascade' }),
     published: integer('published').notNull().default(1),
     // The team member who added the article by hand, promoted a ticket or
     // approved a review item. Null means unknown or automated: articles made
@@ -584,6 +613,7 @@ export const kbArticles = pgTable(
     index('idx_kb_articles_org_published').on(t.orgId, t.published),
     index('idx_kb_articles_source').on(t.sourceTicketId),
     index('idx_kb_articles_source_id').on(t.sourceId),
+    index('idx_kb_articles_source_file').on(t.sourceFileId),
     index('idx_kb_articles_embedding_vec').using('hnsw', t.embeddingVec.op('vector_cosine_ops')),
   ]
 )

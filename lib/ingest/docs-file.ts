@@ -21,6 +21,13 @@
  * limit, so a malformed file can't stall a sync.
  */
 
+/**
+ * Version of the cleanup and chunking rules. Each synced file stores the
+ * version it was processed under; a sync redoes files below this one, so a
+ * change to these rules reaches every repository's docs.
+ */
+export const DOCS_PROCESSING_VERSION = 1
+
 export function cleanDocsFile(path: string, raw: string): { title: string; markdown: string } {
   const fileName = path.split('/').pop() ?? path
   const dot = fileName.lastIndexOf('.')

@@ -1,5 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
+import type { Tx } from './kb-sources'
+import { KbSyncLeaseLostError } from '@/lib/kb-sync/errors'
 
 export type KbSyncJobKind = 'notion' | 'github_repo'
 type KbSyncJobStatus = 'queued' | 'running' | 'succeeded' | 'failed'
@@ -19,6 +21,8 @@ interface KbSyncJob {
   heartbeat_at: string | null
   not_before: string | null
   rerun_requested: boolean
+  /** Background re-processing only (lib/github/docs-reprocess.ts). */
+  reprocess_only: boolean
   created_at: string
   started_at: string | null
   finished_at: string | null
@@ -49,6 +53,8 @@ export async function enqueueKbSyncJob(input: {
   cooldownMs?: number
   rerunIfRunning?: boolean
   pullForward?: boolean
+  /** Background re-processing only; never set by a push or a click. */
+  reprocessOnly?: boolean
 }): Promise<{ id: number; status: KbSyncJobStatus; created: boolean }> {
   const repoId = input.repoId ?? null
   const db = getDb()
@@ -74,24 +80,36 @@ export async function enqueueKbSyncJob(input: {
   // between the lookup and a retry), so the pair is attempted a few times.
   for (let attempt = 0; attempt < 3; attempt++) {
     const inserted = (await db.execute(sql`
-      INSERT INTO kb_sync_jobs (org_id, kind, repo_id, not_before)
-      VALUES (${input.orgId}, ${input.kind}, ${repoId}, ${notBefore}::timestamptz)
+      INSERT INTO kb_sync_jobs (org_id, kind, repo_id, not_before, reprocess_only)
+      VALUES (${input.orgId}, ${input.kind}, ${repoId}, ${notBefore}::timestamptz, ${input.reprocessOnly ?? false})
       ON CONFLICT DO NOTHING
       RETURNING id, status
     `)) as unknown as { id: number; status: KbSyncJobStatus }[]
     if (inserted[0]) return { id: inserted[0].id, status: inserted[0].status, created: true }
 
     const existing = (await db.execute(sql`
-      SELECT id, status FROM kb_sync_jobs
+      SELECT id, status, reprocess_only FROM kb_sync_jobs
       WHERE org_id = ${input.orgId}
         AND kind = ${input.kind}
         AND COALESCE(repo_id, 0) = COALESCE(${repoId}, 0)
         AND status IN ('queued', 'running')
       ORDER BY created_at DESC
       LIMIT 1
-    `)) as unknown as { id: number; status: KbSyncJobStatus }[]
+    `)) as unknown as { id: number; status: KbSyncJobStatus; reprocess_only?: boolean }[]
     const active = existing[0]
     if (!active) continue
+
+    // A push or click while background re-processing waits: that job becomes
+    // a full sync, so the change isn't left for later.
+    if (active.status === 'queued' && active.reprocess_only && !input.reprocessOnly) {
+      const upgraded = (await db.execute(sql`
+        UPDATE kb_sync_jobs SET reprocess_only = false
+        WHERE id = ${active.id} AND org_id = ${input.orgId} AND status = 'queued'
+        RETURNING id
+      `)) as unknown as { id: number }[]
+      // Claimed while we were upgrading it — go round again.
+      if (upgraded.length === 0) continue
+    }
 
     if (active.status === 'running' && input.rerunIfRunning) {
       const marked = (await db.execute(sql`
@@ -135,7 +153,8 @@ export async function claimNextKbSyncJob(): Promise<KbSyncJob | null> {
     WHERE id = (
       SELECT id FROM kb_sync_jobs
       WHERE status = 'queued' AND (not_before IS NULL OR not_before <= now())
-      ORDER BY created_at
+      -- Syncs a person or a push queued go before background re-processing.
+      ORDER BY reprocess_only, created_at
       LIMIT 1
       FOR UPDATE SKIP LOCKED
     )
@@ -262,4 +281,19 @@ export async function getLatestKbSyncJob(
     LIMIT 1
   `)) as unknown as KbSyncJob[]
   return rows[0] ?? null
+}
+
+/**
+ * Throws KbSyncLeaseLostError unless job `id` is still running under this
+ * worker's claim (`attempt`). Called inside each file's write transaction,
+ * holding the job row, so a worker whose job was taken over never commits a
+ * file the newer run may already have written.
+ */
+export async function assertKbSyncJobOwned(tx: Tx, id: number, attempt: number): Promise<void> {
+  const rows = (await tx.execute(sql`
+    SELECT id FROM kb_sync_jobs
+    WHERE id = ${id} AND attempts = ${attempt} AND status = 'running'
+    FOR SHARE
+  `)) as unknown as { id: number }[]
+  if (rows.length === 0) throw new KbSyncLeaseLostError(id)
 }

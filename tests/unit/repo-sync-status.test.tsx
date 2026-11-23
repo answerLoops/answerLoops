@@ -112,6 +112,18 @@ describe('RepoSyncStatus — docs folders', () => {
     expect(container.textContent).toContain('2 files too large to sync')
   })
 
+  it('shows what the last sync changed', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_sync_result: { ...result, updated: 3, added: 0, removed: 0, unchanged: 140 } })} />)
+    expect(container.textContent).toContain('Last sync: 3 files updated, 140 unchanged')
+  })
+
+  it('shows no change line for a result without file changes', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_sync_result: result })} />)
+    expect(container.textContent).not.toContain('Last sync:')
+    const { container: none } = render(<RepoSyncStatus repo={repo({ kb_sync_result: null })} />)
+    expect(none.textContent).not.toContain('Last sync:')
+  })
+
   it('shows no counts line when nothing was skipped', () => {
     const { container } = render(<RepoSyncStatus repo={repo({ kb_sync_result: result })} />)
     expect(container.textContent).not.toMatch(/skipped|couldn't be read|too large/)

@@ -229,6 +229,42 @@ function startRetitleImportsSweep(): void {
   setInterval(() => { sweep().catch(() => {}) }, RETITLE_IMPORTS_SWEEP_INTERVAL_MS)
 }
 
+// Re-processing synced repo docs under new cleanup rules, once (see
+// lib/github/docs-reprocess.ts). The app route decides which repos and
+// queues ordinary KB sync jobs, which the KB sync sweep then runs; this
+// process only keeps the sweep going.
+const DOCS_REPROCESS_SWEEP_INTERVAL_MS = 15 * 60 * 1000
+const DOCS_REPROCESS_REQUEST_TIMEOUT_MS = 60 * 1000
+
+function startDocsReprocessSweep(): void {
+  const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
+  const botSecret = process.env.BOT_SECRET
+  let inFlight = false
+
+  const sweep = async () => {
+    if (!botSecret) return // the route requires BOT_SECRET; nothing to do without it
+    if (inFlight) return // the previous sweep is still running; never overlap
+    inFlight = true
+    try {
+      const res = await fetch(`${targetUrl}/api/kb/docs-reprocess/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${botSecret}` },
+        signal: AbortSignal.timeout(DOCS_REPROCESS_REQUEST_TIMEOUT_MS),
+      })
+      if (!res.ok) {
+        logger.warn('docs re-processing sweep: request failed', { module: MOD, status: res.status })
+      }
+    } catch (err) {
+      // Must not crash the bot process; it retries on the next sweep.
+      logger.error('docs re-processing sweep failed', { module: MOD, error: err })
+    } finally {
+      inFlight = false
+    }
+  }
+  sweep().catch(() => {})
+  setInterval(() => { sweep().catch(() => {}) }, DOCS_REPROCESS_SWEEP_INTERVAL_MS)
+}
+
 // Trial-ending reminder emails (3 days and 1 day before a card-free trial
 // ends). The app route decides who is due and sends; this process only keeps
 // the sweep running. Hourly is fine-grained enough for notices counted in days,
@@ -945,6 +981,7 @@ async function main() {
   startStuckTicketSweep()
   startEmbeddingMigrationSweep()
   startRetitleImportsSweep()
+  startDocsReprocessSweep()
   startTrialReminderSweep()
   startWidgetLeadSweep()
 

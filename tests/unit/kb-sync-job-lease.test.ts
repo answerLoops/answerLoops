@@ -73,9 +73,9 @@ describe('enqueueKbSyncJob', () => {
   it('source has the org filter on every fallback select', () => {
     const src = read('lib/db/queries/kb-sync-jobs.ts')
     const fn = src.slice(src.indexOf('export async function enqueueKbSyncJob'), src.indexOf('export async function claimNextKbSyncJob'))
-    const selects = fn.match(/SELECT id, status FROM kb_sync_jobs\s+WHERE org_id = /g) ?? []
+    const selects = fn.match(/SELECT id, status(, reprocess_only)? FROM kb_sync_jobs\s+WHERE org_id = /g) ?? []
     expect(selects.length).toBe(1)
-    expect(fn).not.toMatch(/SELECT id, status FROM kb_sync_jobs\s+WHERE kind/)
+    expect(fn).not.toMatch(/SELECT id, status(, reprocess_only)? FROM kb_sync_jobs\s+WHERE kind/)
   })
 
   it('marks a run in progress for a follow-up when asked, and reports the existing job', async () => {
