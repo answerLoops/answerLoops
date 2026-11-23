@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="570" viewBox="0 0 1200 570" role="img" aria-labelledby="title desc">
-  <title id="title">How AnswerLoops Makes Every Interaction Count</title>
+  <title id="title">Every Interaction Makes Your Community Stronger</title>
   <desc id="desc">A member asks in community chat or a forum. AnswerLoops finds relevant guides, drafts an answer, and checks it against the sources. With auto-reply enabled, a qualifying answer can post in the channel. Teams can save useful resolutions as knowledge for future questions. Supported channels include Discord, Slack, Discourse, Circle, GitHub, Telegram, email, Google Chat, and website chat.</desc>
   <defs>
     <linearGradient id="surface" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -27,7 +27,7 @@
     .channel{fill:#164365;font-size:14px;font-weight:650;text-anchor:middle}
   </style>
   <rect x="1" y="1" width="1198" height="568" rx="27" fill="url(#surface)" stroke="#cbdade"/>
-  <text x="42" y="62" class="heading">How AnswerLoops Makes Every Interaction Count</text>
+  <text x="42" y="62" class="heading">Every Interaction Makes Your Community Stronger</text>
   <g>
     <rect x="902" y="32" width="256" height="40" rx="20" fill="#fff" fill-opacity=".9"/>
     <circle cx="927" cy="52" r="4" fill="#168fa3"/>

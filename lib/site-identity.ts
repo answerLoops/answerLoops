@@ -3,8 +3,8 @@ import { GITHUB_URL } from '@/lib/site'
 export const ORGANIZATION_ID = 'https://answerloops.com/#organization'
 export const WEBSITE_ID = 'https://answerloops.com/#website'
 
-export const PRODUCT_HEADLINE = 'Help your community grow'
-export const PRODUCT_TAGLINE = 'Members stay. Visitors convert. One knowledge base.'
+export const PRODUCT_HEADLINE = 'Make Your Community More Valuable to Members'
+export const PRODUCT_TAGLINE = 'Turn your existing knowledge into trusted answers that keep members engaged.'
 
 /**
  * The canonical public identity graph shared by every crawlable route.
