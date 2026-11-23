@@ -82,6 +82,12 @@ function ReviewCard({
         <span className="ml-auto text-slate-400">{new Date(item.created_at).toLocaleDateString()}</span>
       </div>
 
+      {item.visitor_message && (
+        <p className="mt-3 break-words text-xs text-slate-500">
+          <span className="font-medium text-slate-600">Visitor asked:</span> <span>{item.visitor_message}</span>
+        </p>
+      )}
+
       {pending ? (
         <div className="mt-3 space-y-3">
           <div>

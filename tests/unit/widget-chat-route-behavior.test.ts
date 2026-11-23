@@ -164,16 +164,16 @@ describe('widget chat route: genui tools are grounded in the same context block 
     },
   ]
 
-  it('registers exactly the five display-only tools', async () => {
+  it('registers exactly the five display-only tools and the knowledge-base search', async () => {
     const res = await callRoute('tools question')
     await drain(res)
     expect(Object.keys(h.agentConfigs[0].tools).sort()).toEqual(
-      ['show_callout', 'show_choices', 'show_contact_options', 'show_link_card', 'show_steps'].sort()
+      ['search_knowledge_base', 'show_callout', 'show_choices', 'show_contact_options', 'show_link_card', 'show_steps'].sort()
     )
   })
 
   describe('follow-up suggestions', () => {
-    const FIVE = ['show_callout', 'show_choices', 'show_contact_options', 'show_link_card', 'show_steps']
+    const FIVE = ['search_knowledge_base', 'show_callout', 'show_choices', 'show_contact_options', 'show_link_card', 'show_steps']
 
     it('on a plan that includes them, adds the sixth tool and tells the assistant about it', async () => {
       h.orgHasFeature.mockResolvedValue(true)

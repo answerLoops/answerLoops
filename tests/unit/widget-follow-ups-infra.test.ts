@@ -65,7 +65,7 @@ describe('the chat route and the panel', () => {
     const route = read('app/api/widget/chat/route.ts')
     expect(route).toContain('followUpsAvailable(')
     expect(route).toContain('followUps,\n')
-    expect(route).toMatch(/buildGenuiTools\(contextBlock, followUps \? \{ followUps: \{ ground:/)
+    expect(route).toMatch(/buildGenuiTools\(\s*\(\) => turn\.groundedText\(\),\s*followUps \? \{ followUps: \{ ground:/)
   })
 
   it('draws the card from the live-suggestion rule and clears it on typing', () => {
