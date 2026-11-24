@@ -38,12 +38,22 @@ describe('isDocFile', () => {
 })
 
 describe('listDocFolders', () => {
-  it('counts docs recursively and greys empty folders', () => {
+  it('counts docs recursively and leaves out folders with no docs', () => {
     const f = byPath(listDocFolders(tree(['docs/a.mdx', 'docs/api/b.md', 'src/x.ts', 'content/docs/c.txt'])))
     expect(f['docs']).toEqual({ path: 'docs', docFiles: 2, selectable: true })
     expect(f['docs/api'].docFiles).toBe(1)
-    expect(f['src']).toEqual({ path: 'src', docFiles: 0, selectable: false })
+    expect(f['src']).toBeUndefined()
     expect(f['content'].docFiles).toBe(1)
+  })
+
+  it('never offers hidden, dependency, build or test folders', () => {
+    const t = tree([
+      'README.md', 'docs/a.md', '.claude/commands/x.md', '.claude/CLAUDE.md', '.github/readme/a.md',
+      '.cursor/rules/r.md', 'node_modules/pkg/readme.md', 'tests/fixtures/a.md', 'docs/.hidden/b.md',
+      'vendor/lib/a.md', 'dist/a.md',
+    ])
+    expect(listDocFolders(t).map((f) => f.path)).toEqual(['.', 'docs'])
+    expect(byPath(listDocFolders(t))['docs'].docFiles).toBe(1)
   })
 
   it('root counts only root files', () => {
@@ -52,7 +62,7 @@ describe('listDocFolders', () => {
   })
 
   it('lists the root first, then folders by path', () => {
-    expect(listDocFolders(tree(['z/a.md', 'b/c.md', 'b/a/x.md'])).map((f) => f.path)).toEqual(['.', 'b', 'b/a', 'z'])
+    expect(listDocFolders(tree(['top.md', 'z/a.md', 'b/c.md', 'b/a/x.md'])).map((f) => f.path)).toEqual(['.', 'b', 'b/a', 'z'])
   })
 })
 
@@ -119,7 +129,29 @@ describe('normalizeDocPaths', () => {
     expect(normalizeDocPaths(['a\u007fb'])).toBeNull()
     expect(normalizeDocPaths(['docs/./x'])).toBeNull()
     expect(normalizeDocPaths(['docs//x'])).toBeNull()
-    expect(normalizeDocPaths(['...', '..foo'])).toEqual(['...', '..foo'])
+    expect(normalizeDocPaths(['...', '..foo'])).toBeNull()
+  })
+
+  it('refuses hidden and excluded folders', () => {
+    expect(normalizeDocPaths(['.claude'])).toBeNull()
+    expect(normalizeDocPaths(['.claude/commands'])).toBeNull()
+    expect(normalizeDocPaths(['docs', '.github/readme'])).toBeNull()
+    expect(normalizeDocPaths(['node_modules/pkg'])).toBeNull()
+    expect(normalizeDocPaths(['docs/tests'])).toBeNull()
+    expect(normalizeDocPaths(['docs', 'content/docs'])).toEqual(['docs', 'content/docs'])
+  })
+})
+
+describe('selectDocFiles inside chosen folders', () => {
+  it('skips hidden and excluded subfolders of a chosen folder, and of the root', () => {
+    const t = tree(['docs/a.md', 'docs/.drafts/b.md', 'docs/tests/c.md', 'docs/node_modules/x/d.md', 'README.md'])
+    expect(selectDocFiles(t, ['docs']).files.map((f) => f.path)).toEqual(['docs/a.md'])
+    expect(selectDocFiles(t, ['.']).files.map((f) => f.path)).toEqual(['README.md'])
+  })
+
+  it('a saved hidden folder yields no files', () => {
+    const t = tree(['.claude/commands/x.md', '.claude/CLAUDE.md'])
+    expect(selectDocFiles(t, ['.claude']).files).toEqual([])
   })
 })
 
