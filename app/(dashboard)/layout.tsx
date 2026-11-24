@@ -136,6 +136,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {usageStatus && <AIUsageBanner status={usageStatus} />}
             <DeflectionStatusBanner offPlatforms={offPlatforms} />
             {children}
+            {/* Room for the floating Feedback pill, so it never covers the
+                last button or row on a page. */}
+            {isFeedbackWidgetEnabled() && <div aria-hidden className="h-16" />}
           </div>
         </main>
       </div>

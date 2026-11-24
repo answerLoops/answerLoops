@@ -207,8 +207,10 @@ export function FeedbackWidget() {
         >
           {count}
         </span>
-        <span className="text-sm font-semibold text-slate-900">Feedback</span>
-        <span className="h-7 w-px bg-slate-200" aria-hidden />
+        {/* On a phone the pill is just the count and the logo, so it covers as
+            little of the page as possible; the label above still says it all. */}
+        <span className="hidden text-sm font-semibold text-slate-900 sm:inline">Feedback</span>
+        <span className="hidden h-7 w-px bg-slate-200 sm:block" aria-hidden />
         <span className="relative flex h-8 w-8 items-center justify-center">
           <LogoMark size={24} />
           {hasNewUpdate && (
