@@ -4,9 +4,10 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { markAllTicketsSeenAction } from '@/lib/actions/notifications'
 import { VIEW_ALL_TICKETS_ID } from '@/components/dashboard/activity-ids'
 
-export function ActivityDisclosure({ headingId, total, viewAll, previewNote, snapshot, proof, children }: {
+export function ActivityDisclosure({ headingId, total, chips, viewAll, previewNote, snapshot, proof, children }: {
   headingId: string
   total: number
+  chips?: ReactNode
   viewAll: ReactNode
   previewNote?: string
   snapshot?: string
@@ -143,6 +144,7 @@ export function ActivityDisclosure({ headingId, total, viewAll, previewNote, sna
                 </button>
               </h2>
               <p className="mt-0.5 text-xs text-slate-500">Customers replied on these tickets. Opening one marks it seen.</p>
+              {chips}
             </div>
             {viewAll}
           </div>

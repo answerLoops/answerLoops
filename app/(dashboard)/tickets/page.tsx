@@ -3,6 +3,7 @@ import { TicketList } from '@/components/tickets/ticket-list'
 import { auth } from '@/auth'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
+import { platformLabel, SUPPORTED_PLATFORMS, isSourcePlatform } from '@/lib/tickets/platform-label'
 import { LockedCsvExportButton } from '@/components/billing/locked-csv-export-button'
 import type { TicketStatus, Priority, TicketCategory } from '@/types'
 import Link from 'next/link'
@@ -13,6 +14,7 @@ interface SearchParams {
   status?: string
   priority?: string
   category?: string
+  platform?: string
   autoDeflected?: string
   needsReview?: string
   pendingDraft?: string
@@ -49,6 +51,7 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
     status: searchParams.status as TicketStatus | undefined,
     priority: searchParams.priority as Priority | undefined,
     category: searchParams.category as TicketCategory | undefined,
+    platform: isSourcePlatform(searchParams.platform) ? searchParams.platform : undefined,
     autoDeflected: searchParams.autoDeflected === '1' || undefined,
     needsReview: searchParams.needsReview === '1' || undefined,
     pendingDraft: searchParams.pendingDraft === '1' || undefined,
@@ -66,6 +69,7 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
   if (filters.status) loadMoreParams.set('status', filters.status)
   if (filters.priority) loadMoreParams.set('priority', filters.priority)
   if (filters.category) loadMoreParams.set('category', filters.category)
+  if (filters.platform) loadMoreParams.set('platform', filters.platform)
   if (filters.autoDeflected) loadMoreParams.set('autoDeflected', '1')
   if (filters.needsReview) loadMoreParams.set('needsReview', '1')
   if (filters.pendingDraft) loadMoreParams.set('pendingDraft', '1')
@@ -79,7 +83,9 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
   if (filters.status) withoutCardFilters.set('status', filters.status)
   if (filters.priority) withoutCardFilters.set('priority', filters.priority)
   if (filters.category) withoutCardFilters.set('category', filters.category)
+  if (filters.platform) withoutCardFilters.set('platform', filters.platform)
   if (filters.sort) withoutCardFilters.set('sort', filters.sort)
+  if (filters.newActivity) withoutCardFilters.set('newActivity', '1')
   const clearCardFiltersQuery = withoutCardFilters.toString()
   const clearCardFiltersHref = clearCardFiltersQuery ? `/tickets?${clearCardFiltersQuery}` : '/tickets'
 
@@ -122,6 +128,14 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
             <option value="documentation">Documentation</option>
             <option value="how_to">How-to</option>
             <option value="general_question">General Question</option>
+          </select>
+          <select name="platform" defaultValue={filters.platform ?? ''} aria-label="Filter by channel" className="rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white">
+            <option value="">All channels</option>
+            {SUPPORTED_PLATFORMS.map((platform) => (
+              <option key={platform} value={platform}>
+                {platformLabel(platform)}
+              </option>
+            ))}
           </select>
           <select name="sort" defaultValue={filters.sort ?? ''} aria-label="Sort tickets" className="rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white">
             <option value="">Newest first</option>

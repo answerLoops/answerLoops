@@ -66,27 +66,32 @@ describe('markTicketSeen', () => {
 })
 
 describe('unseen activity queries', () => {
-  it('getUnseenActivityTickets filters by org and unseen condition, newest customer reply first', async () => {
-    const { calls, tq } = await withDb(() => [[...ticketRow()[0], '2026-10-02T00:00:00.123456Z|10:11:', 17]])
+  it('getUnseenActivityTickets filters by org and unseen condition, returning preview, total, channels, and snapshot', async () => {
+    const mockChannels = [{ platform: 'github', count: 12 }, { platform: 'discord', count: 5 }]
+    const { calls, tq } = await withDb(() => [[...ticketRow()[0], '2026-10-02T00:00:00.123456Z|10:11:', 17, mockChannels]])
     const out = await tq.getUnseenActivityTickets(3, 5)
     expect(out.tickets).toHaveLength(1)
     expect(out.total).toBe(17)
+    expect(out.channels).toEqual(mockChannels)
     expect(out.snapshot).toBe('2026-10-02T00:00:00.123456Z|10:11:')
     expect(calls).toHaveLength(1)
     const q = lower(calls[0].sql)
+    expect(q).toContain('"tickets"."org_id" = $2')
     expect(q).toContain('"tickets"."org_id" = $1')
     expect(q).toMatch(UNSEEN)
     expect(q).toContain('pg_current_snapshot()')
     expect(q).toContain('count(*) over ()')
-    expect(q).toMatch(/order by "tickets"\."last_customer_reply_at" desc, "tickets"\."id" desc limit \$2/)
-    expect(calls[0].params).toEqual([3, 5])
+    expect(q).toContain('json_agg')
+    expect(q).toMatch(/order by "tickets"."last_customer_reply_at" desc, "tickets"."id" desc limit \$3/)
+    expect(calls[0].params).toEqual([3, 3, 5])
   })
 
   it('getUnseenActivityTickets defaults to a limit of 8', async () => {
     const { calls, tq } = await withDb()
     await tq.getUnseenActivityTickets(3)
-    expect(calls[0].params).toEqual([3, 8])
+    expect(calls[0].params).toEqual([3, 3, 8])
   })
+
 })
 
 describe('getTickets activity options', () => {
@@ -128,6 +133,50 @@ describe('getTickets activity options', () => {
     const q = lower(calls[0].sql)
     expect(q).toMatch(/"tickets"\."created_at" < \$\d+/)
     expect(q).not.toMatch(/"tickets"\."last_activity_at" </)
+  })
+
+  it('platform filter adds source_platform condition for valid platforms', async () => {
+    const { calls, tq } = await withDb()
+    await tq.getTickets({ platform: 'github' }, 3)
+    const q = lower(calls[0].sql)
+    expect(q).toContain('"tickets"."org_id" = $1')
+    expect(q).toContain('"tickets"."source_platform" = $2')
+    expect(calls[0].params).toEqual([3, 'github'])
+  })
+
+  it('platform filter safely ignores unknown channel values', async () => {
+    const { calls, tq } = await withDb()
+    await tq.getTickets({ platform: 'unknown_channel' as never }, 3)
+    const q = lower(calls[0].sql)
+    expect(q).toContain('"tickets"."org_id" = $1')
+    expect(q).not.toContain('"tickets"."source_platform"')
+    expect(calls[0].params).toEqual([3])
+  })
+
+  it('combines platform with status, priority, category, newActivity, and pagination cursor', async () => {
+    const { calls, tq } = await withDb()
+    await tq.getTickets(
+      {
+        status: 'open',
+        priority: 'high',
+        category: 'bug',
+        platform: 'discord',
+        newActivity: true,
+        sort: 'activity',
+      },
+      3,
+      50,
+      { createdAt: '2026-10-02T00:00:00.000Z', id: 12 }
+    )
+    const q = lower(calls[0].sql)
+    expect(q).toContain('"tickets"."org_id" = $1')
+    expect(q).toContain('"tickets"."status" = $2')
+    expect(q).toContain('"tickets"."priority" = $3')
+    expect(q).toContain('"tickets"."category" = $4')
+    expect(q).toContain('"tickets"."source_platform" = $5')
+    expect(q).toMatch(UNSEEN)
+    expect(q).toMatch(/order by "tickets"\."last_activity_at" desc, "tickets"\."id" desc limit \$\d+/)
+    expect(calls[0].params).toContain('discord')
   })
 })
 

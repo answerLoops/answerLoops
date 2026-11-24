@@ -1,4 +1,5 @@
 import { eq, and, or, inArray, sql, desc, lt, ne, isNotNull, isNull, gt, getTableColumns, type SQL } from 'drizzle-orm'
+import { isSourcePlatform } from '@/lib/tickets/platform-label'
 import { ticketActivityMessage } from '@/lib/tickets/activity'
 import { getDb } from '../drizzle'
 import { lockTicketActivity } from '../locks'
@@ -17,7 +18,7 @@ import {
   csatRatings,
   kbArticles,
 } from '../schema'
-import type { Ticket, CreateTicketInput, TicketFilters, TicketReply, TicketReplyRole, TicketEvent, AIDraftSkipReason, SourcePlatform } from '@/types'
+import type { Ticket, CreateTicketInput, TicketFilters, TicketReply, TicketReplyRole, TicketEvent, AIDraftSkipReason, SourcePlatform, ChannelActivityCount } from '@/types'
 
 function toTicket(row: typeof tickets.$inferSelect): Ticket {
   return {
@@ -248,21 +249,47 @@ function unseenActivityThrough(cutoff: SQL | string): SQL {
   return and(unseenActivityCondition, sql`${tickets.lastCustomerReplyAt} <= ${cutoff}::timestamptz`)!
 }
 
-/** The preview, total and visibility boundary come from the same statement snapshot. */
-export async function getUnseenActivityTickets(orgId: number, limit = 8) {
+/** The preview, total, channels, and visibility boundary come from the same statement snapshot. */
+export async function getUnseenActivityTickets(orgId: number, limit = 8): Promise<{
+  tickets: Ticket[]
+  total: number
+  channels: ChannelActivityCount[]
+  snapshot?: string
+}> {
   const cutoff = sql`statement_timestamp()`
+  const condition = unseenActivityThrough(cutoff)
   const rows = await getDb()
     .select({
       ...getTableColumns(tickets),
       snapshot: sql<string>`to_char(${cutoff} AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')
         || '|' || pg_current_snapshot()::text`,
       total: sql<number>`count(*) OVER ()::int`,
+      channels: sql<ChannelActivityCount[]>`coalesce(
+        (
+          SELECT json_agg(
+            json_build_object('platform', c.source_platform, 'count', c.n)
+            ORDER BY c.n DESC, c.source_platform ASC
+          )
+          FROM (
+            SELECT ${tickets.sourcePlatform}, count(*)::int AS n
+            FROM ${tickets}
+            WHERE ${eq(tickets.orgId, orgId)} AND ${condition}
+            GROUP BY ${tickets.sourcePlatform}
+          ) c
+        ),
+        '[]'::json
+      )`,
     })
     .from(tickets)
-    .where(and(eq(tickets.orgId, orgId), unseenActivityThrough(cutoff)))
+    .where(and(eq(tickets.orgId, orgId), condition))
     .orderBy(desc(tickets.lastCustomerReplyAt), desc(tickets.id))
     .limit(limit)
-  return { tickets: rows.map(toTicket), total: rows[0]?.total ?? 0, snapshot: rows[0]?.snapshot }
+  return {
+    tickets: rows.map(toTicket),
+    total: rows[0]?.total ?? 0,
+    channels: (rows[0]?.channels ?? []) as ChannelActivityCount[],
+    snapshot: rows[0]?.snapshot,
+  }
 }
 
 /** Records that something happened on the conversation, without marking it as customer activity. */
@@ -331,6 +358,7 @@ export async function getTickets(
   if (filters.status) conditions.push(eq(tickets.status, filters.status))
   if (filters.priority) conditions.push(eq(tickets.priority, filters.priority))
   if (filters.category) conditions.push(eq(tickets.category, filters.category))
+  if (filters.platform && isSourcePlatform(filters.platform)) conditions.push(eq(tickets.sourcePlatform, filters.platform))
   for (const filter of Object.keys(ticketCardConditions) as TicketCardFilter[]) {
     if (filters[filter]) conditions.push(ticketCardConditions[filter])
   }
