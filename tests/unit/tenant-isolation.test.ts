@@ -79,8 +79,8 @@ describe('GitHub repo API routes enforce session org', () => {
 
   it('DELETE /api/github/repos/[id] authenticates, awaits, and scopes the delete', () => {
     const src = read('app/api/github/repos/[id]/route.ts')
-    expect(src).toContain('await requireOrgAccess()')
-    expect(src).toContain('await removeRepo(Number(id), orgId)')
+    expect(src).toContain("await requireOrgAccess(['owner', 'admin'])")
+    expect(src).toContain('await removeRepo(repoId, orgId)')
   })
 
   it('repo connect/remove routes authenticate and pass the verified org', () => {
@@ -91,8 +91,8 @@ describe('GitHub repo API routes enforce session org', () => {
     expect(callbackSrc).toMatch(/await addRepo\([^)]*orgId\)/)
 
     const removeSrc = read('app/api/github/repos/[id]/route.ts')
-    expect(removeSrc).toContain('await requireOrgAccess()')
-    expect(removeSrc).toMatch(/await removeRepo\(Number\(id\), orgId\)/)
+    expect(removeSrc).toContain("requireOrgAccess(['owner', 'admin'])")
+    expect(removeSrc).toMatch(/await removeRepo\(repoId, orgId\)/)
   })
 
   it('GitHub webhook resolves org from the repo row, not a re-fetch of org 1', () => {

@@ -69,6 +69,22 @@ describe('GitHubIntegrationCard — Automatic Deflections row on small screens',
   })
 })
 
+describe('GitHubIntegrationCard — removing a repo', () => {
+  it('shows the reason when removing is refused', async () => {
+    route([repo()])
+    const base = fetchMock.getMockImplementation()!
+    fetchMock.mockImplementation((url: string, init?: RequestInit) =>
+      url === '/api/github/repos/4' && init?.method === 'DELETE'
+        ? json({ error: 'You do not have permission to do that.' }, false)
+        : base(url, init)
+    )
+    render(<GitHubIntegrationCard />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove' }))
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toContain('You do not have permission to do that.')
+  })
+})
+
 describe('GitHubIntegrationCard — knowledge base', () => {
   it('cancel leaves knowledge base off', async () => {
     route([repo()])
