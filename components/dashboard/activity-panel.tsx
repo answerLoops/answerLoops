@@ -3,7 +3,7 @@ import { ActivityDisclosure } from '@/components/dashboard/activity-disclosure'
 import { LocalDate } from '@/components/ui/local-date'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 import { platformLabel } from '@/lib/tickets/platform-label'
-import type { Ticket } from '@/types'
+import type { ChannelActivityCount, Ticket } from '@/types'
 
 export const ACTIVITY_PREVIEW_LIMIT = 5
 const ACTIVITY_HEADING_ID = 'activity-heading'
@@ -19,9 +19,10 @@ function title(ticket: Ticket): string {
  * recent first. Shows nothing when there is nothing new, so a quiet workspace
  * has no empty box on its dashboard.
  */
-export function ActivityPanel({ tickets, total, snapshot, proof }: {
+export function ActivityPanel({ tickets, total, channels = [], snapshot, proof }: {
   tickets: Ticket[]
   total: number
+  channels?: ChannelActivityCount[]
   snapshot?: string
   proof?: string
 }) {
@@ -30,10 +31,60 @@ export function ActivityPanel({ tickets, total, snapshot, proof }: {
       View all {total} →
     </Link>
   )
+
+  let chips: React.ReactNode = null
+  if (channels.length > 1) {
+    const hasOther = channels.length > 4
+    const visible = hasOther ? channels.slice(0, 3) : channels.slice(0, 4)
+    const otherCount = hasOther ? channels.slice(3).reduce((sum, c) => sum + c.count, 0) : 0
+
+    const chipList = [
+      ...visible.map((c) => ({
+        key: c.platform,
+        label: platformLabel(c.platform),
+        count: c.count,
+        href: `/tickets?newActivity=1&sort=activity&platform=${encodeURIComponent(c.platform)}`,
+      })),
+      ...(hasOther
+        ? [
+            {
+              key: 'other',
+              label: 'Other',
+              count: otherCount,
+              href: '/tickets?newActivity=1&sort=activity',
+            },
+          ]
+        : []),
+    ]
+
+    chips = (
+      <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        {chipList.map(({ key, label, count, href }) => {
+          const displayCount = count > 99 ? '99+' : count
+          const accessibleName = `${label}, ${count} ${count === 1 ? 'ticket' : 'tickets'} with new replies`
+
+          return (
+            <Link
+              key={key}
+              href={href}
+              prefetch={false}
+              aria-label={accessibleName}
+              className="inline-flex min-h-7 items-center gap-1 rounded-full border border-blue-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+            >
+              <span>{label}</span>
+              <span>{displayCount}</span>
+            </Link>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <ActivityDisclosure
       headingId={ACTIVITY_HEADING_ID}
       total={tickets.length ? total : 0}
+      chips={chips}
       viewAll={viewAll}
       previewNote={total > ACTIVITY_PREVIEW_LIMIT ? `Showing the latest ${ACTIVITY_PREVIEW_LIMIT} of ${total}` : undefined}
       snapshot={snapshot}

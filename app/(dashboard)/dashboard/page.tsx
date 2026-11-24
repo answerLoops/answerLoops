@@ -63,6 +63,7 @@ export default async function DashboardPage() {
       <ActivityPanel
         tickets={activity.tickets}
         total={activity.total}
+        channels={activity.channels}
         snapshot={activity.snapshot}
         proof={session?.user?.id && activity.snapshot
           ? signActivitySnapshot(activity.snapshot, orgId, Number(session.user.id))

@@ -379,10 +379,16 @@ export interface FeedbackSummary {
   staffVote: FeedbackVote | null
 }
 
+export interface ChannelActivityCount {
+  platform: SourcePlatform
+  count: number
+}
+
 export interface TicketFilters {
   status?: TicketStatus
   priority?: Priority
   category?: TicketCategory
+  platform?: SourcePlatform
   /** Tickets with an AI assessment marked as auto-deflected. */
   autoDeflected?: boolean
   /** Open tickets whose AI assessment requires human review. */

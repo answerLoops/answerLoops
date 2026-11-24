@@ -291,3 +291,207 @@ describe('ActivityPanel', () => {
     expect(row.textContent).toContain('A customer on Slack')
   })
 })
+
+describe('activity channel chips', () => {
+  it('shows no chips when activity comes from only one channel', () => {
+    render(
+      <ActivityPanel
+        tickets={[ticket({ source_platform: 'github' })]}
+        total={5}
+        channels={[{ platform: 'github', count: 5 }]}
+      />
+    )
+    expect(screen.queryByRole('link', { name: /GitHub/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Other/ })).toBeNull()
+  })
+
+  it('shows no chips when channels array is empty', () => {
+    render(<ActivityPanel tickets={[ticket({})]} total={1} channels={[]} />)
+    expect(screen.queryByRole('link', { name: /Other/ })).toBeNull()
+  })
+
+  it('displays channel chips while the panel is collapsed', () => {
+    render(
+      <ActivityPanel
+        tickets={[ticket({})]}
+        total={11}
+        channels={[
+          { platform: 'github', count: 8 },
+          { platform: 'discord', count: 3 },
+        ]}
+      />
+    )
+    const toggle = screen.getByRole('button', { name: /^Activity,/ })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    const githubChip = screen.getByRole('link', { name: 'GitHub, 8 tickets with new replies' })
+    const discordChip = screen.getByRole('link', { name: 'Discord, 3 tickets with new replies' })
+
+    expect(githubChip).toBeVisible()
+    expect(discordChip).toBeVisible()
+    expect(githubChip).toHaveAttribute('href', '/tickets?newActivity=1&sort=activity&platform=github')
+    expect(discordChip).toHaveAttribute('href', '/tickets?newActivity=1&sort=activity&platform=discord')
+  })
+
+  it('renders chips in the deterministic order supplied by the query', () => {
+    render(
+      <ActivityPanel
+        tickets={[ticket({})]}
+        total={12}
+        channels={[
+          { platform: 'github', count: 6 },
+          { platform: 'discord', count: 3 },
+          { platform: 'slack', count: 3 },
+        ]}
+      />
+    )
+    const links = screen.getAllByRole('link').filter((l) => l.getAttribute('href')?.includes('platform='))
+    expect(links).toHaveLength(3)
+    expect(links[0]).toHaveAttribute('href', '/tickets?newActivity=1&sort=activity&platform=github')
+    expect(links[1]).toHaveAttribute('href', '/tickets?newActivity=1&sort=activity&platform=discord')
+    expect(links[2]).toHaveAttribute('href', '/tickets?newActivity=1&sort=activity&platform=slack')
+  })
+
+  it('caps visible count at 99+ while keeping exact count in accessible name', () => {
+    render(
+      <ActivityPanel
+        tickets={[ticket({})]}
+        total={150}
+        channels={[
+          { platform: 'github', count: 120 },
+          { platform: 'email', count: 30 },
+        ]}
+      />
+    )
+    const githubChip = screen.getByRole('link', { name: 'GitHub, 120 tickets with new replies' })
+    expect(githubChip.textContent).toContain('GitHub')
+    expect(githubChip.textContent).toContain('99+')
+    expect(githubChip.textContent).not.toContain('120')
+
+    const emailChip = screen.getByRole('link', { name: 'Email, 30 tickets with new replies' })
+    expect(emailChip.textContent).toContain('Email')
+    expect(emailChip.textContent).toContain('30')
+  })
+
+  it('formats singular ticket properly in accessible name', () => {
+    render(
+      <ActivityPanel
+        tickets={[ticket({})]}
+        total={3}
+        channels={[
+          { platform: 'github', count: 2 },
+          { platform: 'telegram', count: 1 },
+        ]}
+      />
+    )
+    expect(screen.getByRole('link', { name: 'Telegram, 1 ticket with new replies' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'GitHub, 2 tickets with new replies' })).toBeVisible()
+  })
+
+  it('shows at most 4 chips, collapsing channels past the top 3 into an Other chip', () => {
+    render(
+      <ActivityPanel
+        tickets={[ticket({})]}
+        total={15}
+        channels={[
+          { platform: 'github', count: 6 },
+          { platform: 'discord', count: 4 },
+          { platform: 'email', count: 3 },
+          { platform: 'slack', count: 1 },
+          { platform: 'telegram', count: 1 },
+        ]}
+      />
+    )
+    const githubChip = screen.getByRole('link', { name: 'GitHub, 6 tickets with new replies' })
+    const discordChip = screen.getByRole('link', { name: 'Discord, 4 tickets with new replies' })
+    const emailChip = screen.getByRole('link', { name: 'Email, 3 tickets with new replies' })
+    // slack and telegram combined into Other 2
+    const otherChip = screen.getByRole('link', { name: 'Other, 2 tickets with new replies' })
+
+    expect(githubChip).toBeVisible()
+    expect(discordChip).toBeVisible()
+    expect(emailChip).toBeVisible()
+    expect(otherChip).toBeVisible()
+    expect(otherChip).toHaveAttribute('href', '/tickets?newActivity=1&sort=activity')
+    expect(otherChip.textContent).toContain('Other')
+    expect(otherChip.textContent).toContain('2')
+
+    // Slack and Telegram should not have individual chips
+    expect(screen.queryByRole('link', { name: /Slack/ })).toBeNull()
+    expect(screen.queryByRole('link', { name: /Telegram/ })).toBeNull()
+  })
+
+  it('caps Other chip visible count at 99+ while keeping exact count in accessible name', () => {
+    render(
+      <ActivityPanel
+        tickets={[ticket({})]}
+        total={360}
+        channels={[
+          { platform: 'github', count: 100 },
+          { platform: 'slack', count: 80 },
+          { platform: 'telegram', count: 70 },
+          { platform: 'discord', count: 60 },
+          { platform: 'email', count: 50 },
+        ]}
+      />
+    )
+    // Other count = 60 + 50 = 110
+    const otherChip = screen.getByRole('link', { name: 'Other, 110 tickets with new replies' })
+    expect(otherChip).toHaveAttribute('href', '/tickets?newActivity=1&sort=activity')
+    expect(otherChip.textContent).toContain('Other')
+    expect(otherChip.textContent).toContain('99+')
+    expect(otherChip.textContent).not.toContain('110')
+  })
+
+  it('renders exact 4 channels without an Other chip when count is 4', () => {
+    render(
+      <ActivityPanel
+        tickets={[ticket({})]}
+        total={10}
+        channels={[
+          { platform: 'github', count: 4 },
+          { platform: 'discord', count: 3 },
+          { platform: 'email', count: 2 },
+          { platform: 'slack', count: 1 },
+        ]}
+      />
+    )
+    expect(screen.getByRole('link', { name: 'GitHub, 4 tickets with new replies' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Discord, 3 tickets with new replies' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Email, 2 tickets with new replies' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Slack, 1 ticket with new replies' })).toBeVisible()
+    expect(screen.queryByRole('link', { name: /Other/ })).toBeNull()
+  })
+
+  it('keeps chips accessible and does not interfere with toggling the preview', async () => {
+    const user = userEvent.setup()
+    render(
+      <ActivityPanel
+        tickets={[ticket({ id: 1, org_ticket_number: 101, ai_summary: 'Test summary' })]}
+        total={5}
+        channels={[
+          { platform: 'github', count: 3 },
+          { platform: 'slack', count: 2 },
+        ]}
+      />
+    )
+    const toggle = screen.getByRole('button', { name: /^Activity,/ })
+    const preview = document.getElementById(toggle.getAttribute('aria-controls')!)
+    expect(preview).toHaveAttribute('hidden')
+
+    // Chips are visible before expanding
+    expect(screen.getByRole('link', { name: 'GitHub, 3 tickets with new replies' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Slack, 2 tickets with new replies' })).toBeVisible()
+
+    // Expand preview
+    await user.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(preview).not.toHaveAttribute('hidden')
+    expect(screen.getByText('Test summary')).toBeVisible()
+
+    // Chips are still visible after expanding
+    expect(screen.getByRole('link', { name: 'GitHub, 3 tickets with new replies' })).toBeVisible()
+    expect(screen.getByRole('link', { name: 'Slack, 2 tickets with new replies' })).toBeVisible()
+  })
+
+})

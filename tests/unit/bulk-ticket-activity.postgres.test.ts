@@ -403,4 +403,97 @@ describe.skipIf(!url)('bulk ticket activity on PostgreSQL', () => {
     expect(await client`SELECT id FROM ticket_events`).toEqual([])
     expect(await client`SELECT id FROM notifications`).toEqual([])
   }, 12_000)
+  describe('channel activity breakdown on PostgreSQL', () => {
+    it('isolates channels by organization and orders by count desc then platform asc', async () => {
+      // Org 1: 3 on github, 2 on discord, 2 on slack, 1 seen on email (should not be counted)
+      await client`INSERT INTO tickets (org_id, org_ticket_number, source_platform, last_customer_reply_at, last_seen_at, status, content) VALUES
+        (1, 1, 'github', now(), null, 'open', 'gh1'),
+        (1, 2, 'github', now(), null, 'open', 'gh2'),
+        (1, 3, 'github', now(), null, 'open', 'gh3'),
+        (1, 4, 'discord', now(), null, 'open', 'dc1'),
+        (1, 5, 'discord', now(), null, 'open', 'dc2'),
+        (1, 6, 'slack', now(), null, 'open', 'sl1'),
+        (1, 7, 'slack', now(), null, 'open', 'sl2'),
+        (1, 8, 'email', now() - interval '1 hour', now(), 'open', 'em1')`
+
+      // Org 2: overlapping channels (1 github, 5 telegram)
+      await client`INSERT INTO tickets (org_id, org_ticket_number, source_platform, last_customer_reply_at, last_seen_at, status, content) VALUES
+        (2, 10, 'github', now(), null, 'open', 'org2 gh'),
+        (2, 11, 'telegram', now(), null, 'open', 'org2 tg1'),
+        (2, 12, 'telegram', now(), null, 'open', 'org2 tg2'),
+        (2, 13, 'telegram', now(), null, 'open', 'org2 tg3'),
+        (2, 14, 'telegram', now(), null, 'open', 'org2 tg4'),
+        (2, 15, 'telegram', now(), null, 'open', 'org2 tg5')`
+
+      const org1Activity = await getUnseenActivityTickets(1)
+      expect(org1Activity.total).toBe(7)
+      expect(org1Activity.channels).toEqual([
+        { platform: 'github', count: 3 },
+        { platform: 'discord', count: 2 },
+        { platform: 'slack', count: 2 },
+      ])
+      expect(org1Activity.channels.reduce((sum, c) => sum + c.count, 0)).toBe(org1Activity.total)
+
+      const org2Activity = await getUnseenActivityTickets(2)
+      expect(org2Activity.total).toBe(6)
+      expect(org2Activity.channels).toEqual([
+        { platform: 'telegram', count: 5 },
+        { platform: 'github', count: 1 },
+      ])
+      expect(org2Activity.channels.reduce((sum, c) => sum + c.count, 0)).toBe(org2Activity.total)
+
+      const ghTickets = await getTickets({ platform: 'github' }, 1)
+      expect(ghTickets).toHaveLength(3)
+      expect(ghTickets.every((t) => t.source_platform === 'github')).toBe(true)
+
+      const unknownTickets = await getTickets({ platform: 'invalid_platform' as never }, 1)
+      expect(unknownTickets).toHaveLength(8)
+    })
+
+    it('returns preview, total, snapshot, and channel breakdown consistently from a single statement under concurrent writes', async () => {
+      // Seed 10 tickets across github and discord
+      for (let i = 1; i <= 10; i++) {
+        const platform = i <= 6 ? 'github' : 'discord'
+        await client`INSERT INTO tickets (org_id, org_ticket_number, source_platform, last_customer_reply_at, status, content)
+          VALUES (1, ${i}, ${platform}, now() - interval '10 seconds', 'open', 'Message')`
+      }
+
+      // Initial read: 6 github, 4 discord, total = 10
+      const initial = await getUnseenActivityTickets(1, 5)
+      expect(initial.total).toBe(10)
+      expect(initial.tickets).toHaveLength(5)
+      expect(initial.channels).toEqual([
+        { platform: 'github', count: 6 },
+        { platform: 'discord', count: 4 },
+      ])
+      expect(initial.channels.reduce((sum, c) => sum + c.count, 0)).toBe(initial.total)
+
+      // Concurrently insert replies while reading activity in a tight loop
+      const writer = (async () => {
+        for (let i = 11; i <= 25; i++) {
+          const platform = i % 2 === 0 ? 'slack' : 'email'
+          await client`INSERT INTO tickets (org_id, org_ticket_number, source_platform, last_customer_reply_at, status, content)
+            VALUES (1, ${i}, ${platform}, clock_timestamp(), 'open', 'Concurrent reply')`
+          await delay(2)
+        }
+      })()
+
+      // Read concurrently multiple times; each read must have sum(channels) === total
+      for (let r = 0; r < 10; r++) {
+        const snap = await getUnseenActivityTickets(1, 5)
+        const channelSum = snap.channels.reduce((sum, c) => sum + c.count, 0)
+        expect(snap.total).toBe(channelSum)
+        expect(snap.snapshot).toBeDefined()
+        await delay(3)
+      }
+
+      await writer
+      const finalActivity = await getUnseenActivityTickets(1, 5)
+      const finalSum = finalActivity.channels.reduce((sum, c) => sum + c.count, 0)
+      expect(finalActivity.total).toBe(25)
+      expect(finalSum).toBe(25)
+      expect(finalActivity.channels.find((c) => c.platform === 'github')?.count).toBe(6)
+      expect(finalActivity.channels.find((c) => c.platform === 'discord')?.count).toBe(4)
+    })
+  })
 })
