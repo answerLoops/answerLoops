@@ -17,7 +17,7 @@ import {
   csatRatings,
   kbArticles,
 } from '../schema'
-import type { Ticket, CreateTicketInput, TicketFilters, TicketReply, TicketReplyRole, TicketEvent, AIDraftSkipReason } from '@/types'
+import type { Ticket, CreateTicketInput, TicketFilters, TicketReply, TicketReplyRole, TicketEvent, AIDraftSkipReason, SourcePlatform } from '@/types'
 
 function toTicket(row: typeof tickets.$inferSelect): Ticket {
   return {
@@ -450,11 +450,13 @@ export async function getTicketBySourceMessageInChannel(
 // silently missed every "first reply to a top-level message" — the most
 // common case — even on the webhook path, which otherwise receives every
 // reply correctly.
-export async function getTicketByThreadId(threadId: string, orgId: number): Promise<Ticket | null> {
+export async function getTicketByThreadId(threadId: string, orgId: number, platform: SourcePlatform): Promise<Ticket | null> {
   const db = getDb()
   // A reply to a message that was itself appended to a ticket (a reply to a
   // reply) carries that message's id, which only exists on the stored thread
-  // message, so that is searched too. Scoped by org through the ticket row.
+  // message, so that is searched too. Scoped by org and by channel through the
+  // ticket row: thread ids are only unique within one channel (a Circle post
+  // and a Discourse topic can both be "55").
   const appendedTo = db
     .select({ ticketId: ticketReplies.ticketId })
     .from(ticketReplies)
@@ -468,7 +470,8 @@ export async function getTicketByThreadId(threadId: string, orgId: number): Prom
         eq(tickets.sourceMessageId, threadId),
         inArray(tickets.id, appendedTo)
       ),
-      eq(tickets.orgId, orgId)
+      eq(tickets.orgId, orgId),
+      eq(tickets.sourcePlatform, platform)
     ))
     .orderBy(desc(tickets.createdAt))
     .limit(1)
