@@ -141,8 +141,12 @@ export async function POST(req: NextRequest) {
   if (!content.body || (content.body.length < 10 && !isTrackedReply)) return Response.json({ ok: true })
   if (!content.authorId || content.authorId === '0') return Response.json({ ok: true })
 
+  // Watched spaces decide which posts open tickets. A comment on a post we
+  // already track belongs to that conversation (its post passed this check
+  // when the ticket was made), so it is kept even when the comment's payload
+  // doesn't say which space it is in.
   const watched = parseChannelIds(integration)
-  if (watched.length > 0 && !watched.includes(content.spaceId)) return Response.json({ ok: true })
+  if (watched.length > 0 && !isTrackedReply && !watched.includes(content.spaceId)) return Response.json({ ok: true })
 
   const communityUrl = integration.team_id ? integration.team_id.replace(/\/+$/, '') : null
   const sourceUrl = content.url ?? (communityUrl ? `${communityUrl}/posts/${content.postId}` : null)
