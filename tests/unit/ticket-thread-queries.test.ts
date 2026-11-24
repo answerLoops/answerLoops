@@ -38,7 +38,7 @@ const ticketRow = (status: string) => [
 describe('getTicketByThreadId reaches a ticket through a message stored in its thread', () => {
   it('ORs the ticket columns with a subquery over stored thread messages, in one org-scoped query', async () => {
     const { calls, queries } = await withDb()
-    await queries.getTicketByThreadId('telegram:-100:2', 3)
+    await queries.getTicketByThreadId('telegram:-100:2', 3, 'telegram')
 
     expect(calls).toHaveLength(1)
     const sql = calls[0].sql.toLowerCase()
@@ -149,7 +149,7 @@ describe('recordAnswerLoopsReply', () => {
 
   it('is found by getTicketByThreadId, so a reply to the bot\'s message reaches the ticket', async () => {
     const { calls, queries } = await withDb()
-    await queries.getTicketByThreadId('posted-1', 3)
+    await queries.getTicketByThreadId('posted-1', 3, 'telegram')
     expect(calls[0].sql.toLowerCase()).toContain('from "ticket_replies" where "ticket_replies"."source_message_id"')
   })
 })
