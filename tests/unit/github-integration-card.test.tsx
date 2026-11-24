@@ -89,17 +89,18 @@ describe('GitHubIntegrationCard — knowledge base', () => {
   it('cancel leaves knowledge base off', async () => {
     route([repo()])
     render(<GitHubIntegrationCard />)
-    await userEvent.click(await screen.findByRole('checkbox', { name: /Knowledge Base/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Set up Knowledge Base/ }))
     expect(await screen.findByRole('button', { name: 'Save and sync' })).toBeTruthy()
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(screen.queryByRole('button', { name: 'Save and sync' })).toBeNull()
+    expect(screen.getByRole('button', { name: /Set up Knowledge Base/ })).toBeTruthy()
     expect(posts('/api/github/repo-settings')).toHaveLength(0)
   })
 
   it('saving the picker switches the repo on and starts a sync', async () => {
     route([repo()])
     render(<GitHubIntegrationCard />)
-    await userEvent.click(await screen.findByRole('checkbox', { name: /Knowledge Base/ }))
+    await userEvent.click(await screen.findByRole('button', { name: /Set up Knowledge Base/ }))
     await userEvent.click(await screen.findByRole('button', { name: 'Save and sync' }))
     await waitFor(() => expect(posts('/api/github/sync-kb')).toHaveLength(1))
     expect(JSON.parse(posts('/api/github/repo-settings')[0][1].body)).toEqual({ repoId: 4, kbEnabled: 1, kbPaths: ['docs'] })
@@ -155,23 +156,25 @@ describe('GitHubIntegrationCard — knowledge base', () => {
 
   it('locks the Knowledge Base box while folders are being saved', async () => {
     let release!: () => void
-    route([repo()], { settings: () => new Promise((r) => { release = () => r({ ok: true, json: async () => ({ ok: true }) }) }) })
+    route([repo({ kb_enabled: 1, kb_paths: ['docs'] })], { settings: () => new Promise((r) => { release = () => r({ ok: true, json: async () => ({ ok: true }) }) }) })
     render(<GitHubIntegrationCard />)
     const box = (await screen.findByRole('checkbox', { name: /Knowledge Base/ })) as HTMLInputElement
-    await userEvent.click(box)
+    expect(box.checked).toBe(true)
+    await userEvent.click(await screen.findByRole('button', { name: 'Change folders' }))
     await userEvent.click(await screen.findByRole('button', { name: /Save and sync/ }))
     await waitFor(() => expect(box.disabled).toBe(true))
     release()
   })
 
-  it('does not post when unticking a repo that was never switched on', async () => {
+  it('shows no checkbox and no "Off" label until Knowledge Base is on', async () => {
     route([repo()])
     render(<GitHubIntegrationCard />)
-    const box = await screen.findByRole('checkbox', { name: /Knowledge Base/ })
-    await userEvent.click(box)
+    await screen.findByRole('button', { name: /Set up Knowledge Base/ })
+    expect(screen.queryByRole('checkbox', { name: /Knowledge Base/ })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: /Set up Knowledge Base/ }))
     await screen.findByRole('button', { name: 'Save and sync' })
-    await userEvent.click(box)
-    expect(screen.queryByRole('button', { name: 'Save and sync' })).toBeNull()
+    expect(screen.queryByRole('checkbox', { name: /Knowledge Base/ })).toBeNull()
+    expect(screen.queryByText('Choosing folders')).toBeNull()
     expect(posts('/api/github/repo-settings')).toHaveLength(0)
   })
 
@@ -182,6 +185,23 @@ describe('GitHubIntegrationCard — knowledge base', () => {
     await waitFor(() => expect(document.activeElement?.textContent).toBe('Docs folders'))
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     await waitFor(() => expect(document.activeElement?.textContent).toBe('Change folders'))
+  })
+
+  it('returns focus to Choose folders when the picker is cancelled on a repo that is off', async () => {
+    route([repo()])
+    render(<GitHubIntegrationCard />)
+    await userEvent.click(await screen.findByRole('button', { name: /Set up Knowledge Base/ }))
+    await screen.findByRole('button', { name: 'Save and sync' })
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(document.activeElement?.textContent).toBe('Choose folders'))
+  })
+
+  it('hides Choose folders while the picker is open', async () => {
+    route([repo()])
+    render(<GitHubIntegrationCard />)
+    await userEvent.click(await screen.findByRole('button', { name: /Set up Knowledge Base/ }))
+    await screen.findByRole('button', { name: 'Save and sync' })
+    expect(screen.queryByRole('button', { name: /Set up Knowledge Base/ })).toBeNull()
   })
 
   it('Sync now sends a POST and shows the result', async () => {

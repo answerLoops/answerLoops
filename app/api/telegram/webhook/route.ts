@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
 
   // A short reply ("thanks, that worked") belongs to a conversation we already
   // track; only a message that would open a new ticket must be long enough.
-  const isTrackedReply = threadId ? !!(await getTicketByThreadId(threadId, orgId)) : false
+  const isTrackedReply = threadId ? !!(await getTicketByThreadId(threadId, orgId, 'telegram')) : false
   if (!isTrackedReply && message.text.trim().length < 10) return Response.json({ ok: true })
 
   // Telegram message ids repeat across chats, so new tickets are keyed by

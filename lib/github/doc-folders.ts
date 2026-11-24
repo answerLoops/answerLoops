@@ -51,6 +51,29 @@ const MAX_CHOSEN_FOLDERS = 50
 const MAX_FOLDER_PATH_LENGTH = 300
 
 const EXCLUDE_PATHS = ['node_modules', 'vendor', '.github', 'test', 'tests', '__tests__', 'spec']
+
+/**
+ * Folders nobody wants in a knowledge base: hidden folders (`.claude`,
+ * `.github`, `.cursor`, ...), dependencies, build output and test folders.
+ * They are left out of the picker, refused when saved, and skipped by a sync
+ * even inside a chosen folder, so an agent-instruction or CI file is never
+ * uploaded by accident.
+ */
+const NEVER_SYNC_SEGMENTS = new Set([
+  'node_modules', 'vendor', 'dist', 'build', 'out', 'coverage', 'target', 'bower_components',
+  'test', 'tests', '__tests__', 'spec', '__snapshots__', '__mocks__', '__pycache__',
+])
+
+export function isExcludedFolder(path: string): boolean {
+  if (path === ROOT_FOLDER) return false
+  return path.split('/').some((seg) => seg.startsWith('.') || NEVER_SYNC_SEGMENTS.has(seg.toLowerCase()))
+}
+
+/** True when the file sits inside a hidden or excluded folder. */
+function inExcludedFolder(filePath: string): boolean {
+  const slash = filePath.lastIndexOf('/')
+  return slash !== -1 && isExcludedFolder(filePath.slice(0, slash))
+}
 const EXCLUDE_FILES = ['CHANGELOG.md', 'CHANGELOG.mdx', 'LICENSE.md', 'CODE_OF_CONDUCT.md']
 
 export function isDocFile(path: string, opts: { allowTxt: boolean }): boolean {
@@ -78,7 +101,11 @@ function inFolder(path: string, folder: string): boolean {
   return folder === ROOT_FOLDER ? !path.includes('/') : path.startsWith(`${folder}/`)
 }
 
-/** Every folder in the tree with its docs file count: the root first, then by path. */
+/**
+ * The folders worth offering, with their docs file counts: the root first,
+ * then by path. Hidden and excluded folders, and folders with no docs files
+ * anywhere inside, are left out.
+ */
 export function listDocFolders(entries: TreeEntry[]): DocFolder[] {
   const counts = new Map<string, number>([[ROOT_FOLDER, 0]])
   const ensure = (dir: string) => {
@@ -91,7 +118,7 @@ export function listDocFolders(entries: TreeEntry[]): DocFolder[] {
     if (e.type !== 'blob') continue
     const parts = e.path.split('/')
     for (let k = 1; k < parts.length; k++) ensure(parts.slice(0, k).join('/'))
-    if (!isDocFile(e.path, { allowTxt: true })) continue
+    if (!isDocFile(e.path, { allowTxt: true }) || inExcludedFolder(e.path)) continue
     if (parts.length === 1) {
       counts.set(ROOT_FOLDER, counts.get(ROOT_FOLDER)! + 1)
       continue
@@ -102,8 +129,9 @@ export function listDocFolders(entries: TreeEntry[]): DocFolder[] {
     }
   }
   return [...counts.entries()]
+    .filter(([path, docFiles]) => docFiles > 0 && !isExcludedFolder(path))
     .sort(([a], [b]) => (a === ROOT_FOLDER ? -1 : b === ROOT_FOLDER ? 1 : a < b ? -1 : a > b ? 1 : 0))
-    .map(([path, docFiles]) => ({ path, docFiles, selectable: docFiles > 0 }))
+    .map(([path, docFiles]) => ({ path, docFiles, selectable: true }))
 }
 
 export function defaultSelection(folders: DocFolder[]): string[] {
@@ -139,6 +167,7 @@ export function normalizeDocPaths(input: unknown): string[] | null {
     }
     const path = trimmed.replace(/^(\.\/)+/, '').replace(/^\/+|\/+$/g, '')
     if (!path || path.split('/').some((seg) => seg === '..' || seg === '.' || seg === '')) return null
+    if (isExcludedFolder(path)) return null
     cleaned.push(path)
   }
   const unique = [...new Set(cleaned)]
@@ -164,7 +193,7 @@ export function selectDocFiles(entries: TreeEntry[], kbPaths: string[] | null): 
   }
   const missingFolders = kbPaths.filter((p) => p !== ROOT_FOLDER && !dirs.has(p))
   const files = blobs
-    .filter((e) => isDocFile(e.path, { allowTxt: true }) && kbPaths.some((folder) => inFolder(e.path, folder)))
+    .filter((e) => isDocFile(e.path, { allowTxt: true }) && !inExcludedFolder(e.path) && kbPaths.some((folder) => inFolder(e.path, folder)))
     .sort(byPath)
   return { files, missingFolders }
 }

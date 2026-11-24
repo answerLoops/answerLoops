@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
   // A short reply ("thanks, that worked") in a topic we already track is part
   // of the conversation; only a post that would open a new ticket must be
   // long enough to be a question.
-  const isTrackedReply = !!(await getTicketByThreadId(String(post.topic_id), integration.org_id))
+  const isTrackedReply = !!(await getTicketByThreadId(String(post.topic_id), integration.org_id, 'discourse'))
   if (content.length < 10 && !isTrackedReply) return Response.json({ ok: true })
 
   const siteUrl = integration.team_id ?? instance.replace(/\/+$/, '')

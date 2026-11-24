@@ -165,14 +165,14 @@ export async function POST(req: NextRequest) {
     // A comment on a closed issue still belongs to the conversation: it joins
     // the issue's ticket (reopening it if staff had resolved it). It never
     // opens a ticket of its own, so a stray comment on an old issue is ignored.
-    if (issue.state !== 'open' && !(await getTicketByThreadId(issueThreadId, actualOrgId))) {
+    if (issue.state !== 'open' && !(await getTicketByThreadId(issueThreadId, actualOrgId, 'github'))) {
       return NextResponse.json({ ok: true })
     }
     const issueCommentId = `github-issue-comment-${owner}-${repoName}-${comment.id}`
     if (isMaintainerAuthored(comment.author_association)) {
       // Never a support request, but part of the conversation staff read.
       await recordThreadContextMessage(
-        { messageId: issueCommentId, content: comment.body, authorName: comment.user.login, threadId: issueThreadId },
+        { messageId: issueCommentId, content: comment.body, authorName: comment.user.login, threadId: issueThreadId, platform: 'github' },
         actualOrgId
       )
       return NextResponse.json({ ok: true })
@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
     const discussionCommentId = `github-discussion-comment-${owner}-${repoName}-${comment.id}`
     if (isMaintainerAuthored(comment.author_association)) {
       await recordThreadContextMessage(
-        { messageId: discussionCommentId, content: comment.body, authorName: comment.user.login, threadId: discussionThreadId },
+        { messageId: discussionCommentId, content: comment.body, authorName: comment.user.login, threadId: discussionThreadId, platform: 'github' },
         actualOrgId
       )
       return NextResponse.json({ ok: true })
@@ -259,7 +259,7 @@ async function handleTicket({
     // continues a conversation we already track, and noise when it would
     // open a new ticket on its own.
     if (!content.trim()) return
-    if (content.trim().length < 10 && !(threadId && (await getTicketByThreadId(threadId, orgId)))) return
+    if (content.trim().length < 10 && !(threadId && (await getTicketByThreadId(threadId, orgId, 'github')))) return
 
     if (await isIngestRateLimited(orgId)) {
       logger.warn('github ticket ingest rate limited', { module: MOD, orgId })

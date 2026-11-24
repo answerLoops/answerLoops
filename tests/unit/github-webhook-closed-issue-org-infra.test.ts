@@ -58,7 +58,7 @@ describe('closed-issue comment handling scoped to the repo row org', () => {
   it('looks up the issue ticket with the org id of the repo row and processes under that org', async () => {
     await comment('a long enough comment body', 'closed')
     for (const call of h.getTicketByThreadId.mock.calls) {
-      expect(call).toEqual(['github-issue-o-r-5', ORG])
+      expect(call).toEqual(['github-issue-o-r-5', ORG, 'github'])
     }
     expect(h.getTicketByThreadId).toHaveBeenCalled()
     expect(h.processCommunityMessage).toHaveBeenCalledTimes(1)

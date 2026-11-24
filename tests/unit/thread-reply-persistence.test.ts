@@ -102,7 +102,7 @@ describe('processCommunityMessage: thread replies append instead of creating a n
     )
 
     expect(result).toEqual({ ticket_id: 42, appended: true })
-    expect(getTicketByThreadId).toHaveBeenCalledWith('T123', 3)
+    expect(getTicketByThreadId).toHaveBeenCalledWith('T123', 3, 'slack')
     expect(recordCustomerReply).toHaveBeenCalledWith(42, 'a follow-up reply in the thread', {
       authorName: expect.any(String),
       messageId: expect.any(String),

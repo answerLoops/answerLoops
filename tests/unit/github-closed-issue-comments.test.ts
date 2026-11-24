@@ -58,7 +58,7 @@ describe('issue comments on a closed issue', () => {
   it('a customer comment is handed to the pipeline when the issue already has a ticket', async () => {
     const res = await comment('NONE', 'closed')
     expect(res.status).toBe(200)
-    expect(h.getTicketByThreadId).toHaveBeenCalledWith('github-issue-o-r-5', 9)
+    expect(h.getTicketByThreadId).toHaveBeenCalledWith('github-issue-o-r-5', 9, 'github')
     expect(h.processCommunityMessage).toHaveBeenCalledTimes(1)
     expect(h.processCommunityMessage.mock.calls[0][0]).toMatchObject({
       threadId: 'github-issue-o-r-5',
