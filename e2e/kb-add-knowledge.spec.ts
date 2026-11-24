@@ -23,6 +23,7 @@ test.describe('add knowledge by hand', () => {
     const answer = `Yes, ${topic} applies to every workspace on the Pro plan.`
 
     await page.goto('/kb')
+    await page.getByRole('button', { name: '+ Write answer' }).click()
     await page.locator('#add-knowledge-question').fill(question)
     await page.locator('#add-knowledge-answer').fill(answer)
     await page.getByRole('button', { name: 'Add to knowledge base' }).click()
@@ -55,6 +56,7 @@ test.describe('add knowledge by hand', () => {
   test('the button stays disabled until both fields have text, and typing alone writes nothing', async ({ page, request }) => {
     const { topic, question } = uniqueQuestion()
     await page.goto('/kb')
+    await page.getByRole('button', { name: '+ Write answer' }).click()
     const button = page.getByRole('button', { name: 'Add to knowledge base' })
 
     await expect(button).toBeDisabled()
@@ -74,6 +76,7 @@ test.describe('add knowledge by hand', () => {
     const first = uniqueQuestion()
     const second = uniqueQuestion()
     await page.goto('/kb')
+    await page.getByRole('button', { name: '+ Write answer' }).click()
     for (const { question, topic } of [first, second]) {
       await page.locator('#add-knowledge-question').fill(question)
       await page.locator('#add-knowledge-answer').fill(`Answer for ${topic}.`)

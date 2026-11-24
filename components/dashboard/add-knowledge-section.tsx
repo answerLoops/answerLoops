@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { WRITE_ANSWER_INTRO } from '@/components/dashboard/write-answer-copy'
 import { addKnowledgeAction, type AddKnowledgeState } from '@/lib/actions/kb'
 
 const QUESTION_MAX = 500
@@ -24,7 +25,10 @@ export function AddKnowledgeSection({
   onAdded,
   draft,
   onDraftConsumed,
+  bare = false,
 }: {
+  /** Drops the card, heading and intro, for use inside a dialog that supplies them. */
+  bare?: boolean
   onAdded?: () => void
   /** Starting text, for an article written from a ticket. */
   draft?: KnowledgeDraft | null
@@ -70,18 +74,19 @@ export function AddKnowledgeSection({
 
   return (
     <section
-      className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm"
-      aria-labelledby="add-knowledge-heading"
+      className={bare ? undefined : 'rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm'}
+      aria-labelledby={bare ? undefined : 'add-knowledge-heading'}
     >
-      <h2 id="add-knowledge-heading" className="text-sm font-semibold text-slate-900">
-        Write an answer by hand
-      </h2>
-      <p className="mt-0.5 text-xs text-slate-500">
-        Write down something the assistant should know. It starts answering questions straight away, so leave out
-        names and account details.
-      </p>
+      {!bare && (
+        <>
+          <h2 id="add-knowledge-heading" className="text-sm font-semibold text-slate-900">
+            Write an answer by hand
+          </h2>
+          <p className="mt-0.5 text-xs text-slate-500">{WRITE_ANSWER_INTRO}</p>
+        </>
+      )}
 
-      <form action={formAction} className="mt-3 space-y-3">
+      <form action={formAction} className={bare ? 'space-y-3' : 'mt-3 space-y-3'}>
         {sourceTicketId !== null && <input type="hidden" name="sourceTicketId" value={sourceTicketId} />}
         {sourceTicketId !== null && (
           <p role="status" className="text-xs text-slate-600">

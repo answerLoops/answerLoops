@@ -153,13 +153,12 @@ export const SHOTS: Shot[] = [
     id: 'knowledge-base',
     route: '/kb',
     viewport: { width: 1440, height: 900 },
-    waitFor: ['h1:has-text("Knowledge Base")', 'text=Write an answer by hand'],
-    alt: 'The knowledge base page from the top: the title, the Manage, Knowledge coverage and Review tabs, a form for writing an answer by hand, and the connected GitHub repository below it.',
+    waitFor: ['h1:has-text("Knowledge Base")', 'button:text-is("+ Write answer")'],
+    alt: 'The knowledge base page from the top: the title with the Connect, Import URL, Upload file and Write answer buttons, four counts, the Sources, Knowledge coverage, Review and Flagged answers tabs, and the list of sources below.',
     pins: [
-      { id: 'tabs', selector: 'button:text-is("Manage") >> xpath=ancestor::div[1]', label: 'Manage, coverage and review tabs' },
-      { id: 'write-answer', selector: 'text=Write an answer by hand >> xpath=ancestor::div[1]', label: 'Write an answer by hand' },
-      { id: 'add-article', selector: 'button:text-is("Add to knowledge base")', label: 'Add it to the knowledge base' },
-      { id: 'github-repos', selector: 'text=GitHub Repositories >> xpath=ancestor::div[1]', label: 'Sync a GitHub repository' },
+      { id: 'add-buttons', selector: 'button:text-is("+ Write answer") >> xpath=ancestor::div[1]', label: 'Add content: write, upload, import or connect' },
+      { id: 'tabs', selector: 'button:text-is("Sources") >> xpath=ancestor::div[1]', label: 'Sources, coverage, review and flagged answers tabs' },
+      { id: 'sources', selector: 'h2:has-text("Sources") >> xpath=ancestor::div[2]', label: 'Every source, with Sync now for GitHub repositories' },
     ],
   },
   {

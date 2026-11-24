@@ -19,7 +19,14 @@ async function fetchNotionKbState(): Promise<NotionKbState> {
   return { conn, sources }
 }
 
-export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
+export function NotionKBSection({
+  onSynced,
+  hideWhenDisconnected = false,
+}: {
+  onSynced: () => void
+  /** Renders nothing until a workspace is connected, instead of the connect prompt. */
+  hideWhenDisconnected?: boolean
+}) {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [source, setSource] = useState<KBSource | null>(null)
@@ -159,6 +166,7 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   if (connected === null) return null // still loading
 
   if (connected === false) {
+    if (hideWhenDisconnected) return null
     return (
       <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4">
         <h2 className="text-sm font-semibold text-gray-900">Notion workspace</h2>
