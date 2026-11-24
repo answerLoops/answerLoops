@@ -39,7 +39,7 @@ describe('app/api/widget/chat/route.ts — deflection quota', () => {
     const s = src()
     const orgResolvedIdx = s.indexOf('const org = await getOrgByWidgetToken(widgetToken)')
     const reserveIdx = s.indexOf('const reservation = await reserveGeneration(org.id)')
-    const embedIdx = s.indexOf('const context = retrieveContext(query, org.id)')
+    const embedIdx = s.indexOf('const context = retrieveContext(lookupText, org.id)')
     const streamIdx = s.indexOf('widgetAgent.stream(')
 
     expect(orgResolvedIdx).toBeGreaterThan(-1)

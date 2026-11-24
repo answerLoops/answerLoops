@@ -9,12 +9,11 @@ import { DuplicateArticleError, findExactDuplicate } from './kb-duplicates'
 import { toVerification, VERIFICATION_NOTE_MAX } from '@/lib/kb/verification'
 import { relatedDocsChange } from '@/lib/kb/docs-change'
 import type { KBArticle, KBSearchResult, PriorAnswer, WidgetKBContext } from '@/types'
+import { KB_MATCH_THRESHOLD, KB_NEAR_MISS_FLOOR, chooseWidgetContext } from '@/lib/kb/widget-context'
 
-export const KB_MATCH_THRESHOLD = 0.45
-
-// The lowest similarity the website widget still offers the model as a near
-// miss when nothing clears KB_MATCH_THRESHOLD (see getWidgetKBContext).
-export const KB_NEAR_MISS_FLOOR = 0.3
+// Defined with the widget's choice of articles (lib/kb/widget-context.ts);
+// re-exported here for the callers that search through this module.
+export { KB_MATCH_THRESHOLD, KB_NEAR_MISS_FLOOR }
 
 // Candidates the HNSW index examines per query. The default (40) can return
 // fewer rows than asked for once the org/published/model filters discard
@@ -500,24 +499,20 @@ export async function getKBContext(vector: number[], k = 3, orgId: number): Prom
 }
 
 /**
- * Knowledge-base context for the website widget.
- *
- * Visitors often ask loosely ("what does it cost?") and the wording rarely
- * matches the article that answers it, so a question can score just under the
- * match bar against exactly the right article. Rather than answering with
- * nothing, the widget falls back to the closest articles above a lower floor
- * and lets the model judge whether they cover the question, which turns many
- * would-be "I don't know" replies into answers.
- *
- * Articles that clear the bar always win: near misses are only supplied when
- * none do, so a well-matched question gets exactly the context it got before.
+ * The website widget's lookup: the articles it would hand the assistant for a
+ * question, with scores, and whether any cleared the match bar (strong
+ * matches) or these are near misses (lib/kb/widget-context.ts). The Knowledge
+ * coverage tester calls this too, so it shows exactly what the widget sees.
  */
+export async function widgetLookup(vector: number[], k: number, orgId: number): Promise<{ results: KBSearchResult[]; matched: boolean }> {
+  return chooseWidgetContext(await searchArticles(vector, k, orgId, KB_NEAR_MISS_FLOOR))
+}
+
+/** Knowledge-base context for the website widget, from widgetLookup. */
 export async function getWidgetKBContext(vector: number[], k: number, orgId: number): Promise<WidgetKBContext> {
-  const results = await searchArticles(vector, k, orgId, KB_NEAR_MISS_FLOOR)
-  const strong = results.filter((a) => a.score >= KB_MATCH_THRESHOLD)
-  const chosen = strong.length > 0 ? strong : results
+  const { results, matched } = await widgetLookup(vector, k, orgId)
   return {
-    articles: chosen.map((a) => ({ summary: a.question, answer: a.answer, articleId: a.id })),
-    matched: strong.length > 0,
+    articles: results.map((a) => ({ summary: a.question, answer: a.answer, articleId: a.id })),
+    matched,
   }
 }

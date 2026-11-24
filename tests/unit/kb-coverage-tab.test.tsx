@@ -172,6 +172,7 @@ describe('CoverageTab: try a customer question', () => {
     route({
       search: {
         degraded: false,
+        matched: true,
         results: [
           { id: 1, question: 'How do I reset my password?', answer: 'a', score: 0.91 },
           { id: 4, question: 'Opening hours', answer: 'a', score: 0.52 },
@@ -184,13 +185,15 @@ describe('CoverageTab: try a customer question', () => {
     expect(box.textContent).toContain('How do I reset my password?')
     expect(box.textContent).toContain('91% match')
     expect(box.textContent).toContain('2 articles')
-    expect(h.fetchMock).toHaveBeenCalledWith('/api/kb/search?q=reset%20password')
+    // The same lookup the widget makes, not the Manage tab's search.
+    expect(h.fetchMock).toHaveBeenCalledWith('/api/kb/search?q=reset%20password&for=widget')
   })
 
   it('only shows as many matches as the widget actually retrieves', async () => {
     route({
       search: {
         degraded: false,
+        matched: true,
         results: Array.from({ length: 8 }, (_, i) => ({ id: i + 1, question: `Match ${i + 1}`, answer: 'a', score: 0.9 })),
       },
     })
@@ -199,8 +202,26 @@ describe('CoverageTab: try a customer question', () => {
     expect(within(box).getAllByRole('listitem')).toHaveLength(5)
   })
 
+  it('shows near misses as close matches the assistant may use, not as covered', async () => {
+    route({
+      search: {
+        degraded: false,
+        matched: false,
+        results: [{ id: 7, question: 'Pricing › Pro', answer: 'a', score: 0.38 }],
+      },
+    })
+    await ask('what does it cost')
+    const status = await screen.findByText(/^Close matches/)
+    const box = status.closest('[role="status"]') as HTMLElement
+    expect(box.textContent).toContain('Pricing › Pro')
+    expect(box.textContent).toContain('38% match')
+    expect(box.textContent).toMatch(/uses them if they answer the question/i)
+    expect(screen.queryByText(/^Covered/)).toBeNull()
+    expect(screen.queryByText(/^Not covered/)).toBeNull()
+  })
+
   it('reports Not covered, and that the answer would come from general knowledge', async () => {
-    route({ search: { results: [], degraded: false } })
+    route({ search: { results: [], matched: false, degraded: false } })
     await ask('do you ship to mars')
     expect(await screen.findByText(/^Not covered/)).toBeTruthy()
     expect(screen.getByText(/answer this from general knowledge/i)).toBeTruthy()
