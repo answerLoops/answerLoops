@@ -154,7 +154,7 @@ describe('maintainer and bot comments', () => {
     expect(res.status).toBe(200)
     expect(h.processCommunityMessage).not.toHaveBeenCalled()
     expect(h.recordThreadContextMessage).toHaveBeenCalledWith(
-      { messageId: 'github-issue-comment-o-r-80', content: 'Looking into this now', authorName: 'maint', threadId: 'github-issue-o-r-5' },
+      { messageId: 'github-issue-comment-o-r-80', content: 'Looking into this now', authorName: 'maint', threadId: 'github-issue-o-r-5', platform: 'github' },
       9
     )
   })

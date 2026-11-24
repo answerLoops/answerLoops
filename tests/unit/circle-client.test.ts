@@ -8,7 +8,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 //     (breaking the watched-space filter), or — for a comment — points the
 //     ticket thread at the comment instead of its parent post.
 //   - circleFetch must send `Authorization: Bearer <token>` against the v2
-//     base; fetchCirclePost must be inert under MOCK_EXTERNALS (no network in
+//     base; fetchCircleRecord must be inert under MOCK_EXTERNALS (no network in
 //     tests / CI), mirroring tests/unit/discourse-send-routing.test.ts.
 
 let mockExternals = false
@@ -77,13 +77,46 @@ describe('circleFetch', () => {
   })
 })
 
-describe('fetchCirclePost', () => {
-  it('returns null under MOCK_EXTERNALS without calling fetch', async () => {
+describe('fetchCircleRecord', () => {
+  const jsonResponse = (body: unknown, status = 200) =>
+    ({ ok: status >= 200 && status < 300, status, json: async () => body }) as unknown as Response
+
+  it('is off under MOCK_EXTERNALS without calling fetch', async () => {
     mockExternals = true
     global.fetch = vi.fn()
-    const { fetchCirclePost } = await import('@/lib/circle/client')
-
-    expect(await fetchCirclePost('tok', '42')).toBeNull()
+    const { fetchCircleRecord } = await import('@/lib/circle/client')
+    expect(await fetchCircleRecord('tok', 'post', '42')).toEqual({ ok: false, reason: 'off' })
     expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it('returns the post or comment from the matching endpoint', async () => {
+    global.fetch = vi.fn(async () => jsonResponse({ id: 42, body: 'Full text' }))
+    const { fetchCircleRecord } = await import('@/lib/circle/client')
+    expect(await fetchCircleRecord('tok', 'post', '42')).toEqual({ ok: true, record: { id: 42, body: 'Full text' } })
+    expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0]).toBe('https://app.circle.so/api/admin/v2/posts/42')
+    await fetchCircleRecord('tok', 'comment', '7')
+    expect((global.fetch as ReturnType<typeof vi.fn>).mock.calls[1][0]).toBe('https://app.circle.so/api/admin/v2/comments/7')
+  })
+
+  it('reports the status of a refused lookup', async () => {
+    global.fetch = vi.fn(async () => jsonResponse({ error: 'nope' }, 401))
+    const { fetchCircleRecord } = await import('@/lib/circle/client')
+    expect(await fetchCircleRecord('tok', 'post', '42')).toEqual({ ok: false, reason: 'status', status: 401 })
+  })
+
+  it('reports an unreachable API instead of throwing, for a timeout or a network error', async () => {
+    const { fetchCircleRecord } = await import('@/lib/circle/client')
+    global.fetch = vi.fn(async () => { throw new DOMException('The operation timed out.', 'TimeoutError') })
+    await expect(fetchCircleRecord('tok', 'post', '42')).resolves.toEqual({ ok: false, reason: 'unreachable' })
+    global.fetch = vi.fn(async () => { throw new TypeError('fetch failed') })
+    await expect(fetchCircleRecord('tok', 'comment', '7')).resolves.toEqual({ ok: false, reason: 'unreachable' })
+  })
+
+  it('reports a response that is not a record', async () => {
+    const { fetchCircleRecord } = await import('@/lib/circle/client')
+    global.fetch = vi.fn(async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError('bad json') } }) as unknown as Response)
+    expect(await fetchCircleRecord('tok', 'post', '42')).toEqual({ ok: false, reason: 'invalid' })
+    global.fetch = vi.fn(async () => jsonResponse(['not', 'a', 'record']))
+    expect(await fetchCircleRecord('tok', 'post', '42')).toEqual({ ok: false, reason: 'invalid' })
   })
 })

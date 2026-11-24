@@ -87,6 +87,9 @@ Circle is configured entirely per-organization in the Settings UI. There is no c
   <Accordion title="Tickets are created but the content is empty or truncated">
     Circle Workflow webhook payloads vary in how much of the post body they include. answerLoops falls back to the Admin API to fetch the full body — make sure the **Admin API token** you saved is a valid **Admin V2** token and hasn't been revoked.
   </Accordion>
+  <Accordion title="A Workflow run shows Failed with &quot;Could not fetch the full record from Circle&quot;">
+    The webhook arrived without the post's text, and answerLoops couldn't fetch it from Circle's Admin API, so no ticket was created. The run is marked failed so you can see it in the Workflow's history rather than lose it quietly. Check that the **Admin API token** on the Circle card is a valid **Admin V2** token, hasn't been revoked, and belongs to someone who is still an admin of the community. If Circle's API was briefly unavailable, the next post goes through as normal.
+  </Accordion>
   <Accordion title="A draft appears but no reply is posted">
     Check the channel's automatic-reply setting and confidence threshold. Review the draft in the ticket queue if it does not qualify for an automatic reply.
   </Accordion>

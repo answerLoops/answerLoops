@@ -72,7 +72,7 @@ describe('backfillGithubCommentThreads', () => {
     const { calls, summary } = await run({ orphans: [orphanRow(7, 111)], resolve: async () => 5 })
 
     expect(summary).toMatchObject({ attached: 1, noParentTicket: 0, unresolved: 0, hasReplies: 0 })
-    expect(h.getTicketByThreadId).toHaveBeenCalledWith('github-issue-my-org-my-repo-5', 4)
+    expect(h.getTicketByThreadId).toHaveBeenCalledWith('github-issue-my-org-my-repo-5', 4, 'github')
     const insert = calls.find((c) => c.sql.toLowerCase().startsWith('insert into "ticket_replies"'))
     expect(insert?.params).toEqual(expect.arrayContaining([50, 'bob', 'comment 111', 'customer', 'github-issue-comment-my-org-my-repo-111']))
     expect(insert?.sql.toLowerCase()).toContain('on conflict do nothing')
@@ -89,7 +89,7 @@ describe('backfillGithubCommentThreads', () => {
 
   it('looks for the issue ticket inside the same organization only', async () => {
     await run({ orphans: [orphanRow(7, 111)], resolve: async () => 5, orgId: 9 })
-    expect(h.getTicketByThreadId).toHaveBeenCalledWith(expect.any(String), 9)
+    expect(h.getTicketByThreadId).toHaveBeenCalledWith(expect.any(String), 9, 'github')
   })
 
   it('leaves the comment ticket untouched when the issue has no ticket', async () => {

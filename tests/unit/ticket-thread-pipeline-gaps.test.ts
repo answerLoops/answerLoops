@@ -104,7 +104,7 @@ describe('recordThreadContextMessage', () => {
     const { MAX_INGEST_CONTENT_CHARS } = await import('@/lib/ingest/limits')
     const { recordThreadContextMessage } = await import('@/lib/ingest/pipeline')
     const stored = await recordThreadContextMessage(
-      { messageId: 'm-9', content: 'x'.repeat(MAX_INGEST_CONTENT_CHARS + 500), authorName: 'maint', threadId: 'root-1' },
+      { messageId: 'm-9', content: 'x'.repeat(MAX_INGEST_CONTENT_CHARS + 500), authorName: 'maint', threadId: 'root-1', platform: 'github' },
       3
     )
 
@@ -113,6 +113,6 @@ describe('recordThreadContextMessage', () => {
     expect(ticketId).toBe(42)
     expect(content).toHaveLength(MAX_INGEST_CONTENT_CHARS)
     expect(input).toEqual({ authorName: 'maint', messageId: 'm-9' })
-    expect(h.getTicketByThreadId).toHaveBeenCalledWith('root-1', 3)
+    expect(h.getTicketByThreadId).toHaveBeenCalledWith('root-1', 3, 'github')
   })
 })

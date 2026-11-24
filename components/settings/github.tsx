@@ -238,26 +238,36 @@ export function GitHubIntegrationCard() {
                         <p className="text-sm font-medium text-gray-800 mb-0.5">Knowledge Base</p>
                         <p className="text-xs text-gray-500">Sync markdown files from this repo as KB articles so the AI can reference your docs when answering questions.</p>
                       </div>
-                      <label className="flex items-center gap-2 shrink-0 mt-0.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          id={`kb-toggle-${repo.id}`}
-                          aria-label={`Knowledge Base for ${repo.owner}/${repo.repo}`}
-                          checked={repo.kb_enabled === 1 || pickerFor === repo.id}
-                          disabled={savingFor === repo.id}
-                          onChange={(e) => {
-                            if (e.target.checked) setPickerFor(repo.id)
-                            else {
+                      {repo.kb_enabled === 1 ? (
+                        <label className="flex items-center gap-2 shrink-0 mt-0.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            id={`kb-toggle-${repo.id}`}
+                            aria-label={`Knowledge Base for ${repo.owner}/${repo.repo}`}
+                            checked
+                            disabled={savingFor === repo.id}
+                            onChange={() => {
                               setPickerFor(null)
-                              if (repo.kb_enabled === 1) updateSettings(repo.id, { kbEnabled: 0 })
-                            }
-                          }}
-                          className="rounded"
-                        />
-                        <span className="text-xs text-gray-600">
-                          {repo.kb_enabled === 1 ? 'On' : pickerFor === repo.id ? 'Choosing folders' : 'Off'}
-                        </span>
-                      </label>
+                              updateSettings(repo.id, { kbEnabled: 0 })
+                            }}
+                            className="rounded"
+                          />
+                          <span className="text-xs text-gray-600">On</span>
+                        </label>
+                      ) : (
+                        pickerFor !== repo.id && (
+                          <Button
+                            id={`kb-toggle-${repo.id}`}
+                            size="sm"
+                            variant="secondary"
+                            className="shrink-0 whitespace-nowrap"
+                            aria-label={`Set up Knowledge Base for ${repo.owner}/${repo.repo}`}
+                            onClick={() => setPickerFor(repo.id)}
+                          >
+                            Choose folders
+                          </Button>
+                        )
+                      )}
                     </div>
 
                     {repo.kb_enabled === 1 && pickerFor !== repo.id && (

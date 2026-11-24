@@ -2,7 +2,7 @@ import type { NextRequest } from 'next/server'
 import { requireOrgAccess } from '@/lib/auth/org'
 import { getRepoById } from '@/lib/db/queries/github'
 import { getInstallationOctokit } from '@/lib/github/app'
-import { listDocFolders, defaultSelection, selectDocFiles, toTreeEntries } from '@/lib/github/doc-folders'
+import { listDocFolders, defaultSelection, isExcludedFolder, selectDocFiles, toTreeEntries } from '@/lib/github/doc-folders'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
@@ -40,7 +40,8 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     const folders = listDocFolders(entries)
     const truncated = !!tree.truncated
     const usingDefaults = repo.kb_paths === null
-    const selected = usingDefaults ? defaultSelection(folders) : repo.kb_paths!
+    // Saved folders that are now hidden or excluded are no longer offered, so they aren't pre-ticked.
+    const selected = usingDefaults ? defaultSelection(folders) : repo.kb_paths!.filter((p) => !isExcludedFolder(p))
     // A truncated tree may simply not show a folder, so it is never called gone.
     const missing = usingDefaults || truncated ? [] : selectDocFiles(entries, selected).missingFolders
     return Response.json({ folders, selected, usingDefaults, missing, truncated })
