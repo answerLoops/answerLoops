@@ -90,7 +90,7 @@ describe('GET /api/github/repos/[id]/doc-folders', () => {
     const byPath = Object.fromEntries(body.folders.map((f: { path: string }) => [f.path, f]))
     expect(byPath['.']).toEqual({ path: '.', docFiles: 1, selectable: true })
     expect(byPath['docs'].docFiles).toBe(2)
-    expect(byPath['src'].selectable).toBe(false)
+    expect(byPath['src']).toBeUndefined()
   })
 
   it('returns the saved selection and the chosen folders that are gone', async () => {
