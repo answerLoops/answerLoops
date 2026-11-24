@@ -13,6 +13,8 @@ import { followUpsAvailable, groundFollowUps } from '@/lib/widget/follow-ups'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { flattenMastraStream } from '@/lib/widget/mastra-stream'
 import { getWidgetKBContext } from '@/lib/db/queries/kb'
+import { widgetLookupText } from '@/lib/widget/lookup-text'
+import { WIDGET_CONTEXT_ARTICLES } from '@/lib/widget/context-size'
 import type { WidgetKBContext } from '@/types'
 import { captureUnansweredQuestion } from '@/lib/kb/review-capture'
 import { countArticleUsage, newAnswerId, recordAnswerSources } from '@/lib/kb/usage'
@@ -81,7 +83,7 @@ const ORG_DAILY_WINDOW_MS = 24 * 60 * 60_000
 const MAX_BODY_BYTES = 512 * 1024
 
 // How many knowledge-base articles are put in front of the model per answer.
-const MAX_CONTEXT_ARTICLES = 5
+const MAX_CONTEXT_ARTICLES = WIDGET_CONTEXT_ARTICLES
 
 // The per-part cap alone bounds nothing in principle — concatenated parts
 // could multiply straight through it — but AG-UI messages carry a single
@@ -111,6 +113,10 @@ export interface PendingRun {
   turnId: string
   model: Awaited<ReturnType<typeof chatModel>>
   query: string
+  // What the knowledge base is searched with: the query, plus the previous
+  // question for a short follow-up (lib/widget/lookup-text.ts). Defaults to
+  // the query.
+  lookupText?: string
   visitorId: string
   reservationId: number
   // Knowledge-base retrieval, started in the onRequest hook so it overlaps
@@ -377,7 +383,8 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   // that would be refused never spends an embedding call. It runs alongside
   // model resolution: the two are independent and both sit before the first
   // token.
-  const context = retrieveContext(query, org.id)
+  const lookupText = widgetLookupText(messages)
+  const context = retrieveContext(lookupText, org.id)
 
   let model: Awaited<ReturnType<typeof chatModel>>
   try {
@@ -408,6 +415,7 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     turnId,
     model,
     query,
+    lookupText,
     visitorId,
     reservationId: reservation.generationId,
     context,
@@ -448,7 +456,7 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   // panel page makes (app/widget/[widgetToken]/page.tsx); a lookup that fails
   // counts as no, so the answer itself is never held up by it.
   const [retrieved, followUps, flagsAvailable] = await Promise.all([
-    run.context ?? retrieveContext(query, org.id),
+    run.context ?? retrieveContext(run.lookupText ?? query, org.id),
     followUpsAvailable({ id: org.id, followUpsEnabled: org.widget_appearance?.followUpsEnabled !== false }),
     orgHasFeature(org.id, 'kb_review_queue').catch(() => false),
   ])

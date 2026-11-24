@@ -55,7 +55,7 @@ describe('Widget chat route authenticates by widget token and scopes by org', ()
     const src = read('app/api/widget/chat/route.ts')
     // Retrieval is one helper taking the org id; both the embedding (cached per
     // org — see lib/widget/embed-cache.ts) and the KB search are scoped by it.
-    expect(src).toContain('retrieveContext(query, org.id)')
+    expect(src).toContain('retrieveContext(lookupText, org.id)')
     expect(src).toContain('embedQueryCached(query, orgId)')
     // The article count is a named constant rather than a literal now, so this
     // asserts the org argument is threaded rather than pinning the number —

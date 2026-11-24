@@ -104,10 +104,14 @@ describe('structural guarantees (source-level, same convention as the other tena
   })
 
   it("keeps the tester's match count in step with what the widget retrieves", () => {
+    // Both read the one shared constant (lib/widget/context-size.ts), and the
+    // tester asks the search route for the widget's own lookup.
     const widget = read('app/api/widget/chat/route.ts')
     const tab = read('app/(dashboard)/kb/coverage-tab.tsx')
-    const n = widget.match(/const MAX_CONTEXT_ARTICLES = (\d+)/)?.[1]
-    expect(n).toBeTruthy()
-    expect(tab).toContain(`const WIDGET_CONTEXT_ARTICLES = ${n}`)
+    const search = read('app/api/kb/search/route.ts')
+    expect(widget).toContain('const MAX_CONTEXT_ARTICLES = WIDGET_CONTEXT_ARTICLES')
+    expect(tab).toContain("import { WIDGET_CONTEXT_ARTICLES } from '@/lib/widget/context-size'")
+    expect(tab).toContain('&for=widget')
+    expect(search).toContain('widgetLookup(vector, WIDGET_CONTEXT_ARTICLES, orgId)')
   })
 })

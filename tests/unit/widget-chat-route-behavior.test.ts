@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { widgetChatRequest, drain, userMsg } from './support/widget-chat-envelope'
+import { widgetChatRequest, drain, userMsg, assistantMsg } from './support/widget-chat-envelope'
 
 /**
  * Behavioural coverage for the reworked widget chat route: retrieval started
@@ -117,6 +117,27 @@ describe('widget chat route: retrieval only starts after the quota grant', () =>
     await drain(res)
     expect(h.embedText).toHaveBeenCalledWith('granted question', 77)
     expect(h.getWidgetKBContext).toHaveBeenCalledWith([0.1, 0.2], 5, 77)
+  })
+})
+
+describe('widget chat route: short follow-ups search with the previous question', () => {
+  async function callWith(messages: unknown[]) {
+    const { POST } = await import('@/app/api/widget/chat/route')
+    return POST(widgetChatRequest({ widgetToken: VALID_TOKEN, visitorId: 'v1', messages }))
+  }
+
+  it('searches "and for teams?" together with the question before it', async () => {
+    const res = await callWith([userMsg('What does it cost?'), assistantMsg('The Pro plan is $149 a month.'), userMsg('and for teams?')])
+    await drain(res)
+    expect(h.embedText).toHaveBeenCalledWith('What does it cost?\nand for teams?', 77)
+    // The assistant still answers the visitor's actual message.
+    expect(h.streamCalls[0].query).toBe('and for teams?')
+  })
+
+  it('searches a message that stands alone on its own', async () => {
+    const res = await callWith([userMsg('What does it cost?'), assistantMsg('…'), userMsg('How do I connect my Discord server?')])
+    await drain(res)
+    expect(h.embedText).toHaveBeenCalledWith('How do I connect my Discord server?', 77)
   })
 })
 
