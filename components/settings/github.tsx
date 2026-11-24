@@ -132,7 +132,12 @@ export function GitHubIntegrationCard() {
   }, [pickerFor, repos])
 
   const removeRepo = async (repoId: number) => {
-    await fetch(`/api/github/repos/${repoId}`, { method: 'DELETE' })
+    const res = await fetch(`/api/github/repos/${repoId}`, { method: 'DELETE' }).catch(() => null)
+    if (!res?.ok) {
+      const body = (await res?.json().catch(() => ({}))) as { error?: string } | undefined
+      showToast(body?.error ?? 'Could not remove the repository. Try again.', 'error')
+      return
+    }
     reload()
   }
 
