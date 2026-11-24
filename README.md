@@ -24,7 +24,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/ci.yml?branch=main&label=CI&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/ci.yml)
 [![Security](https://img.shields.io/github/actions/workflow/status/answerLoops/answerLoops/security.yml?branch=main&label=security&logo=github&style=flat-square)](https://github.com/answerLoops/answerLoops/actions/workflows/security.yml)
 [![License](https://img.shields.io/github/license/answerLoops/answerLoops?style=flat-square&label=license&color=082e50)](./LICENSE)
-[![Container pulls](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2FNathanTarbert%2F4bd9b9314ea3e912720fbac75d3a94be%2Fraw%2Fcontainer-pulls.json&style=flat-square)](https://github.com/answerLoops/answerLoops/pkgs/container/answerloops)
+[![Container downloads](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2FNathanTarbert%2F4bd9b9314ea3e912720fbac75d3a94be%2Fraw%2Fcontainer-pulls.json&style=flat-square)](https://github.com/answerLoops/answerLoops/pkgs/container/answerloops)
 [![Secured by Cycode](./.github/readme/cycode-badge.svg)](https://cycode.com)
 </div>
 
