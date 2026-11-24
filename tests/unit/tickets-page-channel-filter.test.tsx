@@ -2,6 +2,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import type { Ticket } from '@/types'
+import { isSourcePlatform, platformLabel } from '@/lib/tickets/platform-label'
 
 const { getTickets, auth } = vi.hoisted(() => ({ getTickets: vi.fn(), auth: vi.fn() }))
 
@@ -140,5 +141,19 @@ describe('TicketsPage channel filter', () => {
       undefined,
       true
     )
+  })
+
+  it('validates source platforms and handles label fallbacks correctly', () => {
+    expect(isSourcePlatform('github')).toBe(true)
+    expect(isSourcePlatform('unknown_platform')).toBe(false)
+    expect(isSourcePlatform(null)).toBe(false)
+    expect(isSourcePlatform(123)).toBe(false)
+
+    expect(platformLabel('github')).toBe('GitHub')
+    expect(platformLabel('mcp')).toBe('Agent')
+    expect(platformLabel('discord')).toBe('Discord')
+    expect(platformLabel(null)).toBe('Discord')
+    expect(platformLabel(undefined)).toBe('Discord')
+    expect(platformLabel('custom_platform')).toBe('custom_platform')
   })
 })
