@@ -67,16 +67,31 @@ export function normalizeCircleContent(raw: CirclePostShape, kind: 'post' | 'com
   }
 }
 
-export async function fetchCirclePost(token: string, postId: string): Promise<CirclePostShape | null> {
-  if (MOCK_EXTERNALS) return null
-  const res = await circleFetch(token, `/posts/${encodeURIComponent(postId)}`)
-  if (!res.ok) return null
-  return (await res.json()) as CirclePostShape
-}
+/**
+ * The outcome of looking up a post or comment in Circle's Admin API. Never
+ * throws: a timeout or network failure is `unreachable`, a refused request
+ * carries its status, and a body that isn't a record is `invalid`. `off`
+ * means lookups are disabled (MOCK_EXTERNALS).
+ */
+export type CircleLookup =
+  | { ok: true; record: CirclePostShape }
+  | { ok: false; reason: 'off' | 'unreachable' | 'invalid' }
+  | { ok: false; reason: 'status'; status: number }
 
-export async function fetchCircleComment(token: string, commentId: string): Promise<CirclePostShape | null> {
-  if (MOCK_EXTERNALS) return null
-  const res = await circleFetch(token, `/comments/${encodeURIComponent(commentId)}`)
-  if (!res.ok) return null
-  return (await res.json()) as CirclePostShape
+export async function fetchCircleRecord(token: string, kind: 'post' | 'comment', id: string): Promise<CircleLookup> {
+  if (MOCK_EXTERNALS) return { ok: false, reason: 'off' }
+  let res: Response
+  try {
+    res = await circleFetch(token, `/${kind === 'comment' ? 'comments' : 'posts'}/${encodeURIComponent(id)}`)
+  } catch {
+    return { ok: false, reason: 'unreachable' }
+  }
+  if (!res.ok) return { ok: false, reason: 'status', status: res.status }
+  try {
+    const record: unknown = await res.json()
+    if (!record || typeof record !== 'object' || Array.isArray(record)) return { ok: false, reason: 'invalid' }
+    return { ok: true, record: record as CirclePostShape }
+  } catch {
+    return { ok: false, reason: 'invalid' }
+  }
 }
