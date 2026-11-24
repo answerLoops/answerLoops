@@ -58,7 +58,7 @@ describe('Discourse', () => {
   it('keeps a short post in a topic that already has a ticket, keyed by that topic', async () => {
     h.getTicketByThreadId.mockResolvedValue({ id: 1 })
     await discourse('thanks!', 10)
-    expect(h.getTicketByThreadId).toHaveBeenCalledWith('10', 6)
+    expect(h.getTicketByThreadId).toHaveBeenCalledWith('10', 6, 'discourse')
     expect(h.processCommunityMessage).toHaveBeenCalledTimes(1)
     expect(h.processCommunityMessage.mock.calls[0][0]).toMatchObject({ threadId: '10', platform: 'discourse' })
   })
@@ -78,7 +78,7 @@ describe('Circle', () => {
   it('keeps a short comment on a post that already has a ticket, keyed by that post', async () => {
     h.getTicketByThreadId.mockResolvedValue({ id: 1 })
     await circle('thanks!', 55)
-    expect(h.getTicketByThreadId).toHaveBeenCalledWith('55', 6)
+    expect(h.getTicketByThreadId).toHaveBeenCalledWith('55', 6, 'circle')
     expect(h.processCommunityMessage.mock.calls[0][0]).toMatchObject({ threadId: '55', platform: 'circle' })
   })
 

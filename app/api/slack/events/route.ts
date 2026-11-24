@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       // with no caption) doesn't need to restate context to be worth keeping.
       // Only messages that would start a brand-new ticket get filtered for
       // being too short to be meaningful.
-      const isTrackedReply = threadTs ? !!(await getTicketByThreadId(threadTs, orgId)) : false
+      const isTrackedReply = threadTs ? !!(await getTicketByThreadId(threadTs, orgId, 'slack')) : false
 
       if (!isTrackedReply && !files.length && (!text || text.length < 10)) {
         return Response.json({ ok: true })

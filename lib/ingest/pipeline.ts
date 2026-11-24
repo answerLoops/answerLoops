@@ -86,7 +86,7 @@ export async function processCommunityMessage(
   // into an ongoing human conversation. A staff notification is enough —
   // a human decides whether a fresh AI answer makes sense.
   if (threadId) {
-    const threadTicket = await getTicketByThreadId(threadId, orgId)
+    const threadTicket = await getTicketByThreadId(threadId, orgId, platform)
     if (threadTicket) {
       const stored = await recordCustomerReply(threadTicket.id, content, { authorName, messageId })
       // A redelivered webhook for a reply already in the thread: nothing new
@@ -176,11 +176,11 @@ export async function processCommunityMessage(
  * no ticket to attach to is dropped. Returns whether it was stored.
  */
 export async function recordThreadContextMessage(
-  payload: Pick<MessagePayload, 'messageId' | 'content' | 'authorName' | 'threadId'>,
+  payload: Pick<MessagePayload, 'messageId' | 'content' | 'authorName' | 'threadId'> & { platform: Platform },
   orgId: number
 ): Promise<boolean> {
   if (!payload.threadId) return false
-  const threadTicket = await getTicketByThreadId(payload.threadId, orgId)
+  const threadTicket = await getTicketByThreadId(payload.threadId, orgId, payload.platform)
   if (!threadTicket) return false
   return recordThreadContext(threadTicket.id, clampIngestContent(payload.content), {
     authorName: payload.authorName,
