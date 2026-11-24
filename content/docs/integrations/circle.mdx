@@ -47,7 +47,7 @@ Go to **Integrations → Circle** and fill in:
 | --- | --- |
 | Community URL | Your Circle community's base URL, e.g. `https://community.example.com` |
 | Admin API token | The token from step 1 (used to fetch the full post/comment body when a webhook payload is thin) |
-| Watched space IDs | Numeric space IDs, comma-separated — leave blank to watch every space |
+| Watched space IDs | Numeric space IDs, comma-separated — leave blank to watch every space. Only posts in these spaces open tickets; a comment on a post that already has a ticket is always added to it. |
 
 Click **Connect**. The card then shows a **Webhook URL** and a secret token.
 
