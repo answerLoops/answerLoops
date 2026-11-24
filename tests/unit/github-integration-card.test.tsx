@@ -53,6 +53,22 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
+describe('GitHubIntegrationCard — Automatic Deflections row on small screens', () => {
+  it('stacks the label above its badge and button on phones, side by side from the small breakpoint', async () => {
+    route([repo()])
+    render(<GitHubIntegrationCard />)
+    const badge = await screen.findByText('Automatic Deflections: Off')
+    const controls = badge.parentElement as HTMLElement
+    const row = controls.parentElement as HTMLElement
+    expect(row.className).toMatch(/(^|\s)flex-col(\s|$)/)
+    expect(row.className).toMatch(/sm:flex-row/)
+    // The controls wrap instead of squeezing the description beside them.
+    expect(controls.className).toMatch(/(^|\s)flex-wrap(\s|$)/)
+    expect(controls.className).not.toMatch(/(^|\s)shrink-0(\s|$)/)
+    expect(controls.className).toMatch(/sm:shrink-0/)
+  })
+})
+
 describe('GitHubIntegrationCard — knowledge base', () => {
   it('cancel leaves knowledge base off', async () => {
     route([repo()])
