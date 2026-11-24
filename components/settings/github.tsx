@@ -193,12 +193,13 @@ export function GitHubIntegrationCard() {
 
                   {/* ── Automatic Deflections ────────────────────────── */}
                   <div className="px-4 py-4">
-                    <div className="flex items-start justify-between gap-4">
+                    {/* Stacked on phones so the badge and button never squeeze the description. */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800 mb-0.5">Automatic Deflections</p>
                         <p className="text-xs text-gray-500">When off, high-confidence AI answers are held as drafts awaiting approval instead of posting automatically. Nothing is posted to the issue until your team approves a draft.</p>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                      <div className="flex flex-wrap items-center gap-2 sm:shrink-0 sm:mt-0.5">
                         {editingDeflectId === repo.id ? (
                           <>
                             <ToggleSwitch
