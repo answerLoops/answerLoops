@@ -79,20 +79,22 @@ beforeEach(() => {
   vi.clearAllMocks()
   h.onCountsChange.current = null
   h.onAdded.current = null
+  h.draft.current = null
+  h.onDraftConsumed.current = null
   route(() => json({ counts: { pending: 0 } }))
 })
 
 describe('KB page: tab selection from the URL', () => {
-  it('defaults to Manage with no tab param', async () => {
+  it('defaults to Sources with no tab param', async () => {
     await renderPage('')
-    expect(tab('Manage').getAttribute('aria-selected')).toBe('true')
+    expect(tab('Sources').getAttribute('aria-selected')).toBe('true')
     expect(screen.queryByTestId('review-tab')).toBeNull()
     expect(screen.queryByTestId('coverage-tab')).toBeNull()
   })
 
-  it('falls back to Manage for an unknown tab value', async () => {
+  it('falls back to Sources for an unknown tab value', async () => {
     await renderPage('tab=bogus')
-    expect(tab('Manage').getAttribute('aria-selected')).toBe('true')
+    expect(tab('Sources').getAttribute('aria-selected')).toBe('true')
     expect(screen.queryByTestId('review-tab')).toBeNull()
   })
 
@@ -140,7 +142,7 @@ describe('KB page: pending review badge', () => {
     route(() => Promise.reject(new Error('network')))
     await renderPage('')
     expect(tab('Review').textContent).toBe('Review')
-    expect(tab('Manage')).toBeTruthy()
+    expect(tab('Sources')).toBeTruthy()
   })
 
   it('shows no badge when the response has no counts', async () => {
@@ -182,15 +184,15 @@ describe('KB page: clicking tabs updates the URL', () => {
     expect(h.replace).toHaveBeenCalledWith('/kb?tab=coverage', { scroll: false })
   })
 
-  it('removes the tab param, keeping others, when Manage is clicked', async () => {
+  it('removes the tab param, keeping others, when Sources is clicked', async () => {
     await renderPage('tab=review&foo=bar')
-    await userEvent.click(tab('Manage'))
+    await userEvent.click(tab('Sources'))
     expect(h.replace).toHaveBeenCalledWith('/kb?foo=bar', { scroll: false })
   })
 
-  it('goes to bare /kb when Manage is clicked and no other params exist', async () => {
+  it('goes to bare /kb when Sources is clicked and no other params exist', async () => {
     await renderPage('tab=review')
-    await userEvent.click(tab('Manage'))
+    await userEvent.click(tab('Sources'))
     expect(h.replace).toHaveBeenCalledWith('/kb', { scroll: false })
   })
 
@@ -202,8 +204,11 @@ describe('KB page: clicking tabs updates the URL', () => {
 })
 
 describe('KB page: add-knowledge form', () => {
-  it('shows the form on the Manage tab', async () => {
+  it('keeps the form closed until Write answer is clicked', async () => {
     await renderPage()
+    expect(screen.queryByTestId('add-knowledge-section')).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: '+ Write answer' }))
+    expect(screen.getByRole('dialog', { name: 'Write an answer' })).toBeTruthy()
     expect(screen.getByTestId('add-knowledge-section')).toBeTruthy()
   })
 
@@ -217,6 +222,7 @@ describe('KB page: add-knowledge form', () => {
 
   it('reloads the article list after an article is added', async () => {
     await renderPage()
+    await userEvent.click(screen.getByRole('button', { name: '+ Write answer' }))
     const listCalls = () => h.fetchMock.mock.calls.filter(([url]) => url === '/api/kb').length
     const before = listCalls()
     expect(h.onAdded.current).toBeTypeOf('function')

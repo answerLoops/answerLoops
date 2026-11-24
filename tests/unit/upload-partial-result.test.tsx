@@ -117,7 +117,8 @@ describe('KB page file upload', () => {
     const listLoadsBefore = h.fetchMock.mock.calls.filter(([u]) => u === '/api/kb').length
 
     const user = userEvent.setup()
-    await user.upload(container.querySelector('input[type="file"]') as HTMLInputElement, file())
+    await user.click(screen.getByRole('button', { name: 'Upload file' }))
+    await user.upload(container.ownerDocument.querySelector('input[type="file"]') as HTMLInputElement, file())
 
     expect(await screen.findByText(PARTIAL.error)).toBeInTheDocument()
     await waitFor(() => {

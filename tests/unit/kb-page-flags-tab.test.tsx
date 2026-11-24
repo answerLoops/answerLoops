@@ -76,7 +76,7 @@ describe('KB page: Flagged answers tab', () => {
 
   it('does not show it by default', async () => {
     await renderPage('')
-    expect(tab('Manage').getAttribute('aria-selected')).toBe('true')
+    expect(tab('Sources').getAttribute('aria-selected')).toBe('true')
     expect(screen.queryByTestId('flags-tab')).toBeNull()
   })
 

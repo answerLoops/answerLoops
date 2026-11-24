@@ -14,6 +14,7 @@ interface KBArticle {
 test.describe('KB URL ingest', () => {
   test('imports a single page and creates KB articles', async ({ request, page }) => {
     await page.goto('/kb')
+    await page.getByRole('button', { name: 'Import URL' }).click()
     await expect(page.getByRole('heading', { name: 'Knowledge Base' })).toBeVisible()
 
     const urlInput = page.getByPlaceholder(/https:\/\//)
@@ -25,10 +26,10 @@ test.describe('KB URL ingest', () => {
       await modeSelect.selectOption('page')
     }
 
-    await page.getByRole('button', { name: /import/i }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Import', exact: true }).click()
 
     // Success message with article count
-    await expect(page.getByText(/imported|article/i)).toBeVisible({ timeout: 15_000 })
+    await expect(page.getByRole('dialog').getByText(/imported|article/i)).toBeVisible({ timeout: 15_000 })
 
     // Article appears in KB list
     const articles = await waitFor(async () => {
@@ -40,6 +41,7 @@ test.describe('KB URL ingest', () => {
 
   test('imports a full site (mock returns 1 page)', async ({ page }) => {
     await page.goto('/kb')
+    await page.getByRole('button', { name: 'Import URL' }).click()
 
     const urlInput = page.getByPlaceholder(/https:\/\//)
     await urlInput.fill('https://docs.example.com')
@@ -49,7 +51,7 @@ test.describe('KB URL ingest', () => {
       await modeSelect.selectOption('site')
     }
 
-    await page.getByRole('button', { name: /import/i }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Import', exact: true }).click()
     // Not a broad /article/i match: the mock content preview paragraph for
     // an already-imported page can itself contain the word "articles" in its
     // body text, so a loose match can hit two elements at once.
@@ -58,7 +60,8 @@ test.describe('KB URL ingest', () => {
 
   test('shows validation error for empty URL', async ({ page }) => {
     await page.goto('/kb')
-    await page.getByRole('button', { name: /import/i }).first().click()
+    await page.getByRole('button', { name: 'Import URL' }).click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Import', exact: true }).click()
     // The URL field is a native `required` input — the browser blocks
     // submission itself (no custom error text is rendered), so this checks
     // the field failed constraint validation rather than page text.
@@ -68,9 +71,10 @@ test.describe('KB URL ingest', () => {
 
   test('shows validation error for non-URL string', async ({ page }) => {
     await page.goto('/kb')
+    await page.getByRole('button', { name: 'Import URL' }).click()
     const urlInput = page.getByPlaceholder(/https:\/\//)
     await urlInput.fill('not-a-url')
-    await page.getByRole('button', { name: /import/i }).first().click()
+    await page.getByRole('dialog').getByRole('button', { name: 'Import', exact: true }).click()
     // Same native constraint validation — type="url" rejects a non-URL
     // string before the form ever submits.
     await expect(urlInput).toHaveJSProperty('validity.typeMismatch', true)

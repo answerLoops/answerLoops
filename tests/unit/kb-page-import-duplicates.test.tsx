@@ -51,12 +51,14 @@ async function renderPage() {
 }
 
 async function uploadFile(name = 'guide.md') {
+  await userEvent.click(screen.getByRole('button', { name: 'Upload file' }))
   const input = document.querySelector('input[type="file"]') as HTMLInputElement
   const file = new File(['# Guide'], name, { type: 'text/markdown' })
   await userEvent.setup({ applyAccept: false }).upload(input, file)
 }
 
 async function importUrl() {
+  await userEvent.click(screen.getByRole('button', { name: 'Import URL' }))
   await userEvent.setup().type(screen.getByPlaceholderText('https://docs.example.com'), 'https://docs.example.com')
   fireEvent.submit(screen.getByRole('button', { name: 'Import' }).closest('form')!)
 }
