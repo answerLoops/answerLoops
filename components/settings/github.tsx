@@ -233,13 +233,14 @@ export function GitHubIntegrationCard() {
 
                   {/* ── Knowledge Base ───────────────────────────────── */}
                   <div className="px-4 py-4">
-                    <div className="flex items-start justify-between gap-4 mb-3">
+                    {/* Stacked on phones so the button never squeezes the description. */}
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4 mb-3">
                       <div className="min-w-0">
                         <p className="text-sm font-medium text-gray-800 mb-0.5">Knowledge Base</p>
                         <p className="text-xs text-gray-500">Sync markdown files from this repo as KB articles so the AI can reference your docs when answering questions.</p>
                       </div>
                       {repo.kb_enabled === 1 ? (
-                        <label className="flex items-center gap-2 shrink-0 mt-0.5 cursor-pointer">
+                        <label className="flex items-center gap-2 sm:shrink-0 sm:mt-0.5 cursor-pointer">
                           <input
                             type="checkbox"
                             id={`kb-toggle-${repo.id}`}
@@ -260,7 +261,7 @@ export function GitHubIntegrationCard() {
                             id={`kb-toggle-${repo.id}`}
                             size="sm"
                             variant="secondary"
-                            className="shrink-0 whitespace-nowrap"
+                            className="self-start sm:shrink-0 whitespace-nowrap"
                             aria-label={`Set up Knowledge Base for ${repo.owner}/${repo.repo}`}
                             onClick={() => setPickerFor(repo.id)}
                           >
