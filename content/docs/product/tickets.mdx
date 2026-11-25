@@ -8,10 +8,11 @@ Every question posted in a channel you have connected becomes a **ticket**: one 
 
 <Hotspots
   shot="tickets-list"
-  only={['filters', 'source', 'priority', 'ai-status', 'ticket-row']}
+  only={['status-tabs', 'filters', 'summary', 'priority', 'ai-status', 'ticket-row']}
   notes={{
-    filters: 'Narrow the inbox by status, priority, or category, then press Filter. Export CSV sits in the same bar.',
-    source: 'A colored badge shows which platform the question came from.',
+    'status-tabs': 'Switch between All, Open, In progress, Resolved and Closed. Each tab shows how many tickets it holds.',
+    filters: 'Narrow the list by priority, category or channel. Each choice applies straight away.',
+    summary: 'The question, with a colored badge for the platform it came from and who asked underneath.',
     priority: 'Priority is set from the AI\'s severity assessment when the ticket arrives.',
     'ai-status': 'Shows what the AI did: drafted an answer for review, answered automatically, or left it to a person.',
     'ticket-row': 'Select a row to open the full ticket, with the conversation, the AI draft, and the controls to reply.',
@@ -25,23 +26,21 @@ The **Tickets** page is a single inbox across every connected channel. Each row 
 | Column | What it shows |
 |---|---|
 | **#** | Your workspace's ticket number |
-| **Summary** | AI-written one-line summary of the question. A **New activity** badge appears under it when the customer has written since your team last opened the ticket |
-| **Source** | The platform the question came from |
+| **Summary** | AI-written one-line summary of the question. Underneath are the platform it came from, who asked, **SLA breach** in red when a response or resolution target has been missed, and a **New activity** badge when the customer has written since your team last opened the ticket |
 | **Category** | The AI's classification (see [categories](#how-the-ai-handles-each-category)) |
 | **Priority** | `critical`, `high`, `medium`, or `low` |
 | **Status** | Where the ticket is in its lifecycle |
 | **AI** | What the AI did with it (for example, AI needs review or AI approved) |
-| **SLA** | Shows **SLA breach** in red when a response or resolution target has been missed; blank otherwise |
-| **Author** | Who asked |
 | **Created** | When the original message arrived |
 
 The list shows the 50 newest tickets at a time. Select **Load more** at the bottom for older ones.
 
 ### Filter the list
 
-Use the dropdowns at the top of the page, then press **Filter**:
+The tabs at the top switch between **All**, **Open**, **In progress**, **Resolved** and **Closed**, each with its ticket count. A **Duplicate** tab appears when there are duplicates. The counts cover every ticket in that status, whatever other filters are set. **Export CSV** is in the page header.
 
-- **Status:** Open, In Progress, Resolved, Closed, or Duplicate
+Below the tabs, the dropdowns apply as soon as you change them, with no Filter button:
+
 - **Priority:** Critical, High, Medium, or Low
 - **Category:** Bug, Feature Request, Documentation, How-to, or General Question
 - **Channel:** All channels, Discord, Slack, Google Chat, Telegram, Email, GitHub, Discourse, Circle, or Agent
@@ -51,9 +50,9 @@ Two more controls sit beside them:
 - **Sort:** **Newest first** orders by when the ticket was created. **Latest activity** orders by the most recent message on the conversation, so an old ticket with a fresh reply comes to the top.
 - **New activity:** tick it to show only tickets where the customer has written since your team last opened them.
 
-Filters stack, so you can combine them. **Clear** resets the list.
+Filters stack, so you can combine them, and switching tab keeps the dropdowns you have set. **Clear filters** appears when any dropdown is set and resets them, keeping the current tab.
 
-Selecting a [dashboard stat card or Needs attention row](/docs/product/dashboard#needs-attention) opens this page with a matching card filter (Auto-Answered, Needs Review, AI Drafts Pending, or SLA Breaches). A "Filtered by" label appears above the list and stays in place when you change the dropdowns and press **Filter**. Select **Clear card filter** to remove only the card filter.
+Selecting a [dashboard stat card or Needs attention row](/docs/product/dashboard#needs-attention) opens this page with a matching card filter (Auto-Answered, Needs Review, AI Drafts Pending, or SLA Breaches). A "Filtered by" label appears above the list and stays in place when you change the tabs or dropdowns. Select **Clear card filter** to remove only the card filter.
 
 ### Know when a customer replies
 

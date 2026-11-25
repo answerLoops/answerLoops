@@ -1,9 +1,10 @@
-import { getTickets, encodeTicketCursor, decodeTicketCursor } from '@/lib/db/queries/tickets'
+import { getTickets, getTicketStatusCounts, encodeTicketCursor, decodeTicketCursor } from '@/lib/db/queries/tickets'
 import { TicketList } from '@/components/tickets/ticket-list'
 import { auth } from '@/auth'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
-import { platformLabel, SUPPORTED_PLATFORMS, isSourcePlatform } from '@/lib/tickets/platform-label'
+import { isSourcePlatform } from '@/lib/tickets/platform-label'
+import { TicketFilters } from '@/components/tickets/ticket-filters'
 import { LockedCsvExportButton } from '@/components/billing/locked-csv-export-button'
 import type { TicketStatus, Priority, TicketCategory } from '@/types'
 import Link from 'next/link'
@@ -32,8 +33,8 @@ interface SearchParams {
 // another page follows, without a second round trip or a COUNT query.
 const PAGE_SIZE = 50
 
-// Filters reached from the dashboard stat cards. They have no dropdown in the
-// filter bar, so they ride along as hidden fields to survive a Filter submit.
+// Filters reached from the dashboard stat cards. They have no control in the
+// filter bar; they live in the URL and the filter controls carry them along.
 const CARD_FILTERS = [
   { param: 'autoDeflected', label: 'Auto-Answered' },
   { param: 'needsReview', label: 'Needs Review' },
@@ -60,7 +61,10 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
     newActivity: searchParams.newActivity === '1' || undefined,
     sort: searchParams.sort === 'activity' ? ('activity' as const) : undefined,
   }
-  const rows = await getTickets(filters, orgId, PAGE_SIZE + 1, cursor ?? undefined, true)
+  const [rows, statusCounts] = await Promise.all([
+    getTickets(filters, orgId, PAGE_SIZE + 1, cursor ?? undefined, true),
+    getTicketStatusCounts(orgId),
+  ])
   const hasMore = rows.length > PAGE_SIZE
   const tickets = hasMore ? rows.slice(0, PAGE_SIZE) : rows
   const last = tickets[tickets.length - 1]
@@ -90,6 +94,29 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
   const clearCardFiltersQuery = withoutCardFilters.toString()
   const clearCardFiltersHref = clearCardFiltersQuery ? `/tickets?${clearCardFiltersQuery}` : '/tickets'
 
+  // Status tabs keep every other filter, so switching tab narrows what you are
+  // already looking at instead of starting over.
+  const tabHref = (status?: string) => {
+    const params = new URLSearchParams(loadMoreParams)
+    params.delete('cursor')
+    params.delete('status')
+    if (status) params.set('status', status)
+    const query = params.toString()
+    return query ? `/tickets?${query}` : '/tickets'
+  }
+  const allCount = Object.values(statusCounts).reduce((sum, n) => sum + n, 0)
+  const STATUS_TABS = [
+    { status: undefined, label: 'All', count: allCount },
+    { status: 'open', label: 'Open', count: statusCounts.open },
+    { status: 'in_progress', label: 'In progress', count: statusCounts.in_progress },
+    { status: 'resolved', label: 'Resolved', count: statusCounts.resolved },
+    { status: 'closed', label: 'Closed', count: statusCounts.closed },
+    // Duplicates are rarely wanted, so their tab only appears when there are some.
+    ...(statusCounts.duplicate > 0 || filters.status === 'duplicate'
+      ? [{ status: 'duplicate', label: 'Duplicate', count: statusCounts.duplicate }]
+      : []),
+  ]
+
   return (
     <Page>
       <PageHeader
@@ -100,72 +127,55 @@ export default async function TicketsPage(props: { searchParams: Promise<SearchP
             {hasMore || cursor ? ' (showing the most recent page)' : ''}.
           </>
         }
+        actions={
+          <>
+            {canExportCsv ? (
+              <a
+                href="/api/export/tickets"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Export CSV
+              </a>
+            ) : (
+              <LockedCsvExportButton className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50" />
+            )}
+          </>
+        }
       />
 
-      {/* Filter bar */}
-      <form className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-2 text-sm shadow-sm">
-        <select name="status" defaultValue={searchParams.status ?? ''} className="rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white">
-          <option value="">All statuses</option>
-          <option value="open">Open</option>
-          <option value="in_progress">In Progress</option>
-          <option value="resolved">Resolved</option>
-          <option value="closed">Closed</option>
-          <option value="duplicate">Duplicate</option>
-        </select>
-        <select name="priority" defaultValue={searchParams.priority ?? ''} className="rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white">
-          <option value="">All priorities</option>
-          <option value="critical">Critical</option>
-          <option value="high">High</option>
-          <option value="medium">Medium</option>
-          <option value="low">Low</option>
-        </select>
-        <select name="category" defaultValue={searchParams.category ?? ''} className="rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white">
-          <option value="">All categories</option>
-          <option value="bug">Bug</option>
-          <option value="feature_request">Feature Request</option>
-          <option value="documentation">Documentation</option>
-          <option value="how_to">How-to</option>
-          <option value="general_question">General Question</option>
-        </select>
-        <select name="platform" defaultValue={filters.platform ?? ''} aria-label="Filter by channel" className="rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white">
-          <option value="">All channels</option>
-          {SUPPORTED_PLATFORMS.map((platform) => (
-            <option key={platform} value={platform}>
-              {platformLabel(platform)}
-            </option>
-          ))}
-        </select>
-        <select name="sort" defaultValue={filters.sort ?? ''} aria-label="Sort tickets" className="rounded-md border border-gray-200 px-2 py-1.5 text-sm text-gray-700 bg-white">
-          <option value="">Newest first</option>
-          <option value="activity">Latest activity</option>
-        </select>
-        <label className="flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-700">
-          <input type="checkbox" name="newActivity" value="1" defaultChecked={!!filters.newActivity} />
-          New activity
-        </label>
-        {activeCardFilters.map(({ param }) => (
-          <input key={param} type="hidden" name={param} value="1" />
-        ))}
-        <button type="submit" className="rounded-lg bg-[#082e50] px-4 py-2 text-sm font-medium text-white hover:bg-[#184566]">
-          Filter
-        </button>
-        <Link href="/tickets" className="rounded-full px-3 py-2 text-sm text-gray-600 hover:bg-gray-50">
-          Clear
-        </Link>
-        {canExportCsv ? (
-          <a
-            href="/api/export/tickets"
-            className="flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50"
-          >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Export CSV
-          </a>
-        ) : (
-          <LockedCsvExportButton className="flex items-center gap-1.5 rounded-full border border-gray-200 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50" />
-        )}
-      </form>
+      <div className="flex flex-col gap-3">
+        <nav aria-label="Ticket status" className="dashboard-tabs flex min-w-0 gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2">
+          {STATUS_TABS.map((tab) => {
+            const selected = (filters.status ?? undefined) === tab.status
+            return (
+              <Link
+                key={tab.label}
+                href={tabHref(tab.status)}
+                aria-current={selected ? 'page' : undefined}
+                className={[
+                  'flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
+                  selected ? 'bg-[#082e50] text-white shadow-none' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
+                ].join(' ')}
+              >
+                {tab.label}
+                <span className={`text-xs tabular-nums ${selected ? 'text-white/70' : 'text-slate-400'}`}>{tab.count}</span>
+              </Link>
+            )
+          })}
+        </nav>
+        <TicketFilters
+          values={{
+            priority: filters.priority,
+            category: filters.category,
+            platform: filters.platform,
+            sort: filters.sort,
+            newActivity: filters.newActivity,
+          }}
+        />
+      </div>
 
       {activeCardFilters.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600" data-testid="card-filter-indicator">

@@ -172,9 +172,8 @@ test('dashboard channel chips and tickets filtering at 1280px desktop viewport',
   // Verify unfiltered results show tickets from multiple channels
   await expect(page.getByText('Discord question').first()).toBeVisible()
 
-  // Filter by channel using the tickets page dropdown
+  // Filter by channel using the tickets page dropdown; it applies on change
   await channelSelect.selectOption('discord')
-  await page.getByRole('button', { name: 'Filter' }).click()
   await expect(page).toHaveURL(/\/tickets.*platform=discord/)
   await expect(channelSelect).toHaveValue('discord')
 
