@@ -12,6 +12,7 @@ import { ApiKeysSection } from '@/components/settings/api-keys'
 import { DangerZoneSection } from '@/components/settings/danger-zone'
 import { SourceSupportSection } from '@/components/settings/source-support'
 import { KbPageTitlesSection } from '@/components/settings/kb-page-titles'
+import { Page, PageHeader } from '@/components/dashboard/page-shell'
 
 const TABS = [
   { id: 'general',   label: 'General' },
@@ -71,21 +72,19 @@ export default function SettingsPage() {
   if (tabParam && INTEGRATION_TAB_IDS.has(tabParam)) return null
 
   return (
-    <div className="dashboard-page max-w-6xl">
-      <div className="mb-6">
-        <div className="mb-2 flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-blue-600">
-          <span className="h-px w-5 bg-blue-500" />
-          Workspace configuration
-        </div>
-        <h1 className="text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-3xl">Settings</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Manage AI behavior, team access, and workspace configuration. Connect channels and services under{' '}
-          <Link href="/integrations" className="text-blue-600 hover:underline">Integrations</Link>.
-        </p>
-      </div>
+    <Page>
+      <PageHeader
+        title="Settings"
+        description={
+          <>
+            Manage AI behavior, team access, and workspace configuration. Connect channels and services under{' '}
+            <Link href="/integrations" className="text-blue-600 hover:underline">Integrations</Link>.
+          </>
+        }
+      />
 
       {/* Tab bar */}
-      <div className="dashboard-tabs mb-7 flex min-w-0 gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2" role="tablist">
+      <div className="dashboard-tabs flex min-w-0 gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2" role="tablist">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -139,6 +138,6 @@ export default function SettingsPage() {
           <DangerZoneSection />
         </section>
       )}
-    </div>
+    </Page>
   )
 }

@@ -34,6 +34,15 @@ test.describe('analytics / ROI', () => {
     await expect(page.getByText('Deflection rate')).toBeVisible()
   })
 
+  test('the trend chart defaults to 30 days and switches range from the link', async ({ page }) => {
+    await page.goto('/analytics')
+    const nav = page.getByRole('navigation', { name: 'Trend range' })
+    await expect(nav.getByRole('link', { name: '30 days' })).toHaveAttribute('aria-current', 'page')
+    await nav.getByRole('link', { name: '7 days' }).click()
+    await expect(page).toHaveURL(/\/analytics\?range=7/)
+    await expect(nav.getByRole('link', { name: '7 days' })).toHaveAttribute('aria-current', 'page')
+  })
+
   test('a resolved how-to is a doc gap until promoted to KB', async ({ request, page }) => {
     const ticketId = await ingest(request, { content: 'How do I configure the client connection?' })
     await waitForPipeline(request, ticketId)
