@@ -117,7 +117,16 @@ export class AgentClient {
     });
 
     const text = await res.text();
-    const data = text ? JSON.parse(text) : undefined;
+    let data: unknown;
+
+    if (text) {
+      try {
+        data = JSON.parse(text);
+      } catch (error) {
+        // Non-JSON error bodies (for example, proxy HTML) should reach AgentApiError handling.
+        if (res.ok) throw error;
+      }
+    }
 
     if (!res.ok) {
       const errorBody = data as AgentApiErrorBody | undefined;
