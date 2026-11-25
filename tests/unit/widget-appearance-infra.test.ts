@@ -71,7 +71,7 @@ describe('the actions', () => {
 
 describe('Settings', () => {
   it('shows the appearance controls inside the widget section, fed by what was loaded', () => {
-    const page = read('app/(dashboard)/settings/page.tsx')
+    const page = read('components/settings/widget.tsx')
     expect(page).toContain("import { WidgetAppearanceSettings } from '@/components/settings/widget-appearance'")
     expect(page).toContain('<WidgetAppearanceSettings')
     expect(page).toContain('setAppearance(result.appearance ?? EMPTY_WIDGET_APPEARANCE)')

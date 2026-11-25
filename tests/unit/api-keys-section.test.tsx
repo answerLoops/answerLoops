@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ApiKeysSection } from '@/app/(dashboard)/settings/page'
+import { ApiKeysSection } from '@/components/settings/api-keys'
 import { createApiKeyAction, revokeApiKeyAction } from '@/lib/actions/api-keys'
 import { ALL_SCOPES } from '@/lib/agent/scopes'
 

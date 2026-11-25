@@ -222,7 +222,7 @@ describe('schema + migration for the origin allowlist', () => {
 })
 
 describe('Settings → Widget exposes the allowlist', () => {
-  const src = () => read('app/(dashboard)/settings/page.tsx')
+  const src = () => read('components/settings/widget.tsx')
 
   it('renders a domains field wired to the save action', () => {
     const s = src()

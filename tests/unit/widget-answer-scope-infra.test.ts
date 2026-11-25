@@ -77,7 +77,7 @@ describe('the query layer', () => {
 
 describe('Settings', () => {
   it('shows the controls inside the widget section, fed by what was loaded', () => {
-    const page = read('app/(dashboard)/settings/page.tsx')
+    const page = read('components/settings/widget.tsx')
     expect(page).toContain("import { WidgetAnswersSettings } from '@/components/settings/widget-answers'")
     expect(page).toContain('<WidgetAnswersSettings')
     expect(page).toContain('if (result.answerScope) setAnswerScope(result.answerScope)')

@@ -328,7 +328,7 @@ On the **Sources** tab, choose **Show recent answers** under an article to see t
 
 Source support checks whether the articles supplied to an answer support what the answer says. It splits the answer into short claims and each supplied article into numbered passages, asks a separate AI step which passage (if any) backs each claim, and then confirms every match with an independent similarity check. A match that fails that check is marked inconclusive, never supporting. The result for each article is **supporting evidence found**, **no supporting evidence found**, or **inconclusive**. Textual support is not proof that the answer is correct.
 
-It is **off by default**. An owner or admin turns it on in **Settings → Source support**:
+It is **off by default**. An owner or admin turns it on in **Settings → AI Model**, under **Source support**:
 
 - **Check answers from:** a separate switch for each channel: the website chat widget, support ticket drafts, Discord `/ask`, and the Agent API and MCP. Each channel is checked only while its own switch is on.
 - **Share of answers to check:** the percentage of answers to check. The choice is fixed per answer, so the same answer is always either in or out. Leave it empty to check none.

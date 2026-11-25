@@ -185,7 +185,7 @@ function callsTo(url: string) {
 
 // --- module graph, re-imported per test -----------------------------------
 
-let TeamSection: typeof import('@/app/(dashboard)/settings/page').TeamSection
+let TeamSection: typeof import('@/components/settings/team').TeamSection
 let DashboardLive: typeof import('@/components/dashboard/dashboard-live').DashboardLive
 
 beforeEach(async () => {
@@ -199,7 +199,7 @@ beforeEach(async () => {
   invitesPayload = [PENDING_INVITE]
 
   vi.resetModules()
-  ;({ TeamSection } = await import('@/app/(dashboard)/settings/page'))
+  ;({ TeamSection } = await import('@/components/settings/team'))
   ;({ DashboardLive } = await import('@/components/dashboard/dashboard-live'))
 })
 

@@ -82,7 +82,7 @@ describe('the chat panel and the public lookup', () => {
 
 describe('Settings', () => {
   it('re-creates the form when the saved questions change, so the box shows what was stored', () => {
-    const page = read('app/(dashboard)/settings/page.tsx')
+    const page = read('components/settings/widget.tsx')
     expect(page).toContain("appearance.starterQuestions.join('|')")
     expect(page).toContain('appearance.starterEnabled')
   })

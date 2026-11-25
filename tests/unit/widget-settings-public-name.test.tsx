@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { WidgetSection } from '@/app/(dashboard)/settings/page'
+import { WidgetSection } from '@/components/settings/widget'
 
 /**
  * Behavioral coverage for the "Public name" field in WidgetSection: the
