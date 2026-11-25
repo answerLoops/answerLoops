@@ -123,6 +123,7 @@ export class AgentClient {
       try {
         data = JSON.parse(text);
       } catch (error) {
+        // Non-JSON error bodies (for example, proxy HTML) should reach AgentApiError handling.
         if (res.ok) throw error;
       }
     }
