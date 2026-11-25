@@ -5,6 +5,7 @@ import { getUnreadCount } from '@/lib/db/queries/notifications'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { DashboardLive } from '@/components/dashboard/dashboard-live'
 import { SidebarNav } from '@/components/dashboard/sidebar-nav'
+import { SectionNav } from '@/components/dashboard/section-nav'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
 import { FeedbackWidget } from '@/components/feedback/feedback-widget'
 import { isFeedbackWidgetEnabled } from '@/lib/product-feedback/enabled'
@@ -135,6 +136,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             {trialEnding !== null && <TrialEndingBanner daysLeft={trialEnding} />}
             {usageStatus && <AIUsageBanner status={usageStatus} />}
             <DeflectionStatusBanner offPlatforms={offPlatforms} />
+            <SectionNav />
             {children}
             {/* Room for the floating Feedback pill, so it never covers the
                 last button or row on a page. */}

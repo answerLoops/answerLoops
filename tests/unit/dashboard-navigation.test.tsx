@@ -36,6 +36,30 @@ describe('dashboard navigation', () => {
     expect(screen.getByRole('link', { name: /Dashboard/ })).not.toHaveAttribute('aria-current')
   })
 
+  it('lists seven destinations, with Leads, FAQ and Simulation moved under their sections', () => {
+    render(<SidebarNav />)
+
+    const labels = screen.getAllByRole('link').map((l) => l.textContent?.trim())
+    expect(labels.slice(0, 7)).toEqual(['Dashboard', 'Analytics', 'Tickets', 'Knowledge Base', 'Billing', 'Integrations', 'Settings'])
+    for (const gone of ['Leads', 'FAQ', 'Simulation', 'Knowledge Gaps']) {
+      expect(screen.queryByRole('link', { name: new RegExp(`^${gone}`) })).toBeNull()
+    }
+  })
+
+  it.each([
+    ['/leads', 'Tickets'],
+    ['/tickets', 'Tickets'],
+    ['/faq', 'Knowledge Base'],
+    ['/simulation', 'Knowledge Base'],
+    ['/kb', 'Knowledge Base'],
+  ])('keeps %s under the %s entry', (pathname, entry) => {
+    navigation.pathname = pathname
+    render(<SidebarNav />)
+
+    expect(screen.getByRole('link', { name: new RegExp(entry) })).toHaveAttribute('aria-current', 'page')
+    expect(screen.queryAllByRole('link').filter((l) => l.getAttribute('aria-current') === 'page')).toHaveLength(1)
+  })
+
   it('shows the changelog link, in a new tab, when one is passed down', () => {
     render(<SidebarNav changelogUrl="https://answerloops.com/changelog" />)
 
