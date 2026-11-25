@@ -1,7 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { DiscordIntegrationCard } from '@/components/settings/discord'
 import { SlackIntegrationCard } from '@/components/settings/slack'
 import { GoogleChatIntegrationCard } from '@/components/settings/googlechat'
@@ -11,196 +12,117 @@ import { CircleIntegrationCard } from '@/components/settings/circle'
 import { EmailIntegrationCard } from '@/components/settings/email'
 import { GitHubIntegrationCard } from '@/components/settings/github'
 import { NotionIntegrationCard } from '@/components/settings/notion'
+import { INTEGRATIONS, IntegrationsOverview, isIntegrationId, type IntegrationId, type StatusMap } from './overview'
 
-// Tabs marked `beta` are grouped under a "Beta" label in the tab bar: they are
-// available but have seen little real-world use, so they are not presented
-// alongside the established channels.
-const TABS = [
-  { id: 'discord',     label: 'Discord',     beta: false },
-  { id: 'slack',       label: 'Slack',       beta: false },
-  { id: 'telegram',    label: 'Telegram',    beta: false },
-  { id: 'github',      label: 'GitHub',      beta: false },
-  { id: 'notion',      label: 'Notion',      beta: false },
-  { id: 'discourse',   label: 'Discourse',   beta: false },
-  { id: 'google-chat', label: 'Google Chat', beta: true },
-  { id: 'circle',      label: 'Circle',      beta: true },
-  { id: 'email',       label: 'Email',       beta: true },
-] as const
-
-const STABLE_TABS = TABS.filter((tab) => !tab.beta)
-const BETA_TABS = TABS.filter((tab) => tab.beta)
-
-type TabId = (typeof TABS)[number]['id']
-
-// Maps a tab id to the `platform` value stored on the integrations table —
-// these diverge for Google Chat (tab id uses a hyphen, the DB value uses an
-// underscore). GitHub isn't here: its deflection state is per-repo, not a
-// single integrations-table row, so it's fetched separately.
-const TAB_PLATFORM: Partial<Record<TabId, string>> = {
+// Maps an integration id to the `platform` value stored on the integrations
+// table. These diverge for Google Chat (the id uses a hyphen, the DB value an
+// underscore). GitHub and Notion are not here: GitHub's state is per-repo and
+// Notion has its own connection, so each is fetched separately.
+const PLATFORM: Partial<Record<IntegrationId, string>> = {
   discord: 'discord',
   slack: 'slack',
   'google-chat': 'google_chat',
   telegram: 'telegram',
   discourse: 'discourse',
+  circle: 'circle',
   email: 'email',
 }
 
-// Per-tab dot state for the Automatic Deflections indicator in the tab bar:
-// null = not connected / no data yet (no dot), true = at least one enabled,
-// false = connected but none enabled.
-type DeflectionDotState = Record<string, boolean | null>
+// Platforms whose connected state can be "manual review": the automatic-answers
+// switch is off, so answers wait for approval. Circle and Email never show it.
+const HAS_REVIEW_STATE = new Set<IntegrationId>(['discord', 'slack', 'google-chat', 'telegram', 'discourse'])
+
+interface IntegrationRow {
+  platform: string
+  enabled: number
+  team_id: string | null
+  auto_deflect_enabled: number
+}
 
 export default function IntegrationsPage() {
   const searchParams = useSearchParams()
-  const router = useRouter()
-  const [deflectionDots, setDeflectionDots] = useState<DeflectionDotState>({})
+  const tabParam = searchParams.get('tab')
+  const active = isIntegrationId(tabParam) ? tabParam : null
+  const [statuses, setStatuses] = useState<StatusMap>({})
 
-  const activeTab = (searchParams.get('tab') as TabId) ?? 'discord'
-
-  const setTab = (id: TabId) => {
-    const params = new URLSearchParams(searchParams.toString())
-    params.set('tab', id)
-    router.replace(`/integrations?${params.toString()}`, { scroll: false })
-  }
-
-  // One-time fetch (not per-card) so the tab bar can show each platform's
-  // Automatic Deflections state before the user ever clicks into that tab.
+  // One fetch per source (not per card), so the overview can show every
+  // integration's state before anyone opens one.
   useEffect(() => {
+    let cancelled = false
+    const merge = (patch: StatusMap) => { if (!cancelled) setStatuses((prev) => ({ ...prev, ...patch })) }
+    const unknown = (ids: IntegrationId[]): StatusMap =>
+      Object.fromEntries(ids.map((id) => [id, { connected: false, manualReview: false }]))
+
     fetch('/api/integrations')
       .then((res) => (res.ok ? res.json() : []))
-      .then((rows: { platform: string; enabled: number; team_id: string | null; auto_deflect_enabled: number }[]) => {
-        setDeflectionDots((prev) => {
-          const next = { ...prev }
-          for (const [tabId, platform] of Object.entries(TAB_PLATFORM)) {
-            const row = rows.find((r) => r.platform === platform)
-            // A row can exist (e.g. a partially-set-up Google Chat pairing)
-            // without the integration actually being connected — match each
-            // card's own `connected` check (enabled === 1, plus team_id for
-            // Google Chat) rather than just "a row exists for this platform."
-            const isConnected = row != null && row.enabled === 1 && ((platform !== 'google_chat' && platform !== 'discourse') || !!row.team_id)
-            next[tabId] = isConnected ? row.auto_deflect_enabled === 1 : null
-          }
-          return next
-        })
+      .then((rows: IntegrationRow[]) => {
+        const patch: StatusMap = {}
+        for (const [id, platform] of Object.entries(PLATFORM) as [IntegrationId, string][]) {
+          const row = Array.isArray(rows) ? rows.find((r) => r.platform === platform) : undefined
+          // A row can exist (a half-finished Google Chat pairing, say) without
+          // the integration being connected, so match each card's own check:
+          // enabled, plus a team id for the platforms that need one.
+          const needsTeam = platform === 'google_chat' || platform === 'discourse' || platform === 'circle'
+          const connected = row != null && row.enabled === 1 && (!needsTeam || !!row.team_id)
+          patch[id] = { connected, manualReview: connected && HAS_REVIEW_STATE.has(id) && row.auto_deflect_enabled !== 1 }
+        }
+        merge(patch)
       })
-      .catch(() => {})
+      .catch(() => merge(unknown(Object.keys(PLATFORM) as IntegrationId[])))
 
     fetch('/api/github/repos')
       .then((res) => (res.ok ? res.json() : []))
       .then((repos: { auto_deflect_enabled: number }[]) => {
-        setDeflectionDots((prev) => ({
-          ...prev,
-          github: repos.length === 0 ? null : repos.some((r) => r.auto_deflect_enabled === 1),
-        }))
+        const list = Array.isArray(repos) ? repos : []
+        merge({ github: { connected: list.length > 0, manualReview: list.length > 0 && !list.some((r) => r.auto_deflect_enabled === 1) } })
       })
-      .catch(() => {})
+      .catch(() => merge(unknown(['github'])))
+
+    fetch('/api/notion')
+      .then((res) => (res.ok ? res.json() : { connection: null }))
+      .then((body: { connection?: unknown }) => merge({ notion: { connected: !!body?.connection, manualReview: false } }))
+      .catch(() => merge(unknown(['notion'])))
+
+    return () => { cancelled = true }
   }, [])
 
-  const renderTab = (tab: (typeof TABS)[number]) => (
-    <button
-      key={tab.id}
-      onClick={() => setTab(tab.id)}
-      className={[
-        'shrink-0 rounded-xl px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors',
-        activeTab === tab.id
-          ? 'bg-[#082e50] text-white shadow-none'
-          : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
-      ].join(' ')}
-    >
-      <span className="inline-flex items-center gap-1.5">
-        {tab.label}
-        {deflectionDots[tab.id] != null && (
-          <span
-            className={`h-1.5 w-1.5 rounded-full ${deflectionDots[tab.id] ? 'bg-emerald-500' : 'bg-red-500'}`}
-            title={`Automatic Deflections: ${deflectionDots[tab.id] ? 'On' : 'Off'}`}
-          />
-        )}
-      </span>
-    </button>
-  )
+  const activeInfo = INTEGRATIONS.find((i) => i.id === active)
 
   return (
     <div className="dashboard-page max-w-6xl">
       <div className="mb-6">
-        <div className="mb-2 flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-blue-600">
-          <span className="h-px w-5 bg-blue-500" />
-          Workspace configuration
-        </div>
-        <h1 className="text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-3xl">Integrations</h1>
-        <p className="mt-1 text-sm text-slate-500">Connect the channels and services this workspace answers questions in.</p>
+        {activeInfo ? (
+          <Link
+            href="/integrations"
+            className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-900"
+          >
+            <span aria-hidden="true">←</span> All integrations
+          </Link>
+        ) : (
+          <div className="mb-2 flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-blue-600">
+            <span className="h-px w-5 bg-blue-500" />
+            Workspace configuration
+          </div>
+        )}
+        <h1 className="text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-3xl">
+          {activeInfo ? activeInfo.label : 'Integrations'}
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          {activeInfo ? activeInfo.description : 'Connect the channels and services this workspace answers questions in.'}
+        </p>
       </div>
 
-      {/* Tab bar */}
-      <div className="dashboard-tabs mb-7 flex min-w-0 items-stretch gap-3 overflow-x-auto">
-        <div className="flex shrink-0 gap-1 rounded-xl border border-slate-200 bg-white p-2">
-          {STABLE_TABS.map((tab) => renderTab(tab))}
-        </div>
-        <div
-          role="group"
-          aria-label="Beta integrations"
-          className="flex shrink-0 items-center gap-1 rounded-xl border-2 border-blue-300 bg-blue-50 p-2"
-        >
-          <span className="rounded-full bg-blue-600 px-2.5 py-1 text-xs font-bold uppercase tracking-wide text-white">
-            Beta
-          </span>
-          {BETA_TABS.map((tab) => renderTab(tab))}
-        </div>
-      </div>
+      {!active && <IntegrationsOverview statuses={statuses} />}
 
-      {/* Tab panels */}
-      {activeTab === 'discord' && (
-        <section>
-          <DiscordIntegrationCard />
-        </section>
-      )}
-
-      {activeTab === 'slack' && (
-        <section>
-          <SlackIntegrationCard />
-        </section>
-      )}
-
-      {activeTab === 'google-chat' && (
-        <section>
-          <GoogleChatIntegrationCard />
-        </section>
-      )}
-
-      {activeTab === 'telegram' && (
-        <section>
-          <TelegramIntegrationCard />
-        </section>
-      )}
-
-      {activeTab === 'discourse' && (
-        <section>
-          <DiscourseIntegrationCard />
-        </section>
-      )}
-
-      {activeTab === 'circle' && (
-        <section>
-          <CircleIntegrationCard />
-        </section>
-      )}
-
-      {activeTab === 'email' && (
-        <section>
-          <EmailIntegrationCard />
-        </section>
-      )}
-
-      {activeTab === 'github' && (
-        <section>
-          <GitHubIntegrationCard />
-        </section>
-      )}
-
-      {activeTab === 'notion' && (
-        <section>
-          <NotionIntegrationCard />
-        </section>
-      )}
+      {active === 'discord' && <DiscordIntegrationCard />}
+      {active === 'slack' && <SlackIntegrationCard />}
+      {active === 'google-chat' && <GoogleChatIntegrationCard />}
+      {active === 'telegram' && <TelegramIntegrationCard />}
+      {active === 'discourse' && <DiscourseIntegrationCard />}
+      {active === 'circle' && <CircleIntegrationCard />}
+      {active === 'email' && <EmailIntegrationCard />}
+      {active === 'github' && <GitHubIntegrationCard />}
+      {active === 'notion' && <NotionIntegrationCard />}
     </div>
   )
 }

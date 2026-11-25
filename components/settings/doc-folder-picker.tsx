@@ -23,6 +23,9 @@ const ROOT_LABEL = 'Repository root (top-level files only)'
 /** Same limit the server applies (lib/github/doc-folders.ts). */
 const MAX_FOLDERS = 50
 
+export const DOC_FOLDERS_INTRO =
+  'Choose the folders that hold your docs. Every .md, .mdx and .txt file inside them, including subfolders, is synced.'
+
 /** The chosen folder that already includes this one, if any. The root only covers its own files. */
 function coveringFolder(path: string, selected: Set<string>): string | null {
   if (path === ROOT) return null
@@ -39,17 +42,20 @@ function coveringFolder(path: string, selected: Set<string>): string | null {
  * folders can be chosen; folders with no docs files are shown greyed out.
  * Saving switches Knowledge Base on for the repo with those folders.
  * `onSavingChange` lets the card lock its own controls while a save is out.
+ * `bare` drops the box and heading for use inside a dialog that supplies its own.
  */
 export function DocFolderPicker({
   repoId,
   onSaved,
   onCancel,
   onSavingChange,
+  bare = false,
 }: {
   repoId: number
   onSaved: () => void
   onCancel: () => void
   onSavingChange?: (saving: boolean) => void
+  bare?: boolean
 }) {
   const [listing, setListing] = useState<FolderListing | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -133,15 +139,15 @@ export function DocFolderPicker({
   }
 
   return (
-    <div className="mt-3 rounded-md border border-gray-200 bg-white p-3 space-y-3">
-      <div>
-        <p ref={headingRef} tabIndex={-1} id={`doc-folders-${repoId}`} className="text-sm font-medium text-gray-800 outline-none">
-          Docs folders
-        </p>
-        <p className="text-xs text-gray-500">
-          Choose the folders that hold your docs. Every .md, .mdx and .txt file inside them, including subfolders, is synced.
-        </p>
-      </div>
+    <div className={bare ? 'space-y-3' : 'mt-3 rounded-md border border-gray-200 bg-white p-3 space-y-3'}>
+      {!bare && (
+        <div>
+          <p ref={headingRef} tabIndex={-1} id={`doc-folders-${repoId}`} className="text-sm font-medium text-gray-800 outline-none">
+            Docs folders
+          </p>
+          <p className="text-xs text-gray-500">{DOC_FOLDERS_INTRO}</p>
+        </div>
+      )}
 
       {loadError ? (
         <p className="text-xs text-red-600" role="alert">{loadError}</p>

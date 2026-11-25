@@ -64,4 +64,16 @@ test.describe('integrations: GitHub repos', () => {
     await page.goto('/integrations?tab=github')
     await expect(page.getByText('acme/demo')).toBeVisible()
   })
+
+  test('the overview shows GitHub as connected and Manage opens it', async ({ page }) => {
+    await page.goto('/integrations')
+    const github = page.getByRole('listitem').filter({ has: page.getByRole('heading', { name: 'GitHub' }) })
+    await expect(github.getByText('Connected')).toBeVisible()
+    await github.getByRole('link', { name: 'Manage GitHub' }).click()
+    await expect(page).toHaveURL(/\/integrations\?tab=github/)
+    await expect(page.getByText('acme/demo')).toBeVisible()
+    await page.getByRole('link', { name: /All integrations/ }).click()
+    await expect(page).toHaveURL(/\/integrations$/)
+    await expect(page.getByRole('heading', { name: 'Channels' })).toBeVisible()
+  })
 })

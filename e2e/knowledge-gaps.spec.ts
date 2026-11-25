@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test'
 import { ingest, waitForPipeline, waitForTicketField, ticketDetailPath } from './helpers'
 
-// Knowledge gaps page: resolved how-to tickets not yet in KB appear as gaps.
+// Knowledge gaps tab on the KB page: resolved how-to tickets not yet in KB appear as gaps.
 // Promoting to KB removes them from the list.
 
-test.describe('knowledge gaps page', () => {
+test.describe('knowledge gaps tab', () => {
   test('resolved how-to ticket appears as a gap', async ({ request, page }) => {
     const ticketId = await ingest(request, { content: 'How do I configure the client connection?' })
     await waitForPipeline(request, ticketId)
@@ -19,8 +19,8 @@ test.describe('knowledge gaps page', () => {
     await expect(page.getByText(/open → resolved/)).toBeVisible()
     await waitForTicketField(request, ticketId, 'status', 'resolved')
 
-    await page.goto('/knowledge-gaps')
-    await expect(page.getByRole('heading', { name: /knowledge gap/i })).toBeVisible()
+    await page.goto('/kb?tab=gaps')
+    await expect(page.getByRole('tab', { name: /knowledge gaps/i })).toHaveAttribute('aria-selected', 'true')
     await expect(page.getByText(/configure the client/i).first()).toBeVisible()
   })
 
@@ -36,7 +36,7 @@ test.describe('knowledge gaps page', () => {
     await statusForm.getByRole('button', { name: 'Update status' }).click()
     await waitForTicketField(request, ticketId, 'status', 'resolved')
 
-    await page.goto('/knowledge-gaps')
+    await page.goto('/kb?tab=gaps')
     // Click the link to the ticket
     await page.getByRole('link', { name: /configure the client/i }).first().click()
     await expect(page).toHaveURL(new RegExp(`${ticketPath}$`))
@@ -59,7 +59,7 @@ test.describe('knowledge gaps page', () => {
     await page.getByRole('button', { name: 'Promote to KB' }).click()
     await expect(page.getByText('✓ In knowledge base')).toBeVisible()
 
-    await page.goto('/knowledge-gaps')
+    await page.goto('/kb?tab=gaps')
     // The promoted ticket should no longer appear. Scoped to this ticket's
     // own link rather than matching on content text: other tests in this
     // suite ingest the same wording and leave their tickets resolved-but-
@@ -80,9 +80,15 @@ test.describe('knowledge gaps page', () => {
     await statusForm.getByRole('button', { name: 'Update status' }).click()
     await waitForTicketField(request, ticketId, 'status', 'resolved')
 
-    await page.goto('/knowledge-gaps')
+    await page.goto('/kb?tab=gaps')
     await page.locator(`a[href="/kb?sourceTicket=${ticketId}"]`).click()
     await expect(page).toHaveURL(new RegExp(`/kb\\?sourceTicket=${ticketId}`))
     await expect(page.getByLabel('Question or title')).not.toHaveValue('')
   })
+})
+
+test('the old /knowledge-gaps address lands on the Gaps tab', async ({ page }) => {
+  await page.goto('/knowledge-gaps')
+  await expect(page).toHaveURL(/\/kb\?tab=gaps/)
+  await expect(page.getByRole('tab', { name: /knowledge gaps/i })).toHaveAttribute('aria-selected', 'true')
 })

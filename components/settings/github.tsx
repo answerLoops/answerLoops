@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { DeflectionStatusBadge } from '@/components/ui/badge'
 import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { useToast } from '@/components/settings/shared'
-import { DocFolderPicker } from '@/components/settings/doc-folder-picker'
+import { DocFolderPicker, DOC_FOLDERS_INTRO } from '@/components/settings/doc-folder-picker'
+import { Modal } from '@/components/ui/modal'
 import { runKbSync } from '@/lib/kb/sync-client'
 
 export function GitHubIntegrationCard() {
@@ -300,14 +301,27 @@ export function GitHubIntegrationCard() {
                       </div>
                     )}
 
-                    {pickerFor === repo.id && (
-                      <DocFolderPicker
-                        repoId={repo.id}
-                        onSaved={() => foldersSaved(repo)}
-                        onCancel={() => closePicker(repo, repo.kb_enabled === 1 ? 'change' : 'toggle')}
-                        onSavingChange={(saving) => setSavingFor(saving ? repo.id : null)}
-                      />
-                    )}
+                    <Modal
+                      open={pickerFor === repo.id}
+                      title="Docs folders"
+                      description={DOC_FOLDERS_INTRO}
+                      onClose={() => {
+                        // Leave the dialog open while a save is out, so closing it
+                        // can't hide the result.
+                        if (savingFor === repo.id) return
+                        closePicker(repo, repo.kb_enabled === 1 ? 'change' : 'toggle')
+                      }}
+                    >
+                      {pickerFor === repo.id && (
+                        <DocFolderPicker
+                          bare
+                          repoId={repo.id}
+                          onSaved={() => foldersSaved(repo)}
+                          onCancel={() => closePicker(repo, repo.kb_enabled === 1 ? 'change' : 'toggle')}
+                          onSavingChange={(saving) => setSavingFor(saving ? repo.id : null)}
+                        />
+                      )}
+                    </Modal>
                   </div>
                 </div>
               </div>

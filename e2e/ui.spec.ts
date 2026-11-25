@@ -4,15 +4,14 @@ import { ingest } from './helpers'
 // Read-only rendering of every dashboard surface, after seeding a ticket so the
 // lists and stat cards have something to show.
 test.describe('dashboard surfaces', () => {
-  test('dashboard renders stats cards and recent tickets', async ({ request, page }) => {
+  test('dashboard renders stat cards and the needs-attention list', async ({ request, page }) => {
     await ingest(request, { content: 'How do I configure the client?', authorName: 'dashuser' })
 
     await page.goto('/dashboard')
     // The page heading is a personalized greeting ("Good to see you, <name>"),
     // not a static "Dashboard" title — assert the stable elements instead.
     await expect(page.getByText('Auto-Answered')).toBeVisible()
-    await expect(page.getByText('Needs Review')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Open tickets' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Needs attention' })).toBeVisible()
     // At least one recent open ticket links through to its detail page.
     await expect(page.getByRole('link', { name: /configure the client/i }).first()).toBeVisible()
   })

@@ -98,13 +98,12 @@ export const SHOTS: Shot[] = [
     route: '/dashboard',
     viewport: { width: 1440, height: 980 },
     waitFor: ['h1:has-text("Good to see you")', '.dashboard-stats'],
-    alt: 'The answerLoops dashboard: ticket counts for auto-answered, open, in progress and resolved tickets, with the open tickets list and SLA status below.',
+    alt: 'The answerLoops dashboard: counts for auto-answered, open and resolved tickets, with a Needs attention list below showing what to act on now.',
     pins: [
       { id: 'navigation', selector: 'aside.dashboard-sidebar', label: 'Navigation sidebar' },
       { id: 'stat-cards', selector: '.dashboard-stats', label: 'Ticket counts at a glance' },
       { id: 'auto-answered', selector: 'a:has-text("Auto-Answered")', label: 'Auto-answered tickets' },
-      { id: 'open-tickets', selector: 'h2:text-is("Open tickets") >> xpath=ancestor::div[3]', label: 'Oldest unresolved tickets' },
-      { id: 'sla-status', selector: 'h2:text-is("SLA Status") >> xpath=ancestor::div[3]', label: 'SLA breaches' },
+      { id: 'needs-attention', selector: 'section[aria-labelledby="needs-attention-heading"]', label: 'What needs attention' },
     ],
   },
   {
@@ -177,9 +176,9 @@ export const SHOTS: Shot[] = [
   },
   {
     id: 'knowledge-gaps',
-    route: '/knowledge-gaps',
+    route: '/kb?tab=gaps',
     viewport: { width: 1440, height: 900 },
-    waitFor: ['h1:has-text("Knowledge Gaps")', 'text=Distinct questions'],
+    waitFor: ['h1:has-text("Knowledge Base")', 'text=Distinct questions'],
     alt: 'The knowledge gaps queue: counts of open gap tickets, the most-asked unanswered questions, and a category breakdown.',
     pins: [
       { id: 'summary', selector: 'text=Open gap tickets >> xpath=ancestor::div[2]', label: 'Gap counts' },
@@ -204,15 +203,14 @@ export const SHOTS: Shot[] = [
   {
     id: 'integrations',
     route: '/integrations',
-    // Cropped above the legacy manual-setup block, which lists a masked token.
-    viewport: { width: 1440, height: 740 },
-    waitFor: ['h1:has-text("Integrations")', 'text=Add answerLoops to Discord'],
-    alt: 'The integrations page: a tab for each channel and service, with the Discord tab open showing a connected server.',
+    viewport: { width: 1440, height: 900 },
+    waitFor: ['h1:has-text("Integrations")', 'h2:text-is("Channels")', 'text=Connected'],
+    alt: 'The integrations page: a card for each channel and knowledge source, each showing whether it is connected and a Connect or Manage button.',
     pins: [
-      { id: 'channel-tabs', selector: '.dashboard-tabs', label: 'One tab per channel' },
-      { id: 'connection-status', selector: 'span:text-is("Active")', label: 'Connection status' },
-      { id: 'add-server', selector: 'text=Add answerLoops to Discord', label: 'Connect with one click' },
-      { id: 'connected-server', selector: 'text=Northwind Robotics Community >> xpath=ancestor::div[2]', label: 'A connected server' },
+      { id: 'channels', selector: 'section[aria-label="Channels"]', label: 'Channels' },
+      { id: 'connection-status', selector: 'span:text-is("Connected") >> nth=0', label: 'Connection status' },
+      { id: 'manage', selector: 'a:has-text("Manage") >> nth=0', label: 'Open a connected integration' },
+      { id: 'sources', selector: 'section[aria-label="Knowledge sources"]', label: 'Knowledge sources' },
     ],
   },
   {
