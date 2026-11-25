@@ -178,12 +178,24 @@ describe('GitHubIntegrationCard — knowledge base', () => {
     expect(posts('/api/github/repo-settings')).toHaveLength(0)
   })
 
-  it('moves focus into the picker and back when it closes', async () => {
+  it('opens the picker in a dialog, moves focus into it and back when it closes', async () => {
     route([repo({ kb_enabled: 1, kb_paths: ['docs'] })])
     render(<GitHubIntegrationCard />)
     await userEvent.click(await screen.findByRole('button', { name: 'Change folders' }))
-    await waitFor(() => expect(document.activeElement?.textContent).toBe('Docs folders'))
+    const dialog = await screen.findByRole('dialog', { name: 'Docs folders' })
+    await waitFor(() => expect(document.activeElement).toBe(dialog))
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(document.activeElement?.textContent).toBe('Change folders'))
+  })
+
+  it('closes the picker dialog with Escape', async () => {
+    route([repo({ kb_enabled: 1, kb_paths: ['docs'] })])
+    render(<GitHubIntegrationCard />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Change folders' }))
+    await screen.findByRole('dialog', { name: 'Docs folders' })
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     await waitFor(() => expect(document.activeElement?.textContent).toBe('Change folders'))
   })
 

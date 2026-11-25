@@ -204,15 +204,14 @@ export const SHOTS: Shot[] = [
   {
     id: 'integrations',
     route: '/integrations',
-    // Cropped above the legacy manual-setup block, which lists a masked token.
-    viewport: { width: 1440, height: 740 },
-    waitFor: ['h1:has-text("Integrations")', 'text=Add answerLoops to Discord'],
-    alt: 'The integrations page: a tab for each channel and service, with the Discord tab open showing a connected server.',
+    viewport: { width: 1440, height: 900 },
+    waitFor: ['h1:has-text("Integrations")', 'h2:text-is("Channels")', 'text=Connected'],
+    alt: 'The integrations page: a card for each channel and knowledge source, each showing whether it is connected and a Connect or Manage button.',
     pins: [
-      { id: 'channel-tabs', selector: '.dashboard-tabs', label: 'One tab per channel' },
-      { id: 'connection-status', selector: 'span:text-is("Active")', label: 'Connection status' },
-      { id: 'add-server', selector: 'text=Add answerLoops to Discord', label: 'Connect with one click' },
-      { id: 'connected-server', selector: 'text=Northwind Robotics Community >> xpath=ancestor::div[2]', label: 'A connected server' },
+      { id: 'channels', selector: 'section[aria-label="Channels"]', label: 'Channels' },
+      { id: 'connection-status', selector: 'span:text-is("Connected") >> nth=0', label: 'Connection status' },
+      { id: 'manage', selector: 'a:has-text("Manage") >> nth=0', label: 'Open a connected integration' },
+      { id: 'sources', selector: 'section[aria-label="Knowledge sources"]', label: 'Knowledge sources' },
     ],
   },
   {
