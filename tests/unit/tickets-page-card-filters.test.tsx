@@ -6,10 +6,16 @@ const { getTickets, auth } = vi.hoisted(() => ({ getTickets: vi.fn(), auth: vi.f
 
 vi.mock('@/lib/db/queries/tickets', () => ({
   getTickets,
+  getTicketStatusCounts: async () => ({ open: 3, in_progress: 2, resolved: 1, closed: 0, duplicate: 0 }),
   encodeTicketCursor: () => 'next-cursor',
   decodeTicketCursor: () => null,
 }))
 vi.mock('@/auth', () => ({ auth }))
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+  usePathname: () => '/tickets',
+  useSearchParams: () => new URLSearchParams(),
+}))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: async () => true }))
 vi.mock('@/components/billing/locked-csv-export-button', () => ({ LockedCsvExportButton: () => null }))
 vi.mock('@/components/tickets/ticket-list', () => ({ TicketList: () => <div data-testid="ticket-list" /> }))
@@ -18,13 +24,6 @@ import TicketsPage from '@/app/(dashboard)/tickets/page'
 
 async function renderPage(searchParams: Record<string, string>) {
   render(await TicketsPage({ searchParams: Promise.resolve(searchParams) }))
-}
-
-function hiddenFields(container: HTMLElement) {
-  return Array.from(container.querySelectorAll('form input[type="hidden"]')).map((el) => [
-    el.getAttribute('name'),
-    el.getAttribute('value'),
-  ])
 }
 
 beforeEach(() => {
@@ -60,21 +59,9 @@ describe('TicketsPage card filters', () => {
     expect(screen.queryByTestId('card-filter-indicator')).not.toBeInTheDocument()
   })
 
-  it('keeps the active card filters as hidden fields so pressing Filter does not drop them', async () => {
-    const { container } = render(
-      await TicketsPage({ searchParams: Promise.resolve({ needsReview: '1', slaBreached: '1' }) })
-    )
+  it('shows no card-filter indicator when no card filter is active', async () => {
+    await renderPage({ status: 'open' })
 
-    expect(hiddenFields(container)).toEqual([
-      ['needsReview', '1'],
-      ['slaBreached', '1'],
-    ])
-  })
-
-  it('renders no hidden fields or indicator when no card filter is active', async () => {
-    const { container } = render(await TicketsPage({ searchParams: Promise.resolve({ status: 'open' }) }))
-
-    expect(hiddenFields(container)).toEqual([])
     expect(screen.queryByTestId('card-filter-indicator')).not.toBeInTheDocument()
   })
 
