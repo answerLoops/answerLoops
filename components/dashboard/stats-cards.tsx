@@ -4,14 +4,16 @@ interface StatsCardsProps {
   open: number
   inProgress: number
   resolved: number
-  slaBreaches: number
-  pendingDrafts: number
-  needsReview: number
   autoDeflected: number
   deflectionRate: number
 }
 
-export function StatsCards({ open, inProgress, resolved, slaBreaches, pendingDrafts, needsReview, autoDeflected, deflectionRate }: StatsCardsProps) {
+/**
+ * The four numbers worth seeing at a glance. Counts that need a decision (past
+ * the response target, drafts to approve, answers to review) live in the Needs
+ * attention list instead, so they are not shown twice.
+ */
+export function StatsCards({ open, inProgress, resolved, autoDeflected, deflectionRate }: StatsCardsProps) {
   const cards = [
     {
       label: 'Auto-Answered',
@@ -43,20 +45,10 @@ export function StatsCards({ open, inProgress, resolved, slaBreaches, pendingDra
       label: 'Open',
       href: '/tickets?status=open',
       display: String(open),
+      sub: inProgress > 0 ? `${inProgress} in progress` : undefined,
       icon: (
         <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-        </svg>
-      ),
-      accent: false,
-    },
-    {
-      label: 'In Progress',
-      href: '/tickets?status=in_progress',
-      display: String(inProgress),
-      icon: (
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
         </svg>
       ),
       accent: false,
@@ -71,42 +63,6 @@ export function StatsCards({ open, inProgress, resolved, slaBreaches, pendingDra
         </svg>
       ),
       accent: false,
-    },
-    {
-      label: 'Needs Review',
-      href: '/tickets?needsReview=1',
-      display: String(needsReview),
-      icon: (
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-        </svg>
-      ),
-      accent: needsReview > 0,
-      accentClass: 'text-amber-600',
-    },
-    {
-      label: 'AI Drafts Pending',
-      href: '/tickets?pendingDraft=1',
-      display: String(pendingDrafts),
-      icon: (
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-      ),
-      accent: pendingDrafts > 0,
-      accentClass: 'text-brand-600',
-    },
-    {
-      label: 'SLA Breaches',
-      href: '/tickets?slaBreached=1',
-      display: String(slaBreaches),
-      icon: (
-        <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-        </svg>
-      ),
-      accent: slaBreaches > 0,
-      accentClass: 'text-red-600',
     },
   ]
 
@@ -145,6 +101,9 @@ export function StatsCards({ open, inProgress, resolved, slaBreaches, pendingDra
             }`}>
               {card.display}
             </p>
+            {'sub' in card && card.sub && (
+              <p className="relative mt-1 text-xs text-slate-500">{card.sub}</p>
+            )}
             <div className={`relative mt-3 h-0.5 overflow-hidden rounded-full ${isDark ? 'bg-white/10' : isBlue ? 'bg-[#082e50]/10' : 'bg-slate-100'}`}>
               <div className={`h-full rounded-full ${index < 2 ? 'w-3/4 bg-cyan-300' : 'w-1/3 bg-blue-400/55'}`} />
             </div>

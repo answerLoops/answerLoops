@@ -307,7 +307,7 @@ describe('bot/index.ts: background purge sweep', () => {
 })
 
 describe('Settings Danger Zone: gated on owner role, destructive action requires typed confirmation', () => {
-  const src = read('app/(dashboard)/settings/page.tsx')
+  const src = read('components/settings/danger-zone.tsx')
 
   it('DangerZoneSection only renders the delete UI for the owner', () => {
     const idx = src.indexOf('function DangerZoneSection')
@@ -323,6 +323,6 @@ describe('Settings Danger Zone: gated on owner role, destructive action requires
   })
 
   it('a Danger Zone tab exists in the settings nav', () => {
-    expect(src).toContain("{ id: 'danger',    label: 'Danger Zone' }")
+    expect(read('app/(dashboard)/settings/page.tsx')).toContain("{ id: 'danger',    label: 'Danger Zone' }")
   })
 })

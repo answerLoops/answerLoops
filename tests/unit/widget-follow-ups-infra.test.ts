@@ -56,7 +56,7 @@ describe('the action and the settings screen', () => {
     const component = read('components/settings/widget-appearance.tsx')
     expect(component).toContain('Suggest follow-up questions')
     expect(component).toContain("fd.set('followUpsEnabled'")
-    expect(read('app/(dashboard)/settings/page.tsx')).toContain('${appearance.followUpsEnabled}')
+    expect(read('components/settings/widget.tsx')).toContain('${appearance.followUpsEnabled}')
   })
 })
 

@@ -27,6 +27,7 @@ describe('the 5-ticket platform-key allowance is gone', () => {
   it.each([
     'lib/db/schema.ts', 'lib/db/queries/tickets.ts', 'lib/db/queries/ai-config.ts', 'lib/ai/agent.ts', 'lib/ai/models.ts',
     'app/(dashboard)/layout.tsx', 'app/(dashboard)/settings/page.tsx',
+    'components/settings/ai-model.tsx', 'components/settings/team.tsx', 'components/settings/widget.tsx', 'components/settings/api-keys.tsx',
   ])('%s no longer mentions the old counter, limit or module', (f) => {
     expect(read(f)).not.toMatch(/platform_key_trial_used|PLATFORM_KEY_TRIAL_LIMIT|platform-key-trial|getPlatformKeyTrialStatus/)
   })

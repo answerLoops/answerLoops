@@ -97,7 +97,7 @@ describe('structural guarantees (source-level, same convention as the other tena
   })
 
   it('links the tab from the Chat widget settings and exposes it on the KB page', () => {
-    expect(read('app/(dashboard)/settings/page.tsx')).toContain('/kb?tab=coverage')
+    expect(read('components/settings/widget.tsx')).toContain('/kb?tab=coverage')
     const kb = read('app/(dashboard)/kb/page.tsx')
     expect(kb).toContain("id: 'coverage'")
     expect(kb).toContain('<CoverageTab />')

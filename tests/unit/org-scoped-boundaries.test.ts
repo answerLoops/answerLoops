@@ -112,11 +112,10 @@ describe('Dashboard surfaces thread the session org into their queries', () => {
     const src = read('app/(dashboard)/dashboard/page.tsx')
     expect(src).toContain('const orgId = session?.orgId ?? DEFAULT_ORG_ID')
     expect(src).toContain('getTicketStats(orgId)')
-    expect(src).toContain('getSLABreachedTickets(orgId)')
     // Known Issue 128: bounded with a DB-level limit, not fetched unbounded
     // and sliced client-side afterward.
-    expect(src).toMatch(/getTickets\(\{ status: 'open' \}, orgId, 6\)/)
-    expect(src).not.toContain('.then((t) => t.slice(0, 6))')
+    expect(src).toMatch(/getTickets\(\{ status: 'open' \}, orgId, 5\)/)
+    expect(src).not.toContain('.then((t) => t.slice(0, 5))')
   })
 
   it('dashboard layout scopes the unread badge count to the session org', () => {
