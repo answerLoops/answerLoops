@@ -4,7 +4,11 @@ import { useState,useEffect,useActionState,useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
-import { saveCircleIntegrationAction,deleteCircleIntegrationAction } from '@/lib/actions/integrations'
+import {
+  saveCircleIntegrationAction,
+  deleteCircleIntegrationAction,
+  rotateCircleSecretAction,
+} from '@/lib/actions/integrations'
 
 interface CircleIntegration {
   id: number
@@ -17,22 +21,44 @@ interface CircleIntegration {
   enabled: number
 }
 
+/** Reads this org's Circle row. Throws on a non-OK response or an unexpected body. */
+async function fetchCircleIntegration(): Promise<CircleIntegration | null> {
+  const res = await fetch('/api/integrations')
+  if (!res.ok) throw new Error(`Loading integrations failed with status ${res.status}`)
+  const data: unknown = await res.json()
+  if (!Array.isArray(data)) throw new Error('Loading integrations returned an unexpected response')
+  return (data as CircleIntegration[]).find((i) => i.platform === 'circle') ?? null
+}
+
 export function CircleIntegrationCard() {
   const [integration, setIntegration] = useState<CircleIntegration | null | undefined>(undefined)
+  const [loadError, setLoadError] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [confirmingDisconnect, setConfirmingDisconnect] = useState(false)
+  const [confirmingRotate, setConfirmingRotate] = useState(false)
+  const [rotateError, setRotateError] = useState<string | null>(null)
+  const [rotated, setRotated] = useState(false)
   const { toastMessage, showToast } = useToast()
   const [, startDeleteTransition] = useTransition()
+  const [rotatePending, startRotateTransition] = useTransition()
   const router = useRouter()
 
   const [saveState, saveAction, savePending] = useActionState(
     async (prev: unknown, fd: FormData) => {
       const result = await saveCircleIntegrationAction(prev, fd)
       if (!result?.error) {
-        const updated = await fetch('/api/integrations').then((r) => r.json())
-        setIntegration(updated.find((i: CircleIntegration) => i.platform === 'circle') ?? null)
         setEditing(false)
+        setConfirmingDisconnect(false)
         showToast('Circle settings updated')
         router.refresh()
+        try {
+          setIntegration(await fetchCircleIntegration())
+        } catch {
+          // Saved, but the card could not read the row back: show the
+          // load error with Retry instead of stale settings.
+          setIntegration(undefined)
+          setLoadError(true)
+        }
       }
       return result
     },
@@ -42,27 +68,73 @@ export function CircleIntegrationCard() {
   const [deleteState, deleteAction, deletePending] = useActionState(
     async (prev: unknown, fd: FormData) => {
       const result = await deleteCircleIntegrationAction(prev, fd)
-      if (!result?.error) { setIntegration(null); setEditing(false) }
+      setConfirmingDisconnect(false)
+      if (!result?.error) {
+        setIntegration(null)
+        setEditing(false)
+        setRotated(false)
+        showToast('Circle disconnected')
+        router.refresh()
+      }
       return result
     },
     null
   )
 
   useEffect(() => {
-    fetch('/api/integrations')
-      .then((r) => r.json())
-      .then((data: CircleIntegration[]) => {
-        setIntegration(data.find((i) => i.platform === 'circle') ?? null)
-      })
+    let cancelled = false
+    fetchCircleIntegration()
+      .then((row) => { if (!cancelled) setIntegration(row) })
+      .catch(() => { if (!cancelled) setLoadError(true) })
+    return () => { cancelled = true }
   }, [])
 
-  if (integration === undefined) return <p className="text-sm text-gray-400">Loading…</p>
+  function retryLoad() {
+    setLoadError(false)
+    fetchCircleIntegration()
+      .then(setIntegration)
+      .catch(() => setLoadError(true))
+  }
+
+  function rotateSecret() {
+    setRotateError(null)
+    startRotateTransition(async () => {
+      const result = await rotateCircleSecretAction()
+      setConfirmingRotate(false)
+      if (result.error || !result.webhookSecret) {
+        setRotateError(result.error ?? 'Could not rotate the secret. Try again.')
+        return
+      }
+      const newSecret = result.webhookSecret
+      setIntegration((prev) => (prev ? { ...prev, bot_secret: newSecret } : prev))
+      setRotated(true)
+      router.refresh()
+    })
+  }
+
+  if (integration === undefined) {
+    if (loadError) {
+      return (
+        <div className="bg-white rounded-lg border border-gray-200 p-4 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-red-600 min-w-0">Couldn’t load Circle settings. Check your connection and try again.</p>
+          <Button size="sm" variant="secondary" onClick={retryLoad}>
+            Retry
+          </Button>
+        </div>
+      )
+    }
+    return <p className="text-sm text-gray-400">Loading…</p>
+  }
 
   const connected = integration !== null && integration.enabled === 1 && !!integration.team_id
   const showForm = !connected || editing
   const webhookBase = typeof window !== 'undefined' ? `${window.location.origin}/api/circle/webhook` : '/api/circle/webhook'
-  const postWebhookUrl = `${webhookBase}?kind=post`
-  const commentWebhookUrl = `${webhookBase}?kind=comment`
+  // Circle's "Send to webhook" action cannot set headers, so the secret rides
+  // in the Endpoint URL as ?token=. Built from the current secret, so a
+  // rotation updates both URLs.
+  const tokenParam = integration?.bot_secret ? `&token=${encodeURIComponent(integration.bot_secret)}` : ''
+  const postWebhookUrl = `${webhookBase}?kind=post${tokenParam}`
+  const commentWebhookUrl = `${webhookBase}?kind=comment${tokenParam}`
 
   return (
     <>
@@ -98,28 +170,58 @@ export function CircleIntegrationCard() {
               <ReadOnlyRow label="Community URL" value={integration.team_id ?? '—'} />
               <ReadOnlyRow label="API token" value="••••••••• (saved)" />
               <ReadOnlyRow label="Watched spaces" value={integration.channel_ids.join(', ') || '— (all spaces)'} />
-              {integration.escalation_role_id && (
-                <ReadOnlyRow label="Escalation user" value={integration.escalation_role_id} />
-              )}
               <ReadOnlyRow label="Confidence threshold" value={String(integration.confidence_threshold ?? 0.8)} />
             </div>
             <div className="rounded-md bg-violet-50 border border-violet-100 p-3 text-xs text-violet-800 space-y-2">
               <p>
                 Circle is <span className="font-medium">ingest-only</span> — new posts and comments become tickets with an AI draft, but nothing is posted back to Circle automatically. A reviewer copies the answer into Circle by hand.
               </p>
-              <p className="font-medium">In Circle → Settings → Workflows, create two workflows (action: <span className="font-mono">Send webhook</span> on both) so answerLoops knows which is which:</p>
+              <p className="font-medium">In Circle → Workflows (left sidebar), create two workflows with the action <span className="font-mono">Send to webhook</span>, and paste these Endpoint URLs:</p>
               <div>
-                <p className="text-violet-700/70">Trigger <span className="font-mono">New post</span> → Webhook URL</p>
+                <p className="text-violet-700/70">Trigger <span className="font-mono">Published a post</span> → Endpoint URL</p>
                 <p className="font-mono break-all select-all text-violet-900">{postWebhookUrl}</p>
               </div>
               <div>
-                <p className="text-violet-700/70">Trigger <span className="font-mono">New comment</span> → Webhook URL</p>
+                <p className="text-violet-700/70">Trigger <span className="font-mono">Posted a comment</span> → Endpoint URL</p>
                 <p className="font-mono break-all select-all text-violet-900">{commentWebhookUrl}</p>
               </div>
               <div>
-                <p className="text-violet-700/70">Header (on both) <span className="font-mono">X-AnswerLoops-Token</span></p>
+                <p className="text-violet-700/70">Secret (already in both URLs; an <span className="font-mono">X-AnswerLoops-Token</span> header also works)</p>
                 <p className="font-mono break-all select-all text-violet-900">{integration.bot_secret ?? '— (re-save to generate)'}</p>
               </div>
+            </div>
+            <div className="space-y-2">
+              {rotated && (
+                <p aria-live="polite" className="rounded-md bg-amber-50 border border-amber-100 p-3 text-xs text-amber-800">
+                  Secret rotated. Paste the new Endpoint URLs above into both Circle Workflows, the one for new posts and the one for new comments. Until you do, they won’t create tickets.
+                </p>
+              )}
+              {confirmingRotate ? (
+                <div className="rounded-md border border-amber-200 bg-amber-50 p-3 space-y-2">
+                  <p className="text-xs text-amber-900">
+                    Rotate the secret? The current one stops working right away. You’ll need to update the Endpoint URL in both Circle Workflows with the new secret, the one for new posts and the one for new comments.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="danger" disabled={rotatePending} onClick={rotateSecret}>
+                      {rotatePending ? 'Rotating…' : 'Yes, rotate'}
+                    </Button>
+                    <Button size="sm" variant="ghost" disabled={rotatePending} onClick={() => setConfirmingRotate(false)}>
+                      Keep current secret
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => { setRotateError(null); setConfirmingRotate(true) }}
+                  >
+                    Rotate secret
+                  </Button>
+                </div>
+              )}
+              {rotateError && <p className="text-xs text-red-600">{rotateError}</p>}
             </div>
           </>
         )}
@@ -163,19 +265,6 @@ export function CircleIntegrationCard() {
             <hr className="border-gray-100" />
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">
-                Escalation user <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <input
-                name="escalationUser"
-                type="text"
-                defaultValue={integration?.escalation_role_id ?? ''}
-                placeholder="username"
-                className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
-              />
-              <p className="text-xs text-gray-400 mt-1">Noted on the draft when AI confidence is below threshold.</p>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
                 Confidence threshold <span className="text-gray-400 font-normal">(0–1, default 0.8)</span>
               </label>
               <input
@@ -196,22 +285,54 @@ export function CircleIntegrationCard() {
                 {savePending ? 'Saving…' : connected ? 'Update' : 'Connect'}
               </Button>
               {editing && (
-                <Button type="button" size="sm" variant="ghost" onClick={() => setEditing(false)}>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => { setEditing(false); setConfirmingDisconnect(false) }}
+                >
                   Cancel
                 </Button>
               )}
-              {connected && (
+              {connected && !confirmingDisconnect && (
                 <Button
                   type="button"
                   size="sm"
                   variant="danger"
                   disabled={deletePending}
-                  onClick={() => startDeleteTransition(() => { deleteAction(new FormData()) })}
+                  onClick={() => setConfirmingDisconnect(true)}
                 >
-                  {deletePending ? 'Removing…' : 'Disconnect'}
+                  Disconnect
                 </Button>
               )}
             </div>
+            {connected && confirmingDisconnect && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 space-y-2">
+                <p className="text-xs text-red-800">
+                  <span className="font-medium">Disconnect Circle?</span> New posts stop creating tickets. Reconnecting generates a new secret, so both Workflow URLs will need updating.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="danger"
+                    disabled={deletePending}
+                    onClick={() => startDeleteTransition(() => { deleteAction(new FormData()) })}
+                  >
+                    {deletePending ? 'Disconnecting…' : 'Yes, disconnect'}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={deletePending}
+                    onClick={() => setConfirmingDisconnect(false)}
+                  >
+                    Keep connected
+                  </Button>
+                </div>
+              </div>
+            )}
           </form>
         )}
 

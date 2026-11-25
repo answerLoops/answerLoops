@@ -58,7 +58,7 @@ Go to **Integrations → Circle** and fill in:
 | Admin API token | The token from step 1. Required. |
 | Watched space IDs | Numeric space IDs, comma-separated. Leave blank to watch every space. Only posts in these spaces open tickets. A comment on a post that already has a ticket is always added to it. |
 
-Click **Connect**. The card then shows two webhook URLs, one for posts and one for comments, and a secret token.
+Click **Connect**. The card then shows two Endpoint URLs, one for posts and one for comments, with your secret already in them.
 
 ### 3. Create the two Circle Workflows
 
@@ -66,7 +66,7 @@ In Circle, open **Workflows** in the left sidebar and create a Workflow for post
 
 - **Trigger:** **Published a post**
 - **Action:** **Send to webhook**
-- **Endpoint URL:** the posts URL from the Circle card with your secret added, in this form:
+- **Endpoint URL:** the posts URL from the Circle card. It looks like this:
 
 ```text
 https://<your-answerloops-domain>/api/circle/webhook?kind=post&token=<your-secret>
@@ -76,7 +76,7 @@ Then create a second Workflow for comments:
 
 - **Trigger:** **Posted a comment**
 - **Action:** **Send to webhook**
-- **Endpoint URL:**
+- **Endpoint URL:** the comments URL from the Circle card:
 
 ```text
 https://<your-answerloops-domain>/api/circle/webhook?kind=comment&token=<your-secret>
@@ -102,6 +102,16 @@ Open the ticket in answerLoops, read the draft, and edit it if needed. Click **C
 
 - **Edits and deletions in Circle don't change the ticket.** Circle Workflows have no trigger for edited or deleted posts, so the ticket keeps the text as it was first published.
 - **Reconnecting creates a new secret.** If you disconnect Circle and connect it again, the card shows a new secret token. Update the `token` value in the Endpoint URL of both Workflows, or Circle's events stop reaching answerLoops.
+
+## Rotating the secret
+
+The secret is created when you first connect and stays the same when you edit the card's settings. To replace it, click **Rotate secret** on the Circle card and confirm. Only owners and admins can rotate it.
+
+The old secret stops working as soon as you confirm. The card then shows both Endpoint URLs with the new secret in them. Paste each one into its Circle Workflow, the one for new posts and the one for new comments. Until both are updated, Circle's webhooks won't create tickets.
+
+## Disconnecting
+
+Click **Edit spaces**, then **Disconnect**, and confirm. New posts and comments stop creating tickets right away. If you connect again later, answerLoops generates a new secret, so both Workflow URLs will need updating.
 
 ---
 

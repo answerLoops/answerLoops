@@ -629,7 +629,6 @@ const CircleIntegrationSchema = z.object({
   communityUrl: z.string().optional(),
   apiToken: z.string().optional(),
   spaceIds: z.string().optional(),
-  escalationUser: z.string().optional(),
   confidenceThreshold: z.coerce.number().min(0).max(1).optional(),
 })
 
@@ -647,7 +646,7 @@ export async function saveCircleIntegrationAction(
   const parsed = CircleIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { communityUrl, apiToken, spaceIds, escalationUser, confidenceThreshold } = parsed.data
+  const { communityUrl, apiToken, spaceIds, confidenceThreshold } = parsed.data
   const spaceList = (spaceIds ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -675,9 +674,39 @@ export async function saveCircleIntegrationAction(
     botSecret,
     teamId: normalizedUrl,
     channelIds: spaceList,
-    escalationRoleId: escalationUser?.trim() || null,
+    // Circle is ingest-only, so there is no channel post to mention an
+    // escalation user in. The field is not offered for Circle; saving null
+    // clears any value stored by an earlier version of the form.
+    escalationRoleId: null,
     confidenceThreshold: confidenceThreshold ?? null,
   })
+
+  refresh()
+
+  const baseUrl = process.env.AUTH_URL ?? ''
+  return { webhookUrl: `${baseUrl}/api/circle/webhook`, webhookSecret: botSecret }
+}
+
+/**
+ * Replaces the Circle integration's inbound secret with a freshly generated
+ * one. The previous secret stops resolving to this org as soon as the row is
+ * written, so both Circle Workflows need the new header value.
+ */
+export async function rotateCircleSecretAction(): Promise<{ error?: string; webhookUrl?: string; webhookSecret?: string }> {
+  const access = await requireOrgAccess(['owner', 'admin'])
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
+
+  const gateError = await requireFeature(orgId, 'circle_integration')
+  if (gateError) return { error: gateError }
+
+  const existing = await getIntegration(orgId, 'circle')
+  if (!existing || !existing.team_id || existing.enabled !== 1) return { error: 'Circle is not connected. Connect it first.' }
+
+  const botSecret = generateBotSecret()
+  // Only the secret is passed, so the community URL, token, spaces and
+  // threshold are left as they are.
+  await upsertIntegration({ orgId, platform: 'circle', botSecret })
 
   refresh()
 
