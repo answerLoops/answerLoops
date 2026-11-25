@@ -38,10 +38,10 @@ test.describe('ticket conversation thread', () => {
     await page.goto(await ticketDetailPath(request, ticketId))
     const thread = page.getByRole('region', { name: 'Conversation' })
 
-    // Two team members answer from the dashboard, one after the other.
-    for (const [name, text] of [['Sarah', 'Sarah here: restarting the agent usually fixes it'], ['Dev', 'Dev here: the fix ships in the next release']]) {
+    // The team answers from the dashboard twice, one after the other. Replies
+    // are credited to whoever is signed in, so there is no name to type.
+    for (const text of ['Sarah here: restarting the agent usually fixes it', 'Dev here: the fix ships in the next release']) {
       const form = page.locator('form', { has: page.getByPlaceholder(/Type your response/) })
-      await form.getByPlaceholder('e.g. Sarah').fill(name)
       await form.getByPlaceholder(/Type your response/).fill(text)
       await form.getByRole('button', { name: /^Send reply/ }).click()
       await expect(thread.getByText(text)).toBeVisible()
@@ -58,11 +58,13 @@ test.describe('ticket conversation thread', () => {
     await expect(items.nth(1)).toHaveAttribute('data-role', 'customer')
     await expect(items.nth(2)).toContainText('carol')
     await expect(items.nth(2)).toContainText('Restarting did not help me either')
-    // Each team member appears under their own name, in the order they replied.
-    await expect(items.nth(3)).toContainText('Sarah')
+    // Staff replies appear in the order they were sent, under the signed-in person's name.
+    await expect(items.nth(3)).toContainText('restarting the agent usually fixes it')
     await expect(items.nth(3)).toHaveAttribute('data-role', 'staff')
-    await expect(items.nth(4)).toContainText('Dev')
+    await expect(items.nth(3)).toContainText('Test')
+    await expect(items.nth(4)).toContainText('the fix ships in the next release')
     await expect(items.nth(4)).toHaveAttribute('data-role', 'staff')
+    await expect(items.nth(4)).toContainText('Test')
 
     // The opening message stays above the conversation.
     const original = page.locator('div:has(> h2:text-is("Original Message"))')

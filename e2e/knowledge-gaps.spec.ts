@@ -13,7 +13,6 @@ test.describe('knowledge gaps tab', () => {
     // Resolve via ticket detail
     await page.goto(ticketPath)
     const statusForm = page.locator('form:has(select[name="status"])')
-    await statusForm.locator('input[name="staffName"]').fill('Sarah')
     await statusForm.locator('select[name="status"]').selectOption('resolved')
     await statusForm.getByRole('button', { name: 'Update status' }).click()
     await expect(page.getByText(/open → resolved/)).toBeVisible()
@@ -31,7 +30,6 @@ test.describe('knowledge gaps tab', () => {
 
     await page.goto(ticketPath)
     const statusForm = page.locator('form:has(select[name="status"])')
-    await statusForm.locator('input[name="staffName"]').fill('Sarah')
     await statusForm.locator('select[name="status"]').selectOption('resolved')
     await statusForm.getByRole('button', { name: 'Update status' }).click()
     await waitForTicketField(request, ticketId, 'status', 'resolved')
@@ -49,7 +47,6 @@ test.describe('knowledge gaps tab', () => {
 
     await page.goto(ticketPath)
     const statusForm = page.locator('form:has(select[name="status"])')
-    await statusForm.locator('input[name="staffName"]').fill('Sarah')
     await statusForm.locator('select[name="status"]').selectOption('resolved')
     await statusForm.getByRole('button', { name: 'Update status' }).click()
     await expect(page.getByText(/open → resolved/)).toBeVisible()
@@ -75,7 +72,6 @@ test.describe('knowledge gaps tab', () => {
 
     await page.goto(ticketPath)
     const statusForm = page.locator('form:has(select[name="status"])')
-    await statusForm.locator('input[name="staffName"]').fill('Sarah')
     await statusForm.locator('select[name="status"]').selectOption('resolved')
     await statusForm.getByRole('button', { name: 'Update status' }).click()
     await waitForTicketField(request, ticketId, 'status', 'resolved')

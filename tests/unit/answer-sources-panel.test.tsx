@@ -142,6 +142,11 @@ describe('AnswerSourcesPanel copy and states', () => {
     expect(screen.queryByRole('list')).toBeNull()
   })
 
+  it('leaves out the explanation of what the sources mean when there are none to explain', () => {
+    render(<AnswerSourcesPanel data={data([])} />)
+    expect(document.body.textContent).not.toContain('The assistant decides what to use')
+  })
+
   it('notes a failed draft, while still listing what was supplied', () => {
     render(<AnswerSourcesPanel data={data([source({ rank: 1, status: 'current' })], { outcome: 'failed' })} />)
     expect(screen.getByText(/The draft failed/)).toBeTruthy()

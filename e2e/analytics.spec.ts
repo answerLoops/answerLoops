@@ -42,7 +42,6 @@ test.describe('analytics / ROI', () => {
     // Resolve it.
     await page.goto(ticketPath)
     const statusForm = page.locator('form:has(select[name="status"])')
-    await statusForm.locator('input[name="staffName"]').fill('Sarah')
     await statusForm.locator('select[name="status"]').selectOption('resolved')
     await statusForm.getByRole('button', { name: 'Update status' }).click()
     await expect(page.getByText(/open → resolved/)).toBeVisible()
