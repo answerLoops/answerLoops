@@ -4,17 +4,16 @@ description: Operate support, knowledge, and AI performance from one workspace.
 icon: LayoutDashboard
 ---
 
-The dashboard is your workspace's home screen. It shows what needs attention right now, how the AI is doing, and whether any conversation is running past its response target.
+The dashboard is your workspace's home screen. It shows what needs attention right now and how the AI is doing.
 
 <Hotspots
   shot="dashboard"
-  only={['navigation', 'stat-cards', 'auto-answered', 'open-tickets', 'sla-status']}
+  only={['navigation', 'stat-cards', 'auto-answered', 'needs-attention']}
   notes={{
     navigation: 'Pages are grouped by the job they support: Monitor, Support, Improve, and Configure.',
     'stat-cards': 'Live counts for your tickets. Select any card to open the matching filtered list.',
     'auto-answered': 'Every question the AI resolved automatically, without a person stepping in.',
-    'open-tickets': 'Unresolved questions, oldest first, so nothing sits unanswered.',
-    'sla-status': 'Tickets past their configured response target, kept apart from the rest of the queue.',
+    'needs-attention': 'What your team can act on now: tickets past their response target, AI drafts to approve, answers to review, and the oldest open questions.',
   }}
 />
 
@@ -34,14 +33,24 @@ To clear the backlog, expand **Activity**, select **Mark all as seen**, and conf
 |---|---|---|
 | Auto-Answered | Every question the AI resolved automatically | Tickets filtered to auto-answered |
 | Deflection rate | Deflected / Answered — your key efficiency metric | Analytics |
-| Open | Questions that still need attention | Open tickets |
-| In Progress | Questions currently being handled | In-progress tickets |
+| Open | Questions that still need attention, with how many of them are in progress | Open tickets |
 | Resolved | Completed support conversations | Resolved tickets |
-| Needs Review | Answers waiting for a human decision | Tickets filtered to needs review |
-| AI Drafts Pending | Draft replies ready to review | Tickets filtered to pending drafts |
-| SLA Breaches | Tickets past their configured response target | Tickets filtered to SLA breaches |
 
 Select any card to jump to the matching view. The ticket list shows the same tickets the card counts, and a "Filtered by" label appears above the list while a card filter is active. Pressing **Filter** keeps the card filter along with your status, priority, and category choices. Select **Clear card filter** to drop only the card filter.
+
+## Needs attention
+
+Below the stat cards, one list says what to do next. It starts with the counts that need a decision, most urgent first. A count of zero is left out:
+
+| Row | What it counts | Opens |
+|---|---|---|
+| Tickets past the response target | Tickets past their configured response target | Tickets filtered to SLA breaches |
+| AI drafts waiting for approval | Draft replies ready to review | Tickets filtered to pending drafts |
+| Answers need a human review | Answers waiting for a human decision | Tickets filtered to needs review |
+
+Under those, **Oldest open questions** lists up to five unresolved tickets, oldest first, so nothing sits unanswered. Select one to open it, or **View all open** for the full list. When there is nothing to do, the list reads **All caught up!**
+
+If connected channels are set to manual review, a banner at the top of the dashboard says so and links to **Integrations**. It only shows on the dashboard. On the Integrations page each affected channel carries a **Manual review** tag instead.
 
 <Callout type="info">
   The Deflection rate card uses the same figure as the Analytics page, which leaves out bug reports and feature requests. Auto-Answered counts every deflected ticket, so the two numbers won't always line up with each other.
@@ -54,10 +63,6 @@ Tickets marked `duplicate` are left out of every stat card, the deflection rate,
 A deflection happens when the AI answers a question with confidence above your threshold (default 0.8) and the user doesn't escalate to a human. Higher = less manual support work.
 
 Tickets classified as `bug` are excluded from this metric entirely — the knowledge base can't contain a fix that doesn't exist yet, so declining to auto-answer a bug report is correct behaviour, not a miss. Deflection rate reflects how well answerLoops handles questions the knowledge base can actually answer.
-
-## Quick actions
-
-The dashboard surfaces quick links to the most common tasks: adding knowledge, reviewing deflection trends, configuring AI behavior, and reviewing the generated FAQ. The open-ticket panel prioritizes unresolved work, while the SLA panel separates time-sensitive conversations from the rest of the queue.
 
 ## Live updates
 

@@ -1,7 +1,16 @@
-import Link from 'next/link'
+'use client'
 
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+
+/**
+ * Warns that connected integrations hold answers for approval. It belongs on
+ * the Dashboard, where the work is. Elsewhere it was a yellow bar above every
+ * page, and the Integrations overview already tags each affected card.
+ */
 export function DeflectionStatusBanner({ offPlatforms }: { offPlatforms: string[] }) {
-  if (offPlatforms.length === 0) return null
+  const pathname = usePathname()
+  if (offPlatforms.length === 0 || pathname !== '/dashboard') return null
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 sm:mb-6">

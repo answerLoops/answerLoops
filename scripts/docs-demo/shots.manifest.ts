@@ -98,13 +98,12 @@ export const SHOTS: Shot[] = [
     route: '/dashboard',
     viewport: { width: 1440, height: 980 },
     waitFor: ['h1:has-text("Good to see you")', '.dashboard-stats'],
-    alt: 'The answerLoops dashboard: ticket counts for auto-answered, open, in progress and resolved tickets, with the open tickets list and SLA status below.',
+    alt: 'The answerLoops dashboard: counts for auto-answered, open and resolved tickets, with a Needs attention list below showing what to act on now.',
     pins: [
       { id: 'navigation', selector: 'aside.dashboard-sidebar', label: 'Navigation sidebar' },
       { id: 'stat-cards', selector: '.dashboard-stats', label: 'Ticket counts at a glance' },
       { id: 'auto-answered', selector: 'a:has-text("Auto-Answered")', label: 'Auto-answered tickets' },
-      { id: 'open-tickets', selector: 'h2:text-is("Open tickets") >> xpath=ancestor::div[3]', label: 'Oldest unresolved tickets' },
-      { id: 'sla-status', selector: 'h2:text-is("SLA Status") >> xpath=ancestor::div[3]', label: 'SLA breaches' },
+      { id: 'needs-attention', selector: 'section[aria-labelledby="needs-attention-heading"]', label: 'What needs attention' },
     ],
   },
   {
