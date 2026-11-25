@@ -126,6 +126,11 @@ Circle is configured entirely per-organization in the Settings UI. There is no c
 <AccordionGroup>
   <Accordion title="Posts aren't creating tickets">
     Open **Workflows** in Circle and check that both Workflows are turned on. Then open **Workflows → History** and look at the most recent runs. Make sure each Workflow's Endpoint URL matches the one on the Circle card, includes the right `kind=post` or `kind=comment`, and has `token=` set to the secret shown on the card. Click **Test webhook** in the Workflow to send a sample event. If you set **Watched space IDs**, posts in any other space are ignored on purpose, so clear the field to watch everything. Posts shorter than 10 characters are skipped.
+
+    Every delivery answerLoops accepts but doesn't turn into a ticket is logged as `Circle webhook delivery acknowledged without ingesting`, with the post or comment id and a reason: `no record`, `no id`, `too short`, `no author`, or `outside watched spaces`. The log never includes the post's text. On a self-hosted install, search the app logs for that line to see why a post was skipped.
+  </Accordion>
+  <Accordion title="The ticket's link opens the wrong page">
+    A ticket links to the post's `url` from the webhook payload only when it is an `https://` address on your **Community URL**'s host. Otherwise the link is built as `<Community URL>/posts/<post id>`. If links point at the wrong place, check that the **Community URL** on the Circle card matches the address members use, including any custom domain.
   </Accordion>
   <Accordion title="Events stopped arriving after I reconnected Circle">
     Disconnecting and connecting again creates a new secret. Copy the new secret from the Circle card and update the `token` value in the Endpoint URL of both Workflows.

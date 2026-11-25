@@ -3,7 +3,6 @@ import { getIntegrationByBotSecret, parseChannelIds } from '@/lib/db/queries/int
 import { getTicketByThreadId } from '@/lib/db/queries/tickets'
 import { normalizeCircleContent, fetchCircleRecord, type CircleContent } from '@/lib/circle/client'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
-import { decryptToken } from '@/lib/crypto/tokens'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clampIngestContent, isIngestRateLimited, WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 import { logger } from '@/lib/logger'
@@ -57,6 +56,43 @@ function pickRecord(
   return { raw: generic, kind }
 }
 
+/**
+ * The ticket's link back to Circle. A `url` in the payload is used only when it
+ * is an https address on the connected community's host; anything else gets
+ * the `<community>/posts/<postId>` link built from the saved community URL.
+ */
+function sourceUrlFor(payloadUrl: string | null, communityUrl: string | null, postId: string): string | null {
+  if (!communityUrl) return null
+  const fallback = `${communityUrl}/posts/${postId}`
+  if (!payloadUrl) return fallback
+  try {
+    const link = new URL(payloadUrl)
+    const community = new URL(communityUrl)
+    return link.protocol === 'https:' && link.host === community.host ? link.href : fallback
+  } catch {
+    return fallback
+  }
+}
+
+/**
+ * Acknowledge a delivery that will not be ingested, and log why so the owner
+ * can see it in their own logs. Logs ids and the reason only, never the
+ * record's text.
+ */
+function acknowledgeDropped(
+  orgId: number,
+  reason: 'no record' | 'no id' | 'too short' | 'no author' | 'outside watched spaces',
+  record?: { kind: 'post' | 'comment'; id?: string }
+): Response {
+  logger.info('Circle webhook delivery acknowledged without ingesting', {
+    module: MOD,
+    orgId,
+    ...(record && { kind: record.kind, id: record.id }),
+    reason,
+  })
+  return Response.json({ ok: true })
+}
+
 export async function POST(req: NextRequest) {
   // 1. Resolve the org from the per-org secret. The header is the documented,
   //    preferred transport; ?token= only exists for Workflow actions that
@@ -102,35 +138,31 @@ export async function POST(req: NextRequest) {
   }
 
   const picked = pickRecord(body, explicitKind)
-  if (!picked) {
-    logger.info('Circle webhook with no recognizable record', { module: MOD, orgId: integration.org_id })
-    return Response.json({ ok: true })
-  }
+  if (!picked) return acknowledgeDropped(integration.org_id, 'no record')
 
   let content: CircleContent | null = normalizeCircleContent(picked.raw, picked.kind)
-  if (!content || content.id === '') return Response.json({ ok: true })
+  if (!content || content.id === '') return acknowledgeDropped(integration.org_id, 'no id', { kind: picked.kind })
 
   // 2. Enrich a thin payload from the Admin API when the body is missing. A
   //    lookup that can't be done is answered 502 and logged, so the delivery
   //    shows as Failed in the community's Workflow history with the reason
   //    here, instead of being acknowledged as if there were nothing to ingest.
+  //    The integration row is already decrypted when it is loaded, so the
+  //    stored token is used as is.
   if (!content.body && integration.bot_token) {
-    const token = decryptToken(integration.bot_token)
-    if (token) {
-      const lookup = await fetchCircleRecord(token, picked.kind, content.id)
-      if (lookup.ok) {
-        content = normalizeCircleContent(lookup.record, picked.kind) ?? content
-      } else if (lookup.reason !== 'off') {
-        logger.warn('Circle webhook could not fetch the full record from the Circle API', {
-          module: MOD,
-          orgId: integration.org_id,
-          kind: picked.kind,
-          id: content.id,
-          reason: lookup.reason,
-          ...(lookup.reason === 'status' && { status: lookup.status }),
-        })
-        return new Response('Could not fetch the full record from Circle', { status: 502 })
-      }
+    const lookup = await fetchCircleRecord(integration.bot_token, picked.kind, content.id)
+    if (lookup.ok) {
+      content = normalizeCircleContent(lookup.record, picked.kind) ?? content
+    } else if (lookup.reason !== 'off') {
+      logger.warn('Circle webhook could not fetch the full record from the Circle API', {
+        module: MOD,
+        orgId: integration.org_id,
+        kind: picked.kind,
+        id: content.id,
+        reason: lookup.reason,
+        ...(lookup.reason === 'status' && { status: lookup.status }),
+      })
+      return new Response('Could not fetch the full record from Circle', { status: 502 })
     }
   }
 
@@ -138,18 +170,19 @@ export async function POST(req: NextRequest) {
   // A short comment on a post we already track is part of the conversation;
   // only content that would open a new ticket must be long enough.
   const isTrackedReply = !!content.body && !!(await getTicketByThreadId(content.postId, integration.org_id, 'circle'))
-  if (!content.body || (content.body.length < 10 && !isTrackedReply)) return Response.json({ ok: true })
-  if (!content.authorId || content.authorId === '0') return Response.json({ ok: true })
+  const dropped = { kind: picked.kind, id: content.id }
+  if (!content.body || (content.body.length < 10 && !isTrackedReply)) return acknowledgeDropped(integration.org_id, 'too short', dropped)
+  if (!content.authorId || content.authorId === '0') return acknowledgeDropped(integration.org_id, 'no author', dropped)
 
   // Watched spaces decide which posts open tickets. A comment on a post we
   // already track belongs to that conversation (its post passed this check
   // when the ticket was made), so it is kept even when the comment's payload
   // doesn't say which space it is in.
   const watched = parseChannelIds(integration)
-  if (watched.length > 0 && !isTrackedReply && !watched.includes(content.spaceId)) return Response.json({ ok: true })
+  if (watched.length > 0 && !isTrackedReply && !watched.includes(content.spaceId)) return acknowledgeDropped(integration.org_id, 'outside watched spaces', dropped)
 
   const communityUrl = integration.team_id ? integration.team_id.replace(/\/+$/, '') : null
-  const sourceUrl = content.url ?? (communityUrl ? `${communityUrl}/posts/${content.postId}` : null)
+  const sourceUrl = sourceUrlFor(content.url, communityUrl, content.postId)
 
   logger.info('Circle content received', {
     module: MOD,
