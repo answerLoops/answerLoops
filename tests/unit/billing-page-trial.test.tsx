@@ -111,7 +111,7 @@ describe('billing page plan cards', () => {
   it('labels upgrade buttons "Subscribe to" for an app trial and marks the current card as an active trial', async () => {
     await renderPage(status({ status: 'trialing', isTrialing: true, isAppTrial: true, trialEndsAt: inDays(5) }))
     expect(screen.getByRole('button', { name: 'Subscribe to Pro' })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Subscribe to Enterprise' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Enterprise/ })).toBeNull()
     expect(screen.queryByRole('button', { name: /Upgrade to/ })).toBeNull()
     expect(screen.getByText('Active trial')).toBeTruthy()
   })
@@ -186,9 +186,43 @@ describe('billing page checkout click', () => {
     mockFetch(status({ status: 'trial_expired', isAppTrial: true }), { error: 'Checkout unavailable' })
     render(<BillingPage />)
     await waitFor(() => expect(screen.getByText('Your trial has ended')).toBeTruthy())
-    await user.click(screen.getByRole('button', { name: 'Subscribe to Enterprise' }))
+    await user.click(screen.getByRole('button', { name: 'Subscribe to Pro' }))
     await waitFor(() => expect(screen.getByText('Checkout unavailable')).toBeTruthy())
     expect(window.location.href).toBe('http://localhost/billing')
+  })
+})
+
+describe('billing page Enterprise card', () => {
+  it('shows custom pricing and a Talk to us link instead of a price and checkout button', async () => {
+    await renderPage(status({ status: 'active' }))
+    const card = screen.getByText('Custom pricing').closest('div.rounded-xl') as HTMLElement
+    expect(card.textContent).not.toMatch(/\$499/)
+    const link = screen.getByRole('link', { name: 'Talk to us' }) as HTMLAnchorElement
+    expect(link.href).toBe('https://dub.sh/talk-to-us')
+    expect(screen.queryByRole('button', { name: /Enterprise/ })).toBeNull()
+  })
+
+  it('lists the same features as the pricing page', async () => {
+    await renderPage(status({ status: 'active' }))
+    const { PLAN_COPY } = await import('@/lib/marketing/pricing')
+    for (const plan of ['standard', 'pro', 'enterprise'] as const) {
+      for (const feature of PLAN_COPY[plan].features) {
+        expect(screen.getAllByText(feature).length).toBeGreaterThan(0)
+      }
+    }
+    expect(screen.getByText('Unlimited AI replies')).toBeTruthy()
+  })
+
+  it('sends a Pro workspace near its limit to Talk to us, not checkout', async () => {
+    await renderPage(status({ planId: 'pro', limit: 3000, used: 2700 }))
+    const link = screen.getByRole('link', { name: /Talk to us about Enterprise/ }) as HTMLAnchorElement
+    expect(link.href).toBe('https://dub.sh/talk-to-us')
+    expect(screen.queryByRole('button', { name: 'Upgrade to Enterprise →' })).toBeNull()
+  })
+
+  it('names an Enterprise workspace plan with custom pricing in the summary', async () => {
+    await renderPage(status({ planId: 'enterprise', limit: null, used: 12 }))
+    expect(screen.getByTestId('plan-summary').textContent).toBe('Enterprise · Custom pricing')
   })
 })
 
