@@ -140,13 +140,37 @@ function LimitWarningBanner({ planId, onUpgrade, pending }: { planId: string; on
   )
 }
 
-function UsageBar({ used, limit, planId, currentPeriodEnd, cancelAtPeriodEnd, status }: {
+const formatDate = (iso: string) =>
+  new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+
+/**
+ * "Pro · $149/mo · Renews Dec 25, 2026". The renewal date is left out during a
+ * trial (the trial banner says when it ends), once the plan is set to cancel
+ * (the badge says so), and when the period end is unknown.
+ */
+function planSummary(
+  plan: Plan | undefined,
+  currentPeriodEnd: string | null,
+  cancelAtPeriodEnd: boolean,
+  isTrialing: boolean,
+  status: string
+): string | null {
+  if (!plan) return null
+  const parts = [plan.name, `$${(plan.priceMonthly / 100).toFixed(0)}/mo`]
+  if (currentPeriodEnd && !cancelAtPeriodEnd && !isTrialing && status === 'active') {
+    parts.push(`Renews ${formatDate(currentPeriodEnd)}`)
+  }
+  return parts.join(' · ')
+}
+
+function UsageBar({ used, limit, planId, currentPeriodEnd, cancelAtPeriodEnd, status, isTrialing }: {
   used: number
   limit: number | null
   planId: string
   currentPeriodEnd: string | null
   cancelAtPeriodEnd: boolean
   status: string
+  isTrialing: boolean
 }) {
   const pct = limit ? Math.min((used / limit) * 100, 100) : 0
   const over = limit !== null && used >= limit
@@ -156,11 +180,15 @@ function UsageBar({ used, limit, planId, currentPeriodEnd, cancelAtPeriodEnd, st
   // rather than red.
   const softCap = !!plan && plan.overageRatePer100Cents !== null
   const overUnits = plan ? overageUnits(used, plan) : 0
+  const summary = planSummary(plan, currentPeriodEnd, cancelAtPeriodEnd, isTrialing, status)
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-gray-900">Usage this month</h2>
+      <div className="flex items-start justify-between mb-4 gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-gray-900">Usage this month</h2>
+          {summary && <p className="mt-0.5 text-xs text-gray-500" data-testid="plan-summary">{summary}</p>}
+        </div>
         <div className="flex items-center gap-2">
           {cancelAtPeriodEnd && currentPeriodEnd && (
             <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
@@ -361,6 +389,7 @@ export default function BillingPage() {
               currentPeriodEnd={data.currentPeriodEnd}
               cancelAtPeriodEnd={data.cancelAtPeriodEnd}
               status={data.status}
+              isTrialing={isTrialing}
             />
           )}
 
@@ -382,6 +411,24 @@ export default function BillingPage() {
             </div>
           ) : (
             <>
+              {!isCanceled && !isAppTrial && (
+                <div className="flex flex-col items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">Subscription management</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {isTrialing ? 'Cancel trial, update payment method, or switch plans' : 'Update payment method, change plan, or cancel'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={openPortal}
+                    disabled={portalPending}
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 transition-colors whitespace-nowrap"
+                  >
+                    {portalPending ? 'Redirecting…' : 'Manage subscription →'}
+                  </button>
+                </div>
+              )}
+
               <div className="space-y-4">
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                   <h2 className="text-sm font-semibold text-gray-900">Plans</h2>
@@ -401,28 +448,10 @@ export default function BillingPage() {
                   ))}
                 </div>
               </div>
-
-              {!isCanceled && !isAppTrial && (
-                <div className="flex flex-col items-start gap-4 rounded-xl border border-gray-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">Subscription management</p>
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {isTrialing ? 'Cancel trial, update payment method, or switch plans' : 'Update payment method, change plan, or cancel'}
-                    </p>
-                  </div>
-                  <button
-                    onClick={openPortal}
-                    disabled={portalPending}
-                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60 transition-colors whitespace-nowrap"
-                  >
-                    {portalPending ? 'Redirecting…' : 'Manage subscription →'}
-                  </button>
-                </div>
-              )}
             </>
           )}
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error &&<p className="text-sm text-red-600">{error}</p>}
         </>
       )}
     </Page>
