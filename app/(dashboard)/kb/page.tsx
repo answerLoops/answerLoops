@@ -895,6 +895,19 @@ export default function KBPage() {
     setSourceTotals({ sources: list.length, chunks: list.reduce((n, s) => n + s.chunk_count, 0) })
   }, [])
 
+  // The Sources tab reports its own totals when its list loads. On the other
+  // tabs that list is not mounted, so the counts row would stay blank; load
+  // them here instead.
+  const totalsKnown = sourceTotals !== null
+  useEffect(() => {
+    if (activeTab === 'manage' || totalsKnown) return
+    let cancelled = false
+    fetchKbSources().then((list) => {
+      if (!cancelled && list) handleSourcesLoaded(list)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [activeTab, totalsKnown, handleSourcesLoaded])
+
   // A ticket draft ("+ KB" on Knowledge Gaps) opens the write dialog on its own.
   const [openedDraft, setOpenedDraft] = useState<KnowledgeDraft | null>(null)
   if (draft && draft !== openedDraft) {

@@ -9,10 +9,10 @@ import userEvent from '@testing-library/user-event'
  * sync control for each connected GitHub repository.
  */
 
-const h = vi.hoisted(() => ({ fetchMock: vi.fn(), runKbSync: vi.fn() }))
+const h = vi.hoisted(() => ({ fetchMock: vi.fn(), runKbSync: vi.fn(), params: { current: new URLSearchParams() } }))
 
 vi.mock('next/navigation', () => ({
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => h.params.current,
   useRouter: () => ({ replace: vi.fn() }),
 }))
 vi.mock('@/app/(dashboard)/kb/review-tab', () => ({ ReviewTab: () => <div /> }))
@@ -60,6 +60,7 @@ async function renderPage() {
 beforeEach(() => {
   cleanup()
   vi.clearAllMocks()
+  h.params.current = new URLSearchParams()
   route()
 })
 
@@ -71,6 +72,16 @@ describe('KB page: Sources layout', () => {
     expect(count('Sources')).toBe('2')
     expect(count('Chunks')).toBe('244')
     expect(count('Needs review')).toBe('7')
+  })
+
+  it('shows the source and chunk counts when the page opens on another tab', async () => {
+    h.params.current = new URLSearchParams('tab=coverage')
+    const { default: KBPage } = await import('@/app/(dashboard)/kb/page')
+    render(<KBPage />)
+    const count = (label: string) =>
+      screen.getAllByText(label).find((el) => el.className.includes('text-xs text-slate-500'))?.nextElementSibling?.textContent
+    await waitFor(() => expect(count('Sources')).toBe('2'))
+    expect(count('Chunks')).toBe('244')
   })
 
   it('opens each add-content dialog from the header and closes it with Escape', async () => {
