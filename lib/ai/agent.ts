@@ -26,6 +26,7 @@ import { REFERENCE_MATERIAL_NOTICE, renderReferenceBlock } from '@/lib/ai/refere
 import { createEvidenceCollector } from '@/lib/ai/assess-evidence'
 import { pickWorkaround } from '@/lib/ai/workaround'
 import type { Match } from '@/lib/ai/related'
+import { ingestOnlyPlatformName } from '@/lib/channels/ingest-only'
 
 const MOD = 'ai/agent'
 
@@ -499,10 +500,15 @@ Guidelines:
       // differently on the dashboard — a staff member seeing "92% confidence,
       // needs review" when the answer would have cleared the bar is
       // confusing; "ready to send, just waiting on the toggle" isn't.
+      // An ingest-only channel has no toggle to point at: nothing is ever
+      // posted there, so a confident draft just needs copying in by hand.
       const heldByToggleOnly = meetsConfidenceBar && !autoDeflectEnabled
-      const notificationText = heldByToggleOnly
-        ? `Ready to send (${pct}%) — Automatic Deflections is off — ticket #${orgTicketNumber}`
-        : `Needs human review (${pct}%) — ticket #${orgTicketNumber}`
+      const ingestOnlyName = ingestOnlyPlatformName(platform)
+      const notificationText = !heldByToggleOnly
+        ? `Needs human review (${pct}%) — ticket #${orgTicketNumber}`
+        : ingestOnlyName
+          ? `Draft ready (${pct}%) — copy the answer into ${ingestOnlyName} — ticket #${orgTicketNumber}`
+          : `Ready to send (${pct}%) — Automatic Deflections is off — ticket #${orgTicketNumber}`
       await createNotification('ai_draft_ready', notificationText, ticketId, orgId)
       await postNeedsHumanReview(
         ticketId,

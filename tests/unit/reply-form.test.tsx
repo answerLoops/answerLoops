@@ -22,4 +22,11 @@ describe('ReplyForm', () => {
     render(<ReplyForm ticketId={1} replyingAs={null} />)
     expect(screen.queryByText(/^Sent as/)).toBeNull()
   })
+
+  it('tells a Circle reviewer the reply is only saved on the ticket', () => {
+    render(<ReplyForm ticketId={1} sourcePlatform="circle" />)
+    expect(screen.getByRole('button', { name: 'Save reply' })).toBeInTheDocument()
+    expect(screen.getByText(/answerLoops doesn't post in Circle/)).toBeInTheDocument()
+    expect(screen.queryByText(/ingest-only/)).toBeNull()
+  })
 })
