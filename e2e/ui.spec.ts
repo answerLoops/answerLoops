@@ -37,6 +37,29 @@ test.describe('dashboard surfaces', () => {
     await expect(page.getByText('acme/demo')).toBeVisible()
   })
 
+  test('the sidebar is short, and related pages are linked from their section', async ({ page }) => {
+    await page.goto('/tickets')
+    const sidebar = page.getByRole('complementary')
+    await expect(sidebar.getByRole('link', { name: /^Leads/ })).toHaveCount(0)
+    await expect(sidebar.getByRole('link', { name: /^FAQ/ })).toHaveCount(0)
+    await expect(sidebar.getByRole('link', { name: /^Simulation/ })).toHaveCount(0)
+
+    // Tickets and Leads share a row of links, and Tickets stays highlighted on Leads.
+    const support = page.getByRole('navigation', { name: 'Support pages' })
+    await support.getByRole('link', { name: 'Leads' }).click()
+    await expect(page).toHaveURL(/\/leads$/)
+    await expect(sidebar.getByRole('link', { name: /^Tickets/ })).toHaveAttribute('aria-current', 'page')
+
+    // Knowledge Base, FAQ and Simulation share another.
+    await page.goto('/kb')
+    const knowledge = page.getByRole('navigation', { name: 'Knowledge pages' })
+    await knowledge.getByRole('link', { name: /^FAQ/ }).click()
+    await expect(page).toHaveURL(/\/faq$/)
+    await expect(sidebar.getByRole('link', { name: /^Knowledge Base/ })).toHaveAttribute('aria-current', 'page')
+    await page.getByRole('navigation', { name: 'Knowledge pages' }).getByRole('link', { name: /^Simulation/ }).click()
+    await expect(page).toHaveURL(/\/simulation$/)
+  })
+
   test('faq page renders after generation', async ({ request, page }) => {
     await request.post('/api/faq/generate')
     await page.goto('/faq')

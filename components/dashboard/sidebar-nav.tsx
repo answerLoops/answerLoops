@@ -1,16 +1,19 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { planIncludesFeature, type Feature } from '@/lib/billing/entitlements'
 import { LockBadge } from '@/components/billing/locked-feature'
+import { usePlanId } from '@/components/billing/use-plan-id'
 
 interface NavItem {
   group: string
   href: string
   label: string
   feature?: Feature
+  /** Other pages that belong under this entry, so it stays highlighted on them. */
+  alsoActiveOn?: string[]
   icon: ReactNode
 }
 
@@ -39,6 +42,7 @@ const navItems: NavItem[] = [
     group: 'Support',
     href: '/tickets',
     label: 'Tickets',
+    alsoActiveOn: ['/leads'],
     icon: (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -49,40 +53,10 @@ const navItems: NavItem[] = [
     group: 'Improve',
     href: '/kb',
     label: 'Knowledge Base',
+    alsoActiveOn: ['/faq', '/simulation'],
     icon: (
       <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-      </svg>
-    ),
-  },
-  {
-    group: 'Improve',
-    href: '/faq',
-    label: 'FAQ',
-    icon: (
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>
-    ),
-  },
-  {
-    group: 'Support',
-    href: '/leads',
-    label: 'Leads',
-    icon: (
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-      </svg>
-    ),
-  },
-  {
-    group: 'Monitor',
-    href: '/simulation',
-    label: 'Simulation',
-    feature: 'simulation' as Feature,
-    icon: (
-      <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polygon points="5 3 19 12 5 21 5 3"/>
       </svg>
     ),
   },
@@ -121,14 +95,7 @@ const navItems: NavItem[] = [
 export function SidebarNav({ changelogUrl }: { changelogUrl?: string }) {
   const pathname = usePathname()
   const groups = ['Monitor', 'Support', 'Improve', 'Configure'] as const
-  const [planId, setPlanId] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetch('/api/billing/status')
-      .then((r) => r.json())
-      .then((d: { planId?: string }) => setPlanId(d.planId ?? null))
-      .catch(() => setPlanId(null))
-  }, [])
+  const planId = usePlanId()
 
   return (
     <nav className="dashboard-navigation flex flex-1 flex-col overflow-y-auto px-3 py-5">
@@ -140,7 +107,7 @@ export function SidebarNav({ changelogUrl }: { changelogUrl?: string }) {
             </p>
             <div className="space-y-0.5">
               {navItems.filter((item) => item.group === group).map((item) => {
-                const active = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                const active = [item.href, ...(item.alsoActiveOn ?? [])].some((href) => pathname === href || pathname.startsWith(`${href}/`))
                 const locked = !!item.feature && planId !== null && !planIncludesFeature(planId, item.feature)
                 return (
                   <Link
