@@ -21,6 +21,7 @@ import { ArticleHistory } from '@/components/dashboard/article-history'
 import { ArticleVerificationControl } from '@/components/dashboard/article-verification'
 import { ReviewTab } from './review-tab'
 import { FlagsTab } from './flags-tab'
+import { GapsTab } from './gaps-tab'
 import type { ReviewCounts } from '@/lib/db/queries/kb-review'
 import type { FlagCounts } from '@/lib/db/queries/widget-answer-flags'
 
@@ -718,6 +719,7 @@ const KB_TABS = [
   { id: 'coverage', label: 'Knowledge coverage' },
   { id: 'review', label: 'Review' },
   { id: 'flags', label: 'Flagged answers' },
+  { id: 'gaps', label: 'Knowledge gaps' },
 ] as const
 type KBTabId = (typeof KB_TABS)[number]['id']
 
@@ -732,7 +734,7 @@ export default function KBPage() {
   const router = useRouter()
   const tabParam = searchParams.get('tab')
   const activeTab: KBTabId =
-    tabParam === 'coverage' || tabParam === 'review' || tabParam === 'flags' ? tabParam : 'manage'
+    tabParam === 'coverage' || tabParam === 'review' || tabParam === 'flags' || tabParam === 'gaps' ? tabParam : 'manage'
   // How many unseen questions are waiting in the review queue; stays null for
   // workspaces without the feature, so no badge shows.
   const [pendingReview, setPendingReview] = useState<number | null>(null)
@@ -1039,6 +1041,8 @@ export default function KBPage() {
         <ReviewTab onCountsChange={handleReviewCounts} />
       ) : activeTab === 'flags' ? (
         <FlagsTab onCountsChange={handleFlagCounts} />
+      ) : activeTab === 'gaps' ? (
+        <GapsTab />
       ) : (
         <>
 

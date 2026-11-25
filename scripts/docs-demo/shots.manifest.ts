@@ -177,9 +177,9 @@ export const SHOTS: Shot[] = [
   },
   {
     id: 'knowledge-gaps',
-    route: '/knowledge-gaps',
+    route: '/kb?tab=gaps',
     viewport: { width: 1440, height: 900 },
-    waitFor: ['h1:has-text("Knowledge Gaps")', 'text=Distinct questions'],
+    waitFor: ['h1:has-text("Knowledge Base")', 'text=Distinct questions'],
     alt: 'The knowledge gaps queue: counts of open gap tickets, the most-asked unanswered questions, and a category breakdown.',
     pins: [
       { id: 'summary', selector: 'text=Open gap tickets >> xpath=ancestor::div[2]', label: 'Gap counts' },
