@@ -95,7 +95,7 @@ export async function backfillGithubCommentThreads(
       continue
     }
 
-    const parent = await getTicketByThreadId(githubThreadId(ref.owner, ref.repo, ref.kind, parentNumber), orgId)
+    const parent = await getTicketByThreadId(githubThreadId(ref.owner, ref.repo, ref.kind, parentNumber), orgId, 'github')
     if (!parent || parent.id === orphan.id) {
       summary.noParentTicket++
       continue

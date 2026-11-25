@@ -13,6 +13,9 @@ import { EmbedRefused } from './embed-refused'
 import { clientIp } from '@/lib/http/client-ip'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
+import { getWidgetLogoVersion } from '@/lib/db/queries/widget-logos'
+import { widgetLogoPath } from '@/lib/widget/logo'
+import { brandPalette } from '@/lib/widget/appearance'
 
 export const dynamic = 'force-dynamic'
 
@@ -76,6 +79,16 @@ export default async function WidgetPage({ params }: Props) {
 
   const whiteLabel = await orgHasFeature(org.id, 'white_label_widget')
 
+  // Title, welcome message and brand color are customization, so they apply only
+  // on a plan that includes it, the same check that removes the answerLoops
+  // branding. Anything else gets the default look.
+  const appearance = whiteLabel ? org.widget_appearance : null
+  const brandStyle = appearance?.brandColor ? brandPalette(appearance.brandColor) : null
+  // The workspace's own logo, on the same plan check. Without one (or without the
+  // plan) the chat shows the answerLoops mark.
+  const logo = whiteLabel ? await getWidgetLogoVersion(org.id) : null
+  const logoUrl = logo ? widgetLogoPath(widgetToken, logo.etag) : null
+
   // Only true when this request is embedded on the org's own instance (the
   // Settings preview link, or a self-host testing the widget on localhost) —
   // never on a real customer's site, since isEmbedAllowed above already
@@ -93,6 +106,17 @@ export default async function WidgetPage({ params }: Props) {
   // same browser, so a token copied elsewhere does not verify.
   const renderToken = mintRenderToken(widgetToken, ip)
 
+  // Visitors can flag an answer on the plans that have the Review queue, which
+  // is where those flags are read. Not in the owner's own preview, where a test
+  // question would otherwise be flagged into their real list. That preview is
+  // the Settings link opened as its own tab, which the browser reports as a
+  // top-level "document" request. A widget embedded in a page on this same
+  // instance (our own marketing and docs pages, or a self-host's own site) is
+  // also "self" by referer, but is a real visitor in an iframe, so it keeps the
+  // thumbs. The browser sets this header and a page cannot change it.
+  const openedAsOwnTab = isSelfPreview && headerList.get('sec-fetch-dest') === 'document'
+  const answerFlagsEnabled = !openedAsOwnTab && (await orgHasFeature(org.id, 'kb_review_queue'))
+
   return (
     <WidgetChat
       widgetToken={widgetToken}
@@ -101,6 +125,12 @@ export default async function WidgetPage({ params }: Props) {
       showBranding={!whiteLabel}
       isSelfPreview={isSelfPreview}
       leadCaptureMode={org.widget_lead_capture_mode}
+      title={appearance?.title ?? null}
+      welcome={appearance?.welcome ?? null}
+      starterQuestions={appearance?.starterEnabled ? appearance.starterQuestions : []}
+      brandStyle={brandStyle}
+      logoUrl={logoUrl}
+      answerFlagsEnabled={answerFlagsEnabled}
     />
   )
 }

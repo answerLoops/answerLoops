@@ -7,6 +7,7 @@ import {
   type CalloutData,
   type ChoicesData,
   type ContactData,
+  type FollowUpsData,
   type LinkCardData,
   type StepsData,
 } from '@/lib/widget/genui'
@@ -26,9 +27,11 @@ interface WidgetActions {
   send: (text: string) => void
   /** False while a reply is streaming, so a tap can't interleave two runs. */
   canReply: boolean
+  /** The follow-up suggestions that may be pressed now (see lib/widget/follow-up-thread.ts), or null. */
+  activeFollowUpId: string | null
 }
 
-const WidgetActionsContext = createContext<WidgetActions>({ send: () => {}, canReply: false })
+const WidgetActionsContext = createContext<WidgetActions>({ send: () => {}, canReply: false, activeFollowUpId: null })
 export const WidgetActionsProvider = WidgetActionsContext.Provider
 
 const cardBase = 'w-full max-w-[88%] rounded-2xl rounded-bl-sm border border-gray-100 bg-white shadow-sm'
@@ -53,7 +56,7 @@ export function StepsCard({ data }: { data: StepsData }) {
           return (
             <li key={i} className="flex gap-2.5">
               <div className="flex flex-col items-center">
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600 text-[0.625rem] font-semibold text-white">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-brand-600 text-[0.625rem] font-semibold text-on-brand">
                   {i + 1}
                 </span>
                 {!isLast && <span className="my-0.5 w-px flex-1 bg-brand-100" />}
@@ -92,7 +95,7 @@ export function ChoicesCard({ data }: { data: ChoicesData }) {
               }}
               className={`max-w-full break-words rounded-2xl border px-3 py-1.5 text-left text-xs font-medium transition-colors ${
                 selected
-                  ? 'border-brand-600 bg-brand-600 text-white'
+                  ? 'border-brand-600 bg-brand-600 text-on-brand'
                   : 'border-brand-200 bg-brand-50 text-brand-700 hover:border-brand-300 hover:bg-brand-100 disabled:opacity-50 disabled:hover:bg-brand-50'
               }`}
             >
@@ -100,6 +103,37 @@ export function ChoicesCard({ data }: { data: ChoicesData }) {
             </button>
           )
         })}
+      </div>
+    </section>
+  )
+}
+
+/**
+ * Suggested next questions under an answer. Drawn only while they are live:
+ * the newest reply's suggestions, before the visitor has typed or answered. A
+ * tap sends the question exactly as written, and the sent question then shows
+ * as the visitor's own message, so the buttons are gone for good. Restored
+ * threads and older replies show nothing.
+ */
+export function FollowUpsCard({ data, toolCallId }: { data: FollowUpsData; toolCallId: string }) {
+  const { send, canReply, activeFollowUpId } = useContext(WidgetActionsContext)
+  if (activeFollowUpId !== toolCallId) return null
+
+  return (
+    <section className="w-full max-w-[88%]" aria-label={data.prompt ?? 'Suggested questions'} data-testid="follow-ups">
+      <p className="mb-1.5 break-words text-[0.6875rem] font-medium text-gray-500">{data.prompt ?? 'You might also ask'}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {data.questions.map((question) => (
+          <button
+            key={question.label}
+            type="button"
+            disabled={!canReply}
+            onClick={() => send(question.label)}
+            className="min-h-11 max-w-full break-words rounded-2xl border border-brand-300 bg-white px-3.5 py-2 text-left text-xs font-medium leading-snug text-gray-800 shadow-sm transition-colors hover:border-brand-400 hover:bg-brand-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 disabled:opacity-50 disabled:hover:bg-white"
+          >
+            {question.label}
+          </button>
+        ))}
       </div>
     </section>
   )

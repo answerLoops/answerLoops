@@ -204,6 +204,51 @@ describe('findExactDuplicate', () => {
   })
 })
 
+describe('findExactDuplicate for an imported section', () => {
+  const find = async (question: string, answer: string, heading?: string) => {
+    const { findExactDuplicate } = await import('@/lib/db/queries/kb-duplicates')
+    const { getDb } = await import('@/lib/db/drizzle')
+    return findExactDuplicate(getDb(), 3, question, answer, heading === undefined ? undefined : { sectionHeading: heading })
+  }
+
+  it('finds the same section imported under another page or file title', async () => {
+    respond = () => [[9, 'sample › Getting started', 'Install the package.']]
+    expect(await find('dup-copy › Getting started', 'Install the package.', 'Getting started')).toBe(9)
+  })
+
+  it('finds a section imported before titles carried the page, under its bare heading', async () => {
+    respond = () => [[9, 'Getting started', 'Install the package.']]
+    expect(await find('dup-copy › Getting started', 'Install the package.', 'Getting started')).toBe(9)
+  })
+
+  it('does not treat a different heading over the same body as the same section', async () => {
+    respond = () => [[9, 'sample › Upgrading', 'Install the package.']]
+    expect(await find('dup-copy › Getting started', 'Install the package.', 'Getting started')).toBeNull()
+  })
+
+  it('does not treat a heading that only ends the same way as the same section', async () => {
+    respond = () => [[9, 'sample › Not getting started', 'Install the package.']]
+    expect(await find('dup-copy › Getting started', 'Install the package.', 'getting started')).toBeNull()
+  })
+
+  it('does not match the same heading over a different body', async () => {
+    respond = () => [[9, 'sample › Getting started', 'Something else entirely.']]
+    expect(await find('dup-copy › Getting started', 'Install the package.', 'Getting started')).toBeNull()
+  })
+
+  it('asks the database for the full title, the bare heading and any page title in front of it', async () => {
+    await find('dup-copy › 100% ready_now', 'a', '100% ready_now')
+    const q = calls[0]
+    expect(q.params).toEqual(expect.arrayContaining(['dup-copy › 100% ready_now', '100% ready_now', '% › 100\\% ready\\_now']))
+  })
+
+  it('compares the whole title only when no heading is given, exactly as before', async () => {
+    respond = () => [[9, 'sample › Getting started', 'Install the package.']]
+    expect(await find('dup-copy › Getting started', 'Install the package.')).toBeNull()
+    expect(calls[0].sql).not.toContain(' like ')
+  })
+})
+
 describe('searchArticles with exact copies', () => {
   const row = (id: number, question: string, answer: string, distance: number) => [...articleRow({ id, question, answer }), distance]
   const searchRows = (rows: unknown[][]) => {

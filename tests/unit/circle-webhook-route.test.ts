@@ -63,10 +63,9 @@ describe('Circle inbound webhook route', () => {
     expect(src).toMatch(/=== '0'/)
   })
 
-  it('enrichment fallback references decryptToken + fetchCirclePost/fetchCircleComment', () => {
+  it('enrichment fallback references decryptToken + fetchCircleRecord', () => {
     expect(src).toContain('decryptToken')
-    expect(src).toContain('fetchCirclePost')
-    expect(src).toContain('fetchCircleComment')
+    expect(src).toContain('fetchCircleRecord(token, picked.kind, content.id)')
   })
 
   it('never imports a Circle send/post function (Circle is ingest-only)', () => {

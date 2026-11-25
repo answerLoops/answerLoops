@@ -7,6 +7,7 @@ import {
   checkLinks,
   checkPricing,
   collectServedPaths,
+  extractCustomPricedPlans,
   extractIntroChannels,
   extractPlanFacts,
   syncLlmsText,
@@ -40,9 +41,15 @@ describe('llms.txt fact checks', () => {
       expect(facts.plans.enterprise).toMatchObject({ monthly: 499, quota: null })
     })
 
+    const customPriced = async () => extractCustomPricedPlans(await read('lib/marketing/pricing.ts'))
+
+    it('reads the custom-priced plans from the marketing pricing module', async () => {
+      expect(await customPriced()).toEqual(['enterprise'])
+    })
+
     it('flags a changed monthly price', async () => {
       const llms = (await read('public/llms.txt')).replace('Standard $49 with', 'Standard $59 with')
-      const errors = checkPricing(llms, await read('lib/billing/plans.ts'))
+      const errors = checkPricing(llms, await read('lib/billing/plans.ts'), await customPriced())
       expect(errors.some((e) => e.includes('Standard $49'))).toBe(true)
       expect(errors.some((e) => e.includes('$59'))).toBe(true)
     })
@@ -50,20 +57,33 @@ describe('llms.txt fact checks', () => {
     it('flags a changed answer allowance, overage rate and trial length', async () => {
       const plans = await read('lib/billing/plans.ts')
       const base = await read('public/llms.txt')
-      expect(checkPricing(base.replace('with 3,000', 'with 5,000'), plans).join()).toContain('Pro $149 with 3,000')
-      expect(checkPricing(base.replace('$5 per additional', '$7 per additional'), plans).join()).toContain('$5 per additional block of 100')
-      expect(checkPricing(base.replace('14-day trial', '30-day trial'), plans).join()).toContain('14-day trial')
+      const custom = await customPriced()
+      expect(checkPricing(base.replace('with 3,000', 'with 5,000'), plans, custom).join()).toContain('Pro $149 with 3,000')
+      expect(checkPricing(base.replace('$5 per additional', '$7 per additional'), plans, custom).join()).toContain('$5 per additional block of 100')
+      expect(checkPricing(base.replace('14-day trial', '30-day trial'), plans, custom).join()).toContain('14-day trial')
     })
 
     it('flags a price changed in the code but not in llms.txt', async () => {
       const plans = (await read('lib/billing/plans.ts')).replace('priceMonthly: 14900', 'priceMonthly: 17900')
-      const errors = checkPricing(await read('public/llms.txt'), plans)
+      const errors = checkPricing(await read('public/llms.txt'), plans, await customPriced())
       expect(errors.join()).toContain('Pro $179')
     })
 
     it('flags a leftover price that is no longer in the plan table', async () => {
       const llms = (await read('public/llms.txt')).replace('## Integrations', 'Legacy tier $29.\n\n## Integrations')
-      expect(checkPricing(llms, await read('lib/billing/plans.ts')).join()).toContain('$29 does not match')
+      expect(checkPricing(llms, await read('lib/billing/plans.ts'), await customPriced()).join()).toContain('$29 does not match')
+    })
+
+    it('requires llms.txt to say a custom-priced plan has custom pricing', async () => {
+      const llms = (await read('public/llms.txt')).replace('Enterprise has custom pricing with unlimited', 'Enterprise has unlimited')
+      const errors = checkPricing(llms, await read('lib/billing/plans.ts'), await customPriced())
+      expect(errors.join()).toContain('Enterprise has custom pricing')
+    })
+
+    it('flags the price of a custom-priced plan if it reappears in llms.txt', async () => {
+      const llms = (await read('public/llms.txt')).replace('Enterprise has custom pricing with unlimited', 'Enterprise has custom pricing from $499 with unlimited')
+      const errors = checkPricing(llms, await read('lib/billing/plans.ts'), await customPriced())
+      expect(errors.join()).toContain('$499 does not match')
     })
   })
 

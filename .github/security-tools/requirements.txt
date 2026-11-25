@@ -1,8 +1,7 @@
-# Pinned versions for the CI security scanners (.github/workflows/security.yml).
+# Pinned versions for the CI workflow auditor (.github/workflows/security.yml).
 #
 # These were `pip install <tool> --quiet` with no version, so each run silently
 # pulled whatever PyPI had latest — no reproducibility, no changelog, and a bad
 # release could break CI with nothing to point at. Pinned here so Dependabot
 # (see .github/dependabot.yml, pip ecosystem) opens a PR per bump instead.
-semgrep==1.183.0
-zizmor==1.31.1
+zizmor==1.32.0

@@ -7,6 +7,10 @@ export async function register() {
   process.env.COPILOTKIT_TELEMETRY_DISABLED ??= 'true'
 
   if (process.env.NEXT_RUNTIME === 'nodejs') {
+    // Before anything else touches the database or accepts a request: a
+    // production server without a usable auth secret must not come up at all.
+    const { assertAuthSecretForProduction } = await import('@/lib/auth/secret')
+    assertAuthSecretForProduction()
     await import('./sentry.server.config')
     const { runMigrations } = await import('@/lib/db/migrate')
     await runMigrations()

@@ -90,6 +90,8 @@ describe('deleteTicket: behavioral — actually issues a DELETE against every de
     const calledOn: string[] = []
     const fakeTable = (name: string) => ({ __name: name })
     const tx = {
+      select: () => ({ from: () => ({ where: () => ({ limit: async () => [{ orgId: 3 }] }) }) }),
+      execute: async () => { calledOn.push('lock:workspace') },
       update: (table: { __name: string }) => {
         calledOn.push(`update:${table.__name}`)
         return { set: () => ({ where: () => Promise.resolve() }) }
@@ -127,6 +129,7 @@ describe('deleteTicket: behavioral — actually issues a DELETE against every de
     // table — deleting it first would violate the FK constraints this bug
     // was all about in the first place.
     const ticketDeleteIdx = calledOn.indexOf('delete:tickets')
+    expect(calledOn[0]).toBe('lock:workspace')
     expect(ticketDeleteIdx).toBe(calledOn.length - 1)
     expect(calledOn).toContain('update:kbArticles')
     expect(calledOn).toContain('delete:notifications')

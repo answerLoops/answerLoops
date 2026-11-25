@@ -21,8 +21,8 @@ export default async function Page() {
     <IntentPage
       navState={await resolveNavState()}
       eyebrow="Use case"
-      title="Run answerLoops on your infrastructure"
-      intro="Deploy the application and channel services yourself. Choose your model configuration and take responsibility for database operations, backups, and updates."
+      title="Run community support on your own infrastructure"
+      intro="Deploy answerLoops and its channel services yourself. Choose your model configuration and manage database operations, backups, and updates."
       audience="Teams that need control over deployment and are prepared to operate the services behind their support workflow."
       highlights={[
         {

@@ -4,7 +4,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 
 /**
- * The Manage tab's "related docs changed" notice: a saved resolution whose
+ * The Sources tab's "related docs changed" notice: a saved resolution whose
  * related documentation changed after it was saved says so under its Saved
  * line, and the notice goes away once the list reloads without the flag (after
  * the answer is verified again). The other sections of the page are stubbed.

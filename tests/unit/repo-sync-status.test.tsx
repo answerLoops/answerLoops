@@ -16,14 +16,16 @@ function repo(over: Partial<Parameters<typeof RepoSyncStatus>[0]['repo']> = {}) 
     kb_chunk_count: 12,
     kb_last_synced: '2026-03-04T12:00:00.000Z',
     kb_synced_commit: SHA as string | null,
+    kb_paths: ['docs'] as string[] | null,
+    kb_sync_result: null as Parameters<typeof RepoSyncStatus>[0]['repo']['kb_sync_result'],
     ...over,
   }
 }
 
 describe('RepoSyncStatus', () => {
   it('shows "Not yet synced" when there are no chunks, even if a sha exists', () => {
-    const { container } = render(<RepoSyncStatus repo={repo({ kb_chunk_count: 0 })} />)
-    expect(container.textContent).toBe('Not yet synced')
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_chunk_count: 0, kb_last_synced: null })} />)
+    expect(container.textContent).toContain('Not yet synced')
     expect(screen.queryByRole('link')).toBeNull()
   })
 
@@ -70,6 +72,61 @@ describe('RepoSyncStatus', () => {
     render(<RepoSyncStatus repo={repo({ owner: 'a b/c', repo: 'x?y#z' })} />)
     const href = screen.getByRole('link').getAttribute('href')
     expect(href).toBe(`https://github.com/a%20b%2Fc/x%3Fy%23z/commit/${SHA}`)
+  })
+})
+
+describe('RepoSyncStatus — docs folders', () => {
+  const result = { synced: 3, skippedForRoom: 0, failed: 0, tooLarge: 0, missingFolders: [] as string[] }
+
+  it('nudges to choose folders when none are chosen', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_paths: null })} />)
+    expect(container.textContent).toContain('Choose your docs folders so only your docs are synced.')
+  })
+
+  it('lists the chosen folders', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_paths: ['content/docs', 'docs'] })} />)
+    expect(container.textContent).toContain('Docs folders: content/docs, docs')
+    expect(container.textContent).not.toContain('Choose your docs folders')
+  })
+
+  it('does not call a repo unsynced once it has synced', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_chunk_count: 0 })} />)
+    expect(container.textContent).not.toContain('Not yet synced')
+    expect(container.textContent).toContain('0 chunks')
+  })
+
+  it('names the repository root in words', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_paths: ['.', 'docs'] })} />)
+    expect(container.textContent).toContain('Docs folders: repository root (top-level files), docs')
+  })
+
+  it('names a chosen folder that no longer exists', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_sync_result: { ...result, missingFolders: ['guide'] } })} />)
+    expect(container.textContent).toContain('guide no longer exists in the repo')
+  })
+
+  it('says how many files did not fit, could not be read, or were too large', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_sync_result: { ...result, skippedForRoom: 4, failed: 1, tooLarge: 2 } })} />)
+    expect(container.textContent).toContain('4 files skipped because the knowledge base is full')
+    expect(container.textContent).toContain("1 file couldn't be read and will be retried")
+    expect(container.textContent).toContain('2 files too large to sync')
+  })
+
+  it('shows what the last sync changed', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_sync_result: { ...result, updated: 3, added: 0, removed: 0, unchanged: 140 } })} />)
+    expect(container.textContent).toContain('Last sync: 3 files updated, 140 unchanged')
+  })
+
+  it('shows no change line for a result without file changes', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_sync_result: result })} />)
+    expect(container.textContent).not.toContain('Last sync:')
+    const { container: none } = render(<RepoSyncStatus repo={repo({ kb_sync_result: null })} />)
+    expect(none.textContent).not.toContain('Last sync:')
+  })
+
+  it('shows no counts line when nothing was skipped', () => {
+    const { container } = render(<RepoSyncStatus repo={repo({ kb_sync_result: result })} />)
+    expect(container.textContent).not.toMatch(/skipped|couldn't be read|too large/)
   })
 })
 

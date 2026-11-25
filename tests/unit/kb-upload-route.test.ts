@@ -181,7 +181,7 @@ describe('app/api/kb/upload/route.ts — exact duplicates', () => {
     expect(await res.json()).toMatchObject({ created: 2, duplicates: 1 })
     expect(h.embedText).toHaveBeenCalledTimes(2)
     expect(h.createArticleFromSource).toHaveBeenCalledTimes(2)
-    expect(h.findExactDuplicate).toHaveBeenCalledWith(expect.anything(), 7, 'q2', 'b'.repeat(100))
+    expect(h.findExactDuplicate).toHaveBeenCalledWith(expect.anything(), 7, 'q2', 'b'.repeat(100), { sectionHeading: undefined })
   })
 
   it('counts a section the insert finds is a duplicate (an upload racing another), and keeps going', async () => {

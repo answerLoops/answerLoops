@@ -6,6 +6,7 @@ import {
   CalloutCard,
   CardSkeleton,
   ChoicesCard,
+  FollowUpsCard,
   ContactCard,
   LinkCard,
   StepsCard,
@@ -46,7 +47,7 @@ describe('ChoicesCard', () => {
   it('sends the tapped option as the visitor message, then locks every option', async () => {
     const send = vi.fn()
     render(
-      <WidgetActionsProvider value={{ send, canReply: true }}>
+      <WidgetActionsProvider value={{ send, canReply: true, activeFollowUpId: null }}>
         <ChoicesCard data={data} />
       </WidgetActionsProvider>
     )
@@ -62,7 +63,7 @@ describe('ChoicesCard', () => {
   it('is inert while a reply is still streaming', async () => {
     const send = vi.fn()
     render(
-      <WidgetActionsProvider value={{ send, canReply: false }}>
+      <WidgetActionsProvider value={{ send, canReply: false, activeFollowUpId: null }}>
         <ChoicesCard data={data} />
       </WidgetActionsProvider>
     )
@@ -138,5 +139,86 @@ describe('CardSkeleton', () => {
   it('is hidden from assistive tech', () => {
     const { container } = render(<CardSkeleton />)
     expect(container.firstElementChild?.getAttribute('aria-hidden')).toBe('true')
+  })
+})
+
+
+describe('FollowUpsCard', () => {
+  const data = { questions: [{ label: 'How does the AI check its answers?' }, { label: 'Can I run it on my own server?' }] }
+  const renderCard = (active: string | null, canReply = true, send = vi.fn()) =>
+    render(
+      <WidgetActionsProvider value={{ send, canReply, activeFollowUpId: active }}>
+        <FollowUpsCard data={data} toolCallId="t1" />
+      </WidgetActionsProvider>
+    )
+
+  it('draws nothing unless it is the live set of suggestions', () => {
+    const { container } = renderCard(null)
+    expect(container.firstChild).toBeNull()
+    const other = renderCard('some-other-call')
+    expect(other.container.firstChild).toBeNull()
+  })
+
+  it('draws the questions as buttons with the default lead-in when it is live', () => {
+    renderCard('t1')
+    expect(screen.getByText('You might also ask')).toBeTruthy()
+    expect(screen.getAllByRole('button')).toHaveLength(2)
+  })
+
+  it('uses the assistant’s own lead-in when it gave one', () => {
+    render(
+      <WidgetActionsProvider value={{ send: vi.fn(), canReply: true, activeFollowUpId: 't1' }}>
+        <FollowUpsCard data={{ ...data, prompt: 'Want to know more?' }} toolCallId="t1" />
+      </WidgetActionsProvider>
+    )
+    expect(screen.getByText('Want to know more?')).toBeTruthy()
+  })
+
+  it('sends the tapped question exactly as written', async () => {
+    const send = vi.fn()
+    renderCard('t1', true, send)
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Can I run it on my own server?' }))
+    expect(send).toHaveBeenCalledExactlyOnceWith('Can I run it on my own server?')
+  })
+
+  it('is inert while a reply is still arriving', async () => {
+    const send = vi.fn()
+    renderCard('t1', false, send)
+    for (const b of screen.getAllByRole('button')) expect((b as HTMLButtonElement).disabled).toBe(true)
+    await userEvent.setup().click(screen.getAllByRole('button')[0])
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it('reads on any brand color: dark text on white with a brand-colored border, like the starter questions', () => {
+    renderCard('t1')
+    for (const b of screen.getAllByRole('button')) {
+      expect(b.className).toMatch(/text-gray-800/)
+      expect(b.className).toMatch(/bg-white/)
+      expect(b.className).toMatch(/border-brand-300/)
+      expect(b.className).not.toMatch(/text-brand-/)
+    }
+  })
+
+  it('is easy to tap and read: at least 44px tall, wrapping, with a visible keyboard focus ring', () => {
+    renderCard('t1')
+    for (const b of screen.getAllByRole('button')) {
+      expect(b.className).toMatch(/min-h-11/)
+      expect(b.className).toMatch(/break-words/)
+      expect(b.className).toMatch(/focus-visible:ring-2/)
+    }
+  })
+
+  it('shows question text as plain text, never as markup', () => {
+    render(
+      <WidgetActionsProvider value={{ send: vi.fn(), canReply: true, activeFollowUpId: 't1' }}>
+        <FollowUpsCard
+          data={{ questions: [{ label: '<img src=x onerror=alert(1)>' }, { label: '**bold?**' }] }}
+          toolCallId="t1"
+        />
+      </WidgetActionsProvider>
+    )
+    expect(document.querySelector('img')).toBeNull()
+    expect(screen.getByRole('button', { name: '<img src=x onerror=alert(1)>' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '**bold?**' })).toBeTruthy()
   })
 })

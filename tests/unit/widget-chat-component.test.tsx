@@ -238,6 +238,60 @@ describe('WidgetChat: run lifecycle', () => {
   })
 })
 
+describe('WidgetChat: expired session', () => {
+  it('replaces a refused call with a plain prompt to start a new session, not the raw "Forbidden"', async () => {
+    const fake = makeFakeAgent()
+    await renderWidget(fake)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+
+    fake.emit.runInitialized()
+    fake.emit.runFailed(new Error('HTTP 403: Forbidden'))
+
+    expect(screen.queryByText('Forbidden')).toBeNull()
+    expect(screen.getByTestId('session-expired')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Start a new session' })).toBeTruthy()
+  })
+
+  it('reloads the panel from that button so the page gets a fresh pass', async () => {
+    const reload = vi.spyOn(window.location, 'reload').mockImplementation(() => {})
+    const fake = makeFakeAgent()
+    await renderWidget(fake)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+    fake.emit.runInitialized()
+    fake.emit.runFailed(new Error('HTTP 403: Forbidden'))
+
+    await user.click(screen.getByRole('button', { name: 'Start a new session' }))
+    expect(reload).toHaveBeenCalledTimes(1)
+    reload.mockRestore()
+  })
+
+  it('does not show the prompt for other failures', async () => {
+    const fake = makeFakeAgent()
+    await renderWidget(fake)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Skip' }))
+    fake.emit.runInitialized()
+    fake.emit.runFailed()
+    expect(screen.queryByTestId('session-expired')).toBeNull()
+  })
+})
+
+describe('WidgetChat: header type size', () => {
+  it('draws the title at 14px and the Online line at 12px, with the title still truncating', async () => {
+    await renderWidget(makeFakeAgent())
+    const header = document.querySelector('.border-b.border-gray-100') as HTMLElement
+    const title = header.querySelector('p.font-semibold') as HTMLElement
+    expect(title.className).toContain('text-sm')
+    expect(title.className).not.toMatch(/\btext-xs\b/)
+    expect(title.className).toContain('truncate')
+    const online = screen.getAllByText('Online')[0]
+    expect(online.className).toContain('text-xs')
+    expect(online.className).not.toContain('0.625rem')
+  })
+})
+
 describe('WidgetChat: branding', () => {
   it('shows the "Powered by" line when showBranding is true', async () => {
     h2.current = makeFakeAgent()
@@ -274,7 +328,7 @@ describe('WidgetChat: rich cards', () => {
   it('registers renderers for the whole card catalog and a silent fallback for anything else', async () => {
     await renderWidget(makeFakeAgent())
     expect(new Set(h2.registered)).toEqual(
-      new Set(['show_steps', 'show_choices', 'show_callout', 'show_link_card', 'show_contact_options', '*'])
+      new Set(['show_steps', 'show_choices', 'show_callout', 'show_link_card', 'show_contact_options', 'show_follow_ups', '*'])
     )
   })
 

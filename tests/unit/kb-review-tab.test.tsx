@@ -31,6 +31,7 @@ const item = (over: Partial<KBReviewItem> = {}): KBReviewItem => ({
   article_id: null,
   reviewed_at: null,
   created_at: '2026-10-01T12:00:00.000Z',
+  visitor_message: null,
   ...over,
 })
 
@@ -64,6 +65,21 @@ describe('ReviewTab', () => {
     expect(screen.getByText('Asked 4 times')).toBeTruthy()
     expect(onCounts).toHaveBeenCalledWith(counts)
     expect(h.fetchMock.mock.calls[0][0]).toBe('/api/kb/review?status=pending')
+  })
+
+  it('shows the visitor words beside a rewritten follow-up question', async () => {
+    queue([item({ question: 'Team plan price', visitor_message: 'and for teams?' })])
+    await renderTab()
+    expect(await screen.findByDisplayValue('Team plan price')).toBeTruthy()
+    expect(screen.getByText('Visitor asked:')).toBeTruthy()
+    expect(screen.getByText('and for teams?')).toBeTruthy()
+  })
+
+  it('shows no visitor line when the question is already the visitor own words', async () => {
+    queue([item()])
+    await renderTab()
+    expect(await screen.findByDisplayValue('Do you ship to Canada?')).toBeTruthy()
+    expect(screen.queryByText('Visitor asked:')).toBeNull()
   })
 
   it('flags an item with no usable answer and keeps Approve disabled until one is written', async () => {

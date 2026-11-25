@@ -9,17 +9,28 @@
 // event count, just with no visible content — indistinguishable from a
 // misconfigured provider until you inspect the raw stream. Spreading
 // `payload` onto the chunk gives the converter the flat shape it expects.
+//
+// `hiddenTools` are server-side tools whose calls never reach the browser.
+// The knowledge-base search's result is whole articles: sent on, the client
+// would keep it in the conversation and send it back with every later
+// message, past the per-message size limit. Every chunk of a hidden call is
+// dropped, matched by name where the chunk carries it and by call id where
+// it doesn't (argument deltas and the end of streaming).
 export async function* flattenMastraStream(
   stream: AsyncIterable<unknown>,
-  onFirstText?: () => void
+  onFirstText?: () => void,
+  hiddenTools: readonly string[] = []
 ): AsyncIterable<unknown> {
   let sawText = false
+  const hiddenIds = new Set<unknown>()
   for await (const chunk of stream) {
     if (chunk && typeof chunk === 'object' && 'payload' in chunk) {
       const c = chunk as { type?: string; payload?: unknown }
       const payload = c.payload
       if (payload && typeof payload === 'object') {
         const p = payload as Record<string, unknown>
+        if (typeof p.toolName === 'string' && hiddenTools.includes(p.toolName)) hiddenIds.add(p.toolCallId)
+        if (c.type?.startsWith('tool-') && p.toolCallId !== undefined && hiddenIds.has(p.toolCallId)) continue
         switch (c.type) {
           // Tool chunks use Mastra's own field names; the converter wants the
           // AI SDK's. `tool-call-input-streaming-start` / `tool-call-delta`

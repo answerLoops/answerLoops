@@ -76,17 +76,17 @@ describe('answer loop overview', () => {
     render(<AnswerLoopOverview />)
 
     expect(
-      screen.getByRole('heading', { name: 'Good answers start with your knowledge.' }),
+      screen.getByRole('heading', { name: 'Every Interaction Makes Your Community Stronger' }),
     ).toBeVisible()
     for (const title of [
-      'Question arrives',
-      'Draft from your docs',
-      'Check the answer',
-      'Reply with confidence',
+      'Ask in the community',
+      'Get an answer from your guides',
+      'See the sources',
+      'Get help and move forward',
     ]) {
       expect(screen.getByRole('heading', { name: title })).toBeVisible()
     }
-    expect(screen.getByText('Save useful resolutions as knowledge')).toBeVisible()
+    expect(screen.getByText('Turn useful answers into guides for future questions')).toBeVisible()
     for (const { name, href } of MARKETED_CHANNELS) {
       expect(screen.getByRole('link', { name })).toHaveAttribute('href', href)
     }
@@ -121,7 +121,7 @@ describe('answer loop overview', () => {
 
     expect(examplesShown()).toEqual(['true', 'false', 'false', 'false'])
     expect(
-      screen.getByText('Webhook retries made duplicate orders. How do we stop it?'),
+      screen.getByText('Where can I watch the workshop replay?'),
     ).toBeVisible()
     const hidden = document.querySelectorAll('.loop-example')[1]
     expect(hidden).toHaveAttribute('aria-hidden', 'true')
@@ -130,12 +130,12 @@ describe('answer loop overview', () => {
     expect(examplesShown()).toEqual(['true', 'true', 'false', 'false'])
     expect(hidden).not.toHaveAttribute('aria-hidden')
     expect(screen.getByRole('list', { name: 'Sources used' })).toHaveTextContent(
-      '[1] Webhook delivery[2] Idempotency guide',
+      '[1] Workshop replay guide[2] Member resource library',
     )
 
     steps(2)
     expect(examplesShown()).toEqual(['true', 'true', 'true', 'true'])
-    expect(screen.getByText('Posted with 2 cited sources')).toBeVisible()
+    expect(screen.getByText('Member gets a link to the replay')).toBeVisible()
   })
 
   it('alternates to the held-back example after each full pass', () => {
@@ -146,13 +146,13 @@ describe('answer loop overview', () => {
     expect(pressedRun()).toEqual(['Docs don’t cover it'])
     expect(stepStates()).toEqual(['active', 'idle', 'idle', 'idle'])
     expect(
-      screen.getByText('Can we rotate our API key with no downtime?'),
+      screen.getByText('Can I bring a guest to the next meetup?'),
     ).toBeVisible()
 
     steps(3)
     const final = document.querySelectorAll<HTMLElement>('.loop-example')[3]
     expect(final.dataset.tone).toBe('warn')
-    expect(final).toHaveTextContent('Held back and sent to your team')
+    expect(final).toHaveTextContent('Your team can pick up the question')
 
     finishRun()
     expect(pressedRun()).toEqual(['Answered from docs'])
@@ -168,13 +168,13 @@ describe('answer loop overview', () => {
     expect(stepStates()).toEqual(['active', 'idle', 'idle', 'idle'])
     expect(examplesShown()).toEqual(['true', 'false', 'false', 'false'])
     expect(
-      screen.queryByText('Webhook retries made duplicate orders. How do we stop it?'),
+      screen.queryByText('Where can I watch the workshop replay?'),
     ).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Answered from docs' }))
     expect(pressedRun()).toEqual(['Answered from docs'])
     expect(
-      screen.getByText('Webhook retries made duplicate orders. How do we stop it?'),
+      screen.getByText('Where can I watch the workshop replay?'),
     ).toBeVisible()
   })
 
@@ -195,7 +195,7 @@ describe('answer loop overview', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Pause diagram animation' }))
     expect(examplesShown()).toEqual(['true', 'true', 'true', 'true'])
-    expect(screen.getByText('Posted with 2 cited sources')).toBeVisible()
+    expect(screen.getByText('Member gets a link to the replay')).toBeVisible()
 
     fireEvent.click(screen.getByRole('button', { name: 'Docs don’t cover it' }))
     expect(pressedRun()).toEqual(['Docs don’t cover it'])
@@ -203,8 +203,8 @@ describe('answer loop overview', () => {
     expect(
       document.querySelectorAll('.loop-example[aria-hidden="true"]'),
     ).toHaveLength(0)
-    expect(screen.getByText('No article covers key rotation')).toBeVisible()
-    expect(screen.getByText('Held back and sent to your team')).toBeVisible()
+    expect(screen.getByText('No guide covers the guest policy')).toBeVisible()
+    expect(screen.getByText('Your team can pick up the question')).toBeVisible()
     advance(10000)
     expect(stepStates()).toEqual(['active', 'idle', 'idle', 'idle'])
 
@@ -239,7 +239,7 @@ describe('answer loop overview', () => {
     // The picker still works without motion, showing the whole example at once.
     fireEvent.click(screen.getByRole('button', { name: 'Docs don’t cover it' }))
     expect(examplesShown()).toEqual(['true', 'true', 'true', 'true'])
-    expect(screen.getByText('Held back and sent to your team')).toBeVisible()
+    expect(screen.getByText('Your team can pick up the question')).toBeVisible()
   })
   it('pauses when the tab is hidden and resumes when it becomes visible again', () => {
     const hidden = vi.spyOn(document, 'hidden', 'get').mockReturnValue(false)

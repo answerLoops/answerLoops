@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { TICKET_STATUSES } from '@/lib/agent/core'
 
 // A ticket marked `duplicate` must not inflate dashboard totals, deflection
 // metrics, category counts, or SLA figures. Runs the real query builders
@@ -68,8 +69,7 @@ describe('analytics queries', () => {
 })
 
 describe('status plumbing', () => {
-  it('accepts duplicate as a valid status everywhere it is enumerated', async () => {
-    const { TICKET_STATUSES } = await import('@/lib/agent/core')
+  it('accepts duplicate as a valid status everywhere it is enumerated', () => {
     expect(TICKET_STATUSES).toContain('duplicate')
   })
 })

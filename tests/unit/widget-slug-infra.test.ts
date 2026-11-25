@@ -25,6 +25,12 @@ vi.mock('@/lib/db/queries/widgets', () => ({
   getOrgByWidgetSlug: h.getOrgByWidgetSlug,
 }))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
+vi.mock('@/lib/db/queries/widget-logos', () => ({
+  getWidgetLogoVersion: vi.fn(async () => null),
+  getWidgetLogo: vi.fn(async () => null),
+  setWidgetLogo: vi.fn(async () => ({ etag: '0123456789abcdef' })),
+  deleteWidgetLogo: vi.fn(async () => undefined),
+}))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/http/origin-guard', () => ({ verifyOriginProxy: () => null }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
@@ -108,6 +114,7 @@ describe('GET /api/widget/config: slug routing and rate-limit key', () => {
     plan_id: 'pro',
     widget_allowed_origins: null,
     widget_lead_capture_mode: 'on-failure',
+    widget_appearance: { title: null, welcome: null, brandColor: null },
   })
 
   async function call(id: string) {
@@ -145,7 +152,7 @@ describe('GET /api/widget/config: slug routing and rate-limit key', () => {
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.token).toBeNull()
-    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#4f46e5' })
+    expect(body.display).toEqual({ windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoVersion: null })
     expect(h.orgHasFeature).not.toHaveBeenCalled()
   })
 
@@ -180,15 +187,18 @@ describe('public/widget.js: using the resolved token', () => {
   const RESOLVED = 'd4'.repeat(24)
 
   interface El {
+    tag: string
     id: string
     src: string
     textContent: string
     attrs: Record<string, string>
     children: El[]
+    listeners: Record<string, () => void>
     [k: string]: unknown
   }
-  const el = (): El => {
+  const el = (tag = ''): El => {
     const e: El = {
+      tag,
       id: '',
       src: '',
       textContent: '',
@@ -200,12 +210,23 @@ describe('public/widget.js: using the resolved token', () => {
         e.attrs[k] = v
       },
       getAttribute: (k: string) => (k in e.attrs ? e.attrs[k] : null),
-      addEventListener: () => {},
+      listeners: {},
+      addEventListener: (type: string, fn: () => void) => {
+        e.listeners[type] = fn
+      },
       appendChild: (c: El) => {
         e.children.push(c)
       },
       classList: { add() {}, remove() {} },
     }
+    let text = ''
+    Object.defineProperty(e, 'textContent', {
+      get: () => text,
+      set: (v: string) => {
+        text = v
+        if (v === '') e.children.length = 0
+      },
+    })
     return e
   }
 
@@ -221,7 +242,8 @@ describe('public/widget.js: using the resolved token', () => {
         readyState: 'complete',
         head,
         body,
-        createElement: () => el(),
+        createElement: (tag: string) => el(tag),
+        createElementNS: (_ns: string, tag: string) => el(tag),
         getElementsByTagName: () => [script],
         addEventListener: () => {},
       },
@@ -241,6 +263,7 @@ describe('public/widget.js: using the resolved token', () => {
       panel: () => body.children.find((c) => c.id === 'cp-widget-panel'),
       bubble: () => body.children.find((c) => c.id === 'cp-widget-bubble'),
       iframeSrc: () => body.children.find((c) => c.id === 'cp-widget-panel')?.children[0]?.src,
+      open: () => body.children.find((c) => c.id === 'cp-widget-bubble')?.listeners.click?.(),
     }
   }
 
@@ -250,7 +273,9 @@ describe('public/widget.js: using the resolved token', () => {
 
   it('a slug snippet builds the iframe from the returned token, never the slug', async () => {
     const w = run('acme-help', { token: RESOLVED, display: {} })
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${RESOLVED}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${RESOLVED}`)
     expect(w.iframeSrc()).not.toContain('acme-help')
   })
 

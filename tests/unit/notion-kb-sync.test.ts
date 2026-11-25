@@ -106,7 +106,9 @@ describe('lib/notion/kb-sync.ts — syncNotionToKB', () => {
   })
 
   it('budgets articles as MAX_ARTICLES_PER_ORG minus every non-Notion article', () => {
-    expect(src).toMatch(/MAX_ARTICLES_PER_ORG\s*=\s*2000/)
+    // The limit is the shared one every writer uses (lib/kb/limits.ts).
+    expect(src).toContain("import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'")
+    expect(fs.readFileSync(path.join(process.cwd(), 'lib/kb/limits.ts'), 'utf8')).toMatch(/MAX_ARTICLES_PER_ORG\s*=\s*2000/)
     expect(src).toContain('await countArticles(orgId)')
     expect(src).toContain('existingNotionChunks')
     expect(src).toMatch(/MAX_ARTICLES_PER_ORG - \(\(await countArticles\(orgId\)\) - existingNotionChunks\)/)

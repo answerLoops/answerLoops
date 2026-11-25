@@ -114,7 +114,9 @@ describe('widget lead endpoint carries the standard abuse controls', () => {
   it('bounds the email length and shape rather than checking for an @', () => {
     const s = src()
     expect(s).toContain('MAX_EMAIL_CHARS')
-    expect(s).toContain('EMAIL_PATTERN.test(normalized)')
+    // The shape is checked by the shared strict check, not a loose pattern.
+    expect(s).toContain('isAcceptableLeadEmail(normalized)')
+    expect(s).not.toContain('EMAIL_PATTERN')
     // The original check stored any string containing an @, at any length.
     expect(s).not.toContain("email.includes('@')")
   })
@@ -185,11 +187,13 @@ describe('widget token actions cannot act on a defaulted org', () => {
     expect(s).toContain("const WIDGET_ADMIN_ROLES = ['owner', 'admin'] as const")
     // Rotation breaks every live embed; the allowlist decides where the widget
     // works at all; the lead-capture mode decides when a chat visitor is asked
-    // for an email; the public slug decides what name live embeds depend on.
-    // All four are owner/admin. Reading the token stays open to any member so
-    // they can still see the embed snippet.
+    // for an email; the public slug decides what name live embeds depend on;
+    // the answer scope and the guidance note decide what the widget tells a
+    // visitor in the workspace's name; saving and resetting the appearance
+    // change what every visitor sees. All eight are owner/admin. Reading the
+    // token stays open to any member so they can still see the embed snippet.
     const gated = [...s.matchAll(/requireOrgAccess\(WIDGET_ADMIN_ROLES\)/g)]
-    expect(gated.length).toBe(4)
+    expect(gated.length).toBe(8)
     const ungated = [...s.matchAll(/requireOrgAccess\(\)/g)]
     expect(ungated.length).toBe(1)
   })
@@ -282,9 +286,28 @@ describe('the allowlist is enforced where the parent origin is visible', () => {
     // deriving baseUrl when script.src is unavailable — that is unrelated.
   })
 
+  it('the launcher bubble uses the chat window blue, from one named constant, with no indigo left', () => {
+    const s = read('public/widget.js')
+    expect(s).not.toMatch(/4f46e5/i)
+    expect(s).not.toContain('79,70,229')
+    // One constant near BUBBLE_SIZE, so a workspace's own color replaces it in one place.
+    expect(s).toMatch(/var BUBBLE_SIZE = 56;[\s\S]{0,800}var DEFAULT_COLOR = '#2563eb';/)
+    // The same blue the chat window uses (brand-600 in app/globals.css).
+    expect(read('app/globals.css')).toContain('--brand-600, #2563eb')
+  })
+
   it('the page reads the embed origin from headers only', () => {
     const s = read('app/widget/[widgetToken]/page.tsx')
     expect(s).toContain("resolveEmbedOrigin(headerList.get('referer'))")
     expect(s).not.toContain('searchParams')
   })
+})
+
+describe('public/widget.js: builds the page from DOM nodes', () => {
+  it.each(['innerHTML', 'outerHTML', 'insertAdjacentHTML', 'document.write', 'eval(', 'new Function'])(
+    'does not use %s',
+    (api) => {
+      expect(read('public/widget.js')).not.toContain(api)
+    },
+  )
 })

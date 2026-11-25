@@ -389,3 +389,55 @@ describe('EmailIntegrationCard: pre-connect is a single action', () => {
     expect(screen.getByText('Automatic Deflections')).toBeTruthy()
   })
 })
+
+/**
+ * The setup sections deliberately use mount-only effects. Their reload
+ * functions close over callbacks recreated by EmailDeliverySection and must
+ * not become effect dependencies: doing so refetches on every parent render.
+ */
+describe('EmailIntegrationCard: email setup sections fetch once on mount', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockSearchParams.forEach((_v, k) => mockSearchParams.delete(k))
+  })
+
+  function endpointCalls(url: string) {
+    return mockFetch.mock.calls.filter((call) => call[0] === url).length
+  }
+
+  it('does not refetch the domain when the parent rerenders with a new callback identity', async () => {
+    mockRoutes()
+    const { rerender } = render(<EmailIntegrationCard />)
+    const beforeOpening = endpointCalls('/api/email-domain')
+
+    fireEvent.click(await screen.findByRole('button', { name: OWN_DOMAIN_CARD }))
+    await screen.findByPlaceholderText(DOMAIN_INPUT)
+
+    // Mounting EmailDomainSection makes its own request on top of whatever
+    // the parent already asked for. Wait for that, then record the total.
+    await waitFor(() => expect(endpointCalls('/api/email-domain')).toBeGreaterThan(beforeOpening))
+    const afterMount = endpointCalls('/api/email-domain')
+
+    rerender(<EmailIntegrationCard />)
+
+    expect(endpointCalls('/api/email-domain')).toBe(afterMount)
+  })
+
+  it('does not refetch the mailbox when the parent rerenders with a new callback identity', async () => {
+    mockRoutes()
+    const { rerender } = render(<EmailIntegrationCard />)
+    const beforeOpening = endpointCalls('/api/email-oauth')
+
+    fireEvent.click(await screen.findByRole('button', { name: MAILBOX_CARD }))
+    await screen.findByRole('button', { name: /connect gmail/i })
+
+    // Mounting EmailOauthSection makes its own request on top of whatever
+    // the parent already asked for. Wait for that, then record the total.
+    await waitFor(() => expect(endpointCalls('/api/email-oauth')).toBeGreaterThan(beforeOpening))
+    const afterMount = endpointCalls('/api/email-oauth')
+
+    rerender(<EmailIntegrationCard />)
+
+    expect(endpointCalls('/api/email-oauth')).toBe(afterMount)
+  })
+})

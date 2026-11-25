@@ -1,5 +1,6 @@
 import { and, eq, inArray, isNotNull, lt, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
+import { lockTicketActivity } from '../locks'
 import {
   orgs,
   memberships,
@@ -20,6 +21,7 @@ import {
   notifications,
   pushSubscriptions,
   kbSources,
+  kbSourceFiles,
   kbArticles,
   kbReviewItems,
   kbArticleUsage,
@@ -35,6 +37,8 @@ import {
   subscriptions,
   platformAiUsage,
   widgetLeads,
+  widgetAnswerFlags,
+  widgetLogos,
   slaConfigs,
   productFeedback,
   productFeedbackVotes,
@@ -164,6 +168,8 @@ export async function getOrgsPendingPurge(): Promise<number[]> {
  */
 export async function hardPurgeOrg(orgId: number): Promise<void> {
   await getDb().transaction(async (tx) => {
+    // Purge also removes notifications before tickets.
+    await lockTicketActivity(tx, orgId, 'exclusive')
     const ticketIdRows = await tx
       .select({ id: tickets.id })
       .from(tickets)
@@ -180,9 +186,14 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     await tx.delete(kbSupportFlags).where(eq(kbSupportFlags.orgId, orgId))
     await tx.delete(kbSupportAssessments).where(eq(kbSupportAssessments.orgId, orgId))
     await tx.delete(kbSupportSettings).where(eq(kbSupportSettings.orgId, orgId))
+    // Visitor flags on widget answers (they point at an answer and at a lead),
+    // before the answers and leads they link to.
+    await tx.delete(widgetAnswerFlags).where(eq(widgetAnswerFlags.orgId, orgId))
     // References go with their answers, before the articles they point at.
     await tx.delete(kbAnswers).where(eq(kbAnswers.orgId, orgId))
     await tx.delete(kbArticles).where(eq(kbArticles.orgId, orgId))
+    // Synced repository file records, after the sections that point at them.
+    await tx.delete(kbSourceFiles).where(eq(kbSourceFiles.orgId, orgId))
     await tx.delete(notifications).where(eq(notifications.orgId, orgId))
     await tx.delete(csatRatings).where(eq(csatRatings.orgId, orgId))
     await tx.delete(apiGenerations).where(eq(apiGenerations.orgId, orgId))
@@ -215,6 +226,7 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     await tx.delete(subscriptions).where(eq(subscriptions.orgId, orgId))
     await tx.delete(platformAiUsage).where(eq(platformAiUsage.orgId, orgId))
     await tx.delete(widgetLeads).where(eq(widgetLeads.orgId, orgId))
+    await tx.delete(widgetLogos).where(eq(widgetLogos.orgId, orgId))
     await tx.delete(slaConfigs).where(eq(slaConfigs.orgId, orgId))
     // The up-votes this workspace's members cast go first. They can sit on
     // other workspaces' entries, but each vote's org_id is the voter's
@@ -262,5 +274,5 @@ export async function hardPurgeOrg(orgId: number): Promise<void> {
     }
 
     await tx.delete(orgs).where(eq(orgs.id, orgId))
-  })
+  }, { isolationLevel: 'read committed' })
 }

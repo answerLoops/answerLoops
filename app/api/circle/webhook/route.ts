@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getIntegrationByBotSecret, parseChannelIds } from '@/lib/db/queries/integrations'
 import { getTicketByThreadId } from '@/lib/db/queries/tickets'
-import { normalizeCircleContent, fetchCirclePost, fetchCircleComment, type CircleContent } from '@/lib/circle/client'
+import { normalizeCircleContent, fetchCircleRecord, type CircleContent } from '@/lib/circle/client'
 import { processCommunityMessage } from '@/lib/ingest/pipeline'
 import { decryptToken } from '@/lib/crypto/tokens'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
@@ -110,26 +110,43 @@ export async function POST(req: NextRequest) {
   let content: CircleContent | null = normalizeCircleContent(picked.raw, picked.kind)
   if (!content || content.id === '') return Response.json({ ok: true })
 
-  // 2. Enrich a thin payload from the Admin API when the body is missing.
+  // 2. Enrich a thin payload from the Admin API when the body is missing. A
+  //    lookup that can't be done is answered 502 and logged, so the delivery
+  //    shows as Failed in the community's Workflow history with the reason
+  //    here, instead of being acknowledged as if there were nothing to ingest.
   if (!content.body && integration.bot_token) {
     const token = decryptToken(integration.bot_token)
     if (token) {
-      const full = picked.kind === 'comment'
-        ? await fetchCircleComment(token, content.id)
-        : await fetchCirclePost(token, content.id)
-      if (full) content = normalizeCircleContent(full, picked.kind) ?? content
+      const lookup = await fetchCircleRecord(token, picked.kind, content.id)
+      if (lookup.ok) {
+        content = normalizeCircleContent(lookup.record, picked.kind) ?? content
+      } else if (lookup.reason !== 'off') {
+        logger.warn('Circle webhook could not fetch the full record from the Circle API', {
+          module: MOD,
+          orgId: integration.org_id,
+          kind: picked.kind,
+          id: content.id,
+          reason: lookup.reason,
+          ...(lookup.reason === 'status' && { status: lookup.status }),
+        })
+        return new Response('Could not fetch the full record from Circle', { status: 502 })
+      }
     }
   }
 
   // 3. Filters — all acknowledged with 200 so Circle does not retry.
   // A short comment on a post we already track is part of the conversation;
   // only content that would open a new ticket must be long enough.
-  const isTrackedReply = !!content.body && !!(await getTicketByThreadId(content.postId, integration.org_id))
+  const isTrackedReply = !!content.body && !!(await getTicketByThreadId(content.postId, integration.org_id, 'circle'))
   if (!content.body || (content.body.length < 10 && !isTrackedReply)) return Response.json({ ok: true })
   if (!content.authorId || content.authorId === '0') return Response.json({ ok: true })
 
+  // Watched spaces decide which posts open tickets. A comment on a post we
+  // already track belongs to that conversation (its post passed this check
+  // when the ticket was made), so it is kept even when the comment's payload
+  // doesn't say which space it is in.
   const watched = parseChannelIds(integration)
-  if (watched.length > 0 && !watched.includes(content.spaceId)) return Response.json({ ok: true })
+  if (watched.length > 0 && !isTrackedReply && !watched.includes(content.spaceId)) return Response.json({ ok: true })
 
   const communityUrl = integration.team_id ? integration.team_id.replace(/\/+$/, '') : null
   const sourceUrl = content.url ?? (communityUrl ? `${communityUrl}/posts/${content.postId}` : null)

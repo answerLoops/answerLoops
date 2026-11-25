@@ -17,7 +17,16 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
+vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: vi.fn(async () => true) }))
+vi.mock('@/lib/db/queries/widget-logos', () => ({
+  getWidgetLogoVersion: vi.fn(async () => null),
+  getWidgetLogo: vi.fn(async () => null),
+  setWidgetLogo: vi.fn(async () => ({ etag: '0123456789abcdef' })),
+  deleteWidgetLogo: vi.fn(async () => undefined),
+}))
 vi.mock('@/lib/db/queries/widgets', () => ({
+  getWidgetAppearance: vi.fn(async () => ({ title: null, welcome: null, brandColor: null })),
+  setWidgetAppearance: vi.fn(),
   setWidgetSlug: h.setWidgetSlug,
   getWidgetSlug: h.getWidgetSlug,
   ensureWidgetToken: h.ensureWidgetToken,
@@ -26,6 +35,9 @@ vi.mock('@/lib/db/queries/widgets', () => ({
   setWidgetAllowedOrigins: vi.fn(),
   rotateWidgetToken: vi.fn(),
   setWidgetLeadCaptureMode: vi.fn(),
+  getWidgetAnswerSettings: vi.fn(async () => ({ answerScope: 'general', guidance: null })),
+  setWidgetAnswerScope: vi.fn(),
+  setWidgetGuidance: vi.fn(),
 }))
 
 function form(slug: unknown): FormData {

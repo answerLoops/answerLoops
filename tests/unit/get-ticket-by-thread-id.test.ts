@@ -33,7 +33,7 @@ describe('getTicketByThreadId matches either source_thread_id or source_message_
     vi.resetModules()
 
     const { getTicketByThreadId } = await import('@/lib/db/queries/tickets')
-    await getTicketByThreadId('T123', 3)
+    await getTicketByThreadId('T123', 3, 'slack')
 
     expect(calls.length).toBe(1)
     const sql = calls[0].sql.toLowerCase()
@@ -43,6 +43,9 @@ describe('getTicketByThreadId matches either source_thread_id or source_message_
     // OR joining the two column conditions, not just a substring match.
     expect(sql).toMatch(/"source_thread_id"\s*=\s*\$\d+\s+or\s+"tickets"\."source_message_id"\s*=\s*\$\d+/)
     expect(calls[0].params).toContain('T123')
+    // Thread ids are only unique within one channel.
+    expect(sql).toMatch(/"tickets"\."source_platform" = \$\d+/)
+    expect(calls[0].params).toContain('slack')
   })
 
   it('finds the ticket by source_message_id when source_thread_id does not match (the first-reply case)', async () => {
@@ -67,7 +70,7 @@ describe('getTicketByThreadId matches either source_thread_id or source_message_
     vi.resetModules()
 
     const { getTicketByThreadId } = await import('@/lib/db/queries/tickets')
-    const result = await getTicketByThreadId('T123', 3)
+    const result = await getTicketByThreadId('T123', 3, 'slack')
 
     expect(result).not.toBeNull()
     expect(result?.id).toBe(1)
@@ -79,7 +82,7 @@ describe('getTicketByThreadId matches either source_thread_id or source_message_
     vi.resetModules()
 
     const { getTicketByThreadId } = await import('@/lib/db/queries/tickets')
-    const result = await getTicketByThreadId('no-match', 3)
+    const result = await getTicketByThreadId('no-match', 3, 'slack')
 
     expect(result).toBeNull()
   })

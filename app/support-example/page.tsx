@@ -23,8 +23,8 @@ export default async function SupportExamplePage() {
     <ProofPage
       navState={await resolveNavState()}
       eyebrow="Support example"
-      title="See how a support reply is prepared"
-      intro="See how answerLoops handles questions from Discord, Telegram, and Circle. Choose a channel to follow the question, source documents, draft, and review."
+      title="See what happens when a member asks a question"
+      intro="Follow an example from Discord, Telegram, or Circle and see the sources behind the answer, how it is reviewed, and when a question needs your team."
       sections={[
         {
           title: 'What the draft uses',

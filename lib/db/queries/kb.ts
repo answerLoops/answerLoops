@@ -8,9 +8,12 @@ import { dropExactDuplicates } from '@/lib/kb/duplicates'
 import { DuplicateArticleError, findExactDuplicate } from './kb-duplicates'
 import { toVerification, VERIFICATION_NOTE_MAX } from '@/lib/kb/verification'
 import { relatedDocsChange } from '@/lib/kb/docs-change'
-import type { KBArticle, KBSearchResult, PriorAnswer } from '@/types'
+import type { KBArticle, KBSearchResult, PriorAnswer, WidgetKBContext } from '@/types'
+import { KB_MATCH_THRESHOLD, KB_NEAR_MISS_FLOOR, chooseWidgetContext } from '@/lib/kb/widget-context'
 
-export const KB_MATCH_THRESHOLD = 0.45
+// Defined with the widget's choice of articles (lib/kb/widget-context.ts);
+// re-exported here for the callers that search through this module.
+export { KB_MATCH_THRESHOLD, KB_NEAR_MISS_FLOOR }
 
 // Candidates the HNSW index examines per query. The default (40) can return
 // fewer rows than asked for once the org/published/model filters discard
@@ -290,9 +293,16 @@ export function escapeLikePattern(text: string): string {
 // How many times `limit` candidates searchArticles reads before dropping exact copies.
 const DUPLICATE_OVERFETCH = 3
 
-export async function searchArticles(vector: number[], limit = 10, orgId: number): Promise<KBSearchResult[]> {
+// `minScore` defaults to the match bar every answer path uses. Only the
+// website widget asks for less, to find near misses (getWidgetKBContext).
+export async function searchArticles(
+  vector: number[],
+  limit = 10,
+  orgId: number,
+  minScore = KB_MATCH_THRESHOLD
+): Promise<KBSearchResult[]> {
   const distance = cosineDistance(kbArticles.embeddingVec, vector)
-  const maxDistance = 1 - KB_MATCH_THRESHOLD
+  const maxDistance = 1 - minScore
 
   const iterative = await supportsIterativeScan()
 
@@ -486,4 +496,23 @@ export async function deleteArticle(id: number, orgId: number): Promise<void> {
 export async function getKBContext(vector: number[], k = 3, orgId: number): Promise<PriorAnswer[]> {
   const results = await searchArticles(vector, k, orgId)
   return results.map((a) => ({ summary: a.question, answer: a.answer, articleId: a.id }))
+}
+
+/**
+ * The website widget's lookup: the articles it would hand the assistant for a
+ * question, with scores, and whether any cleared the match bar (strong
+ * matches) or these are near misses (lib/kb/widget-context.ts). The Knowledge
+ * coverage tester calls this too, so it shows exactly what the widget sees.
+ */
+export async function widgetLookup(vector: number[], k: number, orgId: number): Promise<{ results: KBSearchResult[]; matched: boolean }> {
+  return chooseWidgetContext(await searchArticles(vector, k, orgId, KB_NEAR_MISS_FLOOR))
+}
+
+/** Knowledge-base context for the website widget, from widgetLookup. */
+export async function getWidgetKBContext(vector: number[], k: number, orgId: number): Promise<WidgetKBContext> {
+  const { results, matched } = await widgetLookup(vector, k, orgId)
+  return {
+    articles: results.map((a) => ({ summary: a.question, answer: a.answer, articleId: a.id })),
+    matched,
+  }
 }

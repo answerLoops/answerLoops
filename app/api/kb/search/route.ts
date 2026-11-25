@@ -1,6 +1,7 @@
 import { requireOrgAccess } from '@/lib/auth/org'
 import { embedText } from '@/lib/ai/embed'
-import { searchArticles, textSearchArticles } from '@/lib/db/queries/kb'
+import { searchArticles, textSearchArticles, widgetLookup } from '@/lib/db/queries/kb'
+import { WIDGET_CONTEXT_ARTICLES } from '@/lib/widget/context-size'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { logger } from '@/lib/logger'
 
@@ -34,6 +35,12 @@ export async function GET(request: Request) {
 
   try {
     const vector = await embedText(q, orgId)
+    // The Knowledge coverage tester asks for the website widget's own lookup,
+    // so what it shows is exactly what the assistant would draw on.
+    if (url.searchParams.get('for') === 'widget') {
+      const { results, matched } = await widgetLookup(vector, WIDGET_CONTEXT_ARTICLES, orgId)
+      return Response.json({ results, matched, degraded: false })
+    }
     return Response.json({ results: await searchArticles(vector, 10, orgId), degraded: false })
   } catch (err) {
     logger.warn('vector search unavailable, falling back to text search', { module: 'api/kb/search', error: err })

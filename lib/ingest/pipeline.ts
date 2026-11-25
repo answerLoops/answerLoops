@@ -86,22 +86,24 @@ export async function processCommunityMessage(
   // into an ongoing human conversation. A staff notification is enough —
   // a human decides whether a fresh AI answer makes sense.
   if (threadId) {
-    const threadTicket = await getTicketByThreadId(threadId, orgId)
+    const threadTicket = await getTicketByThreadId(threadId, orgId, platform)
     if (threadTicket) {
       const stored = await recordCustomerReply(threadTicket.id, content, { authorName, messageId })
       // A redelivered webhook for a reply already in the thread: nothing new
       // to record, notify about, or acknowledge a second time.
-      if (!stored) return { ticket_id: threadTicket.id, duplicate: true }
-      await notifyTicketActivity({ ticket: threadTicket, authorName, content, orgId })
-      // See sendKeepAlive's doc comment (lib/channels/post-reply.ts) — Google
-      // Chat's UI flags the app as "not responding" for this silence too, so
-      // it gets the same neutral, content-free receipt as the deflections-off
-      // paths in lib/ai/agent.ts. Every other platform no-ops here.
-      await sendKeepAlive(platform, threadId, orgId)
-      logger.info('thread reply appended to existing ticket', {
-        module: MOD, ticketId: threadTicket.id, threadId, platform,
-      })
-      return { ticket_id: threadTicket.id, appended: true }
+      if (stored === false) return { ticket_id: threadTicket.id, duplicate: true }
+      if (stored) {
+        await notifyTicketActivity({ ticket: threadTicket, authorName, content, orgId })
+        // See sendKeepAlive's doc comment (lib/channels/post-reply.ts) — Google
+        // Chat's UI flags the app as "not responding" for this silence too, so
+        // it gets the same neutral, content-free receipt as the deflections-off
+        // paths in lib/ai/agent.ts. Every other platform no-ops here.
+        await sendKeepAlive(platform, threadId, orgId)
+        logger.info('thread reply appended to existing ticket', {
+          module: MOD, ticketId: threadTicket.id, threadId, platform,
+        })
+        return { ticket_id: threadTicket.id, appended: true }
+      }
     }
   }
 
@@ -174,11 +176,11 @@ export async function processCommunityMessage(
  * no ticket to attach to is dropped. Returns whether it was stored.
  */
 export async function recordThreadContextMessage(
-  payload: Pick<MessagePayload, 'messageId' | 'content' | 'authorName' | 'threadId'>,
+  payload: Pick<MessagePayload, 'messageId' | 'content' | 'authorName' | 'threadId'> & { platform: Platform },
   orgId: number
 ): Promise<boolean> {
   if (!payload.threadId) return false
-  const threadTicket = await getTicketByThreadId(payload.threadId, orgId)
+  const threadTicket = await getTicketByThreadId(payload.threadId, orgId, payload.platform)
   if (!threadTicket) return false
   return recordThreadContext(threadTicket.id, clampIngestContent(payload.content), {
     authorName: payload.authorName,
@@ -241,14 +243,14 @@ export async function runBackgroundEnrichment(
         module: MOD, orgId, ticketId, category, priority, severity: triage.severity_score, durationMs: Date.now() - t0,
       })
     } catch (err) {
-      // A missing provider is expected and permanent for this org — the
-      // ticket keeps its placeholder triage, same as before this refactor.
-      // Any other error (a transient LLM failure withRetry couldn't recover
-      // from) is unexpected; it's logged by the outer catch below and the
-      // ticket is left with its placeholder rather than blocking the rest
-      // of enrichment.
-      if (!(err instanceof NoAIProviderConfiguredError)) throw err
-      logger.warn('no AI provider configured — leaving ticket untriaged', { module: MOD, orgId, ticketId })
+      // Keep the placeholder triage and carry on, so the notification and the
+      // AI answer still happen. A missing provider is expected; anything else
+      // gets logged as an error.
+      if (err instanceof NoAIProviderConfiguredError) {
+        logger.warn('no AI provider configured — leaving ticket untriaged', { module: MOD, orgId, ticketId })
+      } else {
+        logger.error('triage failed — continuing with the placeholder triage', { module: MOD, orgId, ticketId, error: err })
+      }
     }
 
     await createNotification(

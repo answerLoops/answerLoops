@@ -71,6 +71,26 @@ function clampQuestion(text: string): string {
 interface Chunk {
   question: string
   answer: string
+  /**
+   * The bare section heading the title was built from (the page title when the
+   * section has none). Duplicate checks compare it, so the same section under
+   * another page or file title is still recognised as a copy.
+   */
+  heading?: string
+}
+
+// An article's title is what gets embedded alongside its text (and what the
+// re-embed job and manual edits embed again later), so it carries the page the
+// section came from. A section headed "Pro" on a pricing page is stored as
+// "Pricing › Pro": a visitor asking "what does it cost?" never says "Pro", but
+// the page title puts the section near that question. The heading alone is
+// used when there is no page title or it would only repeat the heading.
+export function sectionTitle(pageTitle: string, heading: string): string {
+  const page = pageTitle.trim()
+  const head = heading.trim()
+  if (!head) return clampQuestion(page)
+  if (!page || page.toLowerCase() === head.toLowerCase()) return clampQuestion(head)
+  return clampQuestion(`${page} › ${head}`)
 }
 
 export function chunkMarkdown(markdown: string, pageTitle: string): Chunk[] {
@@ -81,7 +101,9 @@ export function chunkMarkdown(markdown: string, pageTitle: string): Chunk[] {
 
   for (const section of sections) {
     const lines = section.trim().split('\n')
-    const heading = clampQuestion(lines[0].replace(/^#+\s*/, ''))
+    const rawHeading = lines[0].replace(/^#+\s*/, '')
+    const question = sectionTitle(pageTitle, rawHeading)
+    const heading = clampQuestion(rawHeading) || fallbackTitle
     const body = lines.slice(1).join('\n').trim()
 
     if (body.length < MIN_CHUNK_CHARS) continue
@@ -92,17 +114,17 @@ export function chunkMarkdown(markdown: string, pageTitle: string): Chunk[] {
       let current = ''
       for (const para of paras) {
         if ((current + para).length > MAX_CHUNK_CHARS && current) {
-          chunks.push({ question: heading || fallbackTitle, answer: current.trim() })
+          chunks.push({ question, heading, answer: current.trim() })
           current = para
         } else {
           current = current ? `${current}\n\n${para}` : para
         }
       }
       if (current.trim().length >= MIN_CHUNK_CHARS) {
-        chunks.push({ question: heading || fallbackTitle, answer: current.trim() })
+        chunks.push({ question, heading, answer: current.trim() })
       }
     } else {
-      chunks.push({ question: heading || fallbackTitle, answer: body })
+      chunks.push({ question, heading, answer: body })
     }
   }
 
@@ -110,6 +132,7 @@ export function chunkMarkdown(markdown: string, pageTitle: string): Chunk[] {
   if (chunks.length === 0 && markdown.trim().length >= MIN_CHUNK_CHARS) {
     chunks.push({
       question: fallbackTitle,
+      heading: fallbackTitle,
       answer: markdown.trim().slice(0, MAX_CHUNK_CHARS),
     })
   }
@@ -161,13 +184,13 @@ async function saveChunks(
     try {
       // Checked before embedding so a section already in the knowledge base
       // costs nothing; the insert checks again under the workspace lock.
-      if ((await findExactDuplicate(getDb(), orgId, chunk.question, chunk.answer)) !== null) {
+      if ((await findExactDuplicate(getDb(), orgId, chunk.question, chunk.answer, { sectionHeading: chunk.heading })) !== null) {
         progress.duplicates++
         continue
       }
       const { embedding, model } = await embedTextWithModel(`${chunk.question}\n\n${chunk.answer}`, orgId)
       const row = await createArticleFromSourceWithinCap(
-        { question: chunk.question, answer: chunk.answer, embedding, model, sourceId },
+        { question: chunk.question, answer: chunk.answer, sectionHeading: chunk.heading, embedding, model, sourceId },
         orgId,
         MAX_ARTICLES_PER_ORG,
       )

@@ -24,7 +24,8 @@ interface El {
   children: El[]
   setAttribute(k: string, v: string): void
   getAttribute(k: string): string | null
-  addEventListener(): void
+  addEventListener(type: string, fn: () => void): void
+  listeners: Record<string, () => void>
   appendChild(c: El): void
   classList: { add(): void; remove(): void }
 }
@@ -45,12 +46,23 @@ function el(tag: string): El {
     getAttribute(k) {
       return k in e.attrs ? e.attrs[k] : null
     },
-    addEventListener() {},
+    listeners: {},
+    addEventListener(type, fn) {
+      e.listeners[type] = fn
+    },
     appendChild(c) {
       e.children.push(c)
     },
     classList: { add() {}, remove() {} },
   }
+  let text = ''
+  Object.defineProperty(e, 'textContent', {
+    get: () => text,
+    set: (v: string) => {
+      text = v
+      if (v === '') e.children.length = 0
+    },
+  })
   return e
 }
 
@@ -69,6 +81,7 @@ function run(widgetId: string | null, fetchImpl?: FakeFetch) {
       head,
       body,
       createElement: (tag: string) => el(tag),
+      createElementNS: (_ns: string, tag: string) => el(tag),
       getElementsByTagName: () => [script],
       addEventListener: () => {},
     },
@@ -91,6 +104,8 @@ function run(widgetId: string | null, fetchImpl?: FakeFetch) {
     bubble: () => body.children.find((c) => c.id === 'cp-widget-bubble'),
     iframeSrc: () => body.children.find((c) => c.id === 'cp-widget-panel')?.children[0]?.src,
     css: () => head.children.map((c) => c.textContent).join(''),
+    // The visitor opening the chat: the frame is only created at this point.
+    open: () => body.children.find((c) => c.id === 'cp-widget-bubble')?.listeners.click?.(),
   }
 }
 
@@ -114,12 +129,16 @@ describe('widget.js: resolving the id', () => {
 
   it('loads the panel with the token a slug resolves to', async () => {
     const w = run('acme-support', reply({ token: ROTATED, display: {} }))
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${ROTATED}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${ROTATED}`)
   })
 
   it('keeps a token snippet\'s own token when the reply carries none', async () => {
     const w = run(TOKEN, reply({ token: null, display: {} }))
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
   })
 
   it('ignores a resolved token that is not token-shaped', async () => {
@@ -142,8 +161,10 @@ describe('widget.js: when the lookup fails', () => {
     const w = run(TOKEN, async () => {
       throw new Error('network down')
     })
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
-    expect(w.css()).toContain('background:#4f46e5')
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
+    expect(w.css()).toContain('background:#2563eb')
     expect(w.css()).toContain('width:380px')
   })
 
@@ -153,13 +174,17 @@ describe('widget.js: when the lookup fails', () => {
     ['a null body', reply(null)],
   ])('shows a token install as before after %s', async (_name, impl) => {
     const w = run(TOKEN, impl as FakeFetch)
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
-    expect(w.css()).toContain('background:#4f46e5')
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
+    expect(w.css()).toContain('background:#2563eb')
   })
 
   it('shows a token install as before when fetch does not exist', async () => {
     const w = run(TOKEN, undefined)
-    await vi.waitFor(() => expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    w.open()
+    expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
   })
 
   it('does not load a slug install it could not resolve', async () => {
@@ -181,6 +206,7 @@ describe('widget.js: when the lookup fails', () => {
     await vi.advanceTimersByTimeAsync(1999)
     expect(w.panel()).toBeUndefined()
     await vi.advanceTimersByTimeAsync(2)
+    w.open()
     expect(w.iframeSrc()).toBe(`https://app.test/widget/${TOKEN}`)
     expect(signal?.aborted).toBe(true)
   })
@@ -195,6 +221,39 @@ describe('widget.js: applying display settings', () => {
     expect(w.css()).toContain('height:760px')
   })
 
+  it('builds the bubble shadows from the served color, at the same strengths', async () => {
+    const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#ffd60a', bubbleIconColor: '#111827' } }))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    // The DOM may serialise .4 as 0.4; the strengths are what matter.
+    expect(w.css()).toMatch(/box-shadow:0 4px 16px rgba\(255,214,10,0?\.4\)/)
+    expect(w.css()).toMatch(/box-shadow:0 6px 20px rgba\(255,214,10,0?\.5\)/)
+    expect(w.css()).not.toContain('79,70,229')
+  })
+
+  it('draws the bubble icon in the served icon color, and white when none is served', async () => {
+    const dark = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#ffd60a', bubbleIconColor: '#111827' } }))
+    await vi.waitFor(() => expect(dark.panel()).toBeDefined())
+    expect(dark.bubble()?.children.find((c) => c.tag === 'svg')?.attrs.fill).toBe('#111827')
+    const plain = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#aa00ff' } }))
+    await vi.waitFor(() => expect(plain.panel()).toBeDefined())
+    expect(plain.bubble()?.children.find((c) => c.tag === 'svg')?.attrs.fill).toBe('#ffffff')
+  })
+
+  it('ignores an icon color that is not a plain #rrggbb', async () => {
+    const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#aa00ff', bubbleIconColor: '"><script>x</script>' } }))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    const svgs = w.bubble()?.children.filter((c) => c.tag === 'svg') ?? []
+    expect(svgs).toHaveLength(1)
+    expect(svgs[0].attrs.fill).toBe('#ffffff')
+    expect(w.bubble()?.children.some((c) => c.tag === 'script')).toBe(false)
+  })
+
+  it('shows a keyboard focus ring that reads on any brand color', async () => {
+    const w = run(TOKEN, reply({ token: TOKEN, display: { windowSize: 'small', bubbleColor: '#ffd60a' } }))
+    await vi.waitFor(() => expect(w.panel()).toBeDefined())
+    expect(w.css()).toContain('#cp-widget-bubble:focus-visible{outline:none;box-shadow:0 0 0 3px #ffffff,0 0 0 6px #111827;}')
+  })
+
   it('never lets a hostile color reach the stylesheet', async () => {
     const w = run(
       TOKEN,
@@ -202,7 +261,7 @@ describe('widget.js: applying display settings', () => {
     )
     await vi.waitFor(() => expect(w.panel()).toBeDefined())
     expect(w.css()).not.toContain('display:none')
-    expect(w.css()).toContain('background:#4f46e5')
+    expect(w.css()).toContain('background:#2563eb')
   })
 
   it('treats an unknown size name, including inherited ones, as small', async () => {

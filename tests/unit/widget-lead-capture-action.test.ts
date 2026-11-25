@@ -19,7 +19,16 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
+vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: vi.fn(async () => true) }))
+vi.mock('@/lib/db/queries/widget-logos', () => ({
+  getWidgetLogoVersion: vi.fn(async () => null),
+  getWidgetLogo: vi.fn(async () => null),
+  setWidgetLogo: vi.fn(async () => ({ etag: '0123456789abcdef' })),
+  deleteWidgetLogo: vi.fn(async () => undefined),
+}))
 vi.mock('@/lib/db/queries/widgets', () => ({
+  getWidgetAppearance: vi.fn(async () => ({ title: null, welcome: null, brandColor: null })),
+  setWidgetAppearance: vi.fn(),
   getWidgetLeadCaptureMode: h.getWidgetLeadCaptureMode,
   setWidgetLeadCaptureMode: h.setWidgetLeadCaptureMode,
   ensureWidgetToken: h.ensureWidgetToken,
@@ -28,6 +37,9 @@ vi.mock('@/lib/db/queries/widgets', () => ({
   rotateWidgetToken: vi.fn(),
   getWidgetSlug: vi.fn(async () => null),
   setWidgetSlug: vi.fn(),
+  getWidgetAnswerSettings: vi.fn(async () => ({ answerScope: 'general', guidance: null })),
+  setWidgetAnswerScope: vi.fn(),
+  setWidgetGuidance: vi.fn(),
 }))
 vi.mock('@/lib/widget/origin', () => ({ parseAllowedOrigins: (s: string) => s.split('\n').filter(Boolean) }))
 

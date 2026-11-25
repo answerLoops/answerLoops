@@ -9,6 +9,25 @@ import {
   isWidgetLeadCaptureMode,
   type WidgetLeadCaptureMode,
 } from '@/lib/widget/lead-capture'
+import {
+  SAFE_WIDGET_ANSWER_SCOPE_FALLBACK,
+  isWidgetAnswerScope,
+  normalizeWidgetGuidance,
+  type WidgetAnswerScope,
+} from '@/lib/widget/answer-scope'
+import {
+  normalizeBrandColor,
+  normalizeWidgetTitle,
+  normalizeWidgetWelcome,
+  normalizeStarterQuestions,
+  readFollowUpsEnabled,
+  readStarterEnabled,
+  readWidgetAppearance,
+  serializeFollowUpsEnabled,
+  serializeStarterEnabled,
+  serializeStarterQuestions,
+  type WidgetAppearance,
+} from '@/lib/widget/appearance'
 
 export interface WidgetOrg {
   id: number
@@ -19,6 +38,12 @@ export interface WidgetOrg {
   widget_allowed_origins: string | null
   /** When the widget asks for an email. See lib/widget/lead-capture.ts. */
   widget_lead_capture_mode: WidgetLeadCaptureMode
+  /** What the widget may answer from. See lib/widget/answer-scope.ts. */
+  widget_answer_scope: WidgetAnswerScope
+  /** The owner's note on tone and next steps, or null. */
+  widget_guidance: string | null
+  /** Chat title, welcome message and brand color the owner chose, each null for the default. */
+  widget_appearance: WidgetAppearance
 }
 
 export interface WidgetTokenInfo {
@@ -43,6 +68,14 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       widget_token_expires_at: orgs.widgetTokenExpiresAt,
       widget_allowed_origins: orgs.widgetAllowedOrigins,
       widget_lead_capture_mode: orgs.widgetLeadCaptureMode,
+      widget_answer_scope: orgs.widgetAnswerScope,
+      widget_guidance: orgs.widgetGuidance,
+      widget_title: orgs.widgetTitle,
+      widget_welcome: orgs.widgetWelcome,
+      widget_brand_color: orgs.widgetBrandColor,
+      widget_starter_questions: orgs.widgetStarterQuestions,
+      widget_starter_enabled: orgs.widgetStarterEnabled,
+      widget_follow_ups_enabled: orgs.widgetFollowUpsEnabled,
       plan_id: subscriptions.planId,
     })
     .from(orgs)
@@ -72,6 +105,30 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
     widget_lead_capture_mode: isWidgetLeadCaptureMode(row.widget_lead_capture_mode)
       ? row.widget_lead_capture_mode
       : SAFE_WIDGET_LEAD_CAPTURE_MODE_FALLBACK,
+    // Read the same defensive way, but an unreadable value falls back to the
+    // narrower scope, not the old behaviour: this controls what an anonymous
+    // visitor can be told, so an unclear value must not widen it.
+    widget_answer_scope: isWidgetAnswerScope(row.widget_answer_scope)
+      ? row.widget_answer_scope
+      : SAFE_WIDGET_ANSWER_SCOPE_FALLBACK,
+    // Re-cleaned on read so a note written outside the setter (a hand edit, a
+    // restored backup) can never put oversized or malformed text into every
+    // answer's instructions. Anything that does not pass is treated as none.
+    widget_guidance: (() => {
+      const result = normalizeWidgetGuidance(row.widget_guidance)
+      return result.ok ? result.value : null
+    })(),
+    // Same defensive read: anything that would not pass the write-side checks
+    // is treated as not set, so a hand-edited row cannot put oversized text or
+    // an unusable color into a live widget.
+    widget_appearance: readWidgetAppearance({
+      title: row.widget_title,
+      welcome: row.widget_welcome,
+      brandColor: row.widget_brand_color,
+      starterQuestions: row.widget_starter_questions,
+      starterEnabled: row.widget_starter_enabled,
+      followUpsEnabled: row.widget_follow_ups_enabled,
+    }),
   }
 }
 
@@ -150,6 +207,105 @@ export async function setWidgetLeadCaptureMode(orgId: number, mode: string): Pro
     throw new Error(`Invalid widget lead capture mode: ${mode}`)
   }
   await getDb().update(orgs).set({ widgetLeadCaptureMode: mode }).where(eq(orgs.id, orgId))
+}
+
+export interface WidgetAnswerSettings {
+  answerScope: WidgetAnswerScope
+  guidance: string | null
+}
+
+/** Current answer scope and guidance note, for the settings UI. */
+export async function getWidgetAnswerSettings(orgId: number): Promise<WidgetAnswerSettings> {
+  const [row] = await getDb()
+    .select({ scope: orgs.widgetAnswerScope, guidance: orgs.widgetGuidance })
+    .from(orgs)
+    .where(eq(orgs.id, orgId))
+    .limit(1)
+  const guidance = normalizeWidgetGuidance(row?.guidance)
+  return {
+    answerScope: isWidgetAnswerScope(row?.scope) ? row.scope : SAFE_WIDGET_ANSWER_SCOPE_FALLBACK,
+    guidance: guidance.ok ? guidance.value : null,
+  }
+}
+
+/**
+ * Set what the org's widget may answer from. Validated here, the only write
+ * path, because the column has no DB-level CHECK: an unknown value must stop
+ * here rather than be stored and later read as something it is not.
+ */
+export async function setWidgetAnswerScope(orgId: number, scope: string): Promise<void> {
+  if (!isWidgetAnswerScope(scope)) {
+    throw new Error(`Invalid widget answer scope: ${scope}`)
+  }
+  await getDb().update(orgs).set({ widgetAnswerScope: scope }).where(eq(orgs.id, orgId))
+}
+
+/**
+ * Set the org's guidance note. Cleaned and length-checked here as well as in
+ * the action, so no caller can store text the read path would then discard.
+ * Pass an empty string or null to clear it.
+ */
+export async function setWidgetGuidance(orgId: number, guidance: string | null): Promise<void> {
+  const result = normalizeWidgetGuidance(guidance)
+  if (!result.ok) throw new Error(result.error)
+  await getDb().update(orgs).set({ widgetGuidance: result.value }).where(eq(orgs.id, orgId))
+}
+
+/** What the owner has chosen for the widget's title, welcome message, brand color and starter questions. */
+export async function getWidgetAppearance(orgId: number): Promise<WidgetAppearance> {
+  const [row] = await getDb()
+    .select({
+      title: orgs.widgetTitle,
+      welcome: orgs.widgetWelcome,
+      brandColor: orgs.widgetBrandColor,
+      starterQuestions: orgs.widgetStarterQuestions,
+      starterEnabled: orgs.widgetStarterEnabled,
+      followUpsEnabled: orgs.widgetFollowUpsEnabled,
+    })
+    .from(orgs)
+    .where(eq(orgs.id, orgId))
+    .limit(1)
+  return readWidgetAppearance({
+    title: row?.title,
+    welcome: row?.welcome,
+    brandColor: row?.brandColor,
+    starterQuestions: row?.starterQuestions,
+    starterEnabled: row?.starterEnabled,
+    followUpsEnabled: row?.followUpsEnabled,
+  })
+}
+
+/**
+ * Save the widget's title, welcome message and brand color. Cleaned and checked
+ * here as well as in the action, so no caller can store a value the read path
+ * would then discard. A null or empty field goes back to the default.
+ */
+export async function setWidgetAppearance(
+  orgId: number,
+  input: { title: unknown; welcome: unknown; brandColor: unknown; starterQuestions?: unknown; starterEnabled?: unknown; followUpsEnabled?: unknown }
+): Promise<WidgetAppearance> {
+  const title = normalizeWidgetTitle(input.title)
+  if (!title.ok) throw new Error(title.error)
+  const welcome = normalizeWidgetWelcome(input.welcome)
+  if (!welcome.ok) throw new Error(welcome.error)
+  const color = normalizeBrandColor(input.brandColor)
+  if (!color.ok) throw new Error(color.error)
+  const starters = normalizeStarterQuestions(input.starterQuestions)
+  if (!starters.ok) throw new Error(starters.error)
+  const starterEnabled = readStarterEnabled(input.starterEnabled)
+  const followUpsEnabled = readFollowUpsEnabled(input.followUpsEnabled)
+  await getDb()
+    .update(orgs)
+    .set({
+      widgetTitle: title.value,
+      widgetWelcome: welcome.value,
+      widgetBrandColor: color.value,
+      widgetStarterQuestions: serializeStarterQuestions(starters.value),
+      widgetStarterEnabled: serializeStarterEnabled(starterEnabled),
+      widgetFollowUpsEnabled: serializeFollowUpsEnabled(followUpsEnabled),
+    })
+    .where(eq(orgs.id, orgId))
+  return { title: title.value, welcome: welcome.value, brandColor: color.value, starterQuestions: starters.value, starterEnabled, followUpsEnabled }
 }
 
 /** The org's current public slug, or null when none has been chosen. */

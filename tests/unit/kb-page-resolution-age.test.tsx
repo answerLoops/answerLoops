@@ -4,7 +4,7 @@ import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 /**
- * The Manage tab's saved-resolution age: resolutions show when they were last
+ * The Sources tab's saved-resolution age: resolutions show when they were last
  * saved, the list can be sorted by that date or narrowed to resolutions, and
  * both controls step aside while a search is in play. The other sections of
  * the page are stubbed. Only Date is faked so user events still run.

@@ -12,8 +12,8 @@ import {
 } from '@/components/marketing/layout'
 import { PageSchema } from '@/components/marketing/page-schema'
 import { resolveNavState } from '@/lib/marketing/nav-state'
-import { PRICING_FAQ } from '@/lib/marketing/pricing'
-import { INCLUDED_AI_SUMMARY } from '@/lib/marketing/plan-summary'
+import { isCustomPriced, PRICING_FAQ } from '@/lib/marketing/pricing'
+import { INCLUDED_AI_POINTS } from '@/lib/marketing/plan-summary'
 import { ORGANIZATION_ID } from '@/lib/site-identity'
 import { jsonLdHtml } from '@/lib/marketing/json-ld'
 import { marketingSiteEnabled } from '@/lib/site'
@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'Community support software pricing | answerLoops',
   description:
-    'Compare Standard, Pro, and Enterprise plans. See exact monthly and annual prices, automated-answer allowances, model costs, and trial terms.',
+    'Compare Standard, Pro, and Enterprise plans. See monthly and annual prices, included AI replies, model costs, and trial terms.',
   path: '/pricing',
 })
 function PricingStructuredData() {
@@ -34,7 +34,7 @@ function PricingStructuredData() {
     url: 'https://answerloops.com/pricing',
     provider: { '@id': ORGANIZATION_ID },
     description:
-      'Hosted support plans with included automated answers and a 14-day trial.',
+      'Hosted support plans with included AI replies and a 14-day trial.',
     offers: [
       {
         '@type': 'Offer',
@@ -44,7 +44,9 @@ function PricingStructuredData() {
         availability: 'https://schema.org/InStock',
         description: 'Open-source platform running on your own infrastructure.',
       },
-      ...ORDERED_PLANS.map((plan) => ({
+      // Custom-priced plans have no public price, so they have no offer here:
+      // structured data must match what the page shows.
+      ...ORDERED_PLANS.filter((plan) => !isCustomPriced(plan.id)).map((plan) => ({
         '@type': 'Offer',
         name: plan.name,
         price: (plan.priceMonthly / 100).toString(),
@@ -58,8 +60,8 @@ function PricingStructuredData() {
         },
         description:
           plan.deflectionsPerMonth === null
-            ? 'Unlimited deflections per month with a 14-day hosted trial.'
-            : `${plan.deflectionsPerMonth.toLocaleString()} deflections per month with a 14-day hosted trial.`,
+            ? 'Unlimited AI replies per month with a 14-day hosted trial.'
+            : `${plan.deflectionsPerMonth.toLocaleString()} estimated AI replies per month with a 14-day hosted trial.`,
       })),
     ],
   }
@@ -79,7 +81,6 @@ function PricingStructuredData() {
 
   return (
     <>
-      {/* nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml.react-dangerouslysetinnerhtml */}
       {/* softwareJsonLd/faqJsonLd are built from server-controlled strings (plan names, FAQ copy), never user input; jsonLdHtml escapes `<` so the payload can't break out of the script tag. */}
       <script
         type="application/ld+json"
@@ -108,7 +109,7 @@ export default async function PricingPage({
   const navState = await resolveNavState()
   if (resume === '1' && navState === 'active') redirect('/dashboard')
   return (
-    <MarketingPage navState={navState}>
+    <MarketingPage navState={navState} chat>
       <PageSchema
         name="answerLoops pricing"
         description={metadata.description!}
@@ -116,13 +117,12 @@ export default async function PricingPage({
       />
       <PricingStructuredData />
       <PageHero
-        title="Choose a plan for the number of answers you need"
+        title="Find a plan for your community and website"
         compact
       >
         <p>
-          Every hosted plan includes MCP and REST API access and a monthly
-          allowance of automated answers, with no per-seat fees. Save 20% with
-          annual billing.
+          Give members answers in the channels they use and help website visitors
+          take their next step. Both use the same knowledge base.
         </p>
       </PageHero>
       <section
@@ -162,9 +162,11 @@ export default async function PricingPage({
           <PricingToggle plans={ORDERED_PLANS} />
           <div className="pricing-cost-note mt-8 rounded-xl border p-6">
             <h3>Plan your total cost</h3>
-            <p className="mt-2 text-slate-600">
-              {INCLUDED_AI_SUMMARY}
-            </p>
+            {INCLUDED_AI_POINTS.map((point) => (
+              <p key={point} className="mt-3 text-slate-600">
+                {point}
+              </p>
+            ))}
             <Link
               className="marketing-text-link mt-4"
               href="/docs/product/ai-config"
@@ -179,10 +181,10 @@ export default async function PricingPage({
         className="marketing-section marketing-soft scroll-mt-24"
       >
         <div className="marketing-container">
-          <h2>Compare features and limits</h2>
+          <h2>Find the right plan for your community</h2>
           <p className="marketing-lead">
-            Every plan includes the knowledge base, support queue, website
-            widget, and MCP and REST API access.
+            Compare plans based on how you want to answer questions, improve
+            your docs, and follow up with members.
           </p>
           <PricingComparisonTable />
           <p className="marketing-note">

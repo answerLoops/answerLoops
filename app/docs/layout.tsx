@@ -8,7 +8,7 @@ import { GITHUB_SOURCE_URL } from '@/lib/site'
 import { resolveChangelogUrl } from '@/lib/marketing/changelog-link'
 import { DocsSidebarFooter } from '@/components/docs/docs-sidebar-footer'
 import './docs.css'
-import Script from 'next/script'
+import { SiteChatWidget } from '@/components/site-chat-widget'
 
 // Rendered per request, not at build time. The changelog link in the sidebar
 // footer depends on the deployment flag, which is resolved at request time — a value
@@ -28,11 +28,6 @@ export const dynamic = 'force-dynamic'
 // <body> and Geist fonts) but never touches auth. auth.ts's PUBLIC_PATHS
 // includes '/docs' so proxy.ts never redirects here to /login.
 export default function DocsRootLayout({ children }: { children: ReactNode }) {
-  // Local/dev-only — never hardcode a real token here. Set
-  // NEXT_PUBLIC_DOCS_WIDGET_TOKEN in .env.local (gitignored) to test the
-  // widget on the docs site; the script simply doesn't render without it.
-  const widgetToken = process.env.NEXT_PUBLIC_DOCS_WIDGET_TOKEN
-
   // Null on a self-hosted install, which 404s /changelog. The gate lives in
   // the helper rather than here: documentation stays reachable on every
   // deployment, and only this one link is conditional. See the
@@ -79,13 +74,9 @@ export default function DocsRootLayout({ children }: { children: ReactNode }) {
           { type: 'button', text: START_LABEL, url: START_HREF },
         ]}
       >
-        {widgetToken && (
-          <Script
-            src="/widget.js"
-            data-widget-id={widgetToken}
-            strategy="lazyOnload"
-          />
-        )}
+        {/* The chat assistant, when SITE_CHAT_WIDGET_ID names one. It reads the
+            id per request, which this layout already is (see `dynamic`). */}
+        <SiteChatWidget />
         {children}
       </DocsLayout>
     </RootProvider>

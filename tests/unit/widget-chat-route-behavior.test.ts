@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { widgetChatRequest, drain, userMsg } from './support/widget-chat-envelope'
+import { widgetChatRequest, drain, userMsg, assistantMsg } from './support/widget-chat-envelope'
 
 /**
  * Behavioural coverage for the reworked widget chat route: retrieval started
@@ -18,9 +18,10 @@ const h = vi.hoisted(() => ({
   commitDeflection: vi.fn(async () => {}),
   rateLimitShared: vi.fn(),
   getOrgByWidgetToken: vi.fn(),
+  orgHasFeature: vi.fn(),
   chatModel: vi.fn(),
   embedText: vi.fn(),
-  getKBContext: vi.fn(),
+  getWidgetKBContext: vi.fn(),
   loggerInfo: vi.fn(),
   agentConfigs: [] as Record<string, any>[],
   streamCalls: [] as { query: string }[],
@@ -36,6 +37,7 @@ vi.mock('@/lib/billing/usage', () => ({
 }))
 vi.mock('@/lib/ratelimit', () => ({ rateLimitShared: h.rateLimitShared }))
 vi.mock('@/lib/db/queries/widgets', () => ({ getOrgByWidgetToken: h.getOrgByWidgetToken }))
+vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: h.orgHasFeature }))
 vi.mock('@/lib/ai/models', () => ({
   chatModel: h.chatModel,
   DEFAULT_FAST_MODEL: 'fake-model',
@@ -48,7 +50,7 @@ vi.mock('@/lib/ai/embed', () => ({
   embedTextWithModel: async (text: string, orgId?: number) => ({ embedding: await h.embedText(text, orgId), model: 'test-embed-model' }),
 }))
 vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => 'test-embed-model' }))
-vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
+vi.mock('@/lib/db/queries/kb', () => ({ getWidgetKBContext: h.getWidgetKBContext }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
 vi.mock('@/lib/logger', () => ({
   logger: { info: h.loggerInfo, warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
@@ -90,10 +92,12 @@ beforeEach(async () => {
   clearEmbedQueryCache()
   h.rateLimitShared.mockResolvedValue({ ok: true })
   h.getOrgByWidgetToken.mockResolvedValue({ id: 77, name: 'Acme', widget_token: VALID_TOKEN })
+  // Follow-up suggestions are a Pro feature: off unless a test turns the plan on.
+  h.orgHasFeature.mockResolvedValue(false)
   h.reserveGeneration.mockResolvedValue({ granted: true, generationId: 9 })
   h.chatModel.mockResolvedValue({ id: 'fake-model' })
   h.embedText.mockResolvedValue([0.1, 0.2])
-  h.getKBContext.mockResolvedValue([])
+  h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
 })
 
 describe('widget chat route: retrieval only starts after the quota grant', () => {
@@ -102,7 +106,7 @@ describe('widget chat route: retrieval only starts after the quota grant', () =>
     const res = await callRoute('refused question')
     expect(res.status).toBe(402)
     expect(h.embedText).not.toHaveBeenCalled()
-    expect(h.getKBContext).not.toHaveBeenCalled()
+    expect(h.getWidgetKBContext).not.toHaveBeenCalled()
     expect(h.chatModel).not.toHaveBeenCalled()
     expect(h.agentConfigs).toHaveLength(0)
   })
@@ -112,7 +116,28 @@ describe('widget chat route: retrieval only starts after the quota grant', () =>
     expect(res.status).toBe(200)
     await drain(res)
     expect(h.embedText).toHaveBeenCalledWith('granted question', 77)
-    expect(h.getKBContext).toHaveBeenCalledWith([0.1, 0.2], 5, 77)
+    expect(h.getWidgetKBContext).toHaveBeenCalledWith([0.1, 0.2], 5, 77)
+  })
+})
+
+describe('widget chat route: short follow-ups search with the previous question', () => {
+  async function callWith(messages: unknown[]) {
+    const { POST } = await import('@/app/api/widget/chat/route')
+    return POST(widgetChatRequest({ widgetToken: VALID_TOKEN, visitorId: 'v1', messages }))
+  }
+
+  it('searches "and for teams?" together with the question before it', async () => {
+    const res = await callWith([userMsg('What does it cost?'), assistantMsg('The Pro plan is $149 a month.'), userMsg('and for teams?')])
+    await drain(res)
+    expect(h.embedText).toHaveBeenCalledWith('What does it cost?\nand for teams?', 77)
+    // The assistant still answers the visitor's actual message.
+    expect(h.streamCalls[0].query).toBe('and for teams?')
+  })
+
+  it('searches a message that stands alone on its own', async () => {
+    const res = await callWith([userMsg('What does it cost?'), assistantMsg('…'), userMsg('How do I connect my Discord server?')])
+    await drain(res)
+    expect(h.embedText).toHaveBeenCalledWith('How do I connect my Discord server?', 77)
   })
 })
 
@@ -137,13 +162,13 @@ describe('widget chat route: retrieval failure is non-fatal', () => {
     await drain(res)
     expect(h.streamCalls).toHaveLength(1)
     expect(h.agentConfigs[0].instructions).not.toContain('Knowledge base context')
-    expect(h.getKBContext).not.toHaveBeenCalled()
+    expect(h.getWidgetKBContext).not.toHaveBeenCalled()
     expect(h.releaseGeneration).not.toHaveBeenCalled()
     expect(h.commitDeflection).toHaveBeenCalledWith(77, 9)
   })
 
   it('still streams when the KB search throws', async () => {
-    h.getKBContext.mockRejectedValueOnce(new Error('db down'))
+    h.getWidgetKBContext.mockRejectedValueOnce(new Error('db down'))
     const res = await callRoute('kb failure question')
     expect(res.status).toBe(200)
     await drain(res)
@@ -160,16 +185,54 @@ describe('widget chat route: genui tools are grounded in the same context block 
     },
   ]
 
-  it('registers exactly the five display-only tools', async () => {
+  it('registers exactly the five display-only tools and the knowledge-base search', async () => {
     const res = await callRoute('tools question')
     await drain(res)
     expect(Object.keys(h.agentConfigs[0].tools).sort()).toEqual(
-      ['show_callout', 'show_choices', 'show_contact_options', 'show_link_card', 'show_steps'].sort()
+      ['search_knowledge_base', 'show_callout', 'show_choices', 'show_contact_options', 'show_link_card', 'show_steps'].sort()
     )
   })
 
+  describe('follow-up suggestions', () => {
+    const FIVE = ['search_knowledge_base', 'show_callout', 'show_choices', 'show_contact_options', 'show_link_card', 'show_steps']
+
+    it('on a plan that includes them, adds the sixth tool and tells the assistant about it', async () => {
+      h.orgHasFeature.mockResolvedValue(true)
+      const res = await callRoute('follow ups on')
+      await drain(res)
+      const config = h.agentConfigs[0]
+      expect(Object.keys(config.tools).sort()).toEqual([...FIVE, 'show_follow_ups'].sort())
+      expect(config.instructions).toContain('show_follow_ups')
+      expect(h.orgHasFeature).toHaveBeenCalledWith(77, 'white_label_widget')
+    })
+
+    it('without the plan, never registers the tool or mentions it in the instructions', async () => {
+      h.orgHasFeature.mockResolvedValue(false)
+      const res = await callRoute('no plan')
+      await drain(res)
+      const config = h.agentConfigs[0]
+      expect(Object.keys(config.tools)).not.toContain('show_follow_ups')
+      expect(config.instructions).not.toContain('show_follow_ups')
+    })
+
+    it('with the owner switch off, never registers the tool even on the plan', async () => {
+      h.orgHasFeature.mockResolvedValue(true)
+      h.getOrgByWidgetToken.mockResolvedValue({
+        id: 77,
+        name: 'Acme',
+        widget_token: VALID_TOKEN,
+        widget_appearance: { followUpsEnabled: false },
+      })
+      const res = await callRoute('switched off')
+      await drain(res)
+      const config = h.agentConfigs[0]
+      expect(Object.keys(config.tools)).not.toContain('show_follow_ups')
+      expect(config.instructions).not.toContain('show_follow_ups')
+    })
+  })
+
   it('allows a URL from the KB context through show_link_card and refuses one that is not', async () => {
-    h.getKBContext.mockResolvedValueOnce(KB)
+    h.getWidgetKBContext.mockResolvedValueOnce({ articles: KB, matched: true })
     const res = await callRoute('billing link question')
     await drain(res)
     const config = h.agentConfigs[0]
@@ -190,7 +253,7 @@ describe('widget chat route: genui tools are grounded in the same context block 
   })
 
   it('keeps only contact values present in the KB context', async () => {
-    h.getKBContext.mockResolvedValueOnce(KB)
+    h.getWidgetKBContext.mockResolvedValueOnce({ articles: KB, matched: true })
     const res = await callRoute('contact question')
     await drain(res)
     const result = await h.agentConfigs[0].tools.show_contact_options.execute(

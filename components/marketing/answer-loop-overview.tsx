@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import {
   Check,
   CircleAlert,
@@ -13,30 +12,31 @@ import {
   Send,
   ShieldCheck,
 } from 'lucide-react'
-import { IntegrationIcon } from '@/components/marketing/integration-icon'
-import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
+import { SupportedChannels } from './supported-channels'
+//import { IntegrationIcon } from '@/components/marketing/integration-icon'
+//import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
+//import Link from 'next/link'
 
-// Same steps and wording as the README overview diagram.
 const STEPS = [
   {
     icon: MessageSquare,
-    title: 'Question arrives',
-    body: 'From your community or website chat',
+    title: 'Ask in the community',
+    body: 'Members ask in the channels they already use.',
   },
   {
     icon: FileText,
-    title: 'Draft from your docs',
-    body: 'Find relevant knowledge. Write a sourced answer.',
+    title: 'Get an answer from your guides',
+    body: 'AnswerLoops finds the relevant articles and drafts a reply.',
   },
   {
     icon: ShieldCheck,
-    title: 'Check the answer',
-    body: 'A second AI Agent reviews the draft against sources.',
+    title: 'See the sources',
+    body: 'A second AI checks that the reply matches its sources.',
   },
   {
     icon: Send,
-    title: 'Reply with confidence',
-    body: 'Your team approves, or auto-reply when enabled.',
+    title: 'Get help and move forward',
+    body: 'Members get a reply where they asked. Your team can take over when more help is needed.',
   },
 ]
 
@@ -54,12 +54,12 @@ const RUNS: { label: string; examples: Example[] }[] = [
     examples: [
       {
         kind: 'question',
-        text: 'Webhook retries made duplicate orders. How do we stop it?',
-        where: 'Discord · #dev-support',
+        text: 'Where can I watch the workshop replay?',
+        where: 'Community chat · Member help',
       },
-      { kind: 'sources', sources: ['Webhook delivery', 'Idempotency guide'] },
-      { kind: 'note', tone: 'ok', text: 'Every step matches a cited source' },
-      { kind: 'note', tone: 'ok', text: 'Posted with 2 cited sources' },
+      { kind: 'sources', sources: ['Workshop replay guide', 'Member resource library'] },
+      { kind: 'note', tone: 'ok', text: 'Reply matches the cited guides' },
+      { kind: 'note', tone: 'ok', text: 'Member gets a link to the replay' },
     ],
   },
   {
@@ -67,12 +67,12 @@ const RUNS: { label: string; examples: Example[] }[] = [
     examples: [
       {
         kind: 'question',
-        text: 'Can we rotate our API key with no downtime?',
-        where: 'Discourse · Support',
+        text: 'Can I bring a guest to the next meetup?',
+        where: 'Community forum · Events',
       },
-      { kind: 'note', tone: 'warn', text: 'No article covers key rotation' },
+      { kind: 'note', tone: 'warn', text: 'No guide covers the guest policy' },
       { kind: 'note', tone: 'warn', text: 'No source to check it against' },
-      { kind: 'note', tone: 'warn', text: 'Held back and sent to your team' },
+      { kind: 'note', tone: 'warn', text: 'Your team can pick up the question' },
     ],
   },
 ]
@@ -169,7 +169,7 @@ export function AnswerLoopOverview() {
     >
       <div className="loop-overview-head">
         <h2 id="loop-overview-title" className="loop-overview-title">
-          Good answers start with your knowledge.
+          Every Interaction Makes Your Community Stronger
         </h2>
         <div className="loop-overview-controls">
           <div className="loop-run-picker" role="group" aria-label="Example">
@@ -233,27 +233,18 @@ export function AnswerLoopOverview() {
       >
         <span>
           <RotateCcw size={13} aria-hidden="true" />
-          Save useful resolutions as knowledge
+          Turn useful answers into guides for future questions
         </span>
       </div>
-
+      
       <div
         id="integrations"
         className="loop-channels scroll-mt-20"
         aria-label="Supported channels"
       >
-        <p>answerLoops supports your community</p>
-        <ul>
-          {MARKETED_CHANNELS.map(({ name, href, color }) => (
-            <li key={href}>
-              <Link href={href}>
-                <IntegrationIcon name={name} color={color} />
-                <span>{name}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <SupportedChannels variant="linked" />
       </div>
+
     </figure>
   )
 }

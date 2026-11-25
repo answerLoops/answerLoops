@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import {
+  assertKbSyncJobOwned,
   getKbSyncJob,
   finishKbSyncJob,
   heartbeatKbSyncJob,
@@ -9,7 +10,7 @@ import { KbSyncUserError, KbSyncLeaseLostError, KB_SYNC_GENERIC_FAILURE } from '
 import { throttleProgress } from '@/lib/kb-sync/progress'
 import { getRepoById } from '@/lib/db/queries/github'
 import { syncNotionToKB } from '@/lib/notion/kb-sync'
-import { syncRepoToKB, syncDiscussionsToKB } from '@/lib/github/kb-sync'
+import { syncRepoToKB, syncDiscussionsToKB, describeRepoSync } from '@/lib/github/kb-sync'
 import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { isPlatformBotRequest } from '@/lib/http/bearer-auth'
@@ -97,18 +98,33 @@ export async function POST(request: Request) {
       if (!job.repo_id) throw new Error('github_repo job has no repo_id')
       const repo = await getRepoById(job.repo_id, job.org_id)
       if (!repo) throw new KbSyncUserError('That repository is no longer connected — reconnect it and sync again.')
-      // Sequential: both paths read-modify-write the repo's kbChunkCount.
-      // Discussion progress is offset past the repo-files total so the KB
-      // page's bar keeps climbing across the two phases.
-      let filesTotal = 0
-      const docs = await syncRepoToKB(repo.id, repo.owner, repo.repo, repo.installation_id, job.org_id, {
-        onProgress: (d, t) => { filesTotal = t; progress(d, t) },
-      })
-      const discussions = await syncDiscussionsToKB(repo.id, repo.owner, repo.repo, repo.installation_id, job.org_id, {
-        onProgress: (d, t) => progress(filesTotal + d, filesTotal + t),
-      })
-      syncedCount = docs + discussions
-      detail = `Synced ${docs} doc chunk${docs === 1 ? '' : 's'} and ${discussions} discussion chunk${discussions === 1 ? '' : 's'}`
+      // Every file write checks this worker still owns the job, so a run that
+      // was taken over never commits a file the newer run may have written.
+      if (job.reprocess_only) {
+        // Background re-processing under new cleanup rules: docs only, and
+        // never the Discussions rebuild, which would re-embed every answer.
+        const docs = await syncRepoToKB(repo.id, repo.owner, repo.repo, repo.installation_id, job.org_id, repo.kb_paths, {
+          onProgress: (d, t, item) => progress(d, t, item),
+          reprocessOnly: job.reprocess_only,
+          guard: (tx) => assertKbSyncJobOwned(tx, jobId, attempt),
+        })
+        syncedCount = docs.chunks
+        detail = describeRepoSync(docs.result, null)
+      } else {
+        // Sequential: both paths read-modify-write the repo's kbChunkCount.
+        // Discussion progress is offset past the repo-files total so the KB
+        // page's bar keeps climbing across the two phases.
+        let filesTotal = 0
+        const docs = await syncRepoToKB(repo.id, repo.owner, repo.repo, repo.installation_id, job.org_id, repo.kb_paths, {
+          onProgress: (d, t, item) => { filesTotal = t; progress(d, t, item) },
+          guard: (tx) => assertKbSyncJobOwned(tx, jobId, attempt),
+        })
+        const discussions = await syncDiscussionsToKB(repo.id, repo.owner, repo.repo, repo.installation_id, job.org_id, {
+          onProgress: (d, t) => progress(filesTotal + d, filesTotal + t),
+        })
+        syncedCount = docs.chunks + discussions
+        detail = describeRepoSync(docs.result, discussions)
+      }
     } else {
       throw new Error(`unknown kb sync job kind: ${job.kind}`)
     }

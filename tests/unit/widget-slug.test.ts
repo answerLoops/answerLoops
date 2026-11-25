@@ -59,13 +59,13 @@ describe('widget display settings', () => {
   it('serves today\'s look when nothing has been chosen', () => {
     expect(resolveWidgetDisplay(null, { customization: true })).toEqual(DEFAULT_WIDGET_DISPLAY)
     expect(resolveWidgetDisplay({}, { customization: true })).toEqual(DEFAULT_WIDGET_DISPLAY)
-    expect(DEFAULT_WIDGET_DISPLAY).toEqual({ windowSize: 'small', bubbleColor: '#4f46e5' })
+    expect(DEFAULT_WIDGET_DISPLAY).toEqual({ windowSize: 'small', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoVersion: null })
   })
 
   it('honours a choice when the plan includes customization', () => {
     expect(
       resolveWidgetDisplay({ windowSize: 'large', bubbleColor: '#AA00FF' }, { customization: true })
-    ).toEqual({ windowSize: 'large', bubbleColor: '#aa00ff' })
+    ).toEqual({ windowSize: 'large', bubbleColor: '#aa00ff', bubbleIconColor: '#ffffff', logoVersion: null })
   })
 
   it('ignores the choice entirely when the plan does not include it', () => {
@@ -80,13 +80,13 @@ describe('widget display settings', () => {
     ).toEqual(DEFAULT_WIDGET_DISPLAY)
     expect(
       resolveWidgetDisplay({ windowSize: 'medium', bubbleColor: 'blue' }, { customization: true })
-    ).toEqual({ windowSize: 'medium', bubbleColor: '#4f46e5' })
+    ).toEqual({ windowSize: 'medium', bubbleColor: '#2563eb', bubbleIconColor: '#ffffff', logoVersion: null })
   })
 
   it('returns a copy, so a caller cannot change the shared default', () => {
     const a = resolveWidgetDisplay(null, { customization: false })
     a.bubbleColor = '#000000'
-    expect(DEFAULT_WIDGET_DISPLAY.bubbleColor).toBe('#4f46e5')
+    expect(DEFAULT_WIDGET_DISPLAY.bubbleColor).toBe('#2563eb')
   })
 })
 

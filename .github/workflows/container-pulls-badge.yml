@@ -1,0 +1,42 @@
+name: Container pulls badge
+
+# Publishes the container image's total download count to a gist so the
+# README badge can read it. The package page is the only public source for it.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch: {}
+
+# No checkout and no GITHUB_TOKEN use: one outbound read, one gist write.
+permissions: {}
+
+concurrency:
+  group: container-pulls-badge
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update the pulls gist
+    runs-on: ubuntu-latest
+    # The gist secrets live in this environment, not at repo level.
+    environment: container-pulls-badge
+    permissions: {}
+
+    steps:
+      - name: Read the count and write the gist
+        env:
+          GIST_ID: ${{ secrets.PULLS_GIST_ID }}
+          GIST_TOKEN: ${{ secrets.PULLS_GIST_TOKEN }}
+        run: |
+          set -euo pipefail
+          count=$(curl -fsSL https://github.com/answerLoops/answerLoops/pkgs/container/answerloops \
+            | grep -A1 'Total downloads' | grep -oE 'title="[0-9]+"' | grep -oE '[0-9]+' | head -1)
+          # Fail instead of publishing a wrong number if the page layout changes.
+          [ -n "$count" ] || { echo "Could not read the download count"; exit 1; }
+          label=$(awk -v n="$count" 'BEGIN { if (n >= 1000) printf "%.1fk", n / 1000; else print n }')
+          jq -n --arg m "$label" \
+            '{files: {"container-pulls.json": {content: ({schemaVersion: 1, label: "container pulls", message: $m, color: "2496ED", namedLogo: "docker"} | tojson)}}}' \
+            | curl -fsS -X PATCH -H "Authorization: Bearer $GIST_TOKEN" \
+                -H "Accept: application/vnd.github+json" \
+                -d @- "https://api.github.com/gists/$GIST_ID" > /dev/null
+          echo "Published $label ($count)"

@@ -4,7 +4,7 @@ import { act, cleanup, render, screen, waitFor, within } from '@testing-library/
 import userEvent from '@testing-library/user-event'
 
 /**
- * The Manage tab's article list: each article shows whether a person has checked
+ * The Sources tab's article list: each article shows whether a person has checked
  * it, and the control to do so reloads the list when it succeeds. The other
  * sections of the page are stubbed.
  */

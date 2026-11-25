@@ -5,10 +5,9 @@ import { auth } from '@/auth'
 import { parsePromoCode } from '@/lib/billing/promo'
 import { LoginForm } from '@/components/auth/login-form'
 import { configuredSignInProviders } from '@/lib/auth/providers'
-import { IntegrationIcon } from '@/components/marketing/integration-icon'
-import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 import { Logo, LogoMark } from '@/components/logo'
 import { ORDERED_PLANS, TRIAL_DAYS } from '@/lib/billing/plans'
+import { SupportedChannels } from '@/components/marketing/supported-channels'
 
 export const dynamic = 'force-dynamic'
 
@@ -119,17 +118,7 @@ export default async function LoginPage({ searchParams }: Props) {
             </ul>
 
             <div className="border-t border-slate-100 bg-slate-50/70 px-6 py-4">
-              <p className="text-[0.6875rem] font-medium uppercase tracking-wide text-slate-500">
-                Works wherever your community asks
-              </p>
-              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-2" aria-label="Supported channels">
-                {MARKETED_CHANNELS.map(({ name, color }) => (
-                  <li key={name} title={name} className="flex items-center">
-                    <IntegrationIcon name={name} color={color} />
-                    <span className="sr-only">{name}</span>
-                  </li>
-                ))}
-              </ul>
+              <SupportedChannels variant="compact" />
             </div>
 
             <p className="border-t border-slate-100 px-6 py-4 text-xs leading-relaxed text-slate-500">

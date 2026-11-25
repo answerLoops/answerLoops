@@ -16,10 +16,19 @@ import {
   vector,
   uuid,
   unique,
+  customType,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
+import type { RepoSyncResult } from '../../types'
 
 const now = sql`now()`
+
+// Raw bytes, read and written as a Node Buffer.
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return 'bytea'
+  },
+})
 
 export const orgs = pgTable('orgs', {
   id: serial('id').primaryKey(),
@@ -52,6 +61,35 @@ export const orgs = pgTable('orgs', {
   // default, so it must match what they already had (the old hardcoded gate)
   // rather than silently switching their widget's behaviour.
   widgetLeadCaptureMode: text('widget_lead_capture_mode').notNull().default('up-front'),
+  // What the widget may answer from: 'general' (knowledge base, then general
+  // knowledge) or 'knowledge-base-only'. Validated against WIDGET_ANSWER_SCOPES
+  // in lib/widget/answer-scope.ts at every write; like the other text-enum
+  // columns here there is no DB-level CHECK, so the app layer keeps it honest.
+  // Defaults to 'general' so an existing workspace's widget does not change.
+  widgetAnswerScope: text('widget_answer_scope').notNull().default('general'),
+  // The owner's optional note on tone and next steps, added to the widget's
+  // instructions. NULL means none. Cleaned and length-limited by
+  // normalizeWidgetGuidance before it is stored.
+  widgetGuidance: text('widget_guidance'),
+  // How a Pro or above workspace customises its widget (migration 0078): the
+  // chat header title, the welcome message and a brand color. NULL means the
+  // answerLoops default. Cleaned and validated by lib/widget/appearance.ts at
+  // every write and again at every read.
+  widgetTitle: text('widget_title'),
+  widgetWelcome: text('widget_welcome'),
+  widgetBrandColor: text('widget_brand_color'),
+  // Up to four short questions shown as tappable buttons when the chat opens
+  // (migration 0079), one per line. NULL means none.
+  widgetStarterQuestions: text('widget_starter_questions'),
+  // Whether those buttons are shown. NULL and true mean shown; only an explicit
+  // false hides them, so an owner can switch them off and keep the questions.
+  widgetStarterEnabled: boolean('widget_starter_enabled'),
+  // Whether the assistant may suggest follow-up questions after an answer
+  // (migration 0081). NULL and true mean on; only an explicit false turns it off.
+  widgetFollowUpsEnabled: boolean('widget_follow_ups_enabled'),
+  // When this workspace was last emailed about new website chat leads; limits
+  // it to one email per window. See lib/widget/lead-notifications.ts.
+  widgetLeadsEmailedAt: timestamp('widget_leads_emailed_at', { withTimezone: true }),
   roiMinutesPerTicket: integer('roi_minutes_per_ticket'),
   roiStaffHourlyRate: integer('roi_staff_hourly_rate'),
   // Set the moment an owner confirms account deletion. NULL means active.
@@ -88,6 +126,11 @@ export const orgs = pgTable('orgs', {
   embeddingMigrationLeaseUntil: timestamp('embedding_migration_lease_until', { withTimezone: true }),
   embeddingMigrationAttemptedAt: timestamp('embedding_migration_attempted_at', { withTimezone: true }),
   embeddingMigrationFailures: integer('embedding_migration_failures').notNull().default(0),
+  // Re-title pass bookkeeping (lib/kb/retitle-imports.ts), the same shape as
+  // the re-embed job's above.
+  kbRetitleLeaseUntil: timestamp('kb_retitle_lease_until', { withTimezone: true }),
+  kbRetitleAttemptedAt: timestamp('kb_retitle_attempted_at', { withTimezone: true }),
+  kbRetitleFailures: integer('kb_retitle_failures').notNull().default(0),
   createdAt: text('created_at').notNull().default(now),
 })
 
@@ -214,6 +257,7 @@ export const tickets = pgTable(
     // millisecond precision so a keyset cursor on last_activity_at is exact.
     lastActivityAt: timestamp('last_activity_at', { withTimezone: true }).notNull().default(sql`date_trunc('milliseconds', now())`),
     lastCustomerReplyAt: timestamp('last_customer_reply_at', { withTimezone: true }),
+    lastCustomerReplyXid: text('last_customer_reply_xid'),
     lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
   },
   (t) => [
@@ -280,6 +324,11 @@ export const githubRepos = pgTable('github_repos', {
   // this column existed (migration 0074).
   kbSyncedCommit: text('kb_synced_commit'),
   kbChunkCount: integer('kb_chunk_count').notNull().default(0),
+  // Docs folders an owner picked for the knowledge base sync; NULL means none
+  // were picked and every Markdown file is read (migration 0087).
+  kbPaths: text('kb_paths').array(),
+  // Counts from the last files sync, shown on the repo row (migration 0087).
+  kbSyncResult: jsonb('kb_sync_result').$type<RepoSyncResult>(),
   // Automatic Deflections for this repo — same meaning/default as
   // integrations.autoDeflectEnabled, but GitHub has no integrations row
   // (repos are connected per-repo, not one row per platform), so it lives
@@ -411,12 +460,40 @@ export const kbSources = pgTable(
     // out of retrieval until the customer publishes it. Kept in lockstep with
     // kb_articles.published by setKBSourcePublished().
     published: integer('published').notNull().default(1),
+    // 0 for a URL source imported before section titles carried the page; the
+    // re-title pass (lib/kb/retitle-imports.ts) moves it to 1. Every other
+    // source is 1 (migration 0086).
+    titlesVersion: integer('titles_version').notNull().default(1),
     createdAt: text('created_at').notNull().default(now),
     updatedAt: text('updated_at').notNull().default(now),
   },
   (t) => [
     index('idx_kb_sources_org').on(t.orgId),
+    // URL sources still waiting for the re-title pass (migration 0086).
+    index('idx_kb_sources_retitle_pending').on(t.orgId).where(sql`${t.fileType} = 'url' AND ${t.titlesVersion} = 0`),
     index('idx_kb_sources_published').on(t.published),
+  ]
+)
+
+// One row per repository file a docs sync has written (migration 0088). The
+// blob sha and processing version let a sync skip files that haven't changed
+// and redo files processed under older cleanup rules (lib/ingest/docs-file.ts).
+export const kbSourceFiles = pgTable(
+  'kb_source_files',
+  {
+    id: serial('id').primaryKey(),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    sourceId: integer('source_id').notNull().references(() => kbSources.id, { onDelete: 'cascade' }),
+    path: text('path').notNull(),
+    blobSha: text('blob_sha').notNull(),
+    title: text('title').notNull(),
+    chunkCount: integer('chunk_count').notNull().default(0),
+    processingVersion: integer('processing_version').notNull(),
+    syncedAt: text('synced_at').notNull().default(now),
+  },
+  (t) => [
+    uniqueIndex('kb_source_files_source_id_path_key').on(t.sourceId, t.path),
+    index('idx_kb_source_files_org').on(t.orgId),
   ]
 )
 
@@ -450,6 +527,10 @@ export const kbSyncJobs = pgTable(
     // Another trigger arrived while this job was running; finishing it queues
     // exactly one follow-up run.
     rerunRequested: boolean('rerun_requested').notNull().default(false),
+    // Queued in the background to re-process docs under the current cleanup
+    // rules (migration 0088); claimed after other syncs, and turned into a
+    // full sync if a push or click arrives while it waits.
+    reprocessOnly: boolean('reprocess_only').notNull().default(false),
   },
   (t) => [
     index('idx_kb_sync_jobs_status').on(t.status, t.createdAt),
@@ -502,6 +583,9 @@ export const kbArticles = pgTable(
     sourceTicketId: integer('source_ticket_id').references(() => tickets.id),
     sourceId: integer('source_id'),
     sourcePage: integer('source_page'),
+    // The repository file this section came from, for docs synced from GitHub
+    // (migration 0088). Removing the file's row removes its sections.
+    sourceFileId: integer('source_file_id').references(() => kbSourceFiles.id, { onDelete: 'cascade' }),
     published: integer('published').notNull().default(1),
     // The team member who added the article by hand, promoted a ticket or
     // approved a review item. Null means unknown or automated: articles made
@@ -529,6 +613,7 @@ export const kbArticles = pgTable(
     index('idx_kb_articles_org_published').on(t.orgId, t.published),
     index('idx_kb_articles_source').on(t.sourceTicketId),
     index('idx_kb_articles_source_id').on(t.sourceId),
+    index('idx_kb_articles_source_file').on(t.sourceFileId),
     index('idx_kb_articles_embedding_vec').using('hnsw', t.embeddingVec.op('vector_cosine_ops')),
   ]
 )
@@ -727,6 +812,9 @@ export const kbReviewItems = pgTable(
     ticketId: integer('ticket_id').references(() => tickets.id, { onDelete: 'set null' }),
     question: text('question').notNull(),
     answer: text('answer').notNull(),
+    // The visitor's own words when `question` is the assistant's standalone
+    // rewrite of a widget follow-up; null otherwise. Cleared with the text.
+    visitorMessage: text('visitor_message'),
     // Same fixed platform-wide dimension as kb_articles.embedding_vec; used
     // only to fold near-duplicate questions together.
     embeddingVec: vector('embedding_vec', { dimensions: 1536 }),
@@ -1050,6 +1138,8 @@ export const widgetLeads = pgTable(
     // no question yet when it's collected. Without this the team sees a bare
     // address with nothing to follow up on.
     question: text('question'),
+    // When this lead was included in an email to the team; NULL until then.
+    notifiedAt: timestamp('notified_at', { withTimezone: true }),
     createdAt: text('created_at').notNull().default(now),
   },
   (t) => [
@@ -1064,6 +1154,53 @@ export const widgetLeads = pgTable(
     uniqueIndex('widget_leads_org_email').on(t.orgId, t.email),
   ]
 )
+
+// A visitor's verdict on one widget answer: a thumbs-down with an optional
+// reason and note (drizzle/0084). One row per answer. The question, answer and
+// note are scrubbed before they are stored and cleared after the retention
+// window; the row, the reason and the cited article ids stay. The cited ids are
+// copied from the answer's recorded references when the flag is made, and
+// answer_id is nulled rather than cascaded when the answer record is pruned, so
+// an unreviewed flag is never deleted with it. Shape checks live in the migration.
+export const widgetAnswerFlags = pgTable(
+  'widget_answer_flags',
+  {
+    id: serial('id').primaryKey(),
+    orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
+    answerId: uuid('answer_id').references(() => kbAnswers.id, { onDelete: 'set null' }),
+    // 'up' | 'down'
+    verdict: text('verdict').notNull(),
+    // 'wrong_information' | 'outdated' | 'did_not_answer' | 'other'
+    reason: text('reason'),
+    note: text('note'),
+    question: text('question').notNull().default(''),
+    answer: text('answer').notNull().default(''),
+    citedArticleIds: integer('cited_article_ids').array().notNull().default(sql`'{}'::integer[]`),
+    leadId: integer('lead_id').references(() => widgetLeads.id, { onDelete: 'set null' }),
+    // 'open' | 'resolved' | 'dismissed'
+    status: text('status').notNull().default('open'),
+    resolvedBy: integer('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true, mode: 'string' }),
+    createdAt: timestamp('created_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'string' }).notNull().defaultNow(),
+  },
+  (t) => [
+    uniqueIndex('uq_widget_answer_flags_answer').on(t.answerId).where(sql`${t.answerId} IS NOT NULL`),
+    index('idx_widget_answer_flags_org_status').on(t.orgId, t.status, t.createdAt),
+  ]
+)
+
+// A workspace's chat widget logo: the small square the upload step produced,
+// never the original upload. At most one per workspace. Served by
+// app/api/widget/logo/[id]; see lib/images/logo-pipeline.ts.
+export const widgetLogos = pgTable('widget_logos', {
+  orgId: integer('org_id').primaryKey().references(() => orgs.id),
+  contentType: text('content_type').notNull(),
+  bytes: bytea('bytes').notNull(),
+  // A short fingerprint of the bytes; it versions the logo's address.
+  etag: text('etag').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().default(now),
+})
 
 export const csatMessages = pgTable('csat_messages', {
   messageId: text('message_id').primaryKey(),

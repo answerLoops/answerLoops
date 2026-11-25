@@ -6,11 +6,8 @@ import { Button } from '@/components/ui/button'
 import { ARTICLE_USAGE_RETENTION_DAYS, ARTICLE_USAGE_WINDOW_DAYS, type Coverage, type CoverageGroup, type CoverageStatus } from '@/lib/kb/coverage'
 import type { ArticleUsage } from '@/lib/db/queries/kb-usage'
 import type { KBSearchResult } from '@/types'
+import { WIDGET_CONTEXT_ARTICLES } from '@/lib/widget/context-size'
 
-// How many matches the widget puts in front of the model per answer — kept in
-// step with MAX_CONTEXT_ARTICLES in app/api/widget/chat/route.ts so the tester
-// shows what the assistant would actually draw on.
-const WIDGET_CONTEXT_ARTICLES = 5
 
 type CoverageResponse = Coverage & { articleUsage?: ArticleUsage[]; articleUsageAvailable?: boolean }
 
@@ -97,6 +94,7 @@ function GroupBlock({ group, articleUsageById, articleUsageAvailable }: { group:
 
 type TestResult =
   | { kind: 'covered'; matches: KBSearchResult[] }
+  | { kind: 'close'; matches: KBSearchResult[] }
   | { kind: 'not_covered' }
   | { kind: 'degraded' }
   | { kind: 'error'; message: string }
@@ -113,8 +111,9 @@ function QuestionTester() {
     setTesting(true)
     setResult(null)
     try {
-      const res = await fetch(`/api/kb/search?q=${encodeURIComponent(q)}`)
-      const data = (await res.json()) as { results?: KBSearchResult[]; degraded?: boolean; error?: string }
+      // The website widget's own lookup, so this shows what the assistant sees.
+      const res = await fetch(`/api/kb/search?q=${encodeURIComponent(q)}&for=widget`)
+      const data = (await res.json()) as { results?: KBSearchResult[]; matched?: boolean; degraded?: boolean; error?: string }
       if (!res.ok || data.error) {
         setResult({ kind: 'error', message: data.error ?? 'The test could not run.' })
       } else if (data.degraded) {
@@ -123,7 +122,8 @@ function QuestionTester() {
         setResult({ kind: 'degraded' })
       } else {
         const matches = (data.results ?? []).slice(0, WIDGET_CONTEXT_ARTICLES)
-        setResult(matches.length > 0 ? { kind: 'covered', matches } : { kind: 'not_covered' })
+        if (matches.length === 0) setResult({ kind: 'not_covered' })
+        else setResult(data.matched ? { kind: 'covered', matches } : { kind: 'close', matches })
       }
     } catch {
       setResult({ kind: 'error', message: 'The test could not run. Check your AI provider in Settings.' })
@@ -166,11 +166,27 @@ function QuestionTester() {
           </ul>
         </div>
       )}
+      {result?.kind === 'close' && (
+        <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-3 py-2" role="status">
+          <p className="text-xs font-medium text-sky-800">
+            Close matches: no article is a strong match, so the assistant is given the closest {result.matches.length === 1 ? 'one' : result.matches.length} and uses them if they answer the question.
+          </p>
+          <ul className="mt-1.5 space-y-1">
+            {result.matches.map((m) => (
+              <li key={m.id} className="flex items-start gap-2 text-xs text-sky-900">
+                <span className="min-w-0 flex-1 break-words">{m.question}</span>
+                <span className="shrink-0 tabular-nums text-sky-700">{Math.round(m.score * 100)}% match</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-xs text-sky-700">If none of these answers it, add or edit an article so the question finds a strong match.</p>
+        </div>
+      )}
       {result?.kind === 'not_covered' && (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2" role="status">
           <p className="text-xs font-medium text-amber-800">Not covered — no article is a close enough match.</p>
           <p className="mt-0.5 text-xs text-amber-700">
-            The assistant would answer this from general knowledge, which can be wrong. Add or edit an article to cover it.
+            The assistant would answer this from general knowledge, which can be wrong, or say it doesn't know if your widget answers only from your knowledge base. Add or edit an article to cover it.
           </p>
         </div>
       )}
@@ -224,7 +240,7 @@ export function CoverageTab() {
       <div className="rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3">
         <p className="text-sm text-slate-700">
           Your chat assistant answers from the articles listed here. If a question doesn&apos;t match any of them
-          closely enough, it answers from general knowledge instead, and that answer can be wrong. Anything marked
+          closely enough, it answers from general knowledge instead, and that answer can be wrong, unless your widget is set to answer only from your knowledge base, in which case it says it doesn&apos;t have that. Anything marked
           Unpublished (for example internal documents you keep private) or Not searchable is <strong>not</strong> used by the assistant.
         </p>
       </div>

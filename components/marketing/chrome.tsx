@@ -1,9 +1,11 @@
 import { DOCS_HREF, PRICING_HREF } from '@/components/marketing/nav-shared'
+import Image from 'next/image'
 import Link from 'next/link'
 import { LogoMark } from '@/components/logo'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
 import { NavCta } from './nav-cta'
-import { GITHUB_SOURCE_URL } from '@/lib/site'
+import { CYCODE_URL, GITHUB_SOURCE_URL, X_URL } from '@/lib/site'
+import { PRODUCT_HEADLINE, PRODUCT_TAGLINE } from '@/lib/site-identity'
 import type { NavState } from './nav-shared'
 export { GITHUB_SOURCE_URL } from '@/lib/site'
 export { navState } from './nav-shared'
@@ -20,6 +22,16 @@ const GithubIcon = ({
     aria-hidden="true"
   >
     <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+  </svg>
+)
+const XIcon = ({ className = 'h-4 w-4' }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
   </svg>
 )
 function NavWordmark() {
@@ -147,14 +159,13 @@ export function Footer() {
     <footer className="border-t border-slate-200 bg-white text-slate-900">
       <div className="mx-auto max-w-7xl px-5 py-12 sm:px-8">
         <div className="grid gap-10 lg:grid-cols-[1fr_2fr]">
-          <div>
+          <div className="flex flex-col items-start">
             <NavWordmark />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-600">
-              answerLoops helps your team answer community questions using
-              the documentation and resolutions you already maintain.
+            <p className="mt-4 max-w-xs text-sm font-semibold text-slate-900">
+              {PRODUCT_HEADLINE}.
             </p>
-            <p className="mt-3 text-sm text-slate-600">
-              Use our hosted service or run it yourself.
+            <p className="mt-2 max-w-xs text-sm leading-relaxed text-slate-600">
+              {PRODUCT_TAGLINE}
             </p>
             <Link
               href={GITHUB_SOURCE_URL}
@@ -164,6 +175,31 @@ export function Footer() {
             >
               <GithubIcon className="h-5 w-5" />
               Proudly open-source
+            </Link>
+            <Link
+              href={CYCODE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Secured by Cycode"
+              className="mt-6 flex items-center gap-2 text-base font-medium text-slate-900 transition-colors hover:text-blue-700 lg:mt-auto"
+            >
+              <span>Secured by</span>
+              <Image
+                src="/cycode-logo.svg"
+                alt="Cycode"
+                width={57}
+                height={16}
+                unoptimized
+                className="h-4 w-auto"
+              />
+              <Image
+                src="/cycode-mark.svg"
+                alt=""
+                width={20}
+                height={20}
+                unoptimized
+                className="h-5 w-5"
+              />
             </Link>
           </div>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
@@ -188,9 +224,18 @@ export function Footer() {
         </div>
         <div className="mt-10 flex flex-col gap-4 border-t border-slate-200 pt-6 text-xs text-slate-600 sm:flex-row sm:items-center sm:justify-between">
           <p>© 2026 answerLoops</p>
-          <div className="flex flex-wrap gap-5">
+          <div className="flex flex-wrap items-center gap-5">
             <Link href="/privacy">Privacy Policy</Link>
             <Link href="/terms">Terms of Service</Link>
+            <Link
+              href={X_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="answerLoops on X"
+              className="-m-2.5 p-2.5 text-slate-600 transition-colors hover:text-slate-900"
+            >
+              <XIcon className="h-4 w-4" />
+            </Link>
           </div>
         </div>
       </div>

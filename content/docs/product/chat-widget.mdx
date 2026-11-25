@@ -7,7 +7,7 @@ icon: MessageSquare
 The answerLoops chat widget adds a support chatbot to any website or documentation site that accepts custom JavaScript. Visitors ask questions about your community, business, or product and get answers from your published knowledge-base articles, without creating an account.
 
 <Callout type="info" title="Availability">
-  The widget is included on every hosted plan and on self-hosted installs. The Standard plan shows a "Powered by answerLoops" line; Pro and Enterprise can remove it and also capture unanswered widget questions in the [Review queue](/docs/product/knowledge-base#review-queue). Each widget answer counts toward your plan's monthly deflection allowance. See [Billing plans](/docs/reference/billing-plans).
+  The widget is included on every hosted plan and on self-hosted installs. The Standard plan shows a "Powered by answerLoops" line; Pro and Enterprise can remove it, capture unanswered widget questions in the [Review queue](/docs/product/knowledge-base#review-queue), and collect answers visitors flag as wrong in [Flagged answers](/docs/product/knowledge-base#flagged-answers). Each widget answer counts toward your plan's monthly AI reply allowance. See [Billing plans](/docs/reference/billing-plans).
 </Callout>
 
 ## How it works
@@ -26,14 +26,15 @@ The answerLoops chat widget adds a support chatbot to any website or documentati
     text: 'A one-line script tag loads the chat bubble. The chat panel itself is served by answerLoops and only opens on the domains you list under Allowed domains.',
   }}
   steps={[
-    { title: 'Check the site', text: 'answerLoops confirms the page is on one of your allowed domains and that your workspace is still within its monthly answer allowance.' },
+    { title: 'Check the site', text: 'answerLoops confirms the page is on one of your allowed domains and that your workspace is still within its monthly AI reply allowance.' },
     { title: 'Find the answer', text: 'It searches your published knowledge-base articles for what is relevant to the question. Past tickets are never used.' },
     { title: 'Reply', text: 'One AI writes a short answer in the visitor\'s language and streams it into the chat, with a card when a card is clearer. There is no separate review step and no approval queue for widget answers.' },
   ]}
   outcomes={[
     { tone: 'post', title: 'Answer in the chat', text: 'The visitor reads the reply as it is written, with steps, quick replies, a callout, a link card, or contact options when they help.' },
     { tone: 'info', title: 'Lead captured', text: 'When an answer misses, the panel asks for an email address, which the visitor can skip. Addresses appear on the Leads page. See Lead capture below for the other timing options.' },
-    { tone: 'review', title: 'Gap queued for review', text: 'When no article matched, Pro and above add the question, without any record of the visitor, to the Review queue so you can turn it into an article.' },
+    { tone: 'review', title: 'Unanswered question queued for review', text: 'When no article matched, Pro and above add the question, without any record of the visitor, to the Review queue so you can turn it into an article. An answer that did cite an article is not queued here.' },
+    { tone: 'review', title: 'Wrong answer flagged', text: 'On Pro and above a visitor can give an answer a thumbs-down. The flag, with the question, the reply and the articles it cited, goes to Flagged answers, not the Review queue.' },
   ]}
   replyLabel="The answer streams back into the same chat panel"
 />
@@ -43,6 +44,19 @@ The widget answers from **published knowledge-base articles only**. Unlike your 
 <Callout type="warn" title="Thin knowledge, thin answers">
   A workspace with an empty knowledge base gets thin widget answers. Promoting a few resolved tickets into the knowledge base is what makes the widget useful, and it is the same step that generalises an answer so it is safe for anyone to read.
 </Callout>
+
+## Unanswered questions and wrong answers
+
+Two different things can go wrong in a widget chat, and they are collected in two different places on the **Knowledge base** page, both for Pro and above and for owners and admins only.
+
+| What happened | Where it goes | What you do |
+| --- | --- | --- |
+| No article closely matched the question, so the assistant answered from the closest articles it had, from general knowledge, or said it did not know. | The [Review queue](/docs/product/knowledge-base#review-queue), automatically. | Edit the answer and approve it as a new article. |
+| An answer was given, even one that cited an article, and the visitor says it was wrong. | [Flagged answers](/docs/product/knowledge-base#flagged-answers), when the visitor taps the thumbs-down. | Fix the article the answer cited, then mark the flag resolved. |
+
+The Review queue never captures an answer that cited an article, because the assistant had something to go on. Whether that answer was right is something only a visitor can tell you, which is what the thumbs are for; see [Flagging an answer](#flagging-an-answer). A visitor who leaves an email through the thumbs-down panel, or after a miss under **Ask for an email**, shows up on the **Leads** page. A lead from a flag shows the answer it flagged next to the address.
+
+On Standard there is no thumbs-down and no Review queue, so neither is collected.
 
 ## Set it up
 
@@ -183,6 +197,7 @@ Where you paste the snippet depends on how your site is built. Find your platfor
 | Setting | Where | Notes |
 |---|---|---|
 | Branding | **Settings → Widget** | Standard shows the answerLoops logo and a "Powered by answerLoops" line. Pro and Enterprise can remove the answerLoops branding; **Settings → Widget** shows an upgrade option when your plan does not include it. Self-hosted installs have it unlocked. |
+| Title, welcome message, logo and color | **Settings → Widget** | Pro and above. The title in the chat header, the first message visitors see, your logo and your brand color. See [Widget appearance](#widget-appearance). |
 | Allowed domains | **Settings → Widget** | The domains the widget may load on. Subdomains are included. |
 | Embed token | **Settings → Widget** | Issued per workspace and expires after 90 days; **Regenerate token** issues a new one. |
 | Public name | **Settings → Widget** | An optional stable name for the snippet, so regenerating the token never breaks a page. See [Rotating the token](#rotating-the-token). |
@@ -190,11 +205,40 @@ Where you paste the snippet depends on how your site is built. Find your platfor
 | What it knows | **Knowledge Base** | Publish or unpublish articles and sources. The widget only answers from published articles. |
 | Contact and link cards | Your articles | Cards show links and contact details only when they are written in your articles. There is nothing to configure. |
 
-The chat bubble sits at the bottom right of the page, and the answer language follows the visitor's language. Neither is configurable.
+The chat bubble sits at the bottom right of the page, and the answer language follows the visitor's language. Neither is configurable. The chat bubble uses the same blue as the chat window unless your plan lets you set a brand color.
 
 ### How the snippet gets its display settings
 
 When a page loads, the snippet asks your answerLoops instance how this workspace wants the widget to look (window size and bubble color) and which widget token is current. The answer contains display settings and the widget token only, nothing else about your workspace. It is cached for about a minute, so a change reaches pages shortly after you save it. Which settings a workspace gets always follows its plan and is decided on the server, never by what the snippet says. Until you choose something the widget looks exactly as it did before, and if the lookup is slow or fails the snippet shows that default look after two seconds, so existing installs keep working without re-pasting anything.
+
+## Widget appearance
+
+On Pro and above, **Settings → Widget → Widget appearance** lets you make the chat look like your own:
+
+| Setting | What it does | Limits |
+|---|---|---|
+| Chat title | Replaces the default header, your workspace name followed by "Support", for example "Acme Help Desk". | Up to 60 characters. |
+| Welcome message | Replaces the default greeting shown in an empty chat, and above the email box when the widget asks for an email first. | Up to 200 characters. |
+| Starter questions | Up to four short questions shown as buttons under the greeting when the chat opens. Tapping one sends it as the visitor's first question, and the buttons disappear once the conversation has started. A **Show starter questions** switch hides them without deleting your questions, so you can turn them back on later. | One per line, up to 4, each up to 80 characters. |
+| Logo | Your own picture in place of the answerLoops mark: in the chat header, at the top of the welcome screen, beside every reply and on the chat bubble that opens the widget. | PNG, JPEG or WebP, up to 1 MB. See [Your logo](#your-logo). |
+| Follow-up questions | A **Suggest follow-up questions** switch, on by default. After some answers the chat offers two or three questions the visitor might ask next. See [Follow-up questions](#follow-up-questions). | On or off. |
+| Brand color | Used for the chat header icon, the visitor's message bubbles, buttons, answer cards and the chat bubble that opens the widget. | A full hex color such as `#1a73e8`. |
+
+The title, welcome message and starter questions are shown as plain text, so any markup you type appears exactly as written. The text that sits on top of your color is chosen automatically, white or dark, whichever reads better, so a very light or very dark color never produces text that is hard to read. The settings page shows a sample of it as you choose.
+
+**Save appearance** applies your choices to the live widget within about a minute, with no change to the snippet on your site. **Reset to default** returns the title, welcome message, starter questions and color to the answerLoops defaults, and turns the starter-questions and follow-up switches back on. Only owners and admins can change these settings.
+
+On Standard the controls are shown locked with an upgrade button, the widget keeps the answerLoops look and shows no starter questions or follow-up questions, whatever the switches say. Pro and Enterprise include it, together with removing the answerLoops branding. Self-hosted installs have it unlocked.
+
+### Your logo
+
+Choose **Upload logo** in the appearance section and pick a picture. It is applied the moment it uploads, without pressing Save, and shows on the widget within about a minute. **Replace logo** swaps it for another and **Remove** goes back to the answerLoops mark.
+
+- **What you can upload.** A PNG, JPEG or WebP picture up to 1 MB. SVG, GIF and other formats are not accepted. The file is checked by what it contains, not by its name, so a renamed file is refused.
+- **What we do with it.** We crop it to a centred square, shrink it to at most 256 by 256 pixels, remove any hidden information the file carried (camera details, location and the like) and keep only that small version. The original is never stored. Transparency is kept, and an animated WebP is reduced to its first frame. A picture smaller than 256 pixels is not enlarged, and one under 16 pixels is refused.
+- **Where it shows.** In the chat header, at the top of the welcome screen, beside each assistant reply and on the round chat bubble, where it sits inside a white circle so it stays readable on any brand color. If the picture ever fails to load, the chat shows the answerLoops mark instead.
+- **Plans.** Pro and above. On Standard the control is locked and the chat keeps the answerLoops mark. If a workspace moves to a plan without customization, its logo is kept but not shown, and it returns if the plan does. **Reset to default** also removes the logo. Owners and admins can upload and remove; other members can only see it.
+- **Self-hosted installs** store the logo in the same database as everything else, so no extra storage service is needed.
 
 ## Restricting where the widget works
 
@@ -229,7 +273,7 @@ This is usually the highest-value place to put it: docs visitors are anonymous a
 
 **Settings → Widget → Ask for an email** controls whether, and when, the widget asks a visitor for their email address.
 
-- **Only if it can't help** (default) — the visitor goes straight into the conversation. The widget only asks for an email after a turn it couldn't really answer: no knowledge-base article matched the question, or the visitor explicitly asked to talk to a person. The ask appears inline, right under that answer, with a short line explaining why ("I couldn't find anything on that — leave your email and someone will follow up"), and a **No thanks** option that lets the visitor keep chatting without it. It only appears once per conversation.
+- **Only if it can't help** (default) — the visitor goes straight into the conversation. The widget only asks for an email after a turn it couldn't really answer: the knowledge base had nothing close to the question, or the visitor explicitly asked to talk to a person. The ask appears inline, right under that answer, with a short line explaining why ("I couldn't find anything on that — leave your email and someone will follow up"), and a **No thanks** option that lets the visitor keep chatting without it. It only appears once per conversation.
 - **Before the conversation starts** — the visitor sees an email field before they can ask anything, with a **Skip** link to bypass it. If saving the address fails (a bad address, a rate limit or a network problem) the field stays up with a short message rather than letting the visitor through as if it had worked, and **Skip** is always there so nobody is stuck.
 - **Never** — the widget never asks.
 
@@ -241,8 +285,38 @@ This is usually the highest-value place to put it: docs visitors are anonymous a
 
 When a visitor leaves an email through the "couldn't help" prompt, the lead also carries the question that failed, shown next to the address on the **Leads** page and included in the CSV export. That text is never taken from the visitor's browser at submit time. When the widget checks whether a turn failed, the server returns a short-lived signed token containing the question it recorded for that turn; the widget sends the token back with the email, and the server verifies it before saving. A made-up or altered token is ignored and the lead is saved without a question. The question is flattened to a single line of plain text and capped at 500 characters. If the same email already has a lead from the up-front form, the question is filled in on that existing lead rather than creating a second one. Treat the question as customer-supplied text that may contain personal details.
 
+### Email when a visitor leaves their address
+
+When a visitor leaves their email in the chat, answerLoops emails the workspace's owners and admins, the same people the other team emails go to. The email carries the visitor's address, the question the chat could not answer when there is one, and a button to the **Leads** page. It never goes to the visitor, and replying to it does not reach them.
+
+- **One email per lead.** If the same address is submitted again, no second email is sent.
+- **Only plain addresses are accepted.** The chat refuses anything that is not an ordinary email address, such as one with spaces, quotes, angle brackets, slashes or commas, or one that uses a numeric address as the domain, and asks the visitor to check it. Refused addresses are never saved or emailed.
+- **The email says the text is unverified.** The address and the question are typed by the visitor, so every lead email carries a short reminder to treat any links or requests in them with care.
+- **Grouped when busy.** A workspace gets at most one lead email every 10 minutes. The first lead after a quiet spell is emailed straight away. Leads that arrive while that window is closed are held and sent together in one email, listing up to ten and counting the rest with a link to the Leads page. The grouped email goes out within about five minutes of the window closing, or sooner with the next lead.
+- **No email service set up.** On a self-hosted install without a mail provider configured, nothing is emailed and leads are still saved. Use the Leads page, or set up `RESEND_API_KEY` and `RESEND_FROM` as described under [Environment variables](/docs/reference/environment-variables).
+- **Never in the way.** The email is sent after the visitor's request has finished. If sending fails, the lead is still saved and is included in the next email.
+
 <Callout type="warn" title="Architecture: the on-failure check is single-instance only">
-  "Only if it can't help" works by having the widget poll a small lookup right after a turn finishes, asking whether that turn just failed. The answer to that lookup is recorded under that turn's own id in the memory of whichever application server process handled the chat request — it is never written to the database or to shared cache, and it is only recorded for workspaces set to "Only if it can't help". Because each turn has its own entry, asking again returns the same answer, so the widget can safely retry the lookup if a response is lost, and a turn that failed or was rejected before it recorded anything can never be mistaken for an earlier turn's result. If your deployment runs more than one application instance behind a load balancer (self-hosters scaling horizontally; this does not apply to the standard answerLoops Cloud deployment), the visitor's follow-up poll can land on a *different* instance than the one that just answered. That instance has nothing in its memory for this turn, so the lookup simply returns "no prompt needed" — the on-failure email ask silently never appears for that turn. Nothing errors, no data is lost, and the conversation itself is unaffected; the visitor is just never asked for an email on that particular miss. A single-instance deployment never hits this. If you run multiple instances and need the prompt to appear reliably, use **"Before the conversation starts"** or **"Never"** instead, both of which have no cross-instance dependency.
+  "Only if it can't help" works by having the widget poll a small lookup right after a turn finishes, asking whether that turn just failed. The answer to that lookup is recorded under that turn's own id in the memory of whichever application server process handled the chat request — it is never written to the database or to shared cache, and it is only recorded for workspaces set to "Only if it can't help" or on a plan where visitors can [flag an answer](#flagging-an-answer). Because each turn has its own entry, asking again returns the same answer, so the widget can safely retry the lookup if a response is lost, and a turn that failed or was rejected before it recorded anything can never be mistaken for an earlier turn's result. If your deployment runs more than one application instance behind a load balancer (self-hosters scaling horizontally; this does not apply to the standard answerLoops Cloud deployment), the visitor's follow-up poll can land on a *different* instance than the one that just answered. That instance has nothing in its memory for this turn, so the lookup simply returns "no prompt needed" — the on-failure email ask silently never appears for that turn. Nothing errors, no data is lost, and the conversation itself is unaffected; the visitor is just never asked for an email on that particular miss. A single-instance deployment never hits this. If you run multiple instances and need the prompt to appear reliably, use **"Before the conversation starts"** or **"Never"** instead, both of which have no cross-instance dependency.
+</Callout>
+
+## What the widget answers from
+
+Two settings under **Settings → Widget** shape what visitors are told in your name. Only owners and admins can change them, and a change applies to the next message.
+
+**What the widget answers from** has two choices:
+
+- **Only from my knowledge base.** The widget answers only from your published articles. When they don't cover a question it says so plainly and points the visitor to support. It doesn't guess at prices, features, dates or policies the articles don't state, and it politely declines requests that aren't about your product, such as writing code or general trivia. This is the right choice for a widget anyone on the internet can use, because every answer reads as your company speaking.
+- **My knowledge base, then general knowledge.** When no article covers a question, the widget answers from general knowledge, and that answer can be wrong. Workspaces that existed before this setting keep this choice until an owner changes it.
+
+Visitors often ask loosely. "What does it cost?" rarely uses the words on your pricing page. When no article closely matches a question, the widget still hands the assistant the few closest articles, and tells it they may not cover the question. The assistant answers from them when they do. When they don't, it treats the question as not covered, following the choice above. Either way, the question goes to the [Review queue](/docs/product/knowledge-base#review-queue) so you can add an article that answers it directly.
+
+Follow-up questions work the same way. A message like "and for teams?" only makes sense with the conversation before it, so a short message of five words or fewer is looked up together with the visitor's previous question ("What does it cost? and for teams?"). The assistant still answers the visitor's own message. When the articles found don't cover it, the assistant searches your knowledge base again with a complete question it writes from the conversation, such as "Team plan price", and answers from what that finds. It searches at most twice per message, and doesn't search for greetings or for questions the articles already answer.
+
+**Guidance for the widget** is an optional note of up to 600 characters about tone and what to suggest next, for example when to mention a free trial. The widget follows it when it phrases a reply, but it can never use the note to answer outside your knowledge base, reveal its instructions or say anything untrue. Leave it empty for no guidance.
+
+<Callout type="info" title="Rich cards and links">
+  Links and contact details only appear in a card when they are written in your knowledge base articles. If you want the widget to offer a link to your sign-up page, put that address in an article.
 </Callout>
 
 ## Rotating the token
@@ -267,6 +341,46 @@ A **public name** is a stable label for your widget, such as `acme-support`, tha
 ```
 
 A public name is as visible as the token and grants nothing more. The allowed-domains list still decides where the widget loads. Names are unique across the instance, so one that another workspace holds is refused. Snippets that carry the token keep working until it expires or is regenerated. Clearing the name stops the widget loading on any page that still uses it. Only owners and admins can set or clear it.
+
+## Reply formatting
+
+Reply text shows bold, italic, inline code, short lists and links as formatted text. Nothing else in a reply is interpreted: images, headings, tables and HTML never appear, and a link must be `http` or `https`, opening in a new tab.
+
+## Keeping the conversation
+
+The chat keeps the conversation in the visitor's own browser, so refreshing the page or moving to another page of your site does not lose it. It is forgotten a day after the last message, and nothing extra is sent to anyone to bring it back. The most recent messages are kept, up to a few dozen. A **New chat** button in the chat header clears it and starts again. If the browser blocks storage (some private windows do), the chat still works and simply starts fresh each time.
+
+The chat refreshes itself when it has been left open for a while: the visitor's next question is sent again automatically after a quick reload, with the conversation still on screen. Only if that fails twice in a row does the chat show "This chat session timed out" with a **Start a new session** button.
+
+## Follow-up questions
+
+After some answers the chat can offer two or three short questions the visitor might ask next, as buttons under the reply, for example "How does the AI check its answers?" after a general answer about how answerLoops works. Tapping one sends it as the visitor's next question. On Pro and above, turn them on or off with **Suggest follow-up questions** in **Settings → Widget → Widget appearance**. They are on by default.
+
+- **Only questions your knowledge base can answer.** Before a suggestion is shown, answerLoops checks that your knowledge base has an article that closely matches it. A suggestion that would lead to "I don't have that information" is dropped, and if fewer than two remain, none are shown.
+- **Not on every reply.** The assistant offers them only when there is a natural next question. A short factual answer, a pointer to contact or support, an "I don't know" and a reply that already has a card get none.
+- **Only the newest reply's.** The buttons disappear as soon as the visitor taps one, starts typing or sends their own message, and they never come back in a conversation restored from an earlier visit.
+- **Plain text, in the chat's own look.** The questions use the same buttons as quick replies, in your brand color, and are shown as plain text.
+
+On Standard the switch is shown locked and the chat never offers follow-up questions. Turning the switch off, or a plan without it, means the assistant is not told about the feature at all.
+
+## Flagging an answer
+
+On Pro and above, each answer in the chat has a thumbs-up and a thumbs-down under it, so a visitor can say when an answer helped or when it was wrong, even if it cited one of your articles.
+
+- **Thumbs-up** is one tap and nothing else is asked.
+- **Thumbs-down** is saved the moment it is tapped, so it counts even if the visitor goes no further. A short panel then asks what went wrong (wrong information, out of date, didn't answer my question, or something else), with an optional note.
+- **An email, only if you allow it.** When **Settings → Widget → Ask for an email** is anything other than **Never**, the panel also offers an optional field: "Want someone to follow up? Leave your email." The address is saved as a lead, the same as any other lead, and is not tied to the question. With **Never** the field is not shown, and a server that is sent an address anyway refuses it.
+- **Each answer once.** After a visitor flags an answer the thumbs are replaced by a short thank-you. A conversation restored from an earlier visit, and your own preview of the widget, show no thumbs.
+
+### What is saved with a flag
+
+A flag keeps the question the visitor asked, the reply they were given, which of your articles were supplied to that reply, the reason and the note. It does not keep who the visitor is. The question and reply are never taken from the visitor's browser at the time of the flag: the widget gets a short-lived signed reference to the answer the server recorded for that turn, with the question and reply inside it, and sends it back when the visitor flags, and the server checks it before saving. A made-up or altered reference is refused and nothing is saved. Email addresses, phone numbers and long digit runs in the saved text are replaced with markers, and the text is cleared 90 days after the flag was made (the flag, its reason and the articles it cited stay). Treat the note as customer-supplied text that may contain personal details.
+
+A workspace can collect at most 200 flags a day.
+
+<Callout type="warn" title="Architecture: the answer reference is single-instance only">
+  The signed reference is minted from a short note the application server keeps in memory about each turn, the same note the on-failure check reads. If your deployment runs more than one application instance behind a load balancer (self-hosters scaling horizontally; this does not apply to the standard answerLoops Cloud deployment), the visitor's follow-up lookup can land on a different instance than the one that answered. That answer then shows no thumbs. Nothing errors and the conversation is unaffected.
+</Callout>
 
 ## Rich answer cards
 
@@ -298,13 +412,15 @@ The lead-capture endpoint, used when a visitor leaves an email address, is limit
 
 The on-failure check — a small lookup the widget makes right after a turn finishes, to decide whether to show the lead-capture prompt — is limited at **100/minute per token** and **20/minute per visitor**, the same shape as the chat endpoint next to it.
 
+The answer-flag endpoint, used when a visitor flags an answer and adds a reason or an email, is limited at **60/minute per token** and **10/minute per visitor**, with a 32KB body cap. A workspace can collect at most **200 flags a day**. A flag can only be made on an answer the widget really gave, and the question and reply stored with it have emails, phone numbers and long digit runs replaced, and are cleared after 90 days.
+
 Requests over these limits return `429 Too Many Requests`. The chat and lead-capture limits are enforced across every running instance rather than per process, so those numbers are the real ceiling. The on-failure check is the one exception — see the single-instance callout under Lead capture above. None of these limits are currently configurable.
 
-Separately from rate limits, every widget answer counts toward your plan's monthly deflection allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
+Separately from rate limits, every widget answer counts toward your plan's monthly AI reply allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
 
 ## What the widget can and cannot reach
 
-It answers from your **knowledge base** — published articles only. It does not read your ticket queue, and it has no access to settings, billing, or team data either; the embed token grants none of those.
+It answers from your **knowledge base** — published articles only, and with the widget set to [answer only from your knowledge base](#what-the-widget-answers-from) it uses nothing else. It does not read your ticket queue, and it has no access to settings, billing, or team data either; the embed token grants none of those.
 
 Treat knowledge base contents as visible to anyone who can use the widget. If you have ingested internal documentation, review it before making the widget public.
 

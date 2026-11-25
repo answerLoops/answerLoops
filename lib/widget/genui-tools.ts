@@ -4,6 +4,7 @@ import {
   calloutSchema,
   choicesSchema,
   contactSchema,
+  followUpsSchema,
   linkCardSchema,
   safeContactHref,
   safeHttpsUrl,
@@ -49,12 +50,26 @@ const refused: GenuiResult<never> = { ok: false }
 
 const USAGE = `Use at most one component per reply, only when it is clearly clearer than plain text, and keep any accompanying text to a sentence or two.`
 
+export interface GenuiToolOptions {
+  /**
+   * Present only when follow-up suggestions are available for this workspace:
+   * without it the show_follow_ups tool does not exist, so the assistant cannot
+   * call it. `ground` keeps the suggestions the knowledge base can answer
+   * (lib/widget/follow-ups.ts) and returns none when fewer than two qualify.
+   */
+  followUps?: { ground: (labels: string[]) => Promise<string[]> }
+}
+
 /**
  * @param groundedText the knowledge-base context block the answer is built
- *   from — the only source links and contact details may come from.
+ *   from — the only source links and contact details may come from. Pass a
+ *   function when the context can grow during the turn (the model's own
+ *   searches add articles); it is read again on every card call, so a link
+ *   from an article found mid-turn is allowed and nothing else is.
  */
-export function buildGenuiTools(groundedText: string) {
-  const grounded = makeGroundingCheck(groundedText)
+export function buildGenuiTools(groundedText: string | (() => string), options: GenuiToolOptions = {}) {
+  const grounding = () => makeGroundingCheck(typeof groundedText === 'function' ? groundedText() : groundedText)
+  const followUps = options.followUps
 
   return {
     [GENUI_TOOL_NAMES.steps]: createTool({
@@ -85,7 +100,7 @@ export function buildGenuiTools(groundedText: string) {
       execute: async (input) => {
         const parsed = linkCardSchema.parse(input)
         const url = safeHttpsUrl(parsed.url)
-        if (!url || !grounded.url(parsed.url)) return refused
+        if (!url || !grounding().url(parsed.url)) return refused
         return ok({ ...parsed, url })
       },
     }),
@@ -96,6 +111,7 @@ export function buildGenuiTools(groundedText: string) {
       inputSchema: contactSchema,
       execute: async (input) => {
         const parsed = contactSchema.parse(input)
+        const grounded = grounding()
         const options = parsed.options.filter((o) => {
           if (!safeContactHref(o.kind, o.value)) return false
           if (o.kind === 'email') return grounded.email(o.value)
@@ -106,5 +122,22 @@ export function buildGenuiTools(groundedText: string) {
         return ok({ ...parsed, options })
       },
     }),
+
+    // Only when the workspace has follow-up suggestions available (see options).
+    ...(followUps
+      ? {
+          [GENUI_TOOL_NAMES.followUps]: createTool({
+            id: GENUI_TOOL_NAMES.followUps,
+            description: `Show two or three short questions the visitor might ask next, as tappable buttons, after a helpful answer. Only suggest questions the knowledge base context can answer; any others are discarded. Never after a short factual answer, a refusal, an "I don't know", a contact or support answer, or in a reply that already has another card. ${USAGE}`,
+            inputSchema: followUpsSchema,
+            execute: async (input: unknown) => {
+              const parsed = followUpsSchema.parse(input)
+              const kept = await followUps.ground(parsed.questions.map((q) => q.label))
+              if (kept.length < 2) return refused
+              return ok({ ...(parsed.prompt ? { prompt: parsed.prompt } : {}), questions: kept.map((label) => ({ label })) })
+            },
+          }),
+        }
+      : {}),
   }
 }

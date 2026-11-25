@@ -631,9 +631,12 @@
   padding-bottom: 2rem;
   color: #6b6b6b;
 }
+/* Fill the card width before wrapping. The site-wide balanced wrap splits a
+   step title into two half-width lines, which reads as a cramped column. */
 .marketing-workflow-step h3 {
   font-size: 1.2rem;
   max-width: none;
+  text-wrap: wrap;
 }
 /* The avatar sits inside the eyebrow so each step keeps three children for
    the subgrid rows below. */
@@ -786,57 +789,6 @@
   color: #a4a4a4;
   font-size: 0.6875rem;
 }
-.capability-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border: 1px solid var(--marketing-border);
-  border-radius: 8px;
-  overflow: hidden;
-  background: #fff;
-}
-.capability-card {
-  padding: 2.5rem;
-  min-width: 0;
-}
-.capability-card:nth-child(odd) {
-  border-right: 1px solid var(--marketing-border);
-}
-.capability-card:nth-child(n + 3) {
-  border-top: 1px solid var(--marketing-border);
-}
-.capability-top {
-  display: flex;
-  justify-content: space-between;
-  color: #636363;
-  margin-bottom: 2rem;
-}
-.capability-top span {
-  color: var(--marketing-muted);
-  font:
-    0.75rem ui-monospace,
-    monospace;
-}
-.capability-card h3 {
-  font-size: 1.35rem;
-  font-weight: 500;
-}
-.capability-card > p {
-  color: var(--marketing-muted);
-  margin-top: 1rem;
-  max-width: 32rem;
-}
-.capability-detail {
-  font:
-    0.625rem ui-monospace,
-    monospace;
-  color: var(--marketing-muted);
-  margin: 1.5rem 0;
-  padding: 1rem;
-  background: var(--marketing-soft);
-  border: 1px dashed var(--marketing-border);
-  border-radius: 3px;
-  letter-spacing: 0.06em;
-}
 .marketing-section-heading-center {
   grid-template-columns: 1fr;
   text-align: center;
@@ -881,45 +833,29 @@
     padding: 1.5rem;
   }
 }
-.deployment-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
+/* Home page: one line for buyers who need more than a standard plan. */
+.marketing-site .marketing-section.sales-strip-section {
+  padding-block: clamp(2.5rem, 5vw, 3.5rem);
+  background: var(--marketing-sand);
+  border-block: 1px solid #e5dac6;
 }
-.deployment-grid article {
-  padding: 2.5rem;
-  background: #ffffff;
-  border: 1px solid var(--marketing-border);
-  border-radius: 8px;
-}
-.deployment-symbol {
-  display: block;
-  color: var(--marketing-muted);
-  margin-bottom: 2rem;
-}
-.deployment-grid h3 {
-  font-size: 1.4rem;
-  font-weight: 500;
-}
-.deployment-grid p {
-  color: var(--marketing-muted);
-  margin: 1rem 0 1.5rem;
-}
-.enterprise-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem 2rem;
-  margin-top: 2rem;
-  color: var(--marketing-muted);
-  font-size: 0.8125rem;
-}
-.enterprise-line a {
-  color: #4c4c4c;
-}
-.hosting-enterprise-actions {
+.sales-strip {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem 2rem;
+}
+.sales-strip h2 {
+  font-size: clamp(1.375rem, 2.2vw, 1.75rem);
+}
+.sales-strip p {
+  margin-top: 0.5rem;
+  color: var(--marketing-muted);
+}
+.sales-strip-actions {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 .marketing-site > header {
@@ -1003,29 +939,9 @@
   .marketing-workflow-step .marketing-eyebrow {
     padding-bottom: 0.8rem;
   }
-  .mcp-grid,
-  .capability-grid,
-  .deployment-grid {
+  .mcp-grid {
     grid-template-columns: 1fr;
     gap: 2rem;
-  }
-  .capability-grid {
-    gap: 0;
-  }
-  .capability-card,
-  .deployment-grid article {
-    padding: 1.6rem;
-  }
-  .capability-card:nth-child(odd) {
-    border-right: 0;
-  }
-  .capability-card + .capability-card {
-    border-top: 1px solid var(--marketing-border);
-  }
-  .capability-detail {
-    font-size: 0.6rem;
-    padding: 0.85rem 0.6rem;
-    letter-spacing: 0;
   }
   .marketing-cta {
     padding: 3.5rem 0;
@@ -1074,8 +990,7 @@
 .agent-run figcaption,
 .hero-bottom-line,
 .terminal-bar,
-.terminal-endpoint span,
-.capability-detail {
+.terminal-endpoint span {
   font-size: 0.75rem;
 }
 .agent-checks,
@@ -1091,9 +1006,6 @@
   }
   .hero-bottom-line {
     font-size: 0.65rem;
-  }
-  .capability-detail {
-    font-size: 0.6875rem;
   }
 }
 
@@ -1606,26 +1518,27 @@
   line-height: 1.4;
 }
 .marketing-button-hero {
-  min-height: 3.25rem;
-  padding: 0.85rem 1.35rem;
-  font-size: 1rem;
+  min-height: 3.5rem;
+  padding: 0.95rem 1.9rem;
+  font-size: 1.0625rem;
+}
+.marketing-button-hero svg {
+  transition: transform 0.15s;
+}
+.marketing-button-hero:hover svg {
+  transform: translateX(3px);
+}
+/* The home hero's trial button stays full size on phones; the generic hero
+   action rule shrinks every button there. */
+@media (max-width: 767px) {
+  .marketing-home-hero .marketing-actions .marketing-button-hero {
+    min-height: 3.25rem;
+    font-size: 0.9375rem;
+  }
 }
 @media (min-width: 768px) {
   #features .marketing-section-heading {
     margin-bottom: 2rem;
-  }
-  #features .capability-card {
-    padding: 1.75rem 2rem;
-  }
-  #features .capability-top {
-    margin-bottom: 1.25rem;
-  }
-  #features .capability-card > p {
-    margin-top: 0.75rem;
-  }
-  #features .capability-detail {
-    margin: 1rem 0;
-    padding: 0.75rem 1rem;
   }
 }
 .marketing-site > main:has(.marketing-home-hero) {
@@ -1884,7 +1797,7 @@
 .marketing-home-grid.home-hero-stacked {
   grid-template-areas: 'copy' 'overview';
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.5rem;
+  gap: 2.75rem;
   padding-bottom: 2.5rem;
 }
 .home-hero-stacked .home-hero-copy {
@@ -1897,22 +1810,30 @@
   margin-inline: auto;
   font-size: clamp(2.25rem, 4.2vw, 3.25rem);
 }
-.marketing-home-hero .home-hero-stacked .marketing-eyebrow {
-  margin-bottom: 0.75rem;
-}
 .marketing-home-hero .home-hero-stacked .marketing-intro {
-  margin-top: 0.75rem;
+  margin-top: 1rem;
+}
+@media (min-width: 768px) {
+  .marketing-home-hero .home-hero-stacked .marketing-intro {
+    font-size: 1.125rem;
+  }
 }
 .marketing-home-hero .home-hero-stacked .marketing-actions {
-  margin-top: 1.1rem;
+  margin-top: 1.5rem;
 }
-.home-hero-stacked .hero-positioning,
 .home-hero-stacked .marketing-actions {
   justify-content: center;
 }
 .home-hero-stacked .marketing-intro {
   margin-inline: auto;
-  max-width: 50rem;
+  max-width: 38rem;
+  text-wrap: balance;
+}
+/* Desktop: the sub text is one sentence and should read as one line. */
+@media (min-width: 768px) {
+  .home-hero-stacked .marketing-intro {
+    max-width: none;
+  }
 }
 .home-hero-stacked .marketing-note {
   margin-inline: auto;
@@ -2356,16 +2277,13 @@
 }
 /* Wide but short windows (laptops at 768-800px tall, browser panes): tighten
    the hero so the step cards and the text under their titles are visible
-   without scrolling. The eyebrow is the one decorative line it drops. */
+   without scrolling. */
 @media (min-width: 900px) and (max-height: 820px) {
   .marketing-site .marketing-home-hero:has(> .home-hero-stacked) {
     padding-top: 1rem;
   }
   .marketing-home-grid.home-hero-stacked {
-    gap: 1rem;
-  }
-  .marketing-home-hero .home-hero-stacked .hero-positioning {
-    display: none;
+    gap: 1.5rem;
   }
   .home-hero-stacked .home-hero-copy h1 {
     font-size: clamp(2rem, 3.4vw, 2.75rem);
@@ -2419,4 +2337,732 @@
   .loop-step:not(:last-child)::after {
     animation: none;
   }
+}
+
+/* Home page product tour: one row per feature, copy beside a real product
+   screenshot, alternating sides on desktop and stacking copy-first on phones. */
+.feature-showcase {
+  display: grid;
+  gap: clamp(3rem, 7vw, 5.5rem);
+}
+.feature-showcase-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.75rem;
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .feature-showcase-row {
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    gap: 3rem;
+  }
+  .feature-showcase-row[data-flip] {
+    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+  }
+  .feature-showcase-row[data-flip] .feature-showcase-copy {
+    order: 2;
+  }
+}
+.feature-showcase-copy h3 {
+  font-size: clamp(1.5rem, 2.4vw, 2rem);
+  line-height: 1.15;
+  text-wrap: wrap;
+}
+.feature-showcase-copy > p {
+  margin: 1rem 0 1.25rem;
+  color: var(--marketing-muted);
+  line-height: 1.65;
+}
+.feature-showcase-shot {
+  overflow: hidden;
+  border: 1px solid var(--marketing-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 50px -24px rgba(8, 46, 80, 0.28);
+}
+.feature-showcase-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Mid-page call to action, between the product tour and the AI-tools section. */
+.mid-cta {
+  padding-block: clamp(2.5rem, 5vw, 3.5rem);
+  background: var(--marketing-navy);
+  color: #fff;
+}
+.mid-cta-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem 2rem;
+}
+.marketing-site .mid-cta h2 {
+  color: #fff;
+  font-size: clamp(1.5rem, 2.6vw, 2.125rem);
+}
+.mid-cta p {
+  margin-top: 0.5rem;
+  color: #c7d6e3;
+  font-size: 0.9375rem;
+}
+.marketing-site .mid-cta .marketing-button.marketing-button-hero {
+  background: #fff;
+  color: var(--marketing-navy);
+  -webkit-text-fill-color: var(--marketing-navy);
+  border: 1px solid #fff;
+}
+.marketing-site .mid-cta .marketing-button.marketing-button-hero:hover {
+  background: #e7f2f4;
+}
+@media (max-width: 767px) {
+  .mid-cta .marketing-button-hero {
+    width: 100%;
+  }
+}
+
+/* Website chat section: copy and a numbered list beside a picture of the
+   widget open on a docs page. Deliberately not the card grid used by the
+   verified-answers section right after it. */
+.chat-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: center;
+}
+@media (min-width: 960px) {
+  .chat-section {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+    gap: 4rem;
+  }
+}
+.chat-section-copy h2 {
+  margin-top: 0.75rem;
+}
+.chat-section-lead {
+  margin-top: 1rem;
+  color: var(--marketing-muted);
+  line-height: 1.65;
+}
+.chat-steps {
+  display: grid;
+  gap: 1.1rem;
+  margin: 1.75rem 0 1.25rem;
+}
+.chat-steps li {
+  display: flex;
+  gap: 0.9rem;
+}
+.chat-steps-number {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: var(--marketing-navy);
+  color: #fff;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.chat-steps h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  text-wrap: wrap;
+}
+.chat-steps p {
+  margin-top: 0.2rem;
+  color: var(--marketing-muted);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.chat-steps-miss {
+  margin-bottom: 1.25rem;
+  border-left: 3px solid #e5dac6;
+  padding-left: 0.9rem;
+  color: var(--marketing-muted);
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+.chat-steps-miss strong {
+  color: var(--marketing-navy);
+}
+
+.chat-mock {
+  --chat-brand: #168fa3;
+  margin: 0;
+}
+.chat-mock-browser {
+  position: relative;
+  overflow: hidden;
+  min-height: 30rem;
+  border: 1px solid var(--marketing-border);
+  border-radius: 14px;
+  background: #f8fafc;
+  box-shadow: 0 24px 50px -24px rgba(8, 46, 80, 0.28);
+}
+.chat-mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--marketing-border);
+  background: #fff;
+  padding: 0.6rem 0.9rem;
+}
+.chat-mock-bar span {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 999px;
+  background: #d5dde6;
+}
+.chat-mock-bar p {
+  margin-left: 0.6rem;
+  flex: 1;
+  border-radius: 6px;
+  background: #f1f4f8;
+  padding: 0.2rem 0.6rem;
+  color: #64748b;
+  font-size: 0.6875rem;
+}
+.chat-mock-page {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1.5rem 1.5rem 0;
+  max-width: 52%;
+}
+.chat-mock-page-title {
+  margin-bottom: 0.4rem;
+  color: var(--marketing-navy);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.chat-mock-page i {
+  display: block;
+  height: 0.45rem;
+  border-radius: 4px;
+  background: #e2e8f0;
+}
+.chat-mock-page .chat-mock-page-gap {
+  margin-top: 0.6rem;
+}
+.chat-mock-panel {
+  position: absolute;
+  right: 1rem;
+  bottom: 4.25rem;
+  display: flex;
+  flex-direction: column;
+  width: min(19.5rem, calc(100% - 2rem));
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 40px -12px rgba(8, 46, 80, 0.3);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #1f2937;
+}
+.chat-mock-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.65rem 0.85rem;
+}
+.chat-mock-head p {
+  font-weight: 600;
+  color: #111827;
+}
+.chat-mock-head .chat-mock-online {
+  font-size: 0.625rem;
+  font-weight: 500;
+  color: #22c55e;
+}
+.chat-mock-avatar,
+.chat-mock-bubble,
+.chat-mock-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--chat-brand);
+  color: #fff;
+}
+.chat-mock-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+.chat-mock-thread {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.85rem;
+}
+.chat-mock-visitor {
+  justify-self: end;
+  max-width: 85%;
+  border-radius: 14px 14px 4px 14px;
+  background: var(--chat-brand);
+  padding: 0.45rem 0.7rem;
+  color: #fff;
+}
+.chat-mock-answer {
+  justify-self: start;
+  max-width: 88%;
+  border-radius: 14px 14px 14px 4px;
+  background: #f3f4f6;
+  padding: 0.45rem 0.7rem;
+}
+.chat-mock-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 0.6rem 0.7rem;
+}
+.chat-mock-card-title {
+  font-weight: 600;
+  color: #111827;
+}
+.chat-mock-card ol {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.4rem;
+  padding-left: 1rem;
+  list-style: decimal;
+  color: #4b5563;
+}
+.chat-mock-card code {
+  border-radius: 4px;
+  background: #f3f4f6;
+  padding: 0 0.25rem;
+  font-size: 0.6875rem;
+}
+.chat-mock-host {
+  font-size: 0.625rem;
+  color: #9ca3af;
+}
+.chat-mock-link span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.3rem;
+  font-weight: 500;
+  color: var(--chat-brand);
+}
+.chat-mock-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #f9fafb;
+  padding: 0.3rem 0.3rem 0.3rem 0.85rem;
+  color: #9ca3af;
+}
+.chat-mock-send {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+.chat-mock-powered {
+  padding: 0.4rem 0 0.55rem;
+  text-align: center;
+  font-size: 0.5625rem;
+  color: #cbd5e1;
+}
+.chat-mock-bubble {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  box-shadow: 0 8px 20px -6px rgba(22, 143, 163, 0.6);
+}
+@media (max-width: 559px) {
+  .chat-mock-browser {
+    min-height: 31rem;
+  }
+  .chat-mock-page {
+    max-width: none;
+  }
+  .chat-mock-panel {
+    right: 0.75rem;
+    left: 0.75rem;
+    width: auto;
+  }
+}
+
+/* Who it's for: a compact reference list near the end of the page, not a
+   wall of cards competing with the product sections above it. */
+.marketing-site #who-its-for.audience-section {
+  padding-block: clamp(3.5rem, 7vw, 5rem);
+}
+.audience-heading {
+  max-width: 40rem;
+  margin-bottom: 2.5rem;
+}
+.audience-heading p {
+  margin-top: 0.75rem;
+  color: var(--marketing-muted);
+  line-height: 1.6;
+}
+.marketing-site #who-its-for .audience-grid {
+  gap: 0 3rem;
+}
+.marketing-site #who-its-for .audience-card {
+  display: flex;
+  gap: 1rem;
+  border: 0;
+  border-top: 1px solid var(--marketing-border);
+  border-radius: 0;
+  background: transparent;
+  padding: 1.5rem 0;
+}
+.marketing-site #who-its-for .audience-icon {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin-bottom: 0;
+}
+.marketing-site #who-its-for .audience-card h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  text-wrap: wrap;
+}
+.marketing-site #who-its-for .audience-card p {
+  margin-top: 0.35rem;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+/* Layered 3D: the browser tilts back, the widget panel floats in front of it
+   and overhangs the frame, so it is never clipped by the page behind. */
+.chat-mock {
+  padding: 1.5rem 2.5rem 2.5rem 0;
+  perspective: 1800px;
+}
+.chat-mock-stage {
+  position: relative;
+  transform: rotateY(-9deg) rotateX(4deg);
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease;
+}
+.chat-mock:hover .chat-mock-stage {
+  transform: rotateY(-4deg) rotateX(2deg);
+}
+.chat-mock-browser {
+  min-height: 34rem;
+}
+.chat-mock-panel {
+  top: -1.25rem;
+  right: -2.5rem;
+  bottom: auto;
+  transform: translateZ(70px);
+  box-shadow:
+    0 40px 70px -20px rgba(8, 46, 80, 0.45),
+    0 12px 24px -12px rgba(8, 46, 80, 0.25);
+}
+.chat-mock-bubble {
+  right: -2.5rem;
+  bottom: -1.25rem;
+  transform: translateZ(90px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-mock-stage {
+    transition: none;
+  }
+}
+@media (max-width: 559px) {
+  .chat-mock {
+    padding: 0;
+    perspective: none;
+  }
+  .chat-mock-stage {
+    transform: none;
+  }
+  .chat-mock:hover .chat-mock-stage {
+    transform: none;
+  }
+  .chat-mock-browser {
+    min-height: 13rem;
+  }
+  .chat-mock-panel {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    width: auto;
+    margin: -6rem 0.75rem 0;
+    transform: none;
+  }
+  /* An open panel fills a phone screen, so the launcher is not shown. */
+  .chat-mock-bubble {
+    display: none;
+  }
+}
+
+/* Verified answers: same copy-and-picture rhythm as website chat, mirrored,
+   with a ticket card and the Review agent's verdict layered over it. */
+@media (min-width: 960px) {
+  .chat-section.chat-section-flip {
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  }
+  .chat-section-flip .chat-section-copy {
+    order: 2;
+  }
+}
+.verify-mock {
+  margin: 0;
+  padding: 0 2.5rem 4rem 0;
+  perspective: 1800px;
+}
+.verify-mock-stage {
+  position: relative;
+  transform: rotateY(9deg) rotateX(4deg);
+  transform-style: preserve-3d;
+  transition: transform 0.6s ease;
+}
+.verify-mock:hover .verify-mock-stage {
+  transform: rotateY(4deg) rotateX(2deg);
+}
+.verify-mock-card {
+  overflow: hidden;
+  border: 1px solid var(--marketing-border);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 50px -24px rgba(8, 46, 80, 0.28);
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: #1f2937;
+}
+.verify-mock-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border-bottom: 1px solid #eef2f6;
+  padding: 0.75rem 1.1rem;
+}
+.verify-mock-channel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 600;
+  color: #5865f2;
+}
+.verify-mock-status {
+  border-radius: 999px;
+  background: #fff7e6;
+  padding: 0.15rem 0.6rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: #9a6400;
+}
+.verify-mock-question {
+  display: flex;
+  gap: 0.7rem;
+  padding: 1rem 1.1rem 0.75rem;
+}
+.verify-mock-avatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: #e0e7ff;
+  font-weight: 700;
+  color: #4338ca;
+}
+.verify-mock-author {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #111827;
+}
+.verify-mock-draft {
+  margin: 0.25rem 1.1rem 0;
+  border: 1px solid #cdeaee;
+  border-radius: 10px;
+  background: #f1fafb;
+  padding: 0.8rem 0.9rem;
+}
+.verify-mock-label {
+  margin-bottom: 0.3rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: #0f6f80;
+}
+.verify-mock-draft sup {
+  margin-left: 0.1rem;
+  font-weight: 700;
+  color: #0f6f80;
+}
+.verify-mock-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.6rem;
+}
+.verify-mock-sources li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid #cdeaee;
+  border-radius: 999px;
+  background: #fff;
+  padding: 0.1rem 0.55rem 0.1rem 0.2rem;
+  font-size: 0.6875rem;
+  color: #334155;
+}
+.verify-mock-sources li span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: #0f6f80;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: #fff;
+}
+.verify-mock-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 1.1rem 1.1rem;
+}
+.verify-mock-actions span {
+  border: 1px solid var(--marketing-border);
+  border-radius: 8px;
+  padding: 0.3rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+}
+.verify-mock-actions .verify-mock-approve {
+  border-color: var(--marketing-navy);
+  background: var(--marketing-navy);
+  color: #fff;
+}
+.verify-mock-review {
+  position: absolute;
+  bottom: -3.5rem;
+  right: -2.5rem;
+  width: min(15.5rem, 70%);
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #fff;
+  padding: 0.85rem 0.95rem;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #1f2937;
+  transform: translateZ(70px);
+  box-shadow:
+    0 40px 70px -20px rgba(8, 46, 80, 0.45),
+    0 12px 24px -12px rgba(8, 46, 80, 0.25);
+}
+.verify-mock-review-head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.verify-mock-shield {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 999px;
+  background: var(--marketing-navy);
+  color: #fff;
+}
+.verify-mock-review-title {
+  font-weight: 700;
+  color: #111827;
+}
+.verify-mock-review-sub {
+  font-size: 0.6875rem;
+  color: #64748b;
+}
+.verify-mock-checks {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0.7rem 0;
+}
+.verify-mock-checks li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #334155;
+}
+.verify-mock-checks svg {
+  flex-shrink: 0;
+  color: #16a34a;
+}
+.verify-mock-meter div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6875rem;
+  color: #64748b;
+}
+.verify-mock-meter strong {
+  color: #15803d;
+}
+.verify-mock-meter i {
+  display: block;
+  height: 0.4rem;
+  margin-top: 0.3rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e2e8f0;
+}
+.verify-mock-meter b {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: #22c55e;
+}
+@media (prefers-reduced-motion: reduce) {
+  .verify-mock-stage {
+    transition: none;
+  }
+}
+@media (max-width: 559px) {
+  .verify-mock {
+    padding: 0;
+    perspective: none;
+  }
+  .verify-mock-stage,
+  .verify-mock:hover .verify-mock-stage {
+    transform: none;
+  }
+  .verify-mock-review {
+    position: relative;
+    bottom: auto;
+    right: auto;
+    width: auto;
+    margin: -0.5rem 0.75rem 0;
+    transform: none;
+  }
+}
+@media (max-width: 639px) {
+  .marketing-site #who-its-for .audience-card {
+    padding: 1.1rem 0;
+  }
+}
+
+/* The fake address bar truncates instead of being cut off mid-character. */
+.chat-mock-bar p {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* The tilted mock-ups overhang their frame by design; keep that overhang from
+   widening the page when the section is a single column. */
+.marketing-site #website-chat,
+.marketing-site #how-it-works {
+  overflow-x: clip;
 }

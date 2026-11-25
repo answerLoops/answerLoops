@@ -5,6 +5,7 @@ import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { Modal } from '@/components/ui/modal'
 import type { KBArticle, KBSearchResult, KBSource, GitHubRepo } from '@/types'
 import { describeAge, isResolution, sortBySaved, type ArticleSortOrder } from '@/lib/kb/resolution-age'
 import { ingestUrlAction } from '@/lib/actions/ingest-url'
@@ -12,13 +13,16 @@ import type { IngestUrlResult } from '@/lib/actions/ingest-url'
 import { runKbSync } from '@/lib/kb/sync-client'
 import { NotionKBSection } from '@/components/dashboard/notion-kb-section'
 import { AddKnowledgeSection, type KnowledgeDraft } from '@/components/dashboard/add-knowledge-section'
+import { WRITE_ANSWER_INTRO } from '@/components/dashboard/write-answer-copy'
 import { getTicketDraftAction } from '@/lib/actions/kb'
 import { CoverageTab } from './coverage-tab'
 import { ArticleAnswers } from '@/components/dashboard/article-answers'
 import { ArticleHistory } from '@/components/dashboard/article-history'
 import { ArticleVerificationControl } from '@/components/dashboard/article-verification'
 import { ReviewTab } from './review-tab'
+import { FlagsTab } from './flags-tab'
 import type { ReviewCounts } from '@/lib/db/queries/kb-review'
+import type { FlagCounts } from '@/lib/db/queries/widget-answer-flags'
 
 type Article = KBArticle | KBSearchResult
 
@@ -103,18 +107,89 @@ function DeleteError({ message }: { message: string | null }) {
   )
 }
 
-function SourcesList({ onDeleted }: { onDeleted: () => void }) {
+/** GitHub repos that feed the knowledge base, with a way to re-sync each one. */
+function useGitHubSync(onSynced: () => void) {
+  const [repos, setRepos] = useState<GitHubRepo[]>([])
+  const [syncingId, setSyncingId] = useState<number | null>(null)
+  const [syncLabel, setSyncLabel] = useState<string>('Syncing…')
+  const [toast, setToast] = useState<string | null>(null)
+
+  const loadRepos = useCallback(() => {
+    fetch('/api/github/repos')
+      .then((r) => r.ok ? r.json() : [])
+      .then((all: GitHubRepo[]) => setRepos(all.filter((r) => r.kb_enabled === 1)))
+      .catch(() => setRepos([]))
+  }, [])
+
+  useEffect(() => { loadRepos() }, [loadRepos])
+
+  const stoppedRef = useRef(false)
+  useEffect(() => () => { stoppedRef.current = true }, [])
+
+  const sync = async (repo: GitHubRepo) => {
+    stoppedRef.current = false
+    setSyncingId(repo.id)
+    setSyncLabel('Queued…')
+    const result = await runKbSync(
+      `/api/github/sync-kb?repo_id=${repo.id}`,
+      `/api/kb/sync-jobs?kind=github_repo&repo_id=${repo.id}`,
+      setSyncLabel,
+      () => stoppedRef.current,
+    )
+    setToast(`${repo.owner}/${repo.repo}: ${result.detail}`)
+    if (result.ok) {
+      onSynced()
+      loadRepos()
+    }
+    setSyncingId(null)
+    setTimeout(() => setToast(null), 5000)
+  }
+
+  return { repos, syncingId, syncLabel, toast, sync }
+}
+
+type GitHubSync = ReturnType<typeof useGitHubSync>
+
+const SOURCE_FILTERS = [
+  { id: 'all', label: 'All' },
+  { id: 'files', label: 'Files' },
+  { id: 'urls', label: 'URLs' },
+  { id: 'github', label: 'GitHub' },
+  { id: 'notion', label: 'Notion' },
+] as const
+type SourceFilterId = (typeof SOURCE_FILTERS)[number]['id']
+
+function sourceGroup(fileType: string): Exclude<SourceFilterId, 'all'> {
+  if (fileType === 'url') return 'urls'
+  if (fileType === 'notion') return 'notion'
+  if (fileType === 'github' || fileType === 'github-discussion') return 'github'
+  return 'files'
+}
+
+function SourcesList({
+  onDeleted,
+  onLoaded,
+  github,
+}: {
+  onDeleted: () => void
+  onLoaded: (sources: KBSource[]) => void
+  github: GitHubSync
+}) {
   const [sources, setSources] = useState<KBSource[]>([])
+  const [filter, setFilter] = useState<SourceFilterId>('all')
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [confirmBulk, setConfirmBulk] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const onLoadedRef = useRef(onLoaded)
+  useEffect(() => { onLoadedRef.current = onLoaded })
 
   async function load() {
     const data = await fetchKbSources()
     if (data) {
       setSources(data)
       setSelected(new Set())
+      onLoadedRef.current(data)
     }
   }
 
@@ -124,15 +199,17 @@ function SourcesList({ onDeleted }: { onDeleted: () => void }) {
       if (cancelled || !data) return
       setSources(data)
       setSelected(new Set())
+      onLoadedRef.current(data)
     })
     return () => { cancelled = true }
   }, [])
 
-  const allChecked = sources.length > 0 && selected.size === sources.length
+  const visible = filter === 'all' ? sources : sources.filter((s) => sourceGroup(s.file_type) === filter)
+  const allChecked = visible.length > 0 && visible.every((s) => selected.has(s.id))
   const someChecked = selected.size > 0
 
   function toggleAll() {
-    setSelected(allChecked ? new Set() : new Set(sources.map(s => s.id)))
+    setSelected(allChecked ? new Set() : new Set(visible.map((s) => s.id)))
   }
 
   function toggleOne(id: number) {
@@ -164,13 +241,16 @@ function SourcesList({ onDeleted }: { onDeleted: () => void }) {
   if (sources.length === 0) return null
 
   const selectedChunks = sources.filter(s => selected.has(s.id)).reduce((n, s) => n + s.chunk_count, 0)
+  const presentGroups = new Set(sources.map((s) => sourceGroup(s.file_type)))
+  const filters = SOURCE_FILTERS.filter((f) => f.id === 'all' || presentGroups.has(f.id))
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white">
-      <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between gap-3">
+      <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
           <input
             type="checkbox"
+            aria-label="Select all sources"
             checked={allChecked}
             ref={el => { if (el) el.indeterminate = someChecked && !allChecked }}
             onChange={toggleAll}
@@ -180,7 +260,7 @@ function SourcesList({ onDeleted }: { onDeleted: () => void }) {
             Sources {someChecked && <span className="font-normal text-gray-500">({selected.size} selected)</span>}
           </h2>
         </div>
-        {someChecked && (
+        {someChecked ? (
           confirmBulk ? (
             <div className="flex items-center gap-2">
               <span className="text-xs text-red-600">Delete {selectedChunks} chunks?</span>
@@ -194,115 +274,75 @@ function SourcesList({ onDeleted }: { onDeleted: () => void }) {
               Delete selected
             </Button>
           )
+        ) : (
+          filters.length > 2 && (
+            <div className="flex gap-1" role="group" aria-label="Filter sources">
+              {filters.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  aria-pressed={filter === f.id}
+                  onClick={() => setFilter(f.id)}
+                  className={[
+                    'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                    filter === f.id ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
+                  ].join(' ')}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          )
         )}
       </div>
       {deleteError && <div className="px-4 pt-3"><DeleteError message={deleteError} /></div>}
+      {github.toast && <p role="status" className="px-4 pt-3 text-xs text-green-600">{github.toast}</p>}
       <ul className="divide-y divide-gray-100">
-        {sources.map((s) => (
-          <li key={s.id} className="flex items-center gap-3 px-4 py-3">
-            <input
-              type="checkbox"
-              checked={selected.has(s.id)}
-              onChange={() => toggleOne(s.id)}
-              className="h-3.5 w-3.5 rounded border-gray-300 accent-brand-600 cursor-pointer shrink-0"
-            />
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <FileTypeIcon type={s.file_type} />
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-gray-800 truncate">
-                    {s.file_type === 'notion' ? 'Notion workspace' : s.filename}
+        {visible.map((s) => {
+          const repo = s.file_type === 'github' ? github.repos.find((r) => `${r.owner}/${r.repo}` === s.filename) : undefined
+          return (
+            <li key={s.id} className="flex items-center gap-3 px-4 py-3">
+              <input
+                type="checkbox"
+                aria-label={`Select ${s.filename}`}
+                checked={selected.has(s.id)}
+                onChange={() => toggleOne(s.id)}
+                className="h-3.5 w-3.5 rounded border-gray-300 accent-brand-600 cursor-pointer shrink-0"
+              />
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <FileTypeIcon type={s.file_type} />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-gray-800 truncate">
+                      {s.file_type === 'notion' ? 'Notion workspace' : s.filename}
+                    </p>
+                    {s.published === 0 && (
+                      <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[0.625rem] font-medium text-amber-700">Unpublished</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {repo ? (
+                      <RepoSyncStatus repo={repo} />
+                    ) : (
+                      <>{s.chunk_count} chunk{s.chunk_count !== 1 ? 's' : ''} · {formatBytes(s.size_bytes)}</>
+                    )}
                   </p>
-                  {s.published === 0 && (
-                    <span className="shrink-0 rounded bg-amber-100 px-1.5 py-0.5 text-[0.625rem] font-medium text-amber-700">Unpublished</span>
-                  )}
                 </div>
-                <p className="text-xs text-gray-400">
-                  {s.chunk_count} chunk{s.chunk_count !== 1 ? 's' : ''} · {formatBytes(s.size_bytes)}
-                </p>
               </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-function GitHubKBSection({ onSynced }: { onSynced: () => void }) {
-  const [repos, setRepos] = useState<GitHubRepo[]>([])
-  const [syncingId, setSyncingId] = useState<number | null>(null)
-  const [syncLabel, setSyncLabel] = useState<string>('Syncing…')
-  const [toast, setToast] = useState<string | null>(null)
-
-  const loadRepos = useCallback(() => {
-    fetch('/api/github/repos')
-      .then((r) => r.ok ? r.json() : [])
-      .then((all: GitHubRepo[]) => setRepos(all.filter((r) => r.kb_enabled === 1)))
-      .catch(() => setRepos([]))
-  }, [])
-
-  useEffect(() => { loadRepos() }, [loadRepos])
-
-  const stoppedRef = useRef(false)
-  useEffect(() => () => { stoppedRef.current = true }, [])
-
-  const sync = async (repo: GitHubRepo) => {
-    stoppedRef.current = false
-    setSyncingId(repo.id)
-    setSyncLabel('Queued…')
-    const result = await runKbSync(
-      `/api/github/sync-kb?repo_id=${repo.id}`,
-      `/api/kb/sync-jobs?kind=github_repo&repo_id=${repo.id}`,
-      setSyncLabel,
-      () => stoppedRef.current,
-    )
-    if (result.ok) {
-      setToast(`${repo.owner}/${repo.repo}: ${result.detail}`)
-      onSynced()
-      loadRepos()
-    } else {
-      setToast(`${repo.owner}/${repo.repo}: ${result.detail}`)
-    }
-    setSyncingId(null)
-    setTimeout(() => setToast(null), 5000)
-  }
-
-  if (repos.length === 0) return null
-
-  return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
-      <div>
-        <h2 className="text-sm font-semibold text-gray-900">GitHub Repositories</h2>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Markdown files from these repos are synced into the knowledge base.{' '}
-          <Link href="/integrations?tab=github" className="text-brand-600 hover:underline">Manage in Integrations →</Link>
-        </p>
-      </div>
-
-      {toast && (
-        <p className="text-xs text-green-600">{toast}</p>
-      )}
-
-      <ul className="space-y-2">
-        {repos.map((repo) => (
-          <li key={repo.id} className="flex flex-wrap items-center justify-between bg-white rounded-md border border-gray-200 px-3 py-2.5 gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-gray-800 font-mono break-all">{repo.owner}/{repo.repo}</p>
-              <p className="text-xs text-gray-400">
-                <RepoSyncStatus repo={repo} />
-              </p>
-            </div>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => sync(repo)}
-              disabled={syncingId === repo.id}
-            >
-              {syncingId === repo.id ? syncLabel : 'Sync now'}
-            </Button>
-          </li>
-        ))}
+              {repo && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="shrink-0"
+                  onClick={() => github.sync(repo)}
+                  disabled={github.syncingId === repo.id}
+                >
+                  {github.syncingId === repo.id ? github.syncLabel : 'Sync now'}
+                </Button>
+              )}
+            </li>
+          )
+        })}
       </ul>
     </div>
   )
@@ -351,14 +391,7 @@ function FileUploadSection({ onImported }: { onImported: () => void }) {
   }
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
-      <div>
-        <h2 className="text-sm font-semibold text-gray-900">Upload file</h2>
-        <p className="text-xs text-gray-500 mt-0.5">
-          PDF, DOCX, MD, TXT, CSV — up to 10 MB. Each file is chunked and embedded into the knowledge base.
-        </p>
-      </div>
-
+    <div className="space-y-3">
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
@@ -455,12 +488,7 @@ function UrlIngestSection({ onImported }: { onImported: () => void }) {
   const { elapsed, phase } = useIngestProgress(pending)
 
   return (
-    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
-      <div>
-        <h2 className="text-sm font-semibold text-gray-900">Import from URL</h2>
-        <p className="text-xs text-gray-500 mt-0.5">Crawl a page or entire site and add the content to the knowledge base.</p>
-      </div>
-
+    <div className="space-y-3">
       <form action={action} className="space-y-3">
         <div className="flex flex-wrap gap-3">
           <label className="flex items-center gap-1.5 text-xs text-gray-700 cursor-pointer">
@@ -686,9 +714,10 @@ function ArticlesList({
 }
 
 const KB_TABS = [
-  { id: 'manage', label: 'Manage' },
+  { id: 'manage', label: 'Sources' },
   { id: 'coverage', label: 'Knowledge coverage' },
   { id: 'review', label: 'Review' },
+  { id: 'flags', label: 'Flagged answers' },
 ] as const
 type KBTabId = (typeof KB_TABS)[number]['id']
 
@@ -702,11 +731,26 @@ export default function KBPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const tabParam = searchParams.get('tab')
-  const activeTab: KBTabId = tabParam === 'coverage' || tabParam === 'review' ? tabParam : 'manage'
+  const activeTab: KBTabId =
+    tabParam === 'coverage' || tabParam === 'review' || tabParam === 'flags' ? tabParam : 'manage'
   // How many unseen questions are waiting in the review queue; stays null for
   // workspaces without the feature, so no badge shows.
   const [pendingReview, setPendingReview] = useState<number | null>(null)
   const handleReviewCounts = useCallback((c: ReviewCounts) => setPendingReview(c.pending), [])
+  // The same for answers visitors flagged as wrong.
+  const [openFlags, setOpenFlags] = useState<number | null>(null)
+  const handleFlagCounts = useCallback((c: FlagCounts) => setOpenFlags(c.open), [])
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/kb/flags?limit=0')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { counts?: FlagCounts } | null) => {
+        if (!cancelled && data?.counts) setOpenFlags(data.counts.open)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     let cancelled = false
@@ -768,13 +812,18 @@ export default function KBPage() {
   const [searching, setSearching] = useState(false)
   const [loading, setLoading] = useState(true)
   const [sourcesKey, setSourcesKey] = useState(0)
+  const [sourceTotals, setSourceTotals] = useState<{ sources: number; chunks: number } | null>(null)
+  const [articleCount, setArticleCount] = useState<number | null>(null)
+  const [dialog, setDialog] = useState<'write' | 'file' | 'url' | null>(null)
   const [sortOrder, setSortOrder] = useState<ArticleSortOrder>('newest')
   const [resolutionsOnly, setResolutionsOnly] = useState(false)
 
   async function loadAll() {
     setLoading(true)
     try {
-      setArticles(await fetchKbArticles())
+      const all = await fetchKbArticles()
+      setArticles(all)
+      setArticleCount(all.length)
     } finally {
       setLoading(false)
     }
@@ -788,7 +837,10 @@ export default function KBPage() {
     let cancelled = false
     fetchKbArticles()
       .then((data) => {
-        if (!cancelled) setArticles(data)
+        if (!cancelled) {
+          setArticles(data)
+          setArticleCount(data.length)
+        }
       })
       .catch(() => {})
       .finally(() => {
@@ -838,16 +890,118 @@ export default function KBPage() {
     loadAll()
   }
 
+  const github = useGitHubSync(() => { loadAll(); refreshSources() })
+  const handleSourcesLoaded = useCallback((list: KBSource[]) => {
+    setSourceTotals({ sources: list.length, chunks: list.reduce((n, s) => n + s.chunk_count, 0) })
+  }, [])
+
+  // The Sources tab reports its own totals when its list loads. On the other
+  // tabs that list is not mounted, so the counts row would stay blank; load
+  // them here instead.
+  const totalsKnown = sourceTotals !== null
+  useEffect(() => {
+    if (activeTab === 'manage' || totalsKnown) return
+    let cancelled = false
+    fetchKbSources().then((list) => {
+      if (!cancelled && list) handleSourcesLoaded(list)
+    }).catch(() => {})
+    return () => { cancelled = true }
+  }, [activeTab, totalsKnown, handleSourcesLoaded])
+
+  // A ticket draft ("+ KB" on Knowledge Gaps) opens the write dialog on its own.
+  const [openedDraft, setOpenedDraft] = useState<KnowledgeDraft | null>(null)
+  if (draft && draft !== openedDraft) {
+    setOpenedDraft(draft)
+    setDialog('write')
+  }
+
+  const stats: { label: string; value: number | null; tab?: KBTabId }[] = [
+    { label: 'Sources', value: sourceTotals?.sources ?? null },
+    { label: 'Chunks', value: sourceTotals?.chunks ?? null },
+    { label: 'Articles', value: articleCount },
+    { label: 'Needs review', value: pendingReview, tab: 'review' },
+  ]
+
   return (
     <div className="dashboard-page max-w-6xl space-y-6">
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-blue-600">
-          <span className="h-px w-6 bg-blue-500" />
-          Answer intelligence
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="mb-2 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-blue-600">
+            <span className="h-px w-6 bg-blue-500" />
+            Answer intelligence
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Knowledge Base</h1>
+          <p className="mt-1 text-sm text-slate-500">Give every channel one current, searchable source of truth.</p>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Knowledge Base</h1>
-        <p className="mt-1 text-sm text-slate-500">Give every channel one current, searchable source of truth.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <details className="group relative">
+            <summary className="inline-flex cursor-pointer list-none items-center rounded-lg border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-ink-700 hover:bg-gray-50 [&::-webkit-details-marker]:hidden">
+              Connect
+              <svg className="ml-1.5 h-3.5 w-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </summary>
+            <div className="absolute right-0 z-20 mt-1 w-44 rounded-lg border border-slate-200 bg-white p-1 shadow-lg">
+              <Link href="/integrations?tab=github" className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">GitHub repository</Link>
+              <Link href="/integrations?tab=notion" className="block rounded-md px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Notion workspace</Link>
+            </div>
+          </details>
+          <Button variant="secondary" onClick={() => setDialog('url')}>Import URL</Button>
+          <Button variant="secondary" onClick={() => setDialog('file')}>Upload file</Button>
+          <Button onClick={() => setDialog('write')}>+ Write answer</Button>
+        </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {stats.map((stat) => {
+          const body = (
+            <>
+              <p className="text-xs text-slate-500">{stat.label}</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-slate-900">{stat.value ?? '–'}</p>
+            </>
+          )
+          return stat.tab ? (
+            <button
+              key={stat.label}
+              type="button"
+              onClick={() => setTab(stat.tab!)}
+              className="rounded-xl border border-slate-200 bg-white p-4 text-left hover:border-slate-300"
+            >
+              {body}
+            </button>
+          ) : (
+            <div key={stat.label} className="rounded-xl border border-slate-200 bg-white p-4">{body}</div>
+          )
+        })}
+      </div>
+
+      <Modal
+        open={dialog === 'write'}
+        title="Write an answer"
+        description={WRITE_ANSWER_INTRO}
+        onClose={() => setDialog(null)}
+      >
+        <AddKnowledgeSection
+          bare
+          onAdded={loadAll}
+          draft={draft}
+          onDraftConsumed={() => { clearSourceTicket(); setDialog(null) }}
+        />
+      </Modal>
+      <Modal
+        open={dialog === 'file'}
+        title="Upload file"
+        description="PDF, DOCX, MD, TXT, CSV — up to 10 MB. Each file is chunked and embedded into the knowledge base."
+        onClose={() => setDialog(null)}
+      >
+        <FileUploadSection onImported={() => { loadAll(); refreshSources() }} />
+      </Modal>
+      <Modal
+        open={dialog === 'url'}
+        title="Import from URL"
+        description="Crawl a page or entire site and add the content to the knowledge base."
+        onClose={() => setDialog(null)}
+      >
+        <UrlIngestSection onImported={() => { loadAll(); refreshSources() }} />
+      </Modal>
 
       <div className="dashboard-tabs flex min-w-0 gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-2" role="tablist">
         {KB_TABS.map((tab) => (
@@ -870,6 +1024,11 @@ export default function KBPage() {
                 {pendingReview}
               </span>
             )}
+            {tab.id === 'flags' && openFlags !== null && openFlags > 0 && (
+              <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 py-0.5 text-[0.625rem] font-semibold tabular-nums text-white">
+                {openFlags}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -878,6 +1037,8 @@ export default function KBPage() {
         <CoverageTab />
       ) : activeTab === 'review' ? (
         <ReviewTab onCountsChange={handleReviewCounts} />
+      ) : activeTab === 'flags' ? (
+        <FlagsTab onCountsChange={handleFlagCounts} />
       ) : (
         <>
 
@@ -886,12 +1047,13 @@ export default function KBPage() {
           {draftError}
         </p>
       )}
-      <AddKnowledgeSection onAdded={loadAll} draft={draft} onDraftConsumed={clearSourceTicket} />
-      <GitHubKBSection onSynced={loadAll} />
-      <NotionKBSection onSynced={() => { loadAll(); refreshSources() }} />
-      <FileUploadSection onImported={() => { loadAll(); refreshSources() }} />
-      <UrlIngestSection onImported={loadAll} />
-      <SourcesList key={sourcesKey} onDeleted={() => { loadAll(); refreshSources() }} />
+      <SourcesList
+        key={sourcesKey}
+        onDeleted={() => { loadAll(); refreshSources() }}
+        onLoaded={handleSourcesLoaded}
+        github={github}
+      />
+      <NotionKBSection hideWhenDisconnected onSynced={() => { loadAll(); refreshSources() }} />
 
       <form onSubmit={search} className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200/80 bg-white p-2 shadow-sm">
         <div className="relative w-full sm:flex-1 sm:w-auto">

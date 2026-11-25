@@ -68,6 +68,7 @@ export interface Ticket {
   last_customer_reply_at: string | null
   /** When the team last opened the ticket. */
   last_seen_at: string | null
+  has_new_activity?: boolean
 }
 
 export interface TicketReply {
@@ -123,8 +124,35 @@ export interface GitHubRepo {
   /** Full sha of the commit the last repo files sync read; null before the first sync. */
   kb_synced_commit: string | null
   kb_chunk_count: number
+  /** Docs folders the owner picked for the knowledge base; null when none were picked. */
+  kb_paths: string[] | null
+  /** Counts from the last files sync; null before the first sync that recorded them. */
+  kb_sync_result: RepoSyncResult | null
   auto_deflect_enabled: 0 | 1
   added_at: string
+}
+
+/** What the last repository files sync did, counted in files. */
+export interface RepoSyncResult {
+  /** Files with at least one section in the knowledge base after the sync. */
+  synced: number
+  /** Files left out because the knowledge base reached its article limit. */
+  skippedForRoom: number
+  /** Files that could not be read or processed; the next sync tries them again. */
+  failed: number
+  /** Files over the size limit, skipped without being downloaded. */
+  tooLarge: number
+  /** Chosen folders that no longer exist in the repository. */
+  missingFolders: string[]
+  /**
+   * What an incremental sync did, in files. Absent on a full rebuild (the
+   * first sync after files were recorded) and on results stored before
+   * syncs became incremental.
+   */
+  updated?: number
+  added?: number
+  removed?: number
+  unchanged?: number
 }
 
 export interface Notification {
@@ -169,6 +197,18 @@ export interface PriorAnswer {
   answer: string
   /** Set when the answer came from a knowledge-base article, so its use can be counted. */
   articleId?: number
+}
+
+/** What the website widget's knowledge-base search hands the model (lib/db/queries/kb.ts getWidgetKBContext). */
+export interface WidgetKBContext {
+  /** The articles put in front of the model. Empty when nothing came close. */
+  articles: PriorAnswer[]
+  /**
+   * Whether `articles` cleared the match bar. False with articles present means
+   * they are near misses: the closest the knowledge base has, which may or may
+   * not cover the question.
+   */
+  matched: boolean
 }
 
 /**
@@ -339,10 +379,16 @@ export interface FeedbackSummary {
   staffVote: FeedbackVote | null
 }
 
+export interface ChannelActivityCount {
+  platform: SourcePlatform
+  count: number
+}
+
 export interface TicketFilters {
   status?: TicketStatus
   priority?: Priority
   category?: TicketCategory
+  platform?: SourcePlatform
   /** Tickets with an AI assessment marked as auto-deflected. */
   autoDeflected?: boolean
   /** Open tickets whose AI assessment requires human review. */

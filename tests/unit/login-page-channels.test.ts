@@ -4,16 +4,19 @@ import path from 'node:path'
 import { MARKETED_CHANNELS } from '@/lib/marketing/channels'
 
 const src = readFileSync(path.join(process.cwd(), 'app/login/page.tsx'), 'utf-8')
+const channels = readFileSync(path.join(process.cwd(), 'components/marketing/supported-channels.tsx'), 'utf-8')
 const icons = readFileSync(path.join(process.cwd(), 'components/marketing/integration-icon.tsx'), 'utf-8')
 
 describe('the login page says where answerLoops supports a community', () => {
   it('uses the homepage channel list rather than a copy that can drift from it', () => {
-    expect(src).toContain("import { MARKETED_CHANNELS } from '@/lib/marketing/channels'")
-    expect(src).toContain('MARKETED_CHANNELS.map(')
+    expect(src).toContain("import { SupportedChannels } from '@/components/marketing/supported-channels'")
+    expect(src).toContain('<SupportedChannels variant="compact" />')
+    expect(channels).toContain("import { MARKETED_CHANNELS } from '@/lib/marketing/channels'")
+    expect(channels).toContain('MARKETED_CHANNELS.map(')
   })
 
   it('labels the logos so they cannot be mistaken for sign-in methods', () => {
-    expect(src).toContain('Works wherever your community asks')
+    expect(channels).toContain('Works wherever your community asks')
   })
 
   it('has a logo for every channel in the list', () => {

@@ -194,7 +194,7 @@ export async function swapKBSource(input: {
   })
 }
 
-type Tx = Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0]
+export type Tx = Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0]
 
 /**
  * Marks saved resolutions (articles written from a ticket) that are close to a
@@ -203,16 +203,18 @@ type Tx = Parameters<Parameters<ReturnType<typeof getDb>['transaction']>[0]>[0]
  * that rewrote nothing flags nothing, and the first sync of a source (nothing
  * to compare against) flags nothing either.
  *
- * Runs inside a savepoint: a failure here is logged and never fails the sync
- * or rolls back the swap.
+ * A failure here is logged and never fails the sync or rolls back the swap.
  */
 async function flagResolutionsNearChangedDocs(
   tx: Tx,
   input: { orgId: number; newSourceId: number; targetFilename: string },
   ts: string
 ): Promise<void> {
+  // In its own savepoint: in PostgreSQL a failed query aborts the transaction
+  // it runs in, and this one must never take the swap down with it.
+  let changed: number[] = []
   try {
-    await tx.transaction(async (sp) => {
+    changed = await tx.transaction(async (sp) => {
       const columns = { id: kbArticles.id, question: kbArticles.question, answer: kbArticles.answer }
       const previous = await sp
         .select(columns)
@@ -235,36 +237,58 @@ async function flagResolutionsNearChangedDocs(
             )
           )
         )
-      if (previous.length === 0) return
+      if (previous.length === 0) return []
 
       const next = await sp
         .select(columns)
         .from(kbArticles)
         .where(and(eq(kbArticles.orgId, input.orgId), eq(kbArticles.sourceId, input.newSourceId)))
 
-      const changed = changedChunkIds(previous, next).slice(0, MAX_CHANGED_CHUNKS)
-      if (changed.length === 0) return
+      return changedChunkIds(previous, next).slice(0, MAX_CHANGED_CHUNKS)
+    })
+  } catch (err) {
+    logger.warn('could not compare docs for related resolutions', { module: MOD, orgId: input.orgId, error: err })
+    return
+  }
+  await flagResolutionsNearChunks(tx, { orgId: input.orgId, chunkIds: changed, sourceLabel: input.targetFilename, ts })
+}
 
+/**
+ * Marks saved resolutions close in meaning to any of `chunkIds` (sections a
+ * docs sync added, changed or is about to remove), so a reviewer can re-check
+ * them. The sections must still exist when this runs. Runs inside a
+ * savepoint: a failure is logged and never fails the sync or rolls back its
+ * transaction. Returns whether the marking ran.
+ */
+export async function flagResolutionsNearChunks(
+  tx: Tx,
+  input: { orgId: number; chunkIds: number[]; sourceLabel: string; ts: string }
+): Promise<boolean> {
+  if (input.chunkIds.length === 0) return true
+  try {
+    await tx.transaction(async (sp) => {
       // Only rows on the workspace's pinned embedding model, so two models never
       // meet in one similarity score (lib/ai/embedding-pin.ts). updated_at is
       // left alone: it is when the answer was last saved, not when docs moved.
       await sp.execute(sql`
         UPDATE kb_articles AS r
-        SET docs_changed_at = ${ts}, docs_changed_source = ${input.targetFilename}
+        SET docs_changed_at = ${input.ts}, docs_changed_source = ${input.sourceLabel}
         WHERE r.org_id = ${input.orgId}
           AND r.source_ticket_id IS NOT NULL
           AND r.embedding_vec IS NOT NULL
           AND r.model = (SELECT embedding_model_in_use FROM orgs WHERE id = ${input.orgId})
           AND EXISTS (
             SELECT 1 FROM kb_articles AS c
-            WHERE c.id IN (${sql.join(changed.map((id) => sql`${id}`), sql`, `)})
+            WHERE c.id IN (${sql.join(input.chunkIds.map((id) => sql`${id}`), sql`, `)})
               AND c.embedding_vec IS NOT NULL
               AND c.model = r.model
               AND (c.embedding_vec <=> r.embedding_vec) <= ${1 - RELATED_DOCS_SIMILARITY}
           )
       `)
     })
+    return true
   } catch (err) {
     logger.warn('could not flag resolutions near changed docs', { module: MOD, orgId: input.orgId, error: err })
+    return false
   }
 }

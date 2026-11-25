@@ -1,7 +1,8 @@
+import type { App } from '@octokit/app'
 import { Octokit } from '@octokit/rest'
 import { getRepos } from '@/lib/db/queries/github'
 
-let appInstance: InstanceType<typeof import('@octokit/app').App> | null = null
+let appInstance: App<{ Octokit: typeof Octokit }> | null = null
 
 async function getApp() {
   if (!appInstance) {
@@ -10,6 +11,7 @@ async function getApp() {
     appInstance = new App({
       appId: process.env.GITHUB_APP_ID!,
       privateKey,
+      Octokit,
     })
   }
   return appInstance
@@ -23,9 +25,7 @@ export async function getInstallationOctokit(owner: string, repo: string, orgId:
     throw new Error(`Repository ${owner}/${repo} is not configured`)
   }
 
-  const app = await getApp()
-  const octokit = await app.getInstallationOctokit(repoRecord.installation_id)
-  return octokit as unknown as Octokit
+  return getInstallationOctokitById(repoRecord.installation_id)
 }
 
 export async function getConfiguredRepos(orgId: number): Promise<string[]> {
@@ -35,8 +35,7 @@ export async function getConfiguredRepos(orgId: number): Promise<string[]> {
 
 export async function getInstallationOctokitById(installationId: number): Promise<Octokit> {
   const app = await getApp()
-  const octokit = await app.getInstallationOctokit(installationId)
-  return octokit as unknown as Octokit
+  return app.getInstallationOctokit(installationId)
 }
 
 export async function listInstallationRepos(installationId: number): Promise<Array<{ owner: string; repo: string; isPrivate: boolean }>> {

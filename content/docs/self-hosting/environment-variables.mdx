@@ -14,7 +14,7 @@ This is the shortest working configuration. Everything else is optional and can 
 |---|---|
 | `DATABASE_URL` | Where your data lives |
 | `AUTH_URL` | The public address of your instance |
-| `AUTH_SECRET` | Random secret for sign-in sessions |
+| `AUTH_SECRET` | Random secret for sign-in sessions, at least 32 characters (production refuses to start without one) |
 | `ENCRYPTION_KEY` | Random secret that protects saved API keys and tokens (required in production) |
 | `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` | Google sign-in, the only way to sign in |
 | `OPENAI_API_KEY` | Answers and knowledge-base search, unless each workspace saves its own key in Settings |

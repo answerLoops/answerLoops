@@ -33,9 +33,9 @@ describe('ticket path (lib/ai/agent.ts)', () => {
 })
 
 describe('widget path (app/api/widget/chat/route.ts)', () => {
-  it('captures only when retrieval found nothing and never sends visitor identity', () => {
+  it('captures only when no article matched and never sends visitor identity', () => {
     const s = src('app/api/widget/chat/route.ts')
-    const guard = s.indexOf('if (allContext.length === 0) {')
+    const guard = s.indexOf('if (!turn.matched()) {')
     expect(guard).toBeGreaterThan(-1)
     const call = s.slice(s.indexOf('captureUnansweredQuestion({', guard), s.indexOf('})', s.indexOf('captureUnansweredQuestion({', guard)))
     expect(call).toContain("source: 'widget'")

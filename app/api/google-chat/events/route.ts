@@ -115,7 +115,7 @@ export async function POST(request: Request) {
   const authorId = event.message?.sender?.name ?? event.user?.name ?? 'unknown'
   const authorName = event.message?.sender?.displayName ?? event.user?.displayName ?? authorId
 
-  const isTrackedReply = threadName ? !!(await getTicketByThreadId(threadName, integration.org_id)) : false
+  const isTrackedReply = threadName ? !!(await getTicketByThreadId(threadName, integration.org_id, 'google_chat')) : false
   if (!isTrackedReply && !attachments.length && text.length < 10) {
     return Response.json({})
   }

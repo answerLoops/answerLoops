@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
 import { getOrgByWidgetSlug, getOrgByWidgetToken, type WidgetOrg } from '@/lib/db/queries/widgets'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
+import { getWidgetLogoVersion } from '@/lib/db/queries/widget-logos'
+import { widgetLogoVersionNumber } from '@/lib/widget/logo'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { clientIp } from '@/lib/http/client-ip'
 import { verifyOriginProxy } from '@/lib/http/origin-guard'
@@ -87,12 +89,22 @@ export async function GET(request: Request): Promise<Response> {
     const org = await findOrg(id)
     if (!org) return defaults(CACHEABLE)
 
-    // Nothing is stored per business yet beyond the defaults, so the plan check
-    // runs on an empty selection; the resolver is where a chosen size or color
-    // is limited to what the plan includes once those settings exist.
+    // The resolver limits what a business chose to what its plan includes: a
+    // brand color is served only on a plan with customization, and everyone
+    // else gets the default look.
     const customization = await orgHasFeature(org.id, 'white_label_widget')
+    const logo = customization ? await getWidgetLogoVersion(org.id) : null
     return respond(
-      { token: org.widget_token, display: resolveWidgetDisplay(null, { customization }) },
+      {
+        token: org.widget_token,
+        display: resolveWidgetDisplay(
+          {
+            bubbleColor: org.widget_appearance.brandColor,
+            logoVersion: logo && org.widget_token ? widgetLogoVersionNumber(logo.etag) : null,
+          },
+          { customization }
+        ),
+      },
       CACHEABLE
     )
   } catch (error) {

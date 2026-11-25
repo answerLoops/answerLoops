@@ -17,7 +17,7 @@ const h = vi.hoisted(() => ({
   rateLimitShared: vi.fn(),
   getOrgByWidgetToken: vi.fn(),
   embedText: vi.fn(),
-  getKBContext: vi.fn(),
+  getWidgetKBContext: vi.fn(),
   capture: vi.fn(async () => {}),
   finishEvent: undefined as unknown,
 }))
@@ -39,7 +39,7 @@ vi.mock('@/lib/widget/render-token', () => ({ verifyRenderToken: () => true }))
 vi.mock('@/lib/http/client-ip', () => ({ clientIp: () => '203.0.113.9' }))
 vi.mock('@/lib/ai/embed', () => ({ embedText: h.embedText, embedTextWithModel: async (text: string, orgId?: number) => ({ embedding: await h.embedText(text, orgId), model: 'test-embedding' }) }))
 vi.mock('@/lib/ai/embedding-pin', () => ({ getPinnedModel: async () => 'test-embedding' }))
-vi.mock('@/lib/db/queries/kb', () => ({ getKBContext: h.getKBContext }))
+vi.mock('@/lib/db/queries/kb', () => ({ getWidgetKBContext: h.getWidgetKBContext }))
 vi.mock('@/lib/ai/memory', () => ({ getWidgetChatMemory: () => ({}) }))
 vi.mock('@/lib/kb/review-capture', () => ({ captureUnansweredQuestion: h.capture }))
 vi.mock('@/lib/logger', () => ({
@@ -70,7 +70,7 @@ beforeEach(async () => {
   h.getOrgByWidgetToken.mockResolvedValue({ id: 88, name: 'Acme', widget_token: VALID_TOKEN })
   h.reserveGeneration.mockResolvedValue({ granted: true, generationId: 4 })
   h.embedText.mockResolvedValue([0.1, 0.2])
-  h.getKBContext.mockResolvedValue([])
+  h.getWidgetKBContext.mockResolvedValue({ articles: [], matched: false })
   h.capture.mockResolvedValue(undefined)
 })
 
@@ -91,10 +91,21 @@ describe('widget chat onFinish: review-queue capture', () => {
   })
 
   it('does not capture when the KB returned context for the question', async () => {
-    h.getKBContext.mockResolvedValue([{ id: 1, question: 'Dark mode?', answer: 'Yes.', similarity: 0.9 }])
+    h.getWidgetKBContext.mockResolvedValue({ articles: [{ summary: 'Dark mode?', answer: 'Yes.', articleId: 1 }], matched: true })
     const res = await callRoute()
     expect(res.status).toBe(200)
     expect(h.capture).not.toHaveBeenCalled()
+  })
+
+  it('still captures when the model was only given near misses', async () => {
+    h.getWidgetKBContext.mockResolvedValue({
+      articles: [{ summary: 'Pricing › Pro', answer: '$49 a month.', articleId: 2 }],
+      matched: false,
+    })
+    const res = await callRoute('what does it cost?')
+    expect(res.status).toBe(200)
+    expect(h.capture).toHaveBeenCalledTimes(1)
+    expect((h.capture.mock.calls[0] as unknown[])[0]).toMatchObject({ orgId: 88, question: 'what does it cost?' })
   })
 
   it('bills the deflection before attempting the capture', async () => {

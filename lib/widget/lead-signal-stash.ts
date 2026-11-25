@@ -19,6 +19,11 @@ import type { WidgetLeadSignal } from '@/lib/widget/lead-capture'
 interface Entry {
   signal: WidgetLeadSignal
   question: string
+  // The answer this turn produced, with the question and reply, when it produced
+  // one. Read by the same lead-signal route, which signs it into a token for the
+  // visitor's flag on that answer (lib/widget/answer-token.ts). Kept apart from
+  // the signal so the lead-capture contract above is unchanged.
+  answer?: { answerId: string; question: string; answer: string }
   expiresAt: number
 }
 
@@ -80,4 +85,45 @@ export function getLeadSignal(
   const entry = signals.get(keyFor(widgetToken, visitorId, turnId))
   if (!entry || entry.expiresAt < now) return { signal: 'none', question: '' }
   return { signal: entry.signal, question: entry.question }
+}
+
+/**
+ * Remembers the recorded answer this turn produced, with the question and reply,
+ * for the short window the widget has to ask for a signed reference to it.
+ * Creates a neutral entry ('none', no question) when no lead-capture signal was
+ * stored for the turn, which getLeadSignal reads back exactly like no entry.
+ */
+export function setTurnAnswer(
+  widgetToken: string,
+  visitorId: string,
+  turnId: string,
+  answer: { answerId: string; question: string; answer: string }
+): void {
+  const now = Date.now()
+  sweepExpired(now)
+  const key = keyFor(widgetToken, visitorId, turnId)
+  const existing = signals.get(key)
+  if (existing && existing.expiresAt >= now) {
+    existing.answer = answer
+    return
+  }
+  while (signals.size >= MAX_ENTRIES) {
+    const oldest = signals.keys().next().value
+    if (oldest === undefined) break
+    signals.delete(oldest)
+  }
+  signals.set(key, { signal: 'none', question: '', answer, expiresAt: now + SIGNAL_TTL_MS })
+}
+
+/** The answer stored for this turn, or null. Does not consume the entry. */
+export function getTurnAnswer(
+  widgetToken: string,
+  visitorId: string,
+  turnId: string
+): { answerId: string; question: string; answer: string } | null {
+  const now = Date.now()
+  sweepExpired(now)
+  const entry = signals.get(keyFor(widgetToken, visitorId, turnId))
+  if (!entry || entry.expiresAt < now) return null
+  return entry.answer ?? null
 }

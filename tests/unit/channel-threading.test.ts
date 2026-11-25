@@ -23,6 +23,7 @@ interface StoredTicket {
   org_ticket_number: number
   source_message_id: string
   source_thread_id: string | null
+  source_platform: string
   status: string
 }
 interface StoredReply {
@@ -41,23 +42,25 @@ const store = vi.hoisted(() => ({
 vi.mock('@/lib/db/queries/tickets', () => ({
   getTicketBySourceMessageId: vi.fn(async (messageId: string, orgId: number) =>
     store.tickets.find((t) => t.source_message_id === messageId && t.orgId === orgId) ?? null),
-  getTicketByThreadId: vi.fn(async (threadId: string, orgId: number) => {
+  // Mirrors the SQL: a thread only ever matches tickets from the same channel.
+  getTicketByThreadId: vi.fn(async (threadId: string, orgId: number, platform: string) => {
     const viaReply = new Set(store.replies.filter((r) => r.messageId === threadId).map((r) => r.ticketId))
     return store.tickets.find((t) =>
-      t.orgId === orgId &&
+      t.orgId === orgId && t.source_platform === platform &&
       (t.source_thread_id === threadId || t.source_message_id === threadId || viaReply.has(t.id))) ?? null
   }),
-  createTicket: vi.fn(async (input: { source_message_id: string; source_thread_id?: string }, orgId: number) => {
+  createTicket: vi.fn(async (input: { source_message_id: string; source_thread_id?: string; source_platform?: string }, orgId: number) => {
     const ticket: StoredTicket = {
       id: store.tickets.length + 1,
       orgId,
       org_ticket_number: store.tickets.filter((t) => t.orgId === orgId).length + 1,
       source_message_id: input.source_message_id,
       source_thread_id: input.source_thread_id ?? null,
+      source_platform: input.source_platform ?? 'discord',
       status: 'open',
     }
     store.tickets.push(ticket)
-    return { ...ticket, content: '', source_platform: 'x', category: null, ai_summary: null }
+    return { ...ticket, content: '', category: null, ai_summary: null }
   }),
   recordCustomerReply: vi.fn(async (ticketId: number, content: string, input: { authorName?: string; messageId?: string } = {}) => {
     if (input.messageId && store.replies.some((r) => r.ticketId === ticketId && r.messageId === input.messageId)) return false
@@ -72,8 +75,9 @@ vi.mock('@/lib/db/queries/tickets', () => ({
   updateTicketTriage: vi.fn(),
 }))
 
-const { createNotification, triageMessage, runAIAgent } = vi.hoisted(() => ({
+const { createNotification, sendPushToAll, triageMessage, runAIAgent } = vi.hoisted(() => ({
   createNotification: vi.fn(),
+  sendPushToAll: vi.fn(),
   triageMessage: vi.fn(),
   runAIAgent: vi.fn(),
 }))
@@ -85,7 +89,7 @@ vi.mock('@/lib/sla/engine', () => ({
   calculateDeadlines: vi.fn(async () => ({ sla_response_deadline: null, sla_resolve_deadline: null })),
   checkSlaBreaches: vi.fn(async () => []),
 }))
-vi.mock('@/lib/push/notify', () => ({ sendPushToAll: vi.fn() }))
+vi.mock('@/lib/push/notify', () => ({ sendPushToAll }))
 vi.mock('@/lib/email/send', () => ({ sendNewTicketEmail: vi.fn(), sendSlaBreachEmails: vi.fn() }))
 vi.mock('@/lib/ai/embed', () => ({ embedTextWithModel: vi.fn(), embedText: vi.fn(), EMBEDDING_MODEL: 'test-model' }))
 vi.mock('@/lib/ai/related', () => ({ findRelated: vi.fn(() => []), isDuplicate: vi.fn(() => false) }))
@@ -208,6 +212,25 @@ describe('every channel states how it threads', () => {
   })
 })
 
+describe('threads never cross channels', () => {
+  it('a Circle post and a Discourse topic with the same number are separate tickets', async () => {
+    // Both channels use the bare numeric id of the post or topic as the thread.
+    await send('discourse', { messageId: 'discourse-post-901', threadId: '55', channelId: 'forum' })
+    const circle = await send('circle', { messageId: 'circle-post-55', threadId: '55', channelId: 'community' })
+    expect(circle.appended).toBeUndefined()
+    expect(store.tickets).toHaveLength(2)
+    expect(store.tickets.map((t) => t.source_platform)).toEqual(['discourse', 'circle'])
+  })
+
+  it('a Circle comment on post 55 joins the Circle ticket, not the Discourse one', async () => {
+    await send('discourse', { messageId: 'discourse-post-901', threadId: '55', channelId: 'forum' })
+    await send('circle', { messageId: 'circle-post-55', threadId: '55', channelId: 'community' })
+    const comment = await send('circle', { messageId: 'circle-comment-7', threadId: '55', channelId: 'community' })
+    expect(comment.appended).toBe(true)
+    expect(comment.ticket_id).toBe(2)
+  })
+})
+
 describe.each(CONVERSATIONS)('$platform threading through the pipeline', (c) => {
   it('the first message opens a ticket', async () => {
     const result = await send(c.platform, c.root)
@@ -226,7 +249,7 @@ describe.each(CONVERSATIONS)('$platform threading through the pipeline', (c) => 
     expect(store.replies).toEqual([
       expect.objectContaining({ ticketId: first.ticket_id, author: 'alice', role: 'customer', messageId: c.reply.messageId }),
     ])
-    expect(createNotification).toHaveBeenCalledTimes(1)
+    expect(sendPushToAll).toHaveBeenCalledTimes(1)
     expect(triageMessage).not.toHaveBeenCalled()
     expect(runAIAgent).not.toHaveBeenCalled()
   })
@@ -246,7 +269,7 @@ describe.each(CONVERSATIONS)('$platform threading through the pipeline', (c) => 
     const again = await send(c.platform, c.reply)
     expect(again.duplicate).toBe(true)
     expect(store.replies).toHaveLength(1)
-    expect(createNotification).toHaveBeenCalledTimes(1)
+    expect(sendPushToAll).toHaveBeenCalledTimes(1)
   })
 
   it('another organization with the same ids never joins this conversation', async () => {
@@ -270,7 +293,7 @@ describe.each(CONVERSATIONS)('$platform threading through the pipeline', (c) => 
 
 describe('context-only messages (a maintainer in the conversation)', () => {
   const ctx = (messageId = 'github-issue-comment-o-r-80', threadId = githubThreadId('o', 'r', 'issue', 5)) => ({
-    messageId, threadId, content: 'Looking into this now', authorName: 'maint',
+    messageId, threadId, content: 'Looking into this now', authorName: 'maint', platform: 'github' as const,
   })
 
   it('joins the thread as context: no ticket, no notification, no AI work', async () => {

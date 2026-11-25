@@ -19,7 +19,14 @@ async function fetchNotionKbState(): Promise<NotionKbState> {
   return { conn, sources }
 }
 
-export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
+export function NotionKBSection({
+  onSynced,
+  hideWhenDisconnected = false,
+}: {
+  onSynced: () => void
+  /** Renders nothing until a workspace is connected, instead of the connect prompt. */
+  hideWhenDisconnected?: boolean
+}) {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [workspace, setWorkspace] = useState<string | null>(null)
   const [source, setSource] = useState<KBSource | null>(null)
@@ -29,6 +36,8 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
   const [syncLabel, setSyncLabel] = useState<string>('Syncing…')
   const [syncElapsed, setSyncElapsed] = useState(0)
   const [togglingPublish, setTogglingPublish] = useState(false)
+  const [confirmingPublish, setConfirmingPublish] = useState(false)
+  const confirmPanelRef = useRef<HTMLFieldSetElement>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [truncated, setTruncated] = useState(false)
 
@@ -37,6 +46,17 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
     const t = setInterval(() => setSyncElapsed((s) => s + 1), 1000)
     return () => clearInterval(t)
   }, [syncing])
+
+  // While the publish prompt is open: put focus on Cancel (the safe choice) and
+  // let Escape dismiss it. Listening on the document rather than the panel keeps
+  // Escape working wherever focus has moved to.
+  useEffect(() => {
+    if (!confirmingPublish) return
+    confirmPanelRef.current?.querySelector('button')?.focus()
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setConfirmingPublish(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [confirmingPublish])
 
   const applyState = useCallback((state: NotionKbState) => {
     setConnected(!!state.conn.connection)
@@ -112,9 +132,9 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
     setTimeout(() => setToast(null), 5000)
   }
 
-  const togglePublish = async () => {
+  const setPublished = async (next: 0 | 1) => {
     if (!source) return
-    const next = source.published === 1 ? 0 : 1
+    setConfirmingPublish(false)
     setTogglingPublish(true)
     try {
       const res = await fetch(`/api/kb/sources/${source.id}`, {
@@ -134,9 +154,19 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
     }
   }
 
+  // Taking the content off the widget is always safe, so it happens at once.
+  // Putting it on the widget asks first: the import covers everything the
+  // Notion integration can see, not a page the person picked.
+  const onPublishButton = () => {
+    if (!source) return
+    if (source.published === 1) setPublished(0)
+    else setConfirmingPublish(true)
+  }
+
   if (connected === null) return null // still loading
 
   if (connected === false) {
+    if (hideWhenDisconnected) return null
     return (
       <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4">
         <h2 className="text-sm font-semibold text-gray-900">Notion workspace</h2>
@@ -199,14 +229,37 @@ export function NotionKBSection({ onSynced }: { onSynced: () => void }) {
           <Button
             size="sm"
             variant="secondary"
-            onClick={togglePublish}
-            disabled={!source || togglingPublish}
+            onClick={onPublishButton}
+            disabled={!source || togglingPublish || confirmingPublish}
             title={!source ? 'Run a sync first' : undefined}
           >
             {togglingPublish ? '…' : source?.published === 1 ? 'Unpublish' : 'Publish to widget'}
           </Button>
         </div>
       </div>
+
+      {confirmingPublish && (
+        <fieldset
+          ref={confirmPanelRef}
+          aria-label="Confirm publishing to the website widget"
+          className="min-w-0 rounded-md border border-amber-200 bg-amber-50 px-3 py-3 space-y-2"
+        >
+          <p className="text-sm font-medium text-amber-900">Publish to your website widget?</p>
+          <p className="text-xs text-amber-800 break-words">
+            {chunkCount > 0 ? `${chunkCount} chunk${chunkCount === 1 ? '' : 's'} will go live. ` : ''}
+            Every page and database shared with your Notion integration becomes available to answer anyone who
+            uses your widget. Check which pages are shared in Notion before you publish.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setConfirmingPublish(false)}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={() => setPublished(1)} disabled={togglingPublish}>
+              Yes, publish
+            </Button>
+          </div>
+        </fieldset>
+      )}
     </div>
   )
 }

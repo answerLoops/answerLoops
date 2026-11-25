@@ -1,8 +1,10 @@
-import { getTicketStats, getSLABreachedTickets, getTickets, getUnseenActivityTickets, countUnseenActivityTickets } from '@/lib/db/queries/tickets'
+import { getTicketStats, getSLABreachedTickets, getTickets, getUnseenActivityTickets } from '@/lib/db/queries/tickets'
+import { signActivitySnapshot } from '@/lib/tickets/activity-snapshot'
 import { getDeflectionStats } from '@/lib/db/queries/analytics'
 import { deflectionRate as calculateDeflectionRate } from '@/lib/analytics/roi'
 import { StatsCards } from '@/components/dashboard/stats-cards'
-import { ActivityPanel } from '@/components/dashboard/activity-panel'
+import { ACTIVITY_PREVIEW_LIMIT, ActivityPanel } from '@/components/dashboard/activity-panel'
+import { VIEW_ALL_TICKETS_ID } from '@/components/dashboard/activity-ids'
 import { SLABreachList } from '@/components/dashboard/sla-breach-list'
 import Link from 'next/link'
 import { StatusBadge, CategoryBadge } from '@/components/ui/badge'
@@ -20,13 +22,12 @@ function rowSummary(content: string): string {
 export default async function DashboardPage() {
   const session = await auth()
   const orgId = session?.orgId ?? DEFAULT_ORG_ID
-  const [stats, breachedTickets, recentTickets, deflectionStats, activityTickets, activityTotal] = await Promise.all([
+  const [stats, breachedTickets, recentTickets, deflectionStats, activity] = await Promise.all([
     getTicketStats(orgId),
     getSLABreachedTickets(orgId),
     getTickets({ status: 'open' }, orgId, 6),
     getDeflectionStats(orgId),
-    getUnseenActivityTickets(orgId),
-    countUnseenActivityTickets(orgId),
+    getUnseenActivityTickets(orgId, ACTIVITY_PREVIEW_LIMIT),
   ])
   const dashboardDeflectionRate = Math.round(
     calculateDeflectionRate(deflectionStats.deflected, deflectionStats.answered) * 100
@@ -48,6 +49,7 @@ export default async function DashboardPage() {
           <p className="mt-1 text-sm text-slate-500">Here&rsquo;s what&rsquo;s happening in your community today.</p>
         </div>
         <Link
+          id={VIEW_ALL_TICKETS_ID}
           href="/tickets"
           className="flex items-center gap-1.5 self-start rounded-lg bg-[#082e50] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:brightness-110"
         >
@@ -58,7 +60,15 @@ export default async function DashboardPage() {
         </Link>
       </div>
 
-      <ActivityPanel tickets={activityTickets} total={activityTotal} />
+      <ActivityPanel
+        tickets={activity.tickets}
+        total={activity.total}
+        channels={activity.channels}
+        snapshot={activity.snapshot}
+        proof={session?.user?.id && activity.snapshot
+          ? signActivitySnapshot(activity.snapshot, orgId, Number(session.user.id))
+          : undefined}
+      />
 
       {/* Stats */}
       <StatsCards {...stats} deflectionRate={dashboardDeflectionRate} />

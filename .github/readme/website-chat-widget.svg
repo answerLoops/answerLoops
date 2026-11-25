@@ -1,0 +1,113 @@
+<svg class="widget-demo-run" xmlns="http://www.w3.org/2000/svg" width="960" height="520" viewBox="0 0 960 520" role="img" aria-labelledby="title desc">
+  <title id="title">Lanternfall website chat example</title>
+  <desc id="desc">A player asks if they can team up with friends on another platform. The assistant explains how to enable cross-play and share a party code, then points to the cross-play guide.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" x2="1" y1="0" y2="1">
+      <stop stop-color="#f7f0e4"/><stop offset=".55" stop-color="#e5f3f2"/><stop offset="1" stop-color="#eee8f8"/>
+    </linearGradient>
+    <filter id="shadow" x="-15%" y="-15%" width="135%" height="145%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#082e50" flood-opacity=".16"/>
+    </filter>
+    <g id="mark" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 3l8 9-8 9-8-9z M8 12h8 M12 8v8"/>
+    </g>
+  </defs>
+  <style>
+    text{font-family:system-ui,-apple-system,sans-serif;fill:#082e50}
+    .label{font-size:13px;font-weight:750;letter-spacing:1px}
+    .body{font-size:17px;font-weight:500}
+    .muted{fill:#315e81}
+    .white{fill:#fff}
+    .widget-panel,.widget-question,.widget-answer,.widget-resource{opacity:1}
+    .widget-thinking,.widget-opener,.widget-pointer{opacity:0}
+    @media(prefers-reduced-motion:no-preference){
+      .widget-demo-run .widget-opener{animation:widget-opener 9s both}
+      .widget-demo-run .widget-pointer{animation:widget-pointer 9s both}
+      .widget-demo-run .widget-panel{animation:widget-panel 9s both}
+      .widget-demo-run .widget-question{animation:widget-question 9s both}
+      .widget-demo-run .widget-thinking{animation:widget-thinking 9s both}
+      .widget-demo-run .widget-dot{animation:widget-dot .45s 2.2s ease-in-out 4 alternate}
+      .widget-demo-run .widget-dot:nth-child(3){animation-delay:2.32s}
+      .widget-demo-run .widget-dot:nth-child(4){animation-delay:2.44s}
+      .widget-demo-run .widget-answer{animation:widget-answer 9s both}
+      .widget-demo-run .widget-resource{animation:widget-resource 9s both}
+    }
+    @keyframes widget-opener{0%,9%{opacity:1}15%,100%{opacity:0}}
+    @keyframes widget-pointer{0%{opacity:0;transform:translate(24px,12px)}5%,10%{opacity:1;transform:translate(0,0)}14%,100%{opacity:0}}
+    @keyframes widget-panel{0%,9%{opacity:0;transform:translateY(12px)}16%,100%{opacity:1;transform:translateY(0)}}
+    @keyframes widget-question{0%,20%{opacity:0;transform:translateY(8px)}25%,100%{opacity:1;transform:translateY(0)}}
+    @keyframes widget-thinking{0%,25%,46%,100%{opacity:0}28%,43%{opacity:1}}
+    @keyframes widget-dot{from{opacity:.32;transform:translateY(1px)}to{opacity:1;transform:translateY(-3px)}}
+    @keyframes widget-answer{0%,46%{opacity:0;transform:translateY(7px)}52%,100%{opacity:1;transform:translateY(0)}}
+    @keyframes widget-resource{0%,56%{opacity:0;transform:translateY(7px)}63%,100%{opacity:1;transform:translateY(0)}}
+  </style>
+
+  <rect x="1" y="1" width="958" height="518" rx="25" fill="url(#background)" stroke="#cbdade"/>
+  <rect x="31" y="34" width="898" height="452" rx="17" fill="#fcfefe" stroke="#cbdade"/>
+  <path d="M32 79h896" stroke="#dce8ec"/>
+  <g fill="#a6becd"><circle cx="52" cy="57" r="4"/><circle cx="66" cy="57" r="4"/><circle cx="80" cy="57" r="4"/></g>
+  <rect x="102" y="46" width="280" height="22" rx="6" fill="#eef5f7"/>
+  <text x="113" y="62" class="muted" font-size="13">Lanternfall / Play with friends</text>
+
+  <g color="#168fa3" transform="translate(60 109)"><use href="#mark"/></g>
+  <text x="92" y="127" class="label">LANTERNFALL</text>
+  <text x="60" y="209" font-size="48" font-weight="750" letter-spacing="-1.5">Play</text>
+  <text x="60" y="262" font-size="48" font-weight="750" letter-spacing="-1.5">together</text>
+  <text x="62" y="307" class="body muted">Bring your friends on the next run.</text>
+  <text x="62" y="334" class="body muted">Create a party and explore together.</text>
+  <rect x="62" y="372" width="134" height="43" rx="8" fill="#082e50"/>
+  <text x="129" y="399" text-anchor="middle" class="body white">Game guide</text>
+
+  <g class="widget-opener">
+    <rect x="724" y="407" width="169" height="47" rx="23" fill="#082e50"/>
+    <path d="M744 421h16v11h-9l-5 4v-4h-2z" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+    <text x="769" y="437" class="body white">Chat with us</text>
+  </g>
+
+  <g class="widget-pointer">
+    <circle cx="845" cy="432" r="12" fill="#71ced6" opacity=".55"/>
+    <path d="M845 427l4 18 4-6 7-2z" fill="#fff" stroke="#082e50" stroke-width="1.6" stroke-linejoin="round"/>
+  </g>
+
+  <g class="widget-panel">
+    <rect x="434" y="95" width="466" height="366" rx="19" fill="#fff" stroke="#c8dce2" filter="url(#shadow)"/>
+    <path d="M434 114a19 19 0 0 1 19-19h428a19 19 0 0 1 19 19v53H434z" fill="#082e50"/>
+    <circle cx="475" cy="131" r="21" fill="#168fa3"/>
+    <g color="#fff" transform="translate(463 120)"><use href="#mark"/></g>
+    <text x="509" y="129" class="white" font-size="19" font-weight="750">Lanternfall</text>
+    <text x="509" y="149" fill="#d8edf0" style="fill:#d8edf0" font-size="13">Player support</text>
+    <path d="m870 124 12 12m0-12-12 12" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>
+  </g>
+
+  <g class="widget-question">
+    <rect x="545" y="185" width="336" height="58" rx="12" fill="#dff2f4" stroke="#c6e7ea"/>
+    <text x="561" y="209" class="body">Can I play with friends on</text>
+    <text x="561" y="231" class="body">a different platform?</text>
+  </g>
+
+  <g class="widget-thinking">
+    <rect x="452" y="259" width="74" height="38" rx="12" fill="#edf5f6"/>
+    <circle class="widget-dot" cx="471" cy="278" r="3.5" fill="#315e81"/>
+    <circle class="widget-dot" cx="489" cy="278" r="3.5" fill="#315e81"/>
+    <circle class="widget-dot" cx="507" cy="278" r="3.5" fill="#315e81"/>
+  </g>
+
+  <g class="widget-answer">
+    <rect x="452" y="259" width="414" height="82" rx="12" fill="#edf5f6"/>
+    <text x="468" y="283" class="body">Yes. Turn on <tspan font-weight="750">Cross-play</tspan> in Settings.</text>
+    <text x="468" y="305" class="body">Then open <tspan font-weight="750">Party</tspan> and share your join code</text>
+    <text x="468" y="327" class="body">so your friends can join.</text>
+  </g>
+
+  <g class="widget-resource">
+    <rect x="452" y="353" width="414" height="52" rx="9" fill="#fff" stroke="#c8dce2"/>
+    <text x="467" y="375" class="label muted">FROM THE HELP CENTER</text>
+    <text x="467" y="394" font-size="16" font-weight="750">Set up cross-play and invite friends</text>
+    <path d="M838 381h12m-5-5 5 5-5 5" fill="none" stroke="#082e50" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+
+  <g class="widget-panel">
+    <rect x="452" y="419" width="429" height="28" rx="14" fill="#edf5f6"/>
+    <text x="466" y="438" class="muted" font-size="14">Ask a question…</text>
+  </g>
+</svg>

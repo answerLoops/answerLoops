@@ -31,6 +31,7 @@ import { getOrgsPendingPurge, hardPurgeOrg } from '../lib/db/queries/orgs'
 import { getStuckPendingTickets } from '../lib/db/queries/tickets'
 import { claimNextKbSyncJob, reclaimStuckKbSyncJobs } from '../lib/db/queries/kb-sync-jobs'
 import { purgeExpiredReviewText } from '../lib/db/queries/kb-review'
+import { purgeExpiredFlagText } from '../lib/db/queries/widget-answer-flags'
 import { pruneArticleUsage } from '../lib/db/queries/kb-usage'
 import { pruneAnswerReferences } from '../lib/db/queries/kb-answers'
 import { sweepSupportAssessments } from '../lib/db/queries/kb-support'
@@ -54,15 +55,18 @@ function startKbRetentionSweep(): void {
   const sweep = async () => {
     try {
       const cleared = await purgeExpiredReviewText()
+      // Visitor text on answer flags: dismissed ones at once, the rest after their window.
+      const clearedFlags = await purgeExpiredFlagText()
       const pruned = await pruneArticleUsage()
       // Source-support evidence first: expired text goes, then assessments past the window,
       // then the answers they hang from (which would remove any left anyway).
       const support = await sweepSupportAssessments()
       const prunedAnswers = await pruneAnswerReferences()
-      if (cleared > 0 || pruned > 0 || prunedAnswers > 0 || support.excerptsCleared > 0 || support.assessmentsDeleted > 0) {
+      if (cleared > 0 || clearedFlags > 0 || pruned > 0 || prunedAnswers > 0 || support.excerptsCleared > 0 || support.assessmentsDeleted > 0) {
         logger.info('kb retention sweep complete', {
           module: MOD,
           cleared,
+          clearedFlags,
           pruned,
           prunedAnswers,
           supportExcerptsCleared: support.excerptsCleared,
@@ -188,6 +192,79 @@ function startEmbeddingMigrationSweep(): void {
   setInterval(() => { sweep().catch(() => {}) }, EMBEDDING_MIGRATION_SWEEP_INTERVAL_MS)
 }
 
+// Re-titles sections from pages imported before section titles carried the
+// page ("Pro" becomes "pricing › Pro") and re-embeds them, for workspaces on
+// the platform embedding model. The app route lists them and does the work;
+// this process just keeps the sweep running. Same cadence and bounds as the
+// re-embed sweep above.
+const RETITLE_IMPORTS_SWEEP_INTERVAL_MS = 5 * 60 * 1000
+const RETITLE_IMPORTS_REQUEST_TIMEOUT_MS = 10 * 60 * 1000
+
+function startRetitleImportsSweep(): void {
+  const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
+  const botSecret = process.env.BOT_SECRET
+  let inFlight = false
+
+  const sweep = async () => {
+    if (!botSecret) return // the route requires BOT_SECRET; nothing to do without it
+    if (inFlight) return // the previous sweep is still running; never overlap
+    inFlight = true
+    try {
+      const res = await fetch(`${targetUrl}/api/kb/retitle-imports/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${botSecret}` },
+        signal: AbortSignal.timeout(RETITLE_IMPORTS_REQUEST_TIMEOUT_MS),
+      })
+      if (!res.ok) {
+        logger.warn('re-title sweep: request failed', { module: MOD, status: res.status })
+      }
+    } catch (err) {
+      // Must not crash the bot process; it retries on the next sweep.
+      logger.error('re-title sweep failed', { module: MOD, error: err })
+    } finally {
+      inFlight = false
+    }
+  }
+  sweep().catch(() => {})
+  setInterval(() => { sweep().catch(() => {}) }, RETITLE_IMPORTS_SWEEP_INTERVAL_MS)
+}
+
+// Re-processing synced repo docs under new cleanup rules, once (see
+// lib/github/docs-reprocess.ts). The app route decides which repos and
+// queues ordinary KB sync jobs, which the KB sync sweep then runs; this
+// process only keeps the sweep going.
+const DOCS_REPROCESS_SWEEP_INTERVAL_MS = 15 * 60 * 1000
+const DOCS_REPROCESS_REQUEST_TIMEOUT_MS = 60 * 1000
+
+function startDocsReprocessSweep(): void {
+  const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
+  const botSecret = process.env.BOT_SECRET
+  let inFlight = false
+
+  const sweep = async () => {
+    if (!botSecret) return // the route requires BOT_SECRET; nothing to do without it
+    if (inFlight) return // the previous sweep is still running; never overlap
+    inFlight = true
+    try {
+      const res = await fetch(`${targetUrl}/api/kb/docs-reprocess/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${botSecret}` },
+        signal: AbortSignal.timeout(DOCS_REPROCESS_REQUEST_TIMEOUT_MS),
+      })
+      if (!res.ok) {
+        logger.warn('docs re-processing sweep: request failed', { module: MOD, status: res.status })
+      }
+    } catch (err) {
+      // Must not crash the bot process; it retries on the next sweep.
+      logger.error('docs re-processing sweep failed', { module: MOD, error: err })
+    } finally {
+      inFlight = false
+    }
+  }
+  sweep().catch(() => {})
+  setInterval(() => { sweep().catch(() => {}) }, DOCS_REPROCESS_SWEEP_INTERVAL_MS)
+}
+
 // Trial-ending reminder emails (3 days and 1 day before a card-free trial
 // ends). The app route decides who is due and sends; this process only keeps
 // the sweep running. Hourly is fine-grained enough for notices counted in days,
@@ -223,6 +300,43 @@ function startTrialReminderSweep(): void {
   }
   sweep().catch(() => {})
   setInterval(() => { sweep().catch(() => {}) }, TRIAL_REMINDER_SWEEP_INTERVAL_MS)
+}
+
+// Website chat lead emails. When a visitor leaves their email, the app emails
+// the team at once if that workspace has not been emailed in the last few
+// minutes; leads that arrive inside that window wait. This sweep sends those
+// waiting leads together once the window has closed. The app route decides who
+// is due and sends; this process only keeps the sweep running.
+const WIDGET_LEAD_SWEEP_INTERVAL_MS = 5 * 60 * 1000
+const WIDGET_LEAD_REQUEST_TIMEOUT_MS = 2 * 60 * 1000
+
+function startWidgetLeadSweep(): void {
+  const targetUrl = process.env.BOT_TARGET_URL ?? 'http://localhost:3000'
+  const botSecret = process.env.BOT_SECRET
+  let inFlight = false
+
+  const sweep = async () => {
+    if (!botSecret) return // the route requires BOT_SECRET; nothing to do without it
+    if (inFlight) return // the previous sweep is still running; never overlap
+    inFlight = true
+    try {
+      const res = await fetch(`${targetUrl}/api/widget/lead-notifications/run`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${botSecret}` },
+        signal: AbortSignal.timeout(WIDGET_LEAD_REQUEST_TIMEOUT_MS),
+      })
+      if (!res.ok) {
+        logger.warn('widget lead sweep: request failed', { module: MOD, status: res.status })
+      }
+    } catch (err) {
+      // Must not crash the bot process; it retries on the next sweep.
+      logger.error('widget lead sweep failed', { module: MOD, error: err })
+    } finally {
+      inFlight = false
+    }
+  }
+  sweep().catch(() => {})
+  setInterval(() => { sweep().catch(() => {}) }, WIDGET_LEAD_SWEEP_INTERVAL_MS)
 }
 
 // KB sync worker. Notion/GitHub KB syncs are enqueued into kb_sync_jobs (by the
@@ -866,7 +980,10 @@ async function main() {
   startKbRetentionSweep()
   startStuckTicketSweep()
   startEmbeddingMigrationSweep()
+  startRetitleImportsSweep()
+  startDocsReprocessSweep()
   startTrialReminderSweep()
+  startWidgetLeadSweep()
 
   client.login(initial.discordToken)
 }

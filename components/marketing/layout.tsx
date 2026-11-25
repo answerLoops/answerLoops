@@ -1,9 +1,11 @@
 import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
 import { Source_Sans_3 } from 'next/font/google'
 import { START_HREF, PRICING_HREF } from './nav-shared'
 import { TRIAL_CTA_NOTE } from '@/lib/marketing/plan-summary'
 import type { ReactNode } from 'react'
 import { Nav, Footer, type NavState } from './chrome'
+import { SiteChatWidget } from '@/components/site-chat-widget'
 import './marketing-site.css'
 import './marketing-theme.css'
 
@@ -16,9 +18,16 @@ const marketingFont = Source_Sans_3({
 export function MarketingPage({
   children,
   navState,
+  chat = false,
 }: {
   children: ReactNode
   navState?: NavState
+  /**
+   * Show the chat assistant on this page. Off by default so each page that
+   * carries it is a decision: it belongs where a visitor is deciding whether
+   * answerLoops is right for them, not on a legal page or a changelog.
+   */
+  chat?: boolean
 }) {
   return (
     <div className={`marketing-site ${marketingFont.variable}`}>
@@ -28,6 +37,7 @@ export function MarketingPage({
       <Nav state={navState} />
       <main id="main-content">{children}</main>
       <Footer />
+      {chat && <SiteChatWidget />}
     </div>
   )
 }
@@ -63,8 +73,8 @@ export function PageHero({
 }
 
 export function TrialCta({
-  title = 'Try it with the questions your team gets every week',
-  description = 'Add a few support articles and connect a channel, then review the replies before deciding what to automate.',
+  title = 'Start with the questions people already ask',
+  description = 'Connect a community channel or add website chat. See how both can use the guides you already maintain.',
 }: {
   title?: string
   description?: string
@@ -78,8 +88,9 @@ export function TrialCta({
           <p>{description}</p>
         </div>
         <div>
-          <Link className="marketing-button" href={START_HREF}>
-            Start a 14-day trial
+          <Link className="marketing-button marketing-button-hero" href={START_HREF}>
+            Start your free trial
+            <ArrowRight size={18} strokeWidth={2.25} aria-hidden="true" />
           </Link>
           <p className="marketing-note">
             {TRIAL_CTA_NOTE}
