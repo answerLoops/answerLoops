@@ -6,6 +6,7 @@ import { LockedCsvExportButton } from '@/components/billing/locked-csv-export-bu
 import Link from 'next/link'
 import { listFlagsForLeads } from '@/lib/db/queries/widget-answer-flags'
 import type { FlagReason, LeadFlag } from '@/lib/db/queries/widget-answer-flags'
+import { Page, PageHeader } from '@/components/dashboard/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,30 +24,29 @@ export default async function LeadsPage() {
   const [leads, flagsByLead] = await Promise.all([listWidgetLeads(orgId), listFlagsForLeads(orgId)])
 
   return (
-    <div className="dashboard-page max-w-6xl space-y-6">
-      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-blue-600">
-            <span className="h-px w-6 bg-blue-500" />
-            Demand capture
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Widget Leads</h1>
-          <p className="mt-1 text-sm text-slate-500">{leads.length} email{leads.length !== 1 ? 's' : ''} collected while support conversations were active.</p>
-        </div>
-        {canExportCsv ? (
-          <a
-            href="/api/export/leads"
-            className="flex items-center gap-1.5 self-start rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-blue-200 hover:text-blue-700"
-          >
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-            </svg>
-            Export CSV
-          </a>
-        ) : (
-          <LockedCsvExportButton className="flex items-center gap-1.5 self-start rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-blue-200 hover:text-blue-700" />
-        )}
-      </div>
+    <Page>
+      <PageHeader
+        title="Widget Leads"
+        description={`${leads.length} email${leads.length !== 1 ? 's' : ''} collected while support conversations were active.`}
+        actions={
+          <>
+            {canExportCsv ? (
+              <a
+                href="/api/export/leads"
+                className="flex items-center gap-1.5 self-start rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-blue-200 hover:text-blue-700"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+                Export CSV
+
+              </a>
+            ) : (
+              <LockedCsvExportButton className="flex items-center gap-1.5 self-start rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-blue-200 hover:text-blue-700" />
+            )}
+          </>
+        }
+      />
 
       <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
         {leads.length === 0 ? (
@@ -92,7 +92,7 @@ export default async function LeadsPage() {
           </div>
         )}
       </div>
-    </div>
+    </Page>
   )
 }
 

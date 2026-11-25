@@ -24,6 +24,7 @@ import { FlagsTab } from './flags-tab'
 import { GapsTab } from './gaps-tab'
 import type { ReviewCounts } from '@/lib/db/queries/kb-review'
 import type { FlagCounts } from '@/lib/db/queries/widget-answer-flags'
+import { Page, PageHeader } from '@/components/dashboard/page-shell'
 
 type Article = KBArticle | KBSearchResult
 
@@ -925,17 +926,12 @@ export default function KBPage() {
   ]
 
   return (
-    <div className="dashboard-page max-w-6xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-blue-600">
-            <span className="h-px w-6 bg-blue-500" />
-            Answer intelligence
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Knowledge Base</h1>
-          <p className="mt-1 text-sm text-slate-500">Give every channel one current, searchable source of truth.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
+    <Page>
+      <PageHeader
+        title="Knowledge Base"
+        description="Give every channel one current, searchable source of truth."
+        actions={
+          <>
           <details className="group relative">
             <summary className="inline-flex cursor-pointer list-none items-center rounded-lg border border-border-strong bg-surface px-4 py-2 text-sm font-medium text-ink-700 hover:bg-gray-50 [&::-webkit-details-marker]:hidden">
               Connect
@@ -949,8 +945,9 @@ export default function KBPage() {
           <Button variant="secondary" onClick={() => setDialog('url')}>Import URL</Button>
           <Button variant="secondary" onClick={() => setDialog('file')}>Upload file</Button>
           <Button onClick={() => setDialog('write')}>+ Write answer</Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {stats.map((stat) => {
@@ -1149,6 +1146,6 @@ export default function KBPage() {
       )}
         </>
       )}
-    </div>
+    </Page>
   )
 }

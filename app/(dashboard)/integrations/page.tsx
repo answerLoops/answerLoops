@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { DiscordIntegrationCard } from '@/components/settings/discord'
 import { SlackIntegrationCard } from '@/components/settings/slack'
@@ -13,6 +12,7 @@ import { EmailIntegrationCard } from '@/components/settings/email'
 import { GitHubIntegrationCard } from '@/components/settings/github'
 import { NotionIntegrationCard } from '@/components/settings/notion'
 import { INTEGRATIONS, IntegrationsOverview, isIntegrationId, type IntegrationId, type StatusMap } from './overview'
+import { Page, PageHeader } from '@/components/dashboard/page-shell'
 
 // Maps an integration id to the `platform` value stored on the integrations
 // table. These diverge for Google Chat (the id uses a hyphen, the DB value an
@@ -89,28 +89,12 @@ export default function IntegrationsPage() {
   const activeInfo = INTEGRATIONS.find((i) => i.id === active)
 
   return (
-    <div className="dashboard-page max-w-6xl">
-      <div className="mb-6">
-        {activeInfo ? (
-          <Link
-            href="/integrations"
-            className="mb-3 inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-slate-900"
-          >
-            <span aria-hidden="true">←</span> All integrations
-          </Link>
-        ) : (
-          <div className="mb-2 flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-blue-600">
-            <span className="h-px w-5 bg-blue-500" />
-            Workspace configuration
-          </div>
-        )}
-        <h1 className="text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-3xl">
-          {activeInfo ? activeInfo.label : 'Integrations'}
-        </h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {activeInfo ? activeInfo.description : 'Connect the channels and services this workspace answers questions in.'}
-        </p>
-      </div>
+    <Page>
+      <PageHeader
+        back={activeInfo ? { href: '/integrations', label: 'All integrations' } : undefined}
+        title={activeInfo ? activeInfo.label : 'Integrations'}
+        description={activeInfo ? activeInfo.description : 'Connect the channels and services this workspace answers questions in.'}
+      />
 
       {!active && <IntegrationsOverview statuses={statuses} />}
 
@@ -123,6 +107,6 @@ export default function IntegrationsPage() {
       {active === 'email' && <EmailIntegrationCard />}
       {active === 'github' && <GitHubIntegrationCard />}
       {active === 'notion' && <NotionIntegrationCard />}
-    </div>
+    </Page>
   )
 }

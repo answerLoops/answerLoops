@@ -3,6 +3,7 @@
 import { useEffect, useState, useTransition } from 'react'
 import { ORDERED_PLANS, type Plan, overageUnits } from '@/lib/billing/plans'
 import { useUpgrade } from '@/components/billing/use-upgrade'
+import { Page, PageHeader } from '@/components/dashboard/page-shell'
 
 interface BillingData {
   planId: string
@@ -333,15 +334,8 @@ export default function BillingPage() {
   const approachingLimit = !isCanceled && hasPlan && data?.limit !== null && usagePct >= 80 && usagePct < 100
 
   return (
-    <div className="dashboard-page max-w-6xl space-y-8">
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-blue-600">
-          <span className="h-px w-6 bg-blue-500" />
-          Workspace plan
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Billing</h1>
-        <p className="mt-1 text-sm text-slate-500">Understand usage at a glance and scale without interrupting support.</p>
-      </div>
+    <Page>
+      <PageHeader title="Billing" description="Understand usage at a glance and scale without interrupting support." />
 
       {loading && (
         <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -431,6 +425,6 @@ export default function BillingPage() {
           {error && <p className="text-sm text-red-600">{error}</p>}
         </>
       )}
-    </div>
+    </Page>
   )
 }

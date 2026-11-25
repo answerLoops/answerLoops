@@ -15,6 +15,7 @@ import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { planRequiredFor } from '@/lib/billing/entitlements'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { PLANS } from '@/lib/billing/plans'
+import { Page, PageHeader } from '@/components/dashboard/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,15 +52,11 @@ export default async function AnalyticsPage() {
   const responseTotal = sla.responseMet + sla.responseBreached
 
   return (
-    <div className="dashboard-page max-w-6xl space-y-7">
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-blue-600">
-          <span className="h-px w-6 bg-blue-500" />
-          Performance
-        </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Analytics</h1>
-        <p className="mt-1 text-sm text-slate-500">See what the support agent resolves, where it hesitates, and the time your team gets back.</p>
-      </div>
+    <Page>
+      <PageHeader
+        title="Analytics"
+        description="See what the support agent resolves, where it hesitates, and the time your team gets back."
+      />
 
       {/* Hero ROI */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -250,6 +247,6 @@ export default async function AnalyticsPage() {
           </ul>
         )}
       </section>
-    </div>
+    </Page>
   )
 }
