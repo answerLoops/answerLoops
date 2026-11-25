@@ -1,7 +1,12 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { DeflectionStatusBanner } from '@/components/dashboard/deflection-status-banner'
+
+const nav = vi.hoisted(() => ({ pathname: '/dashboard' }))
+vi.mock('next/navigation', () => ({ usePathname: () => nav.pathname }))
+
+beforeEach(() => { nav.pathname = '/dashboard' })
 
 // Covers DeflectionStatusBanner: it renders nothing when every connected
 // integration is on auto-send (offPlatforms empty), otherwise it warns that
@@ -29,6 +34,12 @@ describe('DeflectionStatusBanner', () => {
     expect(names).toBeInTheDocument()
     expect(names.tagName).toBe('SPAN')
     expect(names.className).toContain('font-semibold')
+  })
+
+  it.each(['/tickets', '/kb', '/integrations', '/settings', '/analytics'])('stays off %s', (pathname) => {
+    nav.pathname = pathname
+    const { container } = render(<DeflectionStatusBanner offPlatforms={['Discord']} />)
+    expect(container.firstChild).toBeNull()
   })
 
   it('renders a Review Integrations link pointing to /integrations', () => {

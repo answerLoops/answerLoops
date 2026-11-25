@@ -61,15 +61,12 @@ describe('dashboard navigation', () => {
 })
 
 describe('dashboard stats', () => {
-  it('renders the measured deflection rate and the the complete operating snapshot', () => {
+  it('renders the measured deflection rate and the ticket counts', () => {
     render(
       <StatsCards
         open={4}
         inProgress={3}
         resolved={13}
-        slaBreaches={1}
-        pendingDrafts={2}
-        needsReview={5}
         autoDeflected={15}
         deflectionRate={75}
       />,
@@ -77,8 +74,8 @@ describe('dashboard stats', () => {
 
     expect(screen.getByText('75%')).toBeInTheDocument()
     expect(screen.getByText('Auto-Answered')).toBeInTheDocument()
-    expect(screen.getByText('SLA Breaches')).toBeInTheDocument()
-    expect(screen.getAllByText(/./).length).toBeGreaterThan(8)
+    expect(screen.getByText('Resolved')).toBeInTheDocument()
+    expect(screen.getByText('3 in progress')).toBeInTheDocument()
   })
 
   it('renders a zero rate when nothing has been answered', () => {
@@ -87,9 +84,6 @@ describe('dashboard stats', () => {
         open={0}
         inProgress={0}
         resolved={0}
-        slaBreaches={0}
-        pendingDrafts={0}
-        needsReview={0}
         autoDeflected={0}
         deflectionRate={0}
       />,

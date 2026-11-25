@@ -16,7 +16,6 @@ vi.mock('@/lib/db/queries/tickets', () => ({
     total: 100, open: 12, inProgress: 8, resolved: 30,
     slaBreaches: 2, pendingDrafts: 3, needsReview: 4, autoDeflected: 50,
   }),
-  getSLABreachedTickets: async () => [],
   getTickets: async () => [],
   getUnseenActivityTickets: h.getUnseenActivityTickets,
 }))
@@ -33,7 +32,6 @@ vi.mock('@/components/dashboard/activity-disclosure', () => ({
     return null
   },
 }))
-vi.mock('@/components/dashboard/sla-breach-list', () => ({ SLABreachList: () => null }))
 
 import DashboardPage from '@/app/(dashboard)/dashboard/page'
 import { verifyActivitySnapshot } from '@/lib/tickets/activity-snapshot'
