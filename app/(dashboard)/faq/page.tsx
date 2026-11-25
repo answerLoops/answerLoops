@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import type { FAQSnapshot } from '@/types'
+import { Page, PageHeader } from '@/components/dashboard/page-shell'
 
 export default function FAQPage() {
   const [faq, setFaq] = useState<FAQSnapshot | null>(null)
@@ -33,24 +34,16 @@ export default function FAQPage() {
   }
 
   return (
-    <div className="dashboard-page max-w-5xl space-y-6">
-      <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-blue-600">
-            <span className="h-px w-6 bg-blue-500" />
-            Published answers
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">FAQ</h1>
-          {faq && (
-            <p className="mt-1 text-sm text-slate-500">
-              Generated {new Date(faq.generated_at).toLocaleDateString()} · {faq.ticket_count} tickets
-            </p>
-          )}
-        </div>
-        <Button onClick={regenerate} disabled={generating} variant="secondary" size="sm">
-          {generating ? 'Generating…' : 'Regenerate FAQ'}
-        </Button>
-      </div>
+    <Page>
+      <PageHeader
+        title="FAQ"
+        description={faq ? `Generated ${new Date(faq.generated_at).toLocaleDateString()} · ${faq.ticket_count} tickets` : undefined}
+        actions={
+          <Button onClick={regenerate} disabled={generating} variant="secondary" size="sm">
+            {generating ? 'Generating…' : 'Regenerate FAQ'}
+          </Button>
+        }
+      />
 
       {loading && <p className="text-sm text-gray-500">Loading…</p>}
 
@@ -68,6 +61,6 @@ export default function FAQPage() {
           <pre className="whitespace-pre-wrap text-sm text-gray-800 font-sans leading-relaxed">{faq.content}</pre>
         </div>
       )}
-    </div>
+    </Page>
   )
 }

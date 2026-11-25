@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import type { SimulationResult, SimTicketResult, SimStreamEvent } from '@/app/api/simulation/run/route'
+import { Page, PageHeader } from '@/components/dashboard/page-shell'
 
 // Curated model lists per provider — only for providers this dropdown can
 // pick a *specific* model for. An org's configured chat_model always wins
@@ -156,18 +157,16 @@ export default function SimulationClient({ configuredProvider, configuredModel, 
   const doneCount = progress.filter(e => e.done).length
 
   return (
-    <div className="dashboard-page max-w-6xl space-y-7">
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-blue-600">
-          <span className="h-px w-5 bg-blue-500" />
-          Safe evaluation
-        </div>
-        <h1 className="text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-3xl">Simulation Mode</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Replay historical tickets through the AI pipeline — no writes, no messages sent.
-          Compare what the AI <em>would</em> do against what actually happened.
-        </p>
-      </div>
+    <Page>
+      <PageHeader
+        title="Simulation Mode"
+        description={
+          <>
+            Replay historical tickets through the AI pipeline — no writes, no messages sent.
+            Compare what the AI <em>would</em> do against what actually happened.
+          </>
+        }
+      />
 
       {/* Config */}
       <div className="relative overflow-hidden rounded-2xl border dashboard-dark-panel border-[#375875] bg-[#082e50] p-5 text-white shadow-[0_24px_65px_-36px_rgba(15,23,42,0.3)] sm:p-6">
@@ -406,6 +405,6 @@ export default function SimulationClient({ configuredProvider, configuredModel, 
           </div>
         </>
       )}
-    </div>
+    </Page>
   )
 }
