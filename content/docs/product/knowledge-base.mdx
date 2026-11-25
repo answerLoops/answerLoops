@@ -6,13 +6,13 @@ icon: BookText
 
 The knowledge base is the material answerLoops answers from. When a question arrives, answerLoops searches your articles for the ones closest in meaning and hands them to the AI as reference material for the reply. Better, fresher articles mean more questions the AI can answer on its own.
 
-Open **Knowledge Base** from the **Improve** group in the sidebar. The page has four tabs: **Sources** (add and organize content), **Knowledge coverage** (see what the assistant can answer from), **Review** (turn unanswered questions into articles), and **Flagged answers** (see answers visitors marked as wrong). Across the top are four counts (sources, chunks, articles, and questions needing review) and the buttons for adding content: **Write answer**, **Upload file**, **Import URL**, and a **Connect** menu for GitHub and Notion.
+Open **Knowledge Base** from the **Improve** group in the sidebar. The page has five tabs: **Sources** (add and organize content), **Knowledge coverage** (see what the assistant can answer from), **Review** (turn unanswered questions into articles), **Flagged answers** (see answers visitors marked as wrong), and **Knowledge gaps** (the most-asked questions the assistant could not answer well). Across the top are four counts (sources, chunks, articles, and questions needing review) and the buttons for adding content: **Write answer**, **Upload file**, **Import URL**, and a **Connect** menu for GitHub and Notion.
 
 <Hotspots
   shot="knowledge-base"
   only={['tabs', 'write-answer', 'add-article', 'github-repos']}
   notes={{
-    tabs: 'Manage is where you add content. Knowledge coverage shows what the assistant can answer from. Review holds unanswered questions waiting to become articles.',
+    tabs: 'Sources is where you add content. Knowledge coverage shows what the assistant can answer from. Review holds unanswered questions waiting to become articles.',
     'write-answer': 'Write down something the assistant should know, in your own words. No import needed.',
     'add-article': 'Saves the article. It is published straight away, so the assistant can use it for the very next question.',
     'github-repos': 'Repositories you have turned on for the knowledge base show up here, each with a Sync now button.',
@@ -20,7 +20,7 @@ Open **Knowledge Base** from the **Improve** group in the sidebar. The page has 
 />
 
 <Callout type="info">
-  The Manage and Knowledge coverage tabs are available on every plan. The Review queue and Flagged answers need the Pro plan or above. Self-hosted deployments have every feature unlocked.
+  The Sources and Knowledge coverage tabs are available on every plan. The Review queue, Flagged answers and Knowledge gaps need the Pro plan or above. Self-hosted deployments have every feature unlocked.
 </Callout>
 
 ## How it fits together
@@ -28,7 +28,7 @@ Open **Knowledge Base** from the **Improve** group in the sidebar. The page has 
 1. **You add content.** Import a web page or site, upload a file, sync a GitHub repository or a Notion workspace, write an answer by hand, or promote a resolved ticket.
 2. **answerLoops makes it searchable.** Each source is split into sections. Each section becomes one article, and every article is converted into an embedding, a numeric fingerprint of its meaning, so it can be found by meaning rather than exact words.
 3. **The assistant draws on it.** For each question, the closest articles are passed to the assistant as reference material. This works the same whether the question arrives through the widget, a channel, email, or the Agent API and MCP `generate_answer`.
-4. **You close the gaps.** Questions the knowledge base could not answer land in [Knowledge Gaps](/docs/product/knowledge-gaps) and the Review queue, ready to become new articles.
+4. **You close the gaps.** Questions the knowledge base could not answer land in the [Knowledge gaps tab](/docs/product/knowledge-gaps) and the Review queue, ready to become new articles.
 
 On a hosted plan, creating embeddings works without your own AI key, using your workspace's included AI usage. If you reach this month's limit, the import stops with a message asking you to add your own provider under **Settings → AI Model**.
 
