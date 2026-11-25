@@ -163,7 +163,7 @@ OPENAI_API_KEY=             # or configure per-org in Settings → AI Model
 
 ## 10. Knowledge Gap Dashboard (T2-1)
 
-- [ ] Go to `/knowledge-gaps` (sidebar: alert circle icon)
+- [ ] Go to `/kb?tab=gaps` (Knowledge Base → Knowledge gaps tab; `/knowledge-gaps` redirects there)
 - [ ] 4 stat cards render: Total gaps, Needs human, Low confidence, Missing KB article
 - [ ] Gap ticket list shows tickets with reason badges (`Low AI confidence` / `Needs human` / `Missing KB article`)
 - [ ] Click `+ KB` on any gap row → navigates to `/kb?sourceTicket=[id]`

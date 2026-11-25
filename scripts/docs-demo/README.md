@@ -197,7 +197,7 @@ gitignored; never commit it.
 ## Routes
 
 `/dashboard`, `/tickets`, `/tickets/<number>`, `/kb` (Sources, Knowledge
-coverage, Review and Flagged answers tabs), `/knowledge-gaps`, `/analytics` (includes CSAT),
+coverage, Review and Flagged answers tabs), `/kb?tab=gaps`, `/analytics` (includes CSAT),
 `/faq`, `/leads`, `/integrations?tab=<discord|slack|telegram|discourse|circle|email|github|notion>`,
 `/settings?tab=<general|team|ai|widget|api-keys>`, `/billing`, `/simulation`.
 
