@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { AIModelSection } from '@/app/(dashboard)/settings/page'
+import { AIModelSection } from '@/components/settings/ai-model'
 import { clearAIConfigAction } from '@/lib/actions/ai-config'
 
 // AIModelSection fetches /api/ai-config/usage-status alongside
