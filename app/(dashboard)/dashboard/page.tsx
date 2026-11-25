@@ -9,6 +9,7 @@ import { NeedsAttention } from '@/components/dashboard/needs-attention'
 import Link from 'next/link'
 import { auth } from '@/auth'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { Page, PageHeader } from '@/components/dashboard/page-shell'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,26 +29,20 @@ export default async function DashboardPage() {
   const firstName = session?.user?.name?.split(' ')[0] ?? 'there'
 
   return (
-    <div className="dashboard-page max-w-7xl space-y-7">
-
-      {/* Header */}
-      <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
-        <div>
-          <div className="mb-2 flex items-center gap-2 text-[0.625rem] font-semibold uppercase tracking-[0.16em] text-blue-600">
-            <span className="h-px w-5 bg-blue-500" />
-            Live workspace
-          </div>
-          <h1 className="text-2xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-3xl">Good to see you, {firstName}</h1>
-          <p className="mt-1 text-sm text-slate-500">Here&rsquo;s what&rsquo;s happening in your community today.</p>
-        </div>
-        <Link
-          id={VIEW_ALL_TICKETS_ID}
-          href="/tickets"
-          className="self-start rounded-lg bg-[#082e50] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:brightness-110"
-        >
-          View all tickets
-        </Link>
-      </div>
+    <Page>
+      <PageHeader
+        title={`Good to see you, ${firstName}`}
+        description="Here’s what’s happening in your community today."
+        actions={
+          <Link
+            id={VIEW_ALL_TICKETS_ID}
+            href="/tickets"
+            className="rounded-lg bg-[#082e50] px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:brightness-110"
+          >
+            View all tickets
+          </Link>
+        }
+      />
 
       <ActivityPanel
         tickets={activity.tickets}
@@ -66,6 +61,6 @@ export default async function DashboardPage() {
         counts={{ slaBreaches: stats.slaBreaches, pendingDrafts: stats.pendingDrafts, needsReview: stats.needsReview }}
         openTickets={openTickets}
       />
-    </div>
+    </Page>
   )
 }

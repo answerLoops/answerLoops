@@ -193,12 +193,12 @@ export const SHOTS: Shot[] = [
     route: '/analytics',
     viewport: { width: 1440, height: 900 },
     waitFor: ['h1:has-text("Analytics")', 'text=Deflection trend'],
-    alt: 'The analytics page: staff time saved, deflection rate and questions handled, above a day-by-day deflection trend.',
+    alt: 'The analytics page: staff time saved, deflection rate and questions handled, above a chart of answered questions per day with a 7, 30 or 90 day selector.',
     pins: [
       { id: 'time-saved', selector: 'text=STAFF TIME SAVED >> xpath=ancestor::div[1]', label: 'Staff time saved' },
       { id: 'deflection-rate', selector: 'text=DEFLECTION RATE >> xpath=ancestor::div[1]', label: 'Deflection rate' },
       { id: 'questions-handled', selector: 'text=QUESTIONS HANDLED >> xpath=ancestor::div[1]', label: 'Questions handled' },
-      { id: 'trend', selector: 'section:has(h2:has-text("Deflection trend"))', label: 'Daily deflection trend' },
+      { id: 'trend', selector: 'section[aria-labelledby="trend-heading"]', label: 'Daily deflection trend' },
     ],
   },
   {

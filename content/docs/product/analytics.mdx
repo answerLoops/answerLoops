@@ -13,7 +13,7 @@ Analytics shows what the AI resolves on its own, where it hesitates, and how muc
     'time-saved': 'An estimate of staff time returned to your team, with a dollar figure based on your own assumptions.',
     'deflection-rate': 'The share of answered questions the AI resolved without a person stepping in.',
     'questions-handled': 'The number of tickets included in the metrics, plus the minutes-per-deflection assumption in use.',
-    trend: 'A day-by-day view of answered and automatically resolved questions.',
+    trend: 'A column for each day, split into automatically resolved and handled by a person. Switch between 7, 30 and 90 days.',
   }}
 />
 
@@ -35,7 +35,9 @@ Duplicate tickets, bug reports, and feature requests are left out of the deflect
 
 ## Follow the trend
 
-**Deflection trend** lists the last 14 days, one row per day that had answered questions. Each row shows how many answered questions were resolved automatically (for example, "4/6 deflected"). A day with no answered questions does not appear.
+**Deflection trend** is a chart with one column for each day. Each column is split into the questions the AI resolved automatically (green) and the ones a person handled (grey). Hover a column to see the day's exact numbers. The text above the chart sums up the whole window, for example "8 of 10 answered questions resolved automatically in the last 30 days".
+
+Choose **7 days**, **30 days** (the default) or **90 days** at the top right of the chart. The choice is in the address as `?range=7`, `?range=30` or `?range=90`, so you can bookmark or share a view. It changes the trend only; the other figures on the page cover all time. Quiet days show as empty columns.
 
 **Trending topics** counts tickets by category, most common first. It counts every category, including bug reports and feature requests, and leaves out only duplicates. Use it to see what your customers ask about most.
 
@@ -80,7 +82,7 @@ The CSAT panel reports the average rating out of 5, the total number of ratings,
 
 ## Find documentation work
 
-**Documentation gaps** lists resolved or closed how-to and documentation tickets that have not been promoted to the knowledge base, newest first, up to 20. Open a ticket, check the explanation, and promote it if it will help answer future questions.
+**Documentation gaps** previews resolved or closed how-to and documentation tickets that have not been promoted to the knowledge base, newest first, up to five. Where your plan includes it, **See all in Knowledge gaps →** opens the full queue on the Knowledge Base page. Open a ticket, check the explanation, and promote it if it will help answer future questions.
 
 ## Where to go next
 
