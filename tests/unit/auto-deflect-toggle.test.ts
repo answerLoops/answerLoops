@@ -22,6 +22,7 @@ const {
   generateText,
   assessAnswer,
   captureUnansweredQuestion,
+  createNotification,
 } = vi.hoisted(() => ({
   sendToSlackChannel: vi.fn(async (_channel: string, _content: string, _orgId: number, _threadTs?: string) => 'posted-ts'),
   sendToChannel: vi.fn(async (_channelId: string, _content: string, _orgId: number) => 'posted-id'),
@@ -36,6 +37,7 @@ const {
   generateText: vi.fn(async () => ({ text: 'a high-confidence draft answer' })),
   assessAnswer: vi.fn(async () => ({ confidence: 0.95, answered_fully: true, reasoning: 'x' })),
   captureUnansweredQuestion: vi.fn(async () => {}),
+  createNotification: vi.fn(),
 }))
 
 vi.mock('@/lib/kb/review-capture', () => ({ captureUnansweredQuestion }))
@@ -55,7 +57,7 @@ vi.mock('@/lib/db/queries/tickets', () => ({
   updateTicketAIDraftStatus,
   getTicketById: vi.fn(async () => ({ id: 1, source_channel_id: 'owner/repo', source_message_id: 'github-issue-42' })),
 }))
-vi.mock('@/lib/db/queries/notifications', () => ({ createNotification: vi.fn() }))
+vi.mock('@/lib/db/queries/notifications', () => ({ createNotification }))
 vi.mock('@/lib/db/queries/assessments', () => ({ saveAssessment: vi.fn(async () => {}) }))
 vi.mock('@/lib/db/queries/feedback', () => ({ mapAnswerMessage: vi.fn(), mapCsatMessage: vi.fn() }))
 vi.mock('@/lib/db/queries/csat', () => ({ mapCsatMessage: vi.fn() }))
@@ -152,6 +154,47 @@ describe('runAIAgent: Automatic Deflections toggle', () => {
 
     expect(createComment).not.toHaveBeenCalled()
     expect(sendToChannel).not.toHaveBeenCalled()
+  })
+
+  describe('staff notification wording', () => {
+    it('says a confident answer is waiting on the toggle for a platform that has one', async () => {
+      getIntegration.mockResolvedValue({ auto_deflect_enabled: 0, confidence_threshold: null })
+      const { runAIAgent } = await import('@/lib/ai/agent')
+
+      await runAIAgent(1, 'a question', 'C123', [], 3, 'slack', 'general_question', [], 4)
+
+      expect(createNotification).toHaveBeenCalledWith(
+        'ai_draft_ready',
+        'Ready to send (95%) — Automatic Deflections is off — ticket #4',
+        1,
+        3
+      )
+    })
+
+    it('tells the team to copy a confident Circle draft in by hand, never mentioning a toggle Circle does not have', async () => {
+      getIntegration.mockResolvedValue({ auto_deflect_enabled: 0, confidence_threshold: null })
+      const { runAIAgent } = await import('@/lib/ai/agent')
+
+      await runAIAgent(1, 'a question', 'post-1', [], 3, 'circle', 'general_question', [], 4)
+
+      expect(createNotification).toHaveBeenCalledWith(
+        'ai_draft_ready',
+        'Draft ready (95%) — copy the answer into Circle — ticket #4',
+        1,
+        3
+      )
+      const texts = createNotification.mock.calls.map((c) => String(c[1]))
+      expect(texts.some((t) => t.includes('Automatic Deflections'))).toBe(false)
+    })
+
+    it('still flags a low-confidence Circle draft for human review', async () => {
+      assessAnswer.mockResolvedValue({ confidence: 0.3, answered_fully: false, reasoning: 'x' })
+      const { runAIAgent } = await import('@/lib/ai/agent')
+
+      await runAIAgent(1, 'a question', 'post-1', [], 3, 'circle', 'general_question', [], 4)
+
+      expect(createNotification).toHaveBeenCalledWith('ai_draft_ready', 'Needs human review (30%) — ticket #4', 1, 3)
+    })
   })
 
   describe('unseen-question capture for the review queue', () => {

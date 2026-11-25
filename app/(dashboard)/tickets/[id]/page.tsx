@@ -30,6 +30,7 @@ import { getEmailMessagesForTicket } from '@/lib/db/queries/email-messages'
 import { TicketContent } from '@/components/tickets/ticket-content'
 import { TicketThread } from '@/components/tickets/ticket-thread'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
+import { reviewNoticeFor } from '@/lib/tickets/review-notice'
 
 // Always reflect the latest ticket state (drafts, assessments, feedback).
 export const dynamic = 'force-dynamic'
@@ -57,13 +58,17 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
         : Promise.resolve(null),
     ])
 
-  // The confidence assessment card shows "needs human review" whether that's
-  // because the answer was genuinely low-confidence or because it would have
-  // cleared the bar but the org has Automatic Deflections switched off for
-  // this channel — those read identically to staff without this flag, but
-  // only the second case means "nothing was sent, respond manually."
-  const deflectionsOffForSource =
-    !!sourceIntegration && sourceIntegration.auto_deflect_enabled !== 1
+  // The confidence assessment card shows "needs human review" whether the
+  // answer was genuinely low-confidence or nothing could be sent for it (the
+  // channel is ingest-only, or Automatic Deflections is off). This line tells
+  // the second case apart. See lib/tickets/review-notice.ts.
+  const reviewNotice = assessment
+    ? reviewNoticeFor({
+        sourcePlatform: ticket.source_platform,
+        autoDeflected: assessment.auto_deflected === 1,
+        sourceIntegration,
+      })
+    : null
 
   const failedDelivery = emailMessages.find(
     (m) => m.direction === 'out' && (m.status === 'bounced' || m.status === 'delivery_failed')
@@ -279,12 +284,8 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
                   {Math.round(assessment.confidence * 100)}% · {assessment.auto_deflected === 1 ? 'auto-answered' : 'needs human review'}
                 </span>
               </div>
-              {assessment.auto_deflected !== 1 && deflectionsOffForSource && (
-                <p className="mb-1.5 text-xs font-medium text-amber-800">
-                  {ticket.source_platform === 'circle'
-                    ? 'Circle is ingest-only — copy the draft below and paste it into Circle by hand.'
-                    : `Automatic Deflections is off for ${ticket.source_platform} — nothing was sent to the customer. Approve and send the draft below, or reply manually.`}
-                </p>
+              {reviewNotice && (
+                <p className="mb-1.5 text-xs font-medium text-amber-800">{reviewNotice}</p>
               )}
               {assessment.reasoning && (
                 <p className="text-xs text-gray-600">{assessment.reasoning}</p>

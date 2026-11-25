@@ -65,3 +65,33 @@ describe('AIDraftPanel — Copy draft button', () => {
     expect(writeText).toHaveBeenCalledWith('my edited answer')
   })
 })
+
+// Circle is ingest-only: nothing the panel does ever reaches Circle, so its
+// labels must not promise a post. Every other platform keeps its own wording.
+describe('AIDraftPanel — ingest-only wording for Circle', () => {
+  it('offers to save the edited answer for a Circle ticket, without promising a post', async () => {
+    const user = userEvent.setup()
+    render(<AIDraftPanel ticketId={1} draft="The AI answer" status="posted" sourcePlatform="circle" />)
+
+    await user.click(screen.getByRole('button', { name: /^edit$/i }))
+
+    expect(screen.getByRole('button', { name: 'Save answer' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /post to circle/i })).toBeNull()
+  })
+
+  it('tells the team to copy a Circle draft in by hand instead of saying it was posted', () => {
+    render(<AIDraftPanel ticketId={1} draft="The AI answer" status="posted" sourcePlatform="circle" />)
+
+    expect(screen.getByText(/copy it into Circle by hand/i)).toBeTruthy()
+    expect(screen.queryByText(/posted to circle/i)).toBeNull()
+  })
+
+  it('keeps the post wording for a platform that does send the answer', async () => {
+    const user = userEvent.setup()
+    render(<AIDraftPanel ticketId={1} draft="The AI answer" status="posted" sourcePlatform="slack" />)
+
+    expect(screen.getByText(/posted to slack/i)).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: /^edit$/i }))
+    expect(screen.getByRole('button', { name: 'Save & post to Slack' })).toBeTruthy()
+  })
+})
