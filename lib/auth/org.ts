@@ -24,7 +24,7 @@ import { memberships } from '@/lib/db/schema'
 type OrgRole = 'owner' | 'admin' | 'member'
 
 type OrgAccess =
-  | { ok: true; orgId: number; userId: number; role: OrgRole }
+  | { ok: true; orgId: number; userId: number; role: OrgRole; userName: string | null }
   | { ok: false; error: string }
 
 /**
@@ -54,5 +54,9 @@ export async function requireOrgAccess(allowedRoles?: readonly OrgRole[]): Promi
     return { ok: false, error: 'You do not have permission to do that.' }
   }
 
-  return { ok: true, orgId, userId, role }
+  // Shown on replies and in the activity log, so staff do not have to type who
+  // they are. Falls back to the part of the email before the @.
+  const userName = session.user.name?.trim() || session.user.email?.split('@')[0] || null
+
+  return { ok: true, orgId, userId, role, userName }
 }

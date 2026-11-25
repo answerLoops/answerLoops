@@ -32,14 +32,24 @@ test.describe('ticket detail interactions', () => {
     await waitForPipeline(request, ticketId)
 
     await page.goto(await ticketDetailPath(request, ticketId))
-    // staffName appears in both the status and reply forms — scope to the
-    // status form (the one with the status select).
+    // Scope to the status form (the one with the status select).
     const statusForm = page.locator('form:has(select[name="status"])')
-    await statusForm.locator('input[name="staffName"]').fill('Sarah')
     await statusForm.locator('select[name="status"]').selectOption('resolved')
     await statusForm.getByRole('button', { name: 'Update status' }).click()
 
-    // The page re-renders with an activity entry recording the transition.
+    // The page re-renders with an activity entry recording the transition,
+    // credited to the signed-in person without asking for a name.
     await expect(page.getByText(/open → resolved/)).toBeVisible()
+    await expect(statusForm.locator('input[name="staffName"]')).toHaveCount(0)
+  })
+
+  test('replies are sent as the signed-in person, with no name field', async ({ request, page }) => {
+    const ticketId = await ingest(request, { content: 'How do I configure the client?' })
+    await waitForPipeline(request, ticketId)
+
+    await page.goto(await ticketDetailPath(request, ticketId))
+    const form = page.locator('form', { has: page.getByPlaceholder(/Type your response/) })
+    await expect(form.getByLabel('Your name')).toHaveCount(0)
+    await expect(form.getByText(/^Sent as /)).toBeVisible()
   })
 })

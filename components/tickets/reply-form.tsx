@@ -16,7 +16,7 @@ const PLATFORM_LABELS: Record<string, { button: string; hint: string; success: s
   mcp:      { button: 'Save reply',              hint: 'This ticket was opened by an AI agent — there\'s no chat channel to post back into; the reply is saved on the ticket for the agent to read via the API.', success: 'Reply saved!' },
 }
 
-export function ReplyForm({ ticketId, sourcePlatform = 'discord' }: { ticketId: number; sourcePlatform?: string }) {
+export function ReplyForm({ ticketId, sourcePlatform = 'discord', replyingAs }: { ticketId: number; sourcePlatform?: string; replyingAs?: string | null }) {
   const formRef = useRef<HTMLFormElement>(null)
   const [state, formAction, isPending] = useActionState(postReplyAction, null)
   const labels = PLATFORM_LABELS[sourcePlatform] ?? PLATFORM_LABELS.discord
@@ -31,13 +31,8 @@ export function ReplyForm({ ticketId, sourcePlatform = 'discord' }: { ticketId: 
     <form ref={formRef} action={formAction} className="space-y-3">
       <input type="hidden" name="ticketId" value={ticketId} />
       <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Your name</label>
-        <input name="staffName" type="text" placeholder="e.g. Sarah" required
-          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm" />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-600 mb-1">Reply</label>
-        <textarea name="content" rows={4} required placeholder="Type your response to the community member…"
+        <label htmlFor={`reply-${ticketId}`} className="sr-only">Reply</label>
+        <textarea id={`reply-${ticketId}`} name="content" rows={4} required placeholder="Type your response to the community member…"
           className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm resize-none" />
       </div>
       {state && 'error' in state && state.error && (
@@ -52,6 +47,7 @@ export function ReplyForm({ ticketId, sourcePlatform = 'discord' }: { ticketId: 
         </Button>
         <p className="text-xs text-gray-400">{labels.hint}</p>
       </div>
+      {replyingAs && <p className="text-xs text-gray-500">Sent as {replyingAs}.</p>}
     </form>
   )
 }

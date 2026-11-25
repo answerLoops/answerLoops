@@ -28,10 +28,12 @@ export function AnswerSourcesPanel({ data }: { data: KBTicketAnswerSources }) {
       <h2 id="answer-sources-heading" className="text-xs font-semibold uppercase tracking-wide text-gray-500">
         Sources
       </h2>
-      <p className="mt-1 text-xs text-slate-600">
-        Articles supplied as context for this draft, in the order they were given. The assistant decides what to use, so
-        this does not mean the reply quoted them.
-      </p>
+      {data.sources.length > 0 && (
+        <p className="mt-1 text-xs text-slate-600">
+          Articles supplied as context for this draft, in the order they were given. The assistant decides what to use, so
+          this does not mean the reply quoted them.
+        </p>
+      )}
 
       {data.outcome === 'failed' && (
         <p className="mt-2 text-xs text-amber-700">The draft failed. These are the articles that were supplied to it.</p>

@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { getTicketByOrgTicketNumber, getTicketReplies, getTicketEvents } from '@/lib/db/queries/tickets'
 import { StatusBadge, PriorityBadge, CategoryBadge, AIDraftBadge } from '@/components/ui/badge'
 import { TicketStatusForm } from '@/components/tickets/ticket-status-form'
-import { DeleteTicketButton } from '@/components/tickets/delete-ticket-button'
+import { TicketActionsMenu } from '@/components/tickets/ticket-actions-menu'
+import { Page } from '@/components/dashboard/page-shell'
 import { auth } from '@/auth'
 import { getOrgMembers } from '@/lib/db/queries/members'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
@@ -96,7 +97,7 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
   const titleFallback = contentText.slice(0, 120) || `Shared ${contentAttachments.length} attachment${contentAttachments.length === 1 ? '' : 's'}`
 
   return (
-    <div className="dashboard-page max-w-6xl space-y-6">
+    <Page>
       <MarkTicketSeen ticketNumber={ticket.org_ticket_number} />
       {/* Back navigation */}
       <Link href="/tickets" className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 transition-colors hover:text-blue-800">
@@ -236,7 +237,7 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
             </a>
           ) : null}
         </div>
-        {isOwner && <DeleteTicketButton ticketId={ticket.id} />}
+        {isOwner && <TicketActionsMenu ticketId={ticket.id} />}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -301,7 +302,7 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
           {/* Reply form */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Reply</h2>
-            <ReplyForm ticketId={ticket.id} sourcePlatform={ticket.source_platform ?? 'discord'} />
+            <ReplyForm ticketId={ticket.id} sourcePlatform={ticket.source_platform ?? 'discord'} replyingAs={session?.user?.name} />
           </div>
         </div>
 
@@ -414,6 +415,6 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
           )}
         </div>
       </div>
-    </div>
+    </Page>
   )
 }

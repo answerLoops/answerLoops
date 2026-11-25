@@ -51,7 +51,7 @@ async function sendReply(
 const UpdateStatusSchema = z.object({
   ticketId: z.coerce.number(),
   status: z.enum(['open', 'in_progress', 'resolved', 'closed', 'duplicate']),
-  staffName: z.string().min(1).max(100),
+  staffName: z.string().max(100).optional(),
   resolutionNotes: z.string().optional(),
 })
 
@@ -64,11 +64,12 @@ export async function updateTicketStatusAction(
     return { error: parsed.error.flatten().fieldErrors.status?.[0] ?? 'Invalid input' }
   }
 
-  const { ticketId, status, staffName, resolutionNotes } = parsed.data
+  const { ticketId, status, resolutionNotes } = parsed.data
 
   const access = await requireOrgAccess()
   if (!access.ok) return { error: access.error }
   const orgId = access.orgId
+  const staffName = staffNameFor(parsed.data.staffName, access.userName)
   const owned = await getTicketById(ticketId, orgId)
   if (!owned) return { error: 'Ticket not found' }
 
@@ -92,9 +93,17 @@ export async function updateTicketStatusAction(
   return null
 }
 
+/**
+ * Who a status change or reply is credited to. The forms no longer ask, so it
+ * is the signed-in person's name; an explicit name (an API caller, say) wins.
+ */
+function staffNameFor(provided: string | undefined, userName: string | null): string {
+  return provided?.trim() || userName || 'Support team'
+}
+
 const PostReplySchema = z.object({
   ticketId: z.coerce.number(),
-  staffName: z.string().min(1).max(100),
+  staffName: z.string().max(100).optional(),
   content: z.string().min(1).max(2000),
 })
 
@@ -107,10 +116,11 @@ export async function postReplyAction(
     return { error: 'Invalid input' }
   }
 
-  const { ticketId, staffName, content } = parsed.data
+  const { ticketId, content } = parsed.data
   const access = await requireOrgAccess()
   if (!access.ok) return { error: access.error }
   const orgId = access.orgId
+  const staffName = staffNameFor(parsed.data.staffName, access.userName)
   const ticket = await getTicketById(ticketId, orgId)
   if (!ticket) return { error: 'Ticket not found' }
 
