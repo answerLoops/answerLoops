@@ -275,6 +275,20 @@ describe('GET /api/integrations', () => {
     h.requireOrgAccess.mockResolvedValue(ok('member'))
     expect((await (await GET(new Request('http://x'))).json())[0].bot_secret).toBeNull()
   })
+
+  it.each([
+    ['owner', 'circle-setup-value'],
+    ['admin', 'circle-setup-value'],
+    ['member', null],
+  ])('shows the Circle webhook token to a %s only when they manage integrations', async (role, expected) => {
+    const { GET } = await import('@/app/api/integrations/route')
+    h.listIntegrations.mockResolvedValue([row({ platform: 'circle', bot_secret: 'circle-setup-value', team_id: 'https://community.example' })])
+    h.requireOrgAccess.mockResolvedValue(ok(role as 'owner' | 'admin' | 'member'))
+    const [circle] = await (await GET(new Request('http://x'))).json()
+    expect(circle.bot_secret).toBe(expected)
+    expect(circle.has_bot_secret).toBe(true)
+    expect(circle).not.toHaveProperty('bot_token')
+  })
 })
 
 describe('team invites', () => {
