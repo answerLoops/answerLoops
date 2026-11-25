@@ -12,7 +12,26 @@ const STAGES = [
   'Reply delivered',
 ]
 
-const CHANNELS = [
+interface DemoChannel {
+  name: string
+  color: string
+  destination: string
+  author: string
+  avatar: string
+  room: string
+  question: string
+  sources: string[]
+  answer: string
+  steps: string[]
+  review: string
+  /**
+   * How the example ends. Most channels post the reviewed answer back to the
+   * conversation; an ingest-only channel ends with a draft for the team.
+   */
+  delivery?: { stage: string; status: string; note: string }
+}
+
+const CHANNELS: DemoChannel[] = [
   {
     name: 'Discord', color: '#5865f2', destination: '#dev-support',
     author: 'Developer', avatar: 'JD', room: '#dev-support',
@@ -51,6 +70,11 @@ const CHANNELS = [
       'Export in the requested format, then share a preview in the print-swap space for feedback.',
     ],
     review: 'Checked export preparation and submission steps against the print-swap guides.',
+    delivery: {
+      stage: 'Draft ready',
+      status: 'Draft ready for your team',
+      note: 'Your team posts it in Circle',
+    },
   },
 ]
 
@@ -185,15 +209,17 @@ export function AnimatedChat() {
         {current >= 4 && (
           <div className="demo-delivered demo-enter">
             <Check size={15} />
-            <span>Reply sent to {channel.destination}</span>
-            <span>Auto-reply enabled</span>
+            <span>{channel.delivery?.status ?? `Reply sent to ${channel.destination}`}</span>
+            <span>{channel.delivery?.note ?? 'Auto-reply enabled'}</span>
           </div>
         )}
       </div>
       <figcaption className="support-demo-footer">
         <span>
           <span className="demo-dot" />
-          {STAGES[current]}
+          {current === STAGES.length - 1 && channel.delivery
+            ? channel.delivery.stage
+            : STAGES[current]}
         </span>
         {!reducedMotion && (
           <button
