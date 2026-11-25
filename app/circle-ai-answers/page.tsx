@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'AI-reviewed answers for your Circle community | answerLoops',
   description:
-    'Keep your Circle community. Add AI-drafted, AI-reviewed answers to new posts and comments from your own knowledge base, with automatic replies you control.',
+    'Keep your Circle community. New posts and comments become tickets with AI-drafted, AI-reviewed answers from your own knowledge base, ready for your team to post in Circle.',
   path: '/circle-ai-answers',
 })
 export default async function Page() {
@@ -22,7 +22,7 @@ export default async function Page() {
       navState={await resolveNavState()}
       eyebrow="Integration"
       title="Keep Circle members learning and participating"
-      intro="Answer questions from your course materials and guides right in Circle. Your team can review drafts and choose when to enable automatic replies."
+      intro="Every new question in Circle arrives with an answer drafted from your course materials and guides. Your team reviews it and posts the answer in Circle, so members always hear from you."
       audience="Circle community operators and course creators who want AI answers without moving members to a new platform."
       highlights={[
         {
@@ -35,7 +35,7 @@ export default async function Page() {
         },
         {
           title: 'Check replies against your course materials',
-          body: 'A separate review agent checks each draft against its sources and assigns a confidence score before anything posts automatically — off by default, so nothing goes out unreviewed until you trust it.',
+          body: 'A separate review agent checks each draft against its sources and assigns a confidence score. Low-confidence drafts are flagged, and nothing is posted to Circle without your team.',
         },
         {
           title: 'Follow up on questions that need your team',
@@ -46,17 +46,17 @@ export default async function Page() {
         {
           step: '01',
           title: 'Connect Circle Workflows',
-          body: 'Set up a webhook workflow for new posts and comments, plus an Admin API token, then choose which spaces to watch.',
+          body: 'Set up one webhook Workflow for new posts and one for new comments, add an Admin API token, then choose which spaces to watch.',
         },
         {
           step: '02',
-          title: 'Review a batch of drafts',
-          body: 'Watch how the review agent scores real questions from your community before enabling automatic replies.',
+          title: 'Review each draft',
+          body: 'Each question lands in your ticket queue with a drafted answer and a confidence score from the review agent.',
         },
         {
           step: '03',
-          title: 'Turn on automatic replies',
-          body: 'Enable it once you trust the pattern — lower-confidence drafts still wait in your ticket queue.',
+          title: 'Answer in Circle',
+          body: 'Edit the draft if needed and post it in Circle yourself. Low-confidence drafts are flagged for a closer look.',
         },
       ]}
       comparison={[
@@ -93,7 +93,7 @@ export default async function Page() {
       schema={{
         name: 'Add AI-reviewed answers to your Circle community',
         description:
-          'Keep your Circle community. Add AI-drafted, AI-reviewed answers to new posts and comments from your own knowledge base, with automatic replies you control.',
+          'Keep your Circle community. New posts and comments become tickets with AI-drafted, AI-reviewed answers from your own knowledge base, ready for your team to post in Circle.',
         path: '/circle-ai-answers',
       }}
     />

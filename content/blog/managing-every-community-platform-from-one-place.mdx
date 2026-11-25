@@ -32,7 +32,7 @@ each platform actually supports:
 | Discord | Message in a monitored channel | `@role` mention | Held as a draft; acknowledgment reaction/reply sent instead |
 | Slack | Message in a monitored channel (OAuth or polling) | User group or user ID mention | Held as a draft; brief acknowledgment reply sent |
 | Discourse | New topic or post in a chosen category | Mentioned user | Held as a draft, or posted with the escalation mention if Automatic Deflections is on |
-| Circle | New post or comment | Mentioned user | Flagged low-confidence on the ticket for review |
+| Circle | New post or comment | Your team, on the ticket | Flagged low-confidence on the ticket for review |
 | GitHub | New Issue or Discussion (skips anything filed by a repo collaborator) | N/A — stays in the queue | Held as a draft; brief acknowledgment comment posted |
 | Telegram | Message in a monitored chat (10+ characters, from a real user) | Escalation username | Held as a draft; no automatic reply sent |
 | Email | Inbound email matching sender filters | Escalation address, named in plain text | Routed to a human instead of sending automatically |
@@ -41,7 +41,7 @@ each platform actually supports:
 
 Three things hold across every row except the widget:
 
-- **Automatic Deflections is off by default on every channel.** Until you turn it on, even a confidence score above threshold doesn't trigger an automatic reply — it holds the draft on the dashboard for Approve/Edit/Dismiss, and the channel gets a brief acknowledgment instead of the real answer.
+- **Automatic Deflections is off by default on every channel.** Until you turn it on, even a confidence score above threshold doesn't trigger an automatic reply — it holds the draft on the dashboard for Approve/Edit/Dismiss, and the channel gets a brief acknowledgment instead of the real answer. Circle never replies automatically: answerLoops drafts the answer on the ticket and your team posts it in Circle.
 - **The confidence threshold is the same 0–1 scale everywhere**, defaulting to `0.8`. Whether a low-confidence answer gets held, flagged, or sent alongside an escalation mention depends on the channel and Automatic Deflections, not the scoring itself.
 - **Escalation is the one thing that's genuinely different per platform**, because each platform has a different idea of "notify someone": Discord and Slack can @mention a role or group, Telegram and Google Chat can only target one specific user, email has no mention concept at all so the address is just named in the reply text, and GitHub has no escalation target — a low-confidence ticket just stays in the queue.
 
@@ -55,6 +55,6 @@ When a resolved ticket contains an explanation future questions will need, promo
 
 ## Turning a channel on deliberately
 
-Because Automatic Deflections defaults to off, connecting a new channel never means the AI starts replying unsupervised on day one. The practical rollout for each channel is the same: connect it, review the drafts it produces against real questions, adjust the confidence threshold if the default `0.8` is too strict or too loose for that community, then switch Automatic Deflections on once the approved drafts have earned that trust.
+Because Automatic Deflections defaults to off, connecting a new channel never means the AI starts replying unsupervised on day one. The practical rollout for each channel is the same: connect it, review the drafts it produces against real questions, adjust the confidence threshold if the default `0.8` is too strict or too loose for that community, then switch Automatic Deflections on once the approved drafts have earned that trust. Circle always stays at the review step, with your team posting each answer by hand.
 
 [See the support workflow](/support-workflow)
