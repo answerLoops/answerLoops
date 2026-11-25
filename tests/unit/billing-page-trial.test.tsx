@@ -191,3 +191,57 @@ describe('billing page checkout click', () => {
     expect(window.location.href).toBe('http://localhost/billing')
   })
 })
+
+describe('billing page plan summary', () => {
+  const summary = () => screen.getByTestId('plan-summary').textContent
+
+  it('names the plan and its price, and says when it renews', async () => {
+    await renderPage(status({ planId: 'pro', limit: 3000, currentPeriodEnd: '2026-12-25T00:00:00.000Z' }))
+    expect(summary()).toMatch(/^Pro · \$149\/mo · Renews /)
+    expect(summary()).toContain('2026')
+  })
+
+  it('shows the price but no renewal date when the period end is unknown', async () => {
+    await renderPage(status({ planId: 'standard', currentPeriodEnd: null }))
+    expect(summary()).toBe('Standard · $49/mo')
+  })
+
+  it('leaves the renewal date out during a trial, since the trial banner says when it ends', async () => {
+    await renderPage(
+      status({ status: 'trialing', isTrialing: true, isAppTrial: false, trialEndsAt: inDays(4), currentPeriodEnd: '2026-12-25T00:00:00.000Z' })
+    )
+    expect(summary()).toBe('Standard · $49/mo')
+  })
+
+  it('leaves the renewal date out once the plan is set to cancel, which the badge already says', async () => {
+    await renderPage(status({ cancelAtPeriodEnd: true, currentPeriodEnd: '2026-12-25T00:00:00.000Z' }))
+    expect(summary()).toBe('Standard · $49/mo')
+    expect(screen.getByText(/^Cancels /)).toBeTruthy()
+  })
+
+  it('leaves the renewal date out when the payment is past due', async () => {
+    await renderPage(status({ status: 'past_due', currentPeriodEnd: '2026-12-25T00:00:00.000Z' }))
+    expect(summary()).toBe('Standard · $49/mo')
+  })
+
+  it('shows no summary on the ended-trial panel, where the usage card is hidden', async () => {
+    await renderPage(status({ status: 'trial_expired', isAppTrial: true }))
+    expect(screen.queryByTestId('plan-summary')).toBeNull()
+  })
+})
+
+describe('billing page layout order', () => {
+  it('puts Manage subscription ahead of the plan cards, so paying customers see it first', async () => {
+    await renderPage(status({ status: 'active' }))
+    const manage = screen.getByRole('button', { name: /Manage subscription/ })
+    const plans = screen.getByRole('heading', { name: 'Plans' })
+    expect(manage.compareDocumentPosition(plans) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('keeps the usage card above both', async () => {
+    await renderPage(status({ status: 'active' }))
+    const usage = screen.getByRole('heading', { name: 'Usage this month' })
+    const manage = screen.getByRole('button', { name: /Manage subscription/ })
+    expect(usage.compareDocumentPosition(manage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+})
