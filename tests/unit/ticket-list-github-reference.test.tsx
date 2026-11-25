@@ -72,3 +72,18 @@ describe('TicketList GitHub reference', () => {
     expect(within(rowFor('slack ticket')).queryByTitle(/^Open /)).toBeNull()
   })
 })
+
+describe('TicketList columns', () => {
+  it('folds channel, author and SLA breach into the summary cell instead of separate columns', () => {
+    render(
+      <TicketList
+        tickets={[ticket({ ai_summary: 'folded ticket', source_platform: 'slack', source_author_name: 'dana', sla_response_deadline: '2020-01-01T00:00:00.000Z', sla_response_met: 0 } as Partial<Ticket>)]}
+      />
+    )
+    const headers = screen.getAllByRole('columnheader').map((h) => h.textContent)
+    expect(headers).toEqual(['#', 'Summary', 'Category', 'Priority', 'Status', 'AI', 'Created'])
+    const cell = rowFor('folded ticket').querySelectorAll('td')[1] as HTMLElement
+    expect(within(cell).getByText('Slack')).toBeInTheDocument()
+    expect(within(cell).getByText('dana')).toBeInTheDocument()
+  })
+})

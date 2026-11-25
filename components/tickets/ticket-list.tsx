@@ -50,18 +50,15 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
 
   return (
     <div className="overflow-x-auto rounded-2xl border border-slate-200/80 bg-white shadow-[0_22px_60px_-42px_rgba(15,23,42,0.55)]">
-      <table className="w-full text-sm min-w-[720px]">
+      <table className="w-full text-sm min-w-[640px]">
         <thead>
           <tr className="border-b border-slate-100 bg-slate-50/80 text-left text-[0.6875rem] font-semibold uppercase tracking-wider text-slate-500">
             <th className="px-4 py-2.5">#</th>
             <th className="px-4 py-2.5">Summary</th>
-            <th className="px-4 py-2.5">Source</th>
             <th className="px-4 py-2.5">Category</th>
             <th className="px-4 py-2.5">Priority</th>
             <th className="px-4 py-2.5">Status</th>
             <th className="px-4 py-2.5">AI</th>
-            <th className="px-4 py-2.5">SLA</th>
-            <th className="px-4 py-2.5">Author</th>
             <th className="px-4 py-2.5">Created</th>
           </tr>
         </thead>
@@ -69,15 +66,17 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
           {tickets.map((ticket) => (
             <tr key={ticket.id} className="transition-colors hover:bg-blue-50/45">
               <td className="px-4 py-3 text-gray-400">#{ticket.org_ticket_number}</td>
-              <td className="px-4 py-3 max-w-xs">
+              <td className="px-4 py-3 max-w-md">
                 <Link href={`/tickets/${ticket.org_ticket_number}`} className="line-clamp-2 font-medium text-slate-900 hover:text-blue-700">
                   {ticket.ai_summary ?? rowSummary(ticket)}
                 </Link>
-                <NewActivityBadge ticket={ticket} />
-              </td>
-              <td className="px-4 py-3">
-                <PlatformBadge platform={ticket.source_platform} />
-                {ticket.source_platform === 'github' && <GithubReferenceLink ticket={ticket} variant="list" />}
+                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                  <PlatformBadge platform={ticket.source_platform} />
+                  {ticket.source_platform === 'github' && <GithubReferenceLink ticket={ticket} variant="list" />}
+                  {ticket.source_author_name && <span>{ticket.source_author_name}</span>}
+                  <SLAIndicator ticket={ticket} />
+                  <NewActivityBadge ticket={ticket} />
+                </div>
               </td>
               <td className="px-4 py-3">
                 {ticket.category && <CategoryBadge category={ticket.category} />}
@@ -91,10 +90,6 @@ export function TicketList({ tickets }: { tickets: Ticket[] }) {
               <td className="px-4 py-3">
                 <AIDraftBadge status={ticket.ai_draft_status} />
               </td>
-              <td className="px-4 py-3">
-                <SLAIndicator ticket={ticket} />
-              </td>
-              <td className="px-4 py-3 text-gray-500 text-xs">{ticket.source_author_name ?? '—'}</td>
               <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
                 <LocalDate iso={ticket.created_at} />
               </td>

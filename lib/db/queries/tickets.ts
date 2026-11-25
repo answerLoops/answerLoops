@@ -18,7 +18,7 @@ import {
   csatRatings,
   kbArticles,
 } from '../schema'
-import type { Ticket, CreateTicketInput, TicketFilters, TicketReply, TicketReplyRole, TicketEvent, AIDraftSkipReason, SourcePlatform, ChannelActivityCount } from '@/types'
+import type { Ticket, TicketStatus, CreateTicketInput, TicketFilters, TicketReply, TicketReplyRole, TicketEvent, AIDraftSkipReason, SourcePlatform, ChannelActivityCount } from '@/types'
 
 function toTicket(row: typeof tickets.$inferSelect): Ticket {
   return {
@@ -672,6 +672,18 @@ export async function getTicketStats(orgId: number) {
     needsReview,
     autoDeflected,
   }
+}
+
+/** How many tickets the org has in each status, for the status tabs on the Tickets page. */
+export async function getTicketStatusCounts(orgId: number): Promise<Record<TicketStatus, number>> {
+  const rows = await getDb()
+    .select({ status: tickets.status, n: sql<number>`COUNT(*)::int` })
+    .from(tickets)
+    .where(eq(tickets.orgId, orgId))
+    .groupBy(tickets.status)
+  const counts: Record<TicketStatus, number> = { open: 0, in_progress: 0, resolved: 0, closed: 0, duplicate: 0 }
+  for (const row of rows) if (row.status in counts) counts[row.status as TicketStatus] = row.n
+  return counts
 }
 
 export async function getSLABreachedTickets(orgId: number): Promise<Ticket[]> {

@@ -8,10 +8,16 @@ const { getTickets, auth } = vi.hoisted(() => ({ getTickets: vi.fn(), auth: vi.f
 
 vi.mock('@/lib/db/queries/tickets', () => ({
   getTickets,
+  getTicketStatusCounts: async () => ({ open: 3, in_progress: 2, resolved: 1, closed: 0, duplicate: 0 }),
   encodeTicketCursor: () => 'cursor-123',
   decodeTicketCursor: (cursor?: string) => (cursor === 'prev-cursor' ? { createdAt: '2026-10-02T00:00:00.000Z', id: 5 } : null),
 }))
 vi.mock('@/auth', () => ({ auth }))
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+  usePathname: () => '/tickets',
+  useSearchParams: () => new URLSearchParams(),
+}))
 vi.mock('@/lib/billing/entitlements-server', () => ({ orgHasFeature: async () => true }))
 vi.mock('@/components/billing/locked-csv-export-button', () => ({ LockedCsvExportButton: () => null }))
 vi.mock('@/components/tickets/ticket-list', () => ({ TicketList: () => <div data-testid="ticket-list" /> }))
