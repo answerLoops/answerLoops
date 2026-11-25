@@ -123,7 +123,7 @@ describe('support workflow animation', () => {
       answer: /Retries can deliver the same event more than once/,
       step: 'Save the order and a unique event ID in one transaction.',
       review: 'Checked retry behavior and duplicate handling against both sources.',
-      destination: '#dev-support',
+      delivered: 'Reply sent to #dev-support',
     },
     {
       channel: 'Telegram', question: /I’m new to the guild/,
@@ -131,7 +131,7 @@ describe('support workflow animation', () => {
       answer: /Start with the raid signup/,
       step: 'Choose your role and review the gear and preparation checklist.',
       review: 'Checked raid signup and preparation steps against both guild guides.',
-      destination: 'guild chat',
+      delivered: 'Reply sent to guild chat',
     },
     {
       channel: 'Circle', question: /I’m joining the community print swap/,
@@ -139,7 +139,7 @@ describe('support workflow animation', () => {
       answer: /Keep your layered original and prepare a separate print-ready export/,
       step: 'Use the printer’s requested color profile and check the soft proof before exporting.',
       review: 'Checked export preparation and submission steps against the print-swap guides.',
-      destination: 'the community',
+      delivered: 'Draft ready for your team',
     },
   ])('shows a coherent $channel question, sources, answer, review, and destination', (example) => {
     render(<AnimatedChat />)
@@ -157,7 +157,7 @@ describe('support workflow animation', () => {
     advance(2000)
     expect(screen.getByText(example.review)).toBeVisible()
     advance(2000)
-    expect(screen.getByText(`Reply sent to ${example.destination}`)).toBeVisible()
+    expect(screen.getByText(example.delivered)).toBeVisible()
   })
 
   it('resets the stage and pending timer when a different channel is selected', () => {
@@ -230,7 +230,11 @@ describe('support workflow animation', () => {
     advance(20000)
     expect(screen.getByText('Reply delivered')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Circle' }))
-    expect(screen.getByText('Reply sent to the community')).toBeVisible()
+    expect(screen.getByText('Draft ready for your team')).toBeVisible()
+    expect(screen.getByText('Your team posts it in Circle')).toBeVisible()
+    expect(screen.getByText('Draft ready')).toBeVisible()
+    expect(screen.queryByText('Reply delivered')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Reply sent to/)).not.toBeInTheDocument()
     expect(screen.getByText(/Keep your layered original/)).toBeVisible()
     expect(vi.getTimerCount()).toBe(0)
   })

@@ -1,8 +1,8 @@
 ---
 title: Answering Circle community questions without living in the app
 subtitle: Route posts and comments from your Circle spaces into one queue, backed by your own knowledge base
-description: How the Circle integration turns new posts and comments in watched spaces into reviewed or automatic replies, with setup steps for the Workflow-based webhook.
-overview: The Circle integration connects through Circle Workflows — you create a webhook workflow for new posts and another for new comments, pointed at answerLoops, plus an Admin API token to fetch full post bodies when the workflow payload is thin. Replies are drafted from your knowledge base, reviewed by a separate AI check, and either sent automatically for questions that qualify or held for a person to approve.
+description: How the Circle integration turns new posts and comments in watched spaces into tickets with reviewed draft answers, with setup steps for the Workflow-based webhook.
+overview: The Circle integration connects through Circle Workflows. You create a webhook Workflow for published posts and another for new comments, pointed at answerLoops, plus an Admin API token to fetch the full post when a webhook arrives without it. Answers are drafted from your knowledge base and reviewed by a separate AI check, then wait on the ticket for your team to post in Circle.
 author: Nathan Tarbert
 datePublished: "2026-08-10"
 category: Integrations
@@ -19,24 +19,24 @@ Circle communities tend to be smaller and more personal than a Discord server or
 
 ## How it connects
 
-Circle doesn't have a native webhook app the way some platforms do — the connection runs through Circle's own Workflows feature. You create one workflow triggered on **New post** and a second on **New comment**, each pointed at a webhook URL answerLoops gives you, with a `kind=post` or `kind=comment` parameter so answerLoops knows which one it's reading (Circle's webhook payload shape isn't fixed, so this avoids guessing). A secret token goes in the request header, or the URL if your workflow action can't set headers.
+Circle doesn't have native webhook subscriptions the way some platforms do, so the connection runs through Circle's own Workflows feature. You create one Workflow triggered on **Published a post** and a second on **Posted a comment**, each using the **Send to webhook** action pointed at a URL answerLoops gives you. Each URL carries a `kind=post` or `kind=comment` parameter so answerLoops knows which one it's reading, plus your secret token. **Send to webhook** is available on Circle's Scale and Circle Plus plans.
 
-You also generate an Admin V2 API token from **Settings → Developers → Tokens**. Workflow payloads sometimes arrive thin — a post ID without the full body — so answerLoops calls back to Circle's API with that token to fetch the complete content when it needs to.
+You also generate an Admin V2 API token from **Settings → Developers → Tokens**. Workflow payloads sometimes arrive thin, with a post ID but not the full text, so answerLoops calls Circle's API with that token to fetch the complete post when it needs to.
 
 From there you pick which spaces to watch (or leave it blank to cover the whole community), and every new post or comment in those spaces runs through triage, retrieval against your knowledge base, and a confidence check before anything gets drafted.
 
 ## What actually happens to a new post
 
-A member posts a question. answerLoops pulls the full content if the webhook payload didn't include it, checks it against what your community actually has documented, and produces a draft. If the confidence score clears your threshold — 0.8 by default — and automatic replies are turned on for that channel, the answer posts on its own. If it doesn't clear the bar, the draft sits in your ticket queue for someone to approve, edit, or dismiss, and you can set an escalation user to get pinged on the ones that need a person (that routing is on Pro and Enterprise plans).
+A member posts a question. answerLoops pulls the full content if the webhook payload didn't include it, checks it against what your community actually has documented, and produces a draft. A separate AI reviews the draft and scores it. The draft then waits on the ticket in your queue. Someone on your team reads it, edits it if needed, and posts the answer in Circle. answerLoops never posts to Circle itself. If the score falls below your threshold, 0.8 by default, the draft is flagged as low-confidence so your team gives it a closer look before posting.
 
 Posts under ten characters get skipped outright — a "thanks!" or a stray comment doesn't need a triage pass.
 
-## Why the reviewed-first default matters here specifically
+## Why a person posts every answer here
 
-A Circle community usually runs on trust in a way a big anonymous Discord doesn't. Members paid for access to this specific person's or team's answers. An AI reply that's confidently wrong in that context costs more than it would in a general chat channel — so automatic replies stay off until you've actually reviewed a batch of drafts and trust what's coming out. Once you turn it on, it only fires for the questions that clear your confidence bar; everything else still waits for a human.
+A Circle community usually runs on trust in a way a big anonymous Discord doesn't. Members paid for access to this specific person's or team's answers. An AI reply that's confidently wrong in that context costs more than it would in a general chat channel. So on Circle, every answer goes out under your team's name, posted by a person who read it first. The draft does the research and the writing. You keep the final say.
 
 ## The actual payoff
 
-The questions that repeat — where's the replay of last week's call, how do I cancel, what's included in this tier — stop needing a person every single time they come up. What lands in front of you instead is the smaller set of things your knowledge base doesn't cover yet, which is a much better use of a creator's or a community manager's actual time than typing the same three answers on a loop.
+The questions that repeat — where's the replay of last week's call, how do I cancel, what's included in this tier — stop needing someone to write them from scratch every time they come up. Those arrive with the answer already drafted, and what needs real thought is the smaller set of things your knowledge base doesn't cover yet, which is a much better use of a creator's or a community manager's actual time than typing the same three answers on a loop.
 
 [See the Circle integration setup](/docs/integrations/circle)

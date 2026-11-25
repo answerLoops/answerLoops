@@ -1,6 +1,6 @@
 ---
 title: Circle
-description: Connect Circle posts and comments to your support queue and configure reviewed replies.
+description: Turn Circle posts and comments into tickets with AI-drafted, reviewed answers that your team posts in Circle.
 icon: CircleDot
 ---
 
@@ -12,32 +12,41 @@ icon: CircleDot
   }}
   trigger={{
     title: 'Circle Workflow webhook',
-    text: 'Two Workflows you create in Circle, one for new posts and one for new comments, send each event to answerLoops as it happens. If the payload is thin, answerLoops fetches the full text with your Admin API token.',
+    text: 'Two Workflows you create in Circle, one for published posts and one for new comments, send each event to answerLoops as it happens. If an event arrives without the text, answerLoops fetches it with your Admin API token.',
   }}
   steps={[
     { title: 'Create ticket', text: 'The post or comment becomes a ticket. Content under 10 characters and posts in spaces you did not choose are skipped. A comment on a post that already has a ticket is added to that ticket.' },
     { title: 'Find the answer', text: 'answerLoops searches your knowledge base for what is relevant to the question and drafts an answer grounded in it.' },
-    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides which path the answer takes.' },
+    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides whether the draft is flagged for follow-up.' },
   ]}
   outcomes={[
-    { tone: 'post', title: 'Reply in Circle', text: 'With automatic replies on and a confident answer, the reply goes out on the post.' },
-    { tone: 'review', title: 'Held as a draft', text: 'Without automatic replies, the draft waits on your dashboard. Your team reviews it and decides what to send.' },
-    { tone: 'escalate', title: 'Flagged for follow-up', text: 'Below the threshold, the draft is flagged as low-confidence on the ticket so the escalation user you set can follow up.' },
+    { tone: 'review', title: 'Draft ready for your team', text: 'The reviewed draft waits on the ticket. Your team checks it, edits it if needed, and posts the answer in Circle.' },
+    { tone: 'escalate', title: 'Flagged for follow-up', text: 'Below the threshold, the draft is flagged as low-confidence on the ticket so your team checks it closely before posting.' },
+    { tone: 'info', title: 'Nothing posts to Circle', text: 'answerLoops reads from Circle and never writes to it. Every answer your members see is one your team posted.' },
   ]}
-  replyLabel="Replies go back to the same Circle post"
+  replyLabel="Your team copies the answer into the Circle post by hand"
 />
 
 ## Overview
 
-answerLoops receives posts and comments from the Circle spaces you select, prepares replies from workspace knowledge, and runs a separate AI review. Configure automatic replies for the questions that qualify, or review drafts with your team.
+answerLoops receives posts and comments from the Circle spaces you select and turns each one into a ticket. It drafts an answer from your workspace knowledge, and a separate AI reviews that draft. Your team reads the reviewed draft on the ticket and posts the answer in Circle by hand. answerLoops never posts anything to Circle.
 
-Inbound events arrive through Circle Workflows configured by your community administrator.
+Posts and comments reach answerLoops through Circle Workflows that your community administrator sets up.
+
+### What you need in Circle
+
+- **A Scale or Circle Plus plan.** Circle has no built-in webhook subscriptions. answerLoops receives posts through a Workflow that uses the **Send to webhook** action, and Circle offers that action only on its Scale and Circle Plus plans. The Business plan includes Workflows and the Admin API, but not **Send to webhook**.
+- **A community admin** to create the Admin API token and the two Workflows.
 
 ## Setup
 
 ### 1. Create an Admin API token
 
 In Circle, go to **Settings → Developers → Tokens**, create a new token, and choose type **Admin V2**. Copy it.
+
+answerLoops uses this token only when a webhook arrives without the text of the post or comment. It then looks up that one record. Each lookup counts toward your community's monthly Admin API quota in Circle.
+
+The token stops working if the admin who created it loses admin rights in the community. If that happens, create a new token as a current admin and save it on the Circle card.
 
 ### 2. Connect in answerLoops
 
@@ -46,29 +55,53 @@ Go to **Integrations → Circle** and fill in:
 | Field | Value |
 | --- | --- |
 | Community URL | Your Circle community's base URL, e.g. `https://community.example.com` |
-| Admin API token | The token from step 1 (used to fetch the full post/comment body when a webhook payload is thin) |
-| Watched space IDs | Numeric space IDs, comma-separated — leave blank to watch every space. Only posts in these spaces open tickets; a comment on a post that already has a ticket is always added to it. |
+| Admin API token | The token from step 1. Required. |
+| Watched space IDs | Numeric space IDs, comma-separated. Leave blank to watch every space. Only posts in these spaces open tickets. A comment on a post that already has a ticket is always added to it. |
 
-Click **Connect**. The card then shows a **Webhook URL** and a secret token.
+Click **Connect**. The card then shows two webhook URLs, one for posts and one for comments, and a secret token.
 
-### 3. Create the Circle Workflow
+### 3. Create the two Circle Workflows
 
-In Circle, go to **Settings → Workflows** and create a workflow:
+In Circle, open **Workflows** in the left sidebar and create a Workflow for posts:
 
-- **Trigger:** *New post*
-- **Action:** *Send webhook*
-  - **URL:** the Webhook URL from step 2, with `?kind=post` appended
-  - **Header:** `X-AnswerLoops-Token` = the secret from step 2 (use the header whenever the Workflow action supports it — if it can't set headers, append `&token=<secret>` to the URL instead; the URL then carries the secret, so treat it as confidential and rotate it if the URL is ever shared)
+- **Trigger:** **Published a post**
+- **Action:** **Send to webhook**
+- **Endpoint URL:** the posts URL from the Circle card with your secret added, in this form:
 
-Create a second workflow the same way for **Trigger:** *New comment*, using `?kind=comment` on its URL instead. Circle's webhook payload shape isn't contractual, so `kind` tells answerLoops which one it's looking at instead of guessing from the payload.
+```text
+https://<your-answerloops-domain>/api/circle/webhook?kind=post&token=<your-secret>
+```
 
-### 4. Set an escalation user (optional)
+Then create a second Workflow for comments:
 
-Enter the Circle user responsible for follow-up in **Escalation user**. Escalation routing is included on Pro and Enterprise.
+- **Trigger:** **Posted a comment**
+- **Action:** **Send to webhook**
+- **Endpoint URL:**
+
+```text
+https://<your-answerloops-domain>/api/circle/webhook?kind=comment&token=<your-secret>
+```
+
+The **Send to webhook** action takes only an endpoint URL, so the secret goes in the URL as `token`. Keep both URLs private. The `kind` value tells answerLoops whether the event is a post or a comment, so keep `kind=post` on the first Workflow and `kind=comment` on the second. If you send events from another tool that can set request headers, answerLoops also accepts the secret in an `X-AnswerLoops-Token` header.
+
+Turn both Workflows on.
+
+### 4. Check delivery
+
+In each Workflow, click **Test webhook** to send a sample event to answerLoops. Once members start posting, open **Workflows → History** in Circle to see each run and whether it succeeded.
 
 ### 5. Set the confidence threshold
 
 **Confidence threshold** (0–1, default `0.8`) is the score below which the draft is flagged as low-confidence on the ticket.
+
+## Answering in Circle
+
+Open the ticket in answerLoops, read the draft, and edit it if needed. Click **Copy draft** and paste it as a comment on the member's Circle post. Then click **Approve** on the ticket to record the answer there. Approving doesn't post anything to Circle.
+
+## Good to know
+
+- **Edits and deletions in Circle don't change the ticket.** Circle Workflows have no trigger for edited or deleted posts, so the ticket keeps the text as it was first published.
+- **Reconnecting creates a new secret.** If you disconnect Circle and connect it again, the card shows a new secret token. Update the `token` value in the Endpoint URL of both Workflows, or Circle's events stop reaching answerLoops.
 
 ---
 
@@ -82,16 +115,22 @@ Circle is configured entirely per-organization in the Settings UI. There is no c
 
 <AccordionGroup>
   <Accordion title="Posts aren't creating tickets">
-    Check the Circle Workflow is **active** and its recent runs show the webhook action succeeded. Confirm the URL matches exactly, includes the right `?kind=post` or `?kind=comment`, and the `X-AnswerLoops-Token` header (or `token=` query param) carries the secret shown on the Circle card. If you set **Watched space IDs**, a post in any other space is ignored on purpose — clear the field to watch everything. Posts shorter than 10 characters are skipped.
+    Open **Workflows** in Circle and check that both Workflows are turned on. Then open **Workflows → History** and look at the most recent runs. Make sure each Workflow's Endpoint URL matches the one on the Circle card, includes the right `kind=post` or `kind=comment`, and has `token=` set to the secret shown on the card. Click **Test webhook** in the Workflow to send a sample event. If you set **Watched space IDs**, posts in any other space are ignored on purpose, so clear the field to watch everything. Posts shorter than 10 characters are skipped.
+  </Accordion>
+  <Accordion title="Events stopped arriving after I reconnected Circle">
+    Disconnecting and connecting again creates a new secret. Copy the new secret from the Circle card and update the `token` value in the Endpoint URL of both Workflows.
   </Accordion>
   <Accordion title="Tickets are created but the content is empty or truncated">
-    Circle Workflow webhook payloads vary in how much of the post body they include. answerLoops falls back to the Admin API to fetch the full body — make sure the **Admin API token** you saved is a valid **Admin V2** token and hasn't been revoked.
+    Circle Workflow webhooks vary in how much of the post they include. When the text is missing, answerLoops fetches the full post with the Admin API. Make sure the **Admin API token** you saved is a valid **Admin V2** token, hasn't been revoked, and belongs to someone who is still an admin of the community.
   </Accordion>
   <Accordion title="A Workflow run shows Failed with &quot;Could not fetch the full record from Circle&quot;">
     The webhook arrived without the post's text, and answerLoops couldn't fetch it from Circle's Admin API, so no ticket was created. The run is marked failed so you can see it in the Workflow's history rather than lose it quietly. Check that the **Admin API token** on the Circle card is a valid **Admin V2** token, hasn't been revoked, and belongs to someone who is still an admin of the community. If Circle's API was briefly unavailable, the next post goes through as normal.
   </Accordion>
-  <Accordion title="A draft appears but no reply is posted">
-    Check the channel's automatic-reply setting and confidence threshold. Review the draft in the ticket queue if it does not qualify for an automatic reply.
+  <Accordion title="I edited a post in Circle and the ticket didn't change">
+    Circle Workflows have no trigger for edited or deleted posts, so the ticket keeps the text as it was first published. If a member rewrites their question, answer the new version in Circle directly.
+  </Accordion>
+  <Accordion title="A draft appears but nothing is posted in Circle">
+    That's expected. answerLoops drafts and reviews the answer, then leaves it on the ticket for your team. Click **Copy draft**, paste it as a comment on the Circle post, then click **Approve** on the ticket to record it. If you'd rather write your own answer, type it in the reply box and click **Save reply**. If the draft is flagged as low-confidence, check it more closely before you post it.
   </Accordion>
 </AccordionGroup>
 
