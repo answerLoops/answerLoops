@@ -107,7 +107,7 @@ export function TicketContent({
           {attachments.map((a, i) => (
             <a
               key={i}
-              href={a.url ?? undefined}
+              href={isSafeExternalUrl(a.url ?? undefined) ? (a.url ?? undefined) : undefined}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex w-fit max-w-full items-center gap-1.5 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-xs font-medium text-blue-600 hover:bg-gray-100 hover:text-blue-800"
