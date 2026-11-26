@@ -38,8 +38,8 @@ function globToRegExp(glob: string): RegExp {
     .replace(/\*\*\//g, '\u0000')
     .replace(/\*\*/g, '\u0001')
     .replace(/\*/g, '[^/]*')
-    .replace(/\u0000/g, '(?:.*/)?')
-    .replace(/\u0001/g, '.*')
+    .replaceAll('\u0000', '(?:.*/)?')
+    .replaceAll('\u0001', '.*')
   return new RegExp(`^${src}$`)
 }
 
