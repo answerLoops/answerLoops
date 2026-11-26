@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 export const metadata: Metadata = publicPageMetadata({
   title: 'AI-reviewed answers for your Circle community | answerLoops',
   description:
-    'Keep your Circle community. New posts and comments become tickets with AI-drafted, AI-reviewed answers from your own knowledge base, ready for your team to post in Circle.',
+    'Keep your Circle community. New posts and comments get AI-drafted, AI-reviewed answers from your own knowledge base, posted back as comments, with automatic replies you control.',
   path: '/circle-ai-answers',
 })
 export default async function Page() {
@@ -22,7 +22,7 @@ export default async function Page() {
       navState={await resolveNavState()}
       eyebrow="Integration"
       title="Keep Circle members learning and participating"
-      intro="Every new question in Circle arrives with an answer drafted from your course materials and guides. Your team reviews it and posts the answer in Circle, so members always hear from you."
+      intro="Every new question in Circle gets an answer drafted from your course materials and guides, posted back as a comment on the member's post. Your team reviews drafts and chooses when to enable automatic replies."
       audience="Circle community operators and course creators who want AI answers without moving members to a new platform."
       highlights={[
         {
@@ -35,7 +35,7 @@ export default async function Page() {
         },
         {
           title: 'Check replies against your course materials',
-          body: 'A separate review agent checks each draft against its sources and assigns a confidence score. Low-confidence drafts are flagged, and nothing is posted to Circle without your team.',
+          body: 'A separate review agent checks each draft against its sources and assigns a confidence score before anything posts automatically. Low-confidence drafts are flagged for your team.',
         },
         {
           title: 'Follow up on questions that need your team',
@@ -50,13 +50,13 @@ export default async function Page() {
         },
         {
           step: '02',
-          title: 'Review each draft',
-          body: 'Each question lands in your ticket queue with a drafted answer and a confidence score from the review agent.',
+          title: 'Review a batch of drafts',
+          body: 'Each question lands in your ticket queue with a drafted answer and a confidence score. Approve a draft and answerLoops posts it as a comment in Circle.',
         },
         {
           step: '03',
-          title: 'Answer in Circle',
-          body: 'Edit the draft if needed and post it in Circle yourself. Low-confidence drafts are flagged for a closer look.',
+          title: 'Turn on automatic replies',
+          body: 'Enable it once you trust the pattern, and confident answers are posted in Circle on their own. Lower-confidence drafts still wait in your ticket queue.',
         },
       ]}
       comparison={[
@@ -93,7 +93,7 @@ export default async function Page() {
       schema={{
         name: 'Add AI-reviewed answers to your Circle community',
         description:
-          'Keep your Circle community. New posts and comments become tickets with AI-drafted, AI-reviewed answers from your own knowledge base, ready for your team to post in Circle.',
+          'Keep your Circle community. New posts and comments get AI-drafted, AI-reviewed answers from your own knowledge base, posted back as comments, with automatic replies you control.',
         path: '/circle-ai-answers',
       }}
     />

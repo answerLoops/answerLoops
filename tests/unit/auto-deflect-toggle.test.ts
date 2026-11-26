@@ -23,6 +23,7 @@ const {
   assessAnswer,
   captureUnansweredQuestion,
   createNotification,
+  postToCirclePost,
 } = vi.hoisted(() => ({
   sendToSlackChannel: vi.fn(async (_channel: string, _content: string, _orgId: number, _threadTs?: string) => 'posted-ts'),
   sendToChannel: vi.fn(async (_channelId: string, _content: string, _orgId: number) => 'posted-id'),
@@ -38,6 +39,7 @@ const {
   assessAnswer: vi.fn(async () => ({ confidence: 0.95, answered_fully: true, reasoning: 'x' })),
   captureUnansweredQuestion: vi.fn(async () => {}),
   createNotification: vi.fn(),
+  postToCirclePost: vi.fn(async (_postId: string, _content: string, _orgId: number): Promise<string | null> => '777'),
 }))
 
 vi.mock('@/lib/kb/review-capture', () => ({ captureUnansweredQuestion }))
@@ -46,6 +48,7 @@ vi.mock('@/lib/discord/send', () => ({ sendToChannel }))
 vi.mock('@/lib/telegram/send', () => ({ sendToTelegramChat: vi.fn() }))
 vi.mock('@/lib/email/reply', () => ({ sendEmailReply: vi.fn() }))
 vi.mock('@/lib/google-chat/send', () => ({ sendToGoogleChatSpace: vi.fn() }))
+vi.mock('@/lib/circle/send', () => ({ postToCirclePost }))
 vi.mock('@/lib/db/queries/integrations', () => ({ getIntegration }))
 vi.mock('@/lib/db/queries/github', () => ({ getRepoByOwnerAndName }))
 vi.mock('@/lib/github/app', () => ({
@@ -156,6 +159,30 @@ describe('runAIAgent: Automatic Deflections toggle', () => {
     expect(sendToChannel).not.toHaveBeenCalled()
   })
 
+  it('Circle with Automatic Deflections on comments the answer on the post and consumes quota', async () => {
+    getIntegration.mockResolvedValue({ auto_deflect_enabled: 1, confidence_threshold: null })
+    const { runAIAgent } = await import('@/lib/ai/agent')
+
+    await runAIAgent(1, 'a question', '42', [], 3, 'circle', 'general_question', [], 1)
+
+    expect(postToCirclePost).toHaveBeenCalled()
+    expect(postToCirclePost.mock.calls[0][0]).toBe('42')
+    expect(postToCirclePost.mock.calls[0][1]).toContain('a high-confidence draft answer')
+    expect(reserveAutoDeflect).toHaveBeenCalled()
+    expect(sendToChannel).not.toHaveBeenCalled()
+  })
+
+  it('Circle with Automatic Deflections off posts nothing and holds the draft for review', async () => {
+    getIntegration.mockResolvedValue({ auto_deflect_enabled: 0, confidence_threshold: null })
+    const { runAIAgent } = await import('@/lib/ai/agent')
+
+    await runAIAgent(1, 'a question', '42', [], 3, 'circle', 'general_question', [], 1)
+
+    expect(postToCirclePost).not.toHaveBeenCalled()
+    expect(reserveAutoDeflect).not.toHaveBeenCalled()
+    expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'needs_human', undefined, undefined)
+  })
+
   describe('staff notification wording', () => {
     it('says a confident answer is waiting on the toggle for a platform that has one', async () => {
       getIntegration.mockResolvedValue({ auto_deflect_enabled: 0, confidence_threshold: null })
@@ -171,27 +198,27 @@ describe('runAIAgent: Automatic Deflections toggle', () => {
       )
     })
 
-    it('tells the team to copy a confident Circle draft in by hand, never mentioning a toggle Circle does not have', async () => {
+    it('says a confident Circle answer is waiting on the toggle, like every other platform', async () => {
       getIntegration.mockResolvedValue({ auto_deflect_enabled: 0, confidence_threshold: null })
       const { runAIAgent } = await import('@/lib/ai/agent')
 
-      await runAIAgent(1, 'a question', 'post-1', [], 3, 'circle', 'general_question', [], 4)
+      await runAIAgent(1, 'a question', '42', [], 3, 'circle', 'general_question', [], 4)
 
       expect(createNotification).toHaveBeenCalledWith(
         'ai_draft_ready',
-        'Draft ready (95%) — copy the answer into Circle — ticket #4',
+        'Ready to send (95%) — Automatic Deflections is off — ticket #4',
         1,
         3
       )
       const texts = createNotification.mock.calls.map((c) => String(c[1]))
-      expect(texts.some((t) => t.includes('Automatic Deflections'))).toBe(false)
+      expect(texts.some((t) => /by hand|copy the answer/i.test(t))).toBe(false)
     })
 
     it('still flags a low-confidence Circle draft for human review', async () => {
       assessAnswer.mockResolvedValue({ confidence: 0.3, answered_fully: false, reasoning: 'x' })
       const { runAIAgent } = await import('@/lib/ai/agent')
 
-      await runAIAgent(1, 'a question', 'post-1', [], 3, 'circle', 'general_question', [], 4)
+      await runAIAgent(1, 'a question', '42', [], 3, 'circle', 'general_question', [], 4)
 
       expect(createNotification).toHaveBeenCalledWith('ai_draft_ready', 'Needs human review (30%) — ticket #4', 1, 3)
     })

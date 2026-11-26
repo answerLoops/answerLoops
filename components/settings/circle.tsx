@@ -3,6 +3,8 @@
 import { useState,useEffect,useActionState,useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { DeflectionStatusBadge } from '@/components/ui/badge'
+import { ToggleSwitch } from '@/components/ui/toggle-switch'
 import { useToast, Toast, ReadOnlyRow } from '@/components/settings/shared'
 import {
   saveCircleIntegrationAction,
@@ -19,6 +21,10 @@ interface CircleIntegration {
   escalation_role_id: string | null
   confidence_threshold: number | null
   enabled: number
+  /** The member email replies are posted as; null posts as the API token's admin. */
+  bot_username: string | null
+  team_member_ids: string[]
+  auto_deflect_enabled: number
 }
 
 /** Reads this org's Circle row. Throws on a non-OK response or an unexpected body. */
@@ -158,7 +164,7 @@ export function CircleIntegrationCard() {
             </span>
             {connected && !editing && (
               <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
-                Edit spaces
+                Edit spaces &amp; deflections
               </Button>
             )}
           </div>
@@ -170,11 +176,17 @@ export function CircleIntegrationCard() {
               <ReadOnlyRow label="Community URL" value={integration.team_id ?? '—'} />
               <ReadOnlyRow label="API token" value="••••••••• (saved)" />
               <ReadOnlyRow label="Watched spaces" value={integration.channel_ids.join(', ') || '— (all spaces)'} />
+              <ReadOnlyRow label="Post replies as" value={integration.bot_username ?? '— (the API token’s admin)'} />
+              <ReadOnlyRow label="Team member IDs" value={integration.team_member_ids.join(', ') || '— (none)'} />
               <ReadOnlyRow label="Confidence threshold" value={String(integration.confidence_threshold ?? 0.8)} />
+              <div className="flex flex-col items-start gap-1 py-1 text-xs sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <span className="text-gray-500 shrink-0">Automatic Deflections</span>
+                <DeflectionStatusBadge enabled={integration.auto_deflect_enabled === 1} />
+              </div>
             </div>
             <div className="rounded-md bg-violet-50 border border-violet-100 p-3 text-xs text-violet-800 space-y-2">
               <p>
-                Circle is <span className="font-medium">ingest-only</span> — new posts and comments become tickets with an AI draft, but nothing is posted back to Circle automatically. A reviewer copies the answer into Circle by hand.
+                New posts and comments become tickets with an AI draft. answerLoops posts replies as comments on the Circle post, when your team approves a draft or sends a reply, or right away for confident answers when Automatic Deflections is on.
               </p>
               <p className="font-medium">In Circle → Workflows (left sidebar), create two workflows with the action <span className="font-mono">Send to webhook</span>, and paste these Endpoint URLs:</p>
               <div>
@@ -229,8 +241,9 @@ export function CircleIntegrationCard() {
         {showForm && (
           <form key={editing ? 'edit' : 'new'} action={saveAction} className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Circle community URL</label>
+              <label htmlFor="circle-community-url" className="block text-xs font-medium text-gray-600 mb-1">Circle community URL</label>
               <input
+                id="circle-community-url"
                 name="communityUrl"
                 type="url"
                 defaultValue={integration?.team_id ?? ''}
@@ -239,21 +252,23 @@ export function CircleIntegrationCard() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Admin API token</label>
+              <label htmlFor="circle-api-token" className="block text-xs font-medium text-gray-600 mb-1">Admin API token</label>
               <input
+                id="circle-api-token"
                 name="apiToken"
                 type="password"
                 autoComplete="new-password"
                 placeholder={connected ? '••••••••• (leave blank to keep current)' : 'Developers → Tokens → new Admin V2 token'}
                 className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
               />
-              <p className="text-xs text-gray-400 mt-1">Used to fetch the full post/comment body when a webhook payload is thin.</p>
+              <p className="text-xs text-gray-400 mt-1">Used to post replies, and to fetch the full post or comment when a webhook payload is thin.</p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label htmlFor="circle-space-ids" className="block text-xs font-medium text-gray-600 mb-1">
                 Watched space IDs <span className="text-gray-400 font-normal">(optional — leave blank for all)</span>
               </label>
               <input
+                id="circle-space-ids"
                 name="spaceIds"
                 type="text"
                 defaultValue={integration?.channel_ids.join(', ') ?? ''}
@@ -262,12 +277,41 @@ export function CircleIntegrationCard() {
               />
               <p className="text-xs text-gray-400 mt-1">Numeric space IDs, comma-separated.</p>
             </div>
+            <div>
+              <label htmlFor="circle-post-as" className="block text-xs font-medium text-gray-600 mb-1">
+                Post replies as <span className="text-gray-400 font-normal">(optional — leave blank for the admin)</span>
+              </label>
+              <input
+                id="circle-post-as"
+                name="postAsEmail"
+                type="email"
+                defaultValue={integration?.bot_username ?? ''}
+                placeholder="support@example.com"
+                className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
+              />
+              <p className="text-xs text-gray-400 mt-1">The email of the community member replies are posted as. A dedicated member works best, so your own comments stay yours.</p>
+            </div>
+            <div>
+              <label htmlFor="circle-team-member-ids" className="block text-xs font-medium text-gray-600 mb-1">
+                Team member Circle IDs <span className="text-gray-400 font-normal">(optional)</span>
+              </label>
+              <input
+                id="circle-team-member-ids"
+                name="teamMemberIds"
+                type="text"
+                defaultValue={integration?.team_member_ids.join(', ') ?? ''}
+                placeholder="1001, 1002"
+                className="w-full rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
+              />
+              <p className="text-xs text-gray-400 mt-1">Numeric member IDs, comma-separated. Their comments are kept on the ticket for context and never open a ticket.</p>
+            </div>
             <hr className="border-gray-100" />
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
+              <label htmlFor="circle-confidence-threshold" className="block text-xs font-medium text-gray-600 mb-1">
                 Confidence threshold <span className="text-gray-400 font-normal">(0–1, default 0.8)</span>
               </label>
               <input
+                id="circle-confidence-threshold"
                 name="confidenceThreshold"
                 type="number"
                 min="0"
@@ -276,6 +320,17 @@ export function CircleIntegrationCard() {
                 defaultValue={integration?.confidence_threshold ?? 0.8}
                 className="w-32 rounded border border-gray-200 px-3 py-1.5 text-sm font-mono"
               />
+            </div>
+            <div>
+              <ToggleSwitch
+                name="autoDeflectEnabled"
+                label="Automatic Deflections"
+                confirmLabel="Circle"
+                defaultChecked={integration?.auto_deflect_enabled === 1}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                When off, high-confidence answers are held as drafts awaiting approval instead of posting automatically. Nothing is posted in Circle until your team approves a draft.
+              </p>
             </div>
             {(saveState as { error?: string } | null)?.error && (
               <p className="text-xs text-red-600">{(saveState as { error?: string }).error}</p>

@@ -146,9 +146,19 @@ describe('IntegrationsPage overview', () => {
     expect(await within(card('Google Chat')).findByText('Not connected')).toBeTruthy()
   })
 
-  it('shows Circle as connected from its own row', async () => {
+  it('shows Circle as connected from its own row, in manual review while Automatic Deflections is off', async () => {
     vi.stubGlobal('fetch', mockFetchByUrl({
       '/api/integrations': [{ platform: 'circle', enabled: 1, team_id: 'c1', auto_deflect_enabled: 0 }],
+    }))
+    render(<IntegrationsPage />)
+    const circle = card('Circle')
+    expect(await within(circle).findByText('Connected')).toBeTruthy()
+    expect(within(circle).getByText('Manual review')).toBeTruthy()
+  })
+
+  it('drops manual review for Circle once Automatic Deflections is on', async () => {
+    vi.stubGlobal('fetch', mockFetchByUrl({
+      '/api/integrations': [{ platform: 'circle', enabled: 1, team_id: 'c1', auto_deflect_enabled: 1 }],
     }))
     render(<IntegrationsPage />)
     const circle = card('Circle')
