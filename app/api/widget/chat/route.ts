@@ -30,8 +30,12 @@ import { reserveGeneration, commitDeflection, releaseGeneration } from '@/lib/bi
 import { logger } from '@/lib/logger'
 import { requestsHuman, isGreetingOrAck, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import { isValidWidgetToken, isValidVisitorId, isValidTurnId } from '@/lib/widget/request-validation'
+import { checkWidgetMessages, type WidgetChatMessage } from '@/lib/widget/chat-messages'
+import { dailyLimitAlert, effectiveDailyLimit, widgetUsageLimits } from '@/lib/widget/usage-limits'
+import { sendWidgetDailyLimitEmail } from '@/lib/email/send'
 import { setLeadSignal, setTurnAnswer } from '@/lib/widget/lead-signal-stash'
-import { buildWidgetInstructions } from '@/lib/widget/instructions'
+import { buildWidgetInstructions, widgetContactBlock } from '@/lib/widget/instructions'
+import { CONTACT_LOOKUP_QUERY, contactArticlesForTurn, needsContactLookup } from '@/lib/widget/contact-context'
 import { createTurnContext } from '@/lib/widget/turn-context'
 import { buildSearchTool, SEARCH_TOOL_NAME } from '@/lib/widget/search-tool'
 import { ToolCallFilter } from '@mastra/core/processors'
@@ -39,25 +43,16 @@ import type { WidgetAnswerScope } from '@/lib/widget/answer-scope'
 
 const MOD = 'api/widget/chat'
 
-// Per-IP+token: catches a single abusive visitor. Per-token: caps total cost
-// exposure for one org even if the IP rotates (proxies, mobile networks, botnets).
-const IP_TOKEN_MAX = 20
-const IP_TOKEN_WINDOW_MS = 60_000
-const TOKEN_MAX = 100
-const TOKEN_WINDOW_MS = 60_000
+// Request limits come from lib/widget/usage-limits.ts (defaults, overridable
+// per instance by env var). Per visitor address and widget: one heavy visitor.
+// Per widget: total load on one workspace even when addresses vary. Per
+// address, whatever the request's shape: applies before anything else, since
+// the per-widget limits only run once a request is a well-formed agent/run
+// call with a real widgetToken, and this widget's own non-run traffic (the
+// runtime's info handshake) has to fit under it too.
+const MINUTE_MS = 60_000
 
-// Applies to every request regardless of envelope method or shape — the
-// per-token limits below only run once a request is known to be a
-// well-formed agent/run call with a real widgetToken, so without this a
-// request shaped any other way (missing `method`, a non-"agent/run" method,
-// or simply malformed) would reach the CopilotKit runtime completely
-// unthrottled. Generous relative to IP_TOKEN_MAX since it also has to admit
-// this widget's own legitimate non-run traffic (e.g. the runtime's info
-// handshake).
-const GLOBAL_IP_MAX = 60
-const GLOBAL_IP_WINDOW_MS = 60_000
-
-// Each message is capped well above normal chat length; the whole array is
+// Each visitor message is capped well above normal chat length; the whole array is
 // capped so a caller can't send thousands of messages to inflate model cost.
 const MAX_MESSAGE_CHARS = 4_000
 const MAX_MESSAGES = 50
@@ -71,14 +66,14 @@ const ALLOWED_ENVELOPE_METHODS = new Set(['agent/run', 'info'])
 
 // Per-org ceiling on widget answers, independent of the plan's monthly
 // allowance (soft-cap plans keep answering past it). Bounds how much model
-// spend any one org's public widget can trigger in a short period.
-const ORG_HOURLY_MAX = 500
-const ORG_HOURLY_WINDOW_MS = 60 * 60_000
-const ORG_DAILY_MAX = 3_000
-const ORG_DAILY_WINDOW_MS = 24 * 60 * 60_000
+// spend any one org's public widget can trigger in a short period. The daily
+// figure is the instance's ceiling, which the owner can lower in Settings.
+const ORG_HOURLY_WINDOW_MS = 60 * MINUTE_MS
+const ORG_DAILY_WINDOW_MS = 24 * 60 * MINUTE_MS
 
-// 50 messages x 4000 chars is the largest legitimate payload; 512KB leaves room
-// for the JSON envelope. Enforced while the body streams in rather than after,
+// Bounds the whole conversation the client sends, including assistant replies
+// and tool results (knowledge-base search results), which have no per-message
+// cap (lib/widget/chat-messages.ts). Enforced while the body streams in rather than after,
 // so the cap holds regardless of what the request claims about its length.
 const MAX_BODY_BYTES = 512 * 1024
 
@@ -198,7 +193,7 @@ export function takePendingRun(requestId: unknown): PendingRun | undefined {
 
 interface RunAgentInputLike {
   threadId?: string
-  messages?: { role?: string; content?: string }[]
+  messages?: WidgetChatMessage[]
   forwardedProps?: {
     widgetToken?: string
     renderToken?: string
@@ -250,7 +245,8 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   // simply doesn't look like a chat run reaches the CopilotKit runtime with
   // no rate limiting at all.
   const ip = clientIp(request)
-  const globalIpLimit = await rateLimitShared(`widget-any:${ip}`, GLOBAL_IP_MAX, GLOBAL_IP_WINDOW_MS)
+  const limits = widgetUsageLimits()
+  const globalIpLimit = await rateLimitShared(`widget-any:${ip}`, limits.perAddressPerMinute, MINUTE_MS)
   if (!globalIpLimit.ok) {
     return new Response('Too many requests', { status: 429 })
   }
@@ -303,26 +299,16 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   if (messages.length > MAX_MESSAGES) {
     return new Response('Too many messages', { status: 400 })
   }
-  const wellFormed = messages.every(
-    (m) => m !== null && typeof m === 'object' && typeof m.role === 'string' && typeof m.content === 'string'
-  )
-  if (!wellFormed) {
-    return new Response('Malformed messages', { status: 400 })
-  }
-  // Only the newest user message is ever read below, but every message still
-  // counts toward MAX_BODY_BYTES — bounding each one here means a large
-  // earlier message can't eat most of that budget while a tiny final message
-  // sails through the query-length check on its own.
-  const oversized = messages.some((m) => (m.content as string).length > MAX_MESSAGE_CHARS)
-  if (oversized) {
-    return new Response('Message too long', { status: 400 })
+  const history = checkWidgetMessages(messages, MAX_MESSAGE_CHARS)
+  if (!history.ok) {
+    return new Response(history.error, { status: 400 })
   }
 
   // Independent counters, so checked concurrently — both are always charged,
   // which can only make the limits stricter, never looser.
   const [tokenLimit, ipLimit] = await Promise.all([
-    rateLimitShared(`widget-token:${widgetToken}`, TOKEN_MAX, TOKEN_WINDOW_MS),
-    rateLimitShared(`widget-ip:${widgetToken}:${ip}`, IP_TOKEN_MAX, IP_TOKEN_WINDOW_MS),
+    rateLimitShared(`widget-token:${widgetToken}`, limits.perWidgetPerMinute, MINUTE_MS),
+    rateLimitShared(`widget-ip:${widgetToken}:${ip}`, limits.perVisitorPerMinute, MINUTE_MS),
   ])
   if (!tokenLimit.ok) {
     return new Response('Too many requests', { status: 429 })
@@ -336,10 +322,17 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     return new Response('Invalid widget token', { status: 404 })
   }
 
+  const dailyLimit = effectiveDailyLimit(org.widget_daily_answer_limit, limits.perWorkspacePerDay)
   const [orgHourly, orgDaily] = await Promise.all([
-    rateLimitShared(`widget-org-hour:${org.id}`, ORG_HOURLY_MAX, ORG_HOURLY_WINDOW_MS),
-    rateLimitShared(`widget-org-day:${org.id}`, ORG_DAILY_MAX, ORG_DAILY_WINDOW_MS),
+    rateLimitShared(`widget-org-hour:${org.id}`, limits.perWorkspacePerHour, ORG_HOURLY_WINDOW_MS),
+    rateLimitShared(`widget-org-day:${org.id}`, dailyLimit, ORG_DAILY_WINDOW_MS),
   ])
+  // Tell the owner as the day's count crosses 80% of the limit and when it
+  // reaches it, once each, in the background so the visitor never waits on it.
+  const dailyAlert = dailyLimitAlert(orgDaily.count, dailyLimit)
+  if (dailyAlert) {
+    void sendWidgetDailyLimitEmail({ orgId: org.id, orgName: org.name, kind: dailyAlert, limit: dailyLimit })
+  }
   if (!orgHourly.ok || !orgDaily.ok) {
     return new Response('Too many requests', { status: 429 })
   }
@@ -362,7 +355,8 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   // allowlist can have produced.
 
   const lastUserMsg = [...messages].reverse().find((m) => m.role === 'user')
-  const query = lastUserMsg?.content ?? ''
+  // A user message's content is always a string once checkWidgetMessages passed.
+  const query = typeof lastUserMsg?.content === 'string' ? lastUserMsg.content : ''
   if (!query.trim()) {
     return new Response('No valid messages', { status: 400 })
   }
@@ -455,16 +449,28 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
   // Whether visitors can flag this workspace's answers is the same plan check the
   // panel page makes (app/widget/[widgetToken]/page.tsx); a lookup that fails
   // counts as no, so the answer itself is never held up by it.
-  const [retrieved, followUps, flagsAvailable] = await Promise.all([
+  //
+  // A widget that answers only from its knowledge base also looks up how to
+  // reach the business, in parallel so it adds no wait, for the fallback reply
+  // to a question its articles don't cover (lib/widget/contact-context.ts).
+  // Best-effort like the main search: a failure means no contact details.
+  const [retrieved, followUps, flagsAvailable, contactFound] = await Promise.all([
     run.context ?? retrieveContext(run.lookupText ?? query, org.id),
     followUpsAvailable({ id: org.id, followUpsEnabled: org.widget_appearance?.followUpsEnabled !== false }),
     orgHasFeature(org.id, 'kb_review_queue').catch(() => false),
+    needsContactLookup(org.widget_answer_scope, query)
+      ? retrieveContext(CONTACT_LOOKUP_QUERY, org.id)
+      : Promise.resolve(NO_CONTEXT),
   ])
   // Everything the model is given this turn: what was found up front plus
   // whatever its own searches add. Strong matches and near misses alike; usage
   // counts, answer sources, the support check and card grounding all read it.
   const turn = createTurnContext(retrieved)
   const contextBlock = turn.groundedText()
+  // Shown to the model and allowed in the contact card, but not one of the
+  // turn's articles: it answered nothing, so it must not count as the question
+  // being covered or as a source of the answer.
+  const contactBlock = widgetContactBlock(org.name, contactArticlesForTurn(retrieved, contactFound))
 
   // resourceId scopes memory to this org+visitor; threadId reuses the same
   // id since the widget has no "start a new conversation" affordance — a
@@ -485,6 +491,7 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
       contextBlock,
       followUps,
       search: true,
+      contactBlock,
     }),
     model: model as MastraModelConfig,
     memory: getWidgetChatMemory(),
@@ -493,7 +500,7 @@ async function runWidgetAgent(ctx: AgentFactoryContext) {
     inputProcessors: [new ToolCallFilter({ exclude: [SEARCH_TOOL_NAME] })],
     tools: {
       ...buildGenuiTools(
-        () => turn.groundedText(),
+        () => turn.groundedText() + contactBlock,
         followUps ? { followUps: { ground: (labels) => groundFollowUps(org.id, labels) } } : {}
       ),
       [SEARCH_TOOL_NAME]: buildSearchTool({ turn, search: (q) => searchKnowledgeBase(q, org.id) }),

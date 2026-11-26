@@ -431,7 +431,6 @@ const TelegramIntegrationSchema = z.object({
   chatIds: z.string().optional(),
   escalationUsername: z.string().optional(),
   confidenceThreshold: z.coerce.number().min(0).max(1).optional(),
-  autoDeflectEnabled: z.coerce.boolean().optional(),
 })
 
 export async function saveTelegramIntegrationAction(
@@ -445,7 +444,9 @@ export async function saveTelegramIntegrationAction(
   const parsed = TelegramIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { botToken, chatIds, escalationUsername, confidenceThreshold, autoDeflectEnabled } = parsed.data
+  const { botToken, chatIds, escalationUsername, confidenceThreshold } = parsed.data
+  // An unchecked switch submits nothing, so its absence means off.
+  const autoDeflectEnabled = formData.get('autoDeflectEnabled') === 'on'
   const chatIdList = (chatIds ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -545,7 +546,6 @@ const DiscourseIntegrationSchema = z.object({
   categoryIds: z.string().optional(),
   escalationUser: z.string().optional(),
   confidenceThreshold: z.coerce.number().min(0).max(1).optional(),
-  autoDeflectEnabled: z.coerce.boolean().optional(),
 })
 
 export async function saveDiscourseIntegrationAction(
@@ -562,7 +562,9 @@ export async function saveDiscourseIntegrationAction(
   const parsed = DiscourseIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { siteUrl, apiKey, botUsername, categoryIds, escalationUser, confidenceThreshold, autoDeflectEnabled } = parsed.data
+  const { siteUrl, apiKey, botUsername, categoryIds, escalationUser, confidenceThreshold } = parsed.data
+  // An unchecked switch submits nothing, so its absence means off.
+  const autoDeflectEnabled = formData.get('autoDeflectEnabled') === 'on'
   const categoryList = (categoryIds ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -629,6 +631,19 @@ const CircleIntegrationSchema = z.object({
   communityUrl: z.string().optional(),
   apiToken: z.string().optional(),
   spaceIds: z.string().optional(),
+  postAsEmail: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || z.email().safeParse(value).success, {
+      message: 'Post replies as must be a member’s email address, or blank to post as the admin.',
+    })
+    .optional(),
+  teamMemberIds: z
+    .string()
+    .refine((value) => value.split(',').map((s) => s.trim()).filter(Boolean).every((id) => /^\d+$/.test(id)), {
+      message: 'Team member Circle IDs must be numeric member IDs, separated by commas.',
+    })
+    .optional(),
   confidenceThreshold: z.coerce.number().min(0).max(1).optional(),
 })
 
@@ -646,11 +661,19 @@ export async function saveCircleIntegrationAction(
   const parsed = CircleIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { communityUrl, apiToken, spaceIds, confidenceThreshold } = parsed.data
+  const { communityUrl, apiToken, spaceIds, postAsEmail, teamMemberIds, confidenceThreshold } = parsed.data
   const spaceList = (spaceIds ?? '')
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
+  const teamMemberList = (teamMemberIds ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  // An unchecked switch submits nothing, so absence means off.
+  const autoDeflectEnabled = formData.get('autoDeflectEnabled') === 'on'
+  // Blank posts replies as the Admin API token's admin.
+  const postAs = postAsEmail || null
 
   const existing = await getIntegration(orgId, 'circle')
 
@@ -674,11 +697,16 @@ export async function saveCircleIntegrationAction(
     botSecret,
     teamId: normalizedUrl,
     channelIds: spaceList,
-    // Circle is ingest-only, so there is no channel post to mention an
-    // escalation user in. The field is not offered for Circle; saving null
-    // clears any value stored by an earlier version of the form.
+    // No escalation user is offered for Circle; saving null clears any value
+    // stored by an earlier version of the form.
     escalationRoleId: null,
     confidenceThreshold: confidenceThreshold ?? null,
+    botUsername: postAs,
+    // The member id learned from earlier replies belongs to the previous
+    // "post replies as" member, so it is forgotten when that member changes.
+    ...((existing?.bot_username ?? null)?.toLowerCase() !== postAs?.toLowerCase() && { botUserId: null }),
+    teamMemberIds: teamMemberList,
+    autoDeflectEnabled,
   })
 
   refresh()
@@ -733,7 +761,6 @@ const EmailIntegrationSchema = z.object({
   allowedSenders: z.string().optional(),
   escalationEmail: z.string().optional(),
   confidenceThreshold: z.coerce.number().min(0).max(1).optional(),
-  autoDeflectEnabled: z.coerce.boolean().optional(),
 })
 
 export async function saveEmailIntegrationAction(
@@ -747,7 +774,9 @@ export async function saveEmailIntegrationAction(
   const parsed = EmailIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { allowedSenders, escalationEmail, confidenceThreshold, autoDeflectEnabled } = parsed.data
+  const { allowedSenders, escalationEmail, confidenceThreshold } = parsed.data
+  // An unchecked switch submits nothing, so its absence means off.
+  const autoDeflectEnabled = formData.get('autoDeflectEnabled') === 'on'
 
   const senderList = (allowedSenders ?? '')
     .split(',')

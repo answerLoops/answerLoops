@@ -25,9 +25,10 @@ import { mintRenderToken } from '../lib/widget/render-token'
 // tests have to speak the real wire format to actually exercise it.
 
 // Render tokens are bound to the client address that minted them. The server
-// reads this address from cf-connecting-ip (accepted on self-hosted installs
-// without ORIGIN_VERIFY_SECRET), so every request in this file presents it and
-// every token is minted for it.
+// reads this address from cf-connecting-ip (accepted on a self-hosted install
+// with TRUST_CLOUDFLARE_IP_HEADER=true, which playwright.config.ts sets for the
+// e2e server), so every request in this file presents it and every token is
+// minted for it.
 const E2E_CLIENT_IP = '203.0.113.10'
 test.use({ extraHTTPHeaders: { 'cf-connecting-ip': E2E_CLIENT_IP } })
 

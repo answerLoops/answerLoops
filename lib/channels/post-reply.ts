@@ -5,6 +5,8 @@ import { sendToTelegramChat } from '@/lib/telegram/send'
 import { sendEmailReply } from '@/lib/email/reply'
 import { sendToGoogleChatSpace } from '@/lib/google-chat/send'
 import { postToDiscourseTopic } from '@/lib/discourse/send'
+import { postToCirclePost } from '@/lib/circle/send'
+import { circleMessageId } from '@/lib/circle/client'
 
 const MOD = 'channels/post-reply'
 
@@ -51,10 +53,15 @@ export async function postReply(
   // saved separately and surfaced via the ticket itself (get_tickets tool /
   // dashboard), not pushed anywhere.
   if (platform === 'mcp') return null
-  // Circle is ingest-only (stage 1): its write API is unconfirmed, so the
-  // AI draft is parked on the ticket for a human to copy into Circle by
-  // hand. Nothing is transmitted.
-  if (platform === 'circle') return null
+  // channelId here is the Circle post id (the webhook sets threadId to the
+  // post id), so a reply is a new comment on that post. The comment id comes
+  // back in the webhook's own message id form: callers store it on the ticket,
+  // and that is how the webhook recognises the comment when Circle sends it
+  // back through the "Posted a comment" Workflow.
+  if (platform === 'circle') {
+    const commentId = await postToCirclePost(channelId, content, orgId)
+    return commentId ? circleMessageId('comment', commentId) : null
+  }
   // GitHub has no channelId-shaped destination (it needs owner/repo/issue
   // number, not a channel id + optional thread) — callers must branch to
   // postReplyToGithub below instead of calling this function. Explicit

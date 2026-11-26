@@ -62,6 +62,10 @@ export const TEST_ENV = {
   // global-setup.ts seeds no `subscriptions` row, the whole suite gets
   // redirected to /checkout/start-trial instead of testing the app.
   DEPLOYMENT_MODE: 'self-hosted',
+  // Lets e2e/widget.spec.ts set each request's client address with
+  // cf-connecting-ip, which a self-hosted production server only reads when
+  // the operator opts in (lib/http/client-ip.ts).
+  TRUST_CLOUDFLARE_IP_HEADER: 'true',
   // The feedback board is off unless enabled (see lib/product-feedback/enabled.ts);
   // product-feedback.spec.ts exercises it.
   FEEDBACK_WIDGET_ENABLED: '1',

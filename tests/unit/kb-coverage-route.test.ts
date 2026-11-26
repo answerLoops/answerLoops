@@ -12,12 +12,14 @@ const h = vi.hoisted(() => ({
   requireOrgAccess: vi.fn(),
   getKnowledgeCoverage: vi.fn(),
   getArticleUsage: vi.fn(),
+  getWidgetAnswerSettings: vi.fn(),
   loggerError: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/org', () => ({ requireOrgAccess: h.requireOrgAccess }))
 vi.mock('@/lib/db/queries/kb-coverage', () => ({ getKnowledgeCoverage: h.getKnowledgeCoverage }))
 vi.mock('@/lib/db/queries/kb-usage', () => ({ getArticleUsage: h.getArticleUsage }))
+vi.mock('@/lib/db/queries/widgets', () => ({ getWidgetAnswerSettings: h.getWidgetAnswerSettings }))
 vi.mock('@/lib/logger', () => ({ logger: { error: h.loggerError } }))
 vi.mock('@/lib/request-id', () => ({ getRequestId: () => 'req-test' }))
 
@@ -31,6 +33,7 @@ beforeEach(() => {
     truncated: false,
   })
   h.getArticleUsage.mockResolvedValue([])
+  h.getWidgetAnswerSettings.mockResolvedValue({ answerScope: 'knowledge-base-only', guidance: 'Private note.' })
 })
 
 describe('GET /api/kb/coverage', () => {
@@ -41,6 +44,7 @@ describe('GET /api/kb/coverage', () => {
     expect(res.status).toBe(401)
     expect(h.getKnowledgeCoverage).not.toHaveBeenCalled()
     expect(h.getArticleUsage).not.toHaveBeenCalled()
+    expect(h.getWidgetAnswerSettings).not.toHaveBeenCalled()
   })
 
   it("reads coverage for the caller's own org only", async () => {
@@ -65,6 +69,30 @@ describe('GET /api/kb/coverage', () => {
     expect(h.loggerError).toHaveBeenCalledWith('failed to load knowledge article usage', expect.objectContaining({
       module: 'api/kb/coverage',
       requestId: 'req-test',
+      orgId: 7,
+      error: expect.any(Error),
+    }))
+  })
+
+  it("includes the org's widget answer scope, and not its guidance note", async () => {
+    h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 7 })
+    const { GET } = await import('@/app/api/kb/coverage/route')
+    const res = await GET(req())
+    const body = await res.json()
+    expect(h.getWidgetAnswerSettings).toHaveBeenCalledExactlyOnceWith(7)
+    expect(body.widgetAnswerScope).toBe('knowledge-base-only')
+    expect(JSON.stringify(body)).not.toContain('Private note.')
+  })
+
+  it('still returns coverage, with a null scope, when the scope read fails', async () => {
+    h.requireOrgAccess.mockResolvedValue({ ok: true, orgId: 7 })
+    h.getWidgetAnswerSettings.mockRejectedValue(new Error('settings db down'))
+    const { GET } = await import('@/app/api/kb/coverage/route')
+    const res = await GET(req())
+    expect(res.status).toBe(200)
+    expect(await res.json()).toMatchObject({ summary: { total: 0 }, articleUsageAvailable: true, widgetAnswerScope: null })
+    expect(h.loggerError).toHaveBeenCalledWith('failed to load widget answer scope for knowledge coverage', expect.objectContaining({
+      module: 'api/kb/coverage',
       orgId: 7,
       error: expect.any(Error),
     }))

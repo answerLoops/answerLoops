@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server'
-import { getIntegrationByBotSecret, parseChannelIds } from '@/lib/db/queries/integrations'
-import { getTicketByThreadId } from '@/lib/db/queries/tickets'
-import { normalizeCircleContent, fetchCircleRecord, type CircleContent } from '@/lib/circle/client'
-import { processCommunityMessage } from '@/lib/ingest/pipeline'
+import { getIntegrationByBotSecret, parseChannelIds, parseTeamMemberIds, type Integration } from '@/lib/db/queries/integrations'
+import { getTicketByThreadId, isPostedByAnswerLoops } from '@/lib/db/queries/tickets'
+import { normalizeCircleContent, fetchCircleRecord, circleMessageId, type CircleContent } from '@/lib/circle/client'
+import { processCommunityMessage, recordThreadContextMessage } from '@/lib/ingest/pipeline'
 import { readBodyCapped } from '@/lib/http/read-body-capped'
 import { clampIngestContent, isIngestRateLimited, WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 import { logger } from '@/lib/logger'
@@ -81,7 +81,7 @@ function sourceUrlFor(payloadUrl: string | null, communityUrl: string | null, po
  */
 function acknowledgeDropped(
   orgId: number,
-  reason: 'no record' | 'no id' | 'too short' | 'no author' | 'outside watched spaces',
+  reason: 'no record' | 'no id' | 'too short' | 'no author' | 'outside watched spaces' | 'own reply' | 'team member',
   record?: { kind: 'post' | 'comment'; id?: string }
 ): Response {
   logger.info('Circle webhook delivery acknowledged without ingesting', {
@@ -91,6 +91,25 @@ function acknowledgeDropped(
     reason,
   })
   return Response.json({ ok: true })
+}
+
+/**
+ * Whether a comment was written by the member answerLoops posts replies as:
+ * the member id Circle reported for an earlier reply, or the "post replies
+ * as" email when the payload carries the author's email. That member is often
+ * a real person (with no email saved, replies go out as the token's admin),
+ * so a comment of theirs that answerLoops didn't post is kept as team context.
+ */
+function isPostingMember(
+  integration: Pick<Integration, 'bot_user_id' | 'bot_username'>,
+  content: CircleContent
+): boolean {
+  if (integration.bot_user_id && content.authorId === integration.bot_user_id) return true
+  return !!(
+    integration.bot_username &&
+    content.authorEmail &&
+    content.authorEmail.toLowerCase() === integration.bot_username.toLowerCase()
+  )
 }
 
 export async function POST(req: NextRequest) {
@@ -167,12 +186,44 @@ export async function POST(req: NextRequest) {
   }
 
   // 3. Filters — all acknowledged with 200 so Circle does not retry.
+  const dropped = { kind: picked.kind, id: content.id }
+  const messageId = circleMessageId(picked.kind, content.id)
+
+  // Circle sends every new comment through the "Posted a comment" Workflow,
+  // answerLoops's replies included. A reply is recognised by the comment id
+  // stored when it was posted. answerLoops only ever replies with comments.
+  if (picked.kind === 'comment' && (await isPostedByAnswerLoops(messageId, integration.org_id, 'circle'))) {
+    return acknowledgeDropped(integration.org_id, 'own reply', dropped)
+  }
+
   // A short comment on a post we already track is part of the conversation;
   // only content that would open a new ticket must be long enough.
   const isTrackedReply = !!content.body && !!(await getTicketByThreadId(content.postId, integration.org_id, 'circle'))
-  const dropped = { kind: picked.kind, id: content.id }
   if (!content.body || (content.body.length < 10 && !isTrackedReply)) return acknowledgeDropped(integration.org_id, 'too short', dropped)
   if (!content.authorId || content.authorId === '0') return acknowledgeDropped(integration.org_id, 'no author', dropped)
+
+  // A team member's comment is kept on its ticket so the conversation reads
+  // in full. It never opens a ticket, reopens one, or notifies anyone, and a
+  // team member's post is not a support request.
+  if (parseTeamMemberIds(integration).includes(content.authorId) || isPostingMember(integration, content)) {
+    const kept = picked.kind === 'comment' && await recordThreadContextMessage(
+      {
+        messageId,
+        content: clampIngestContent(content.body),
+        authorName: content.authorName,
+        threadId: content.postId,
+        platform: 'circle',
+      },
+      integration.org_id
+    )
+    if (!kept) return acknowledgeDropped(integration.org_id, 'team member', dropped)
+    logger.info('Circle team member comment kept as thread context', {
+      module: MOD,
+      orgId: integration.org_id,
+      id: content.id,
+    })
+    return Response.json({ ok: true })
+  }
 
   // Watched spaces decide which posts open tickets. A comment on a post we
   // already track belongs to that conversation (its post passed this check
@@ -194,7 +245,7 @@ export async function POST(req: NextRequest) {
 
   await processCommunityMessage(
     {
-      messageId: `circle-${picked.kind}-${content.id}`,
+      messageId,
       content: clampIngestContent(content.body),
       authorId: content.authorId,
       authorName: content.authorName,

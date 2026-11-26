@@ -59,9 +59,8 @@ export default async function TicketDetailPage(props: { params: Promise<{ id: st
     ])
 
   // The confidence assessment card shows "needs human review" whether the
-  // answer was genuinely low-confidence or nothing could be sent for it (the
-  // channel is ingest-only, or Automatic Deflections is off). This line tells
-  // the second case apart. See lib/tickets/review-notice.ts.
+  // answer was genuinely low-confidence or nothing could be sent for it
+  // (Automatic Deflections is off). This line tells the second case apart. See lib/tickets/review-notice.ts.
   const reviewNotice = assessment
     ? reviewNoticeFor({
         sourcePlatform: ticket.source_platform,

@@ -85,6 +85,7 @@ vi.mock('@/lib/ratelimit', () => ({ rateLimit: () => ({ ok: true }) }))
 vi.mock('@/lib/db/queries/integrations', () => ({
   listIntegrations: h.listIntegrations,
   parseChannelIds: () => [],
+  parseTeamMemberIds: (row: { team_member_ids: string | null }) => (row.team_member_ids ? JSON.parse(row.team_member_ids) : []),
 }))
 vi.mock('@/lib/db/queries/discord-guilds', () => ({ getDiscordGuildByGuildId: h.getDiscordGuildByGuildId }))
 vi.mock('@/lib/db/queries/billing', () => ({ getSubscription: h.getSubscription }))
@@ -288,6 +289,15 @@ describe('GET /api/integrations', () => {
     expect(circle.bot_secret).toBe(expected)
     expect(circle.has_bot_secret).toBe(true)
     expect(circle).not.toHaveProperty('bot_token')
+  })
+
+  it('gives the Circle card its team member ids as a list, but not the learned member id', async () => {
+    const { GET } = await import('@/app/api/integrations/route')
+    h.listIntegrations.mockResolvedValue([row({ platform: 'circle', team_member_ids: '["101","202"]', bot_user_id: '31', team_id: 'https://community.example' })])
+    h.requireOrgAccess.mockResolvedValue(ok('admin'))
+    const [circle] = await (await GET(new Request('http://x'))).json()
+    expect(circle.team_member_ids).toEqual(['101', '202'])
+    expect(circle).not.toHaveProperty('bot_user_id')
   })
 })
 

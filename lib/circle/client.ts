@@ -21,11 +21,22 @@ export async function circleFetch(token: string, path: string, init: RequestInit
   return fetch(`${CIRCLE_API_BASE}${path}`, { ...init, headers, signal: init.signal ?? AbortSignal.timeout(10_000) })
 }
 
+/**
+ * The ingest message id for a Circle post or comment. The webhook stores
+ * incoming records under it, and the send dispatch returns a posted comment's
+ * id in the same form, so the comment is recognised when Circle sends it back.
+ */
+export function circleMessageId(kind: 'post' | 'comment', id: string): string {
+  return `circle-${kind}-${id}`
+}
+
 export interface CircleContent {
   id: string
   body: string
   authorId: string
   authorName: string
+  /** The author's email when the payload carries one, else null. */
+  authorEmail: string | null
   spaceId: string
   /** Post id — for a comment this is the parent post; used as the ticket thread key. */
   postId: string
@@ -49,6 +60,7 @@ interface CirclePostShape {
   space_id?: number | string
   user_id?: number | string
   user_name?: string
+  user_email?: string
   post_id?: number | string
 }
 
@@ -61,6 +73,7 @@ export function normalizeCircleContent(raw: CirclePostShape, kind: 'post' | 'com
     body: [raw.name, readBody(raw.body)].filter(Boolean).join('\n\n').trim(),
     authorId: raw.user_id != null ? String(raw.user_id) : '',
     authorName: raw.user_name ?? 'Circle member',
+    authorEmail: typeof raw.user_email === 'string' && raw.user_email.trim() ? raw.user_email.trim() : null,
     spaceId: raw.space_id != null ? String(raw.space_id) : '',
     postId: kind === 'comment' && raw.post_id != null ? String(raw.post_id) : id,
     url: raw.url ?? null,

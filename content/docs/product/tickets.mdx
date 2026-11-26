@@ -114,6 +114,8 @@ Select any row to open the ticket. The header gathers the key facts as badges: s
 
 The page has two columns. On the left is the conversation: the **Original Message**, the **AI Draft Answer**, the **AI Confidence** card, the **Conversation** (every later message in the thread), and the **Reply** form. On the right are the **Details**, **Related Questions**, **Update Status**, and **Activity** panels.
 
+A GitHub comment sent by replying to a notification email arrives with the quoted notification and GitHub's footer attached. The message shows the reply itself, and a **Show quoted email** toggle underneath opens the rest. The ticket text is stored as received.
+
 ### Read the whole conversation
 
 A question is often a conversation, not one message. When someone keeps talking in the same place, their follow-ups join the ticket they belong to instead of opening new ones, and the **Conversation** section shows every message in order, oldest first. Each message carries its author, the time, and a label:
@@ -213,11 +215,12 @@ The **Reply** form sends a message back to the person who asked. Type your messa
 | Slack | **Send reply to Slack** |
 | Telegram | **Send reply to Telegram** |
 | Discourse | **Send reply to Discourse** |
+| Circle | **Send reply to Circle** |
 | Google Chat | **Send reply to Google Chat** |
 | Email | **Send reply by email** |
-| Circle, Agent | **Save reply** (records the reply on the ticket) |
+| Agent | **Save reply** (records the reply on the ticket) |
 
-Replies go to the original thread on the source platform, not only into answerLoops. Circle tickets are ingest-only, so copy the answer into Circle yourself. For tickets opened by an AI agent there is no chat channel, so the reply is saved on the ticket for the agent to read through the API.
+Replies go to the original thread on the source platform, not only into answerLoops. On Circle, a reply is a comment on the member's post. For tickets opened by an AI agent there is no chat channel, so the reply is saved on the ticket for the agent to read through the API.
 
 ### Turn a good answer into knowledge
 

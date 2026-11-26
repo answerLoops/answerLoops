@@ -1,8 +1,8 @@
 ---
 title: Answering Circle community questions without living in the app
 subtitle: Route posts and comments from your Circle spaces into one queue, backed by your own knowledge base
-description: How the Circle integration turns new posts and comments in watched spaces into tickets with reviewed draft answers, with setup steps for the Workflow-based webhook.
-overview: The Circle integration connects through Circle Workflows. You create a webhook Workflow for published posts and another for new comments, pointed at answerLoops, plus an Admin API token to fetch the full post when a webhook arrives without it. Answers are drafted from your knowledge base and reviewed by a separate AI check, then wait on the ticket for your team to post in Circle.
+description: How the Circle integration turns new posts and comments in watched spaces into tickets with reviewed answers posted back as comments, with setup steps for the Workflow-based webhook.
+overview: The Circle integration connects through Circle Workflows. You create a webhook Workflow for published posts and another for new comments, pointed at answerLoops, plus an Admin API token that answerLoops uses to post replies and to fetch the full post when a webhook arrives without it. Answers are drafted from your knowledge base and reviewed by a separate AI check, then posted back as comments on the member's post, once your team approves them or automatically when Automatic Deflections is on.
 author: Nathan Tarbert
 datePublished: "2026-08-10"
 category: Integrations
@@ -21,19 +21,23 @@ Circle communities tend to be smaller and more personal than a Discord server or
 
 Circle doesn't have native webhook subscriptions the way some platforms do, so the connection runs through Circle's own Workflows feature. You create one Workflow triggered on **Published a post** and a second on **Posted a comment**, each using the **Send to webhook** action pointed at a URL answerLoops gives you. Each URL carries a `kind=post` or `kind=comment` parameter so answerLoops knows which one it's reading, plus your secret token. **Send to webhook** is available on Circle's Scale and Circle Plus plans.
 
-You also generate an Admin V2 API token from **Settings → Developers → Tokens**. Workflow payloads sometimes arrive thin, with a post ID but not the full text, so answerLoops calls Circle's API with that token to fetch the complete post when it needs to.
+You also generate an Admin V2 API token from **Settings → Developers → Tokens**. answerLoops uses it to post replies as comments. Workflow payloads also sometimes arrive thin, with a post ID but not the full text, so answerLoops calls Circle's API with that token to fetch the complete post when it needs to.
 
 From there you pick which spaces to watch (or leave it blank to cover the whole community), and every new post or comment in those spaces runs through triage, retrieval against your knowledge base, and a confidence check before anything gets drafted.
 
 ## What actually happens to a new post
 
-A member posts a question. answerLoops pulls the full content if the webhook payload didn't include it, checks it against what your community actually has documented, and produces a draft. A separate AI reviews the draft and scores it. The draft then waits on the ticket in your queue. Someone on your team reads it, edits it if needed, and posts the answer in Circle. answerLoops never posts to Circle itself. If the score falls below your threshold, 0.8 by default, the draft is flagged as low-confidence so your team gives it a closer look before posting.
+A member posts a question. answerLoops pulls the full content if the webhook payload didn't include it, checks it against what your community actually has documented, and produces a draft. A separate AI reviews the draft and scores it. The draft then waits on the ticket in your queue. Someone on your team reads it, edits it if needed, and clicks **Approve**. answerLoops posts the answer as a comment on the member's post. If the score falls below your threshold, 0.8 by default, the draft is flagged as low-confidence so your team gives it a closer look first.
+
+Replies go out as the member you choose, a "Support" account for example, or as the admin who created the API token. Comments from your own team can be kept on the ticket for context, so the conversation reads in full without each one turning into a ticket.
 
 Posts under ten characters get skipped outright — a "thanks!" or a stray comment doesn't need a triage pass.
 
-## Why a person posts every answer here
+## Why you start with a person approving every answer
 
-A Circle community usually runs on trust in a way a big anonymous Discord doesn't. Members paid for access to this specific person's or team's answers. An AI reply that's confidently wrong in that context costs more than it would in a general chat channel. So on Circle, every answer goes out under your team's name, posted by a person who read it first. The draft does the research and the writing. You keep the final say.
+A Circle community usually runs on trust in a way a big anonymous Discord doesn't. Members paid for access to this specific person's or team's answers. An AI reply that's confidently wrong in that context costs more than it would in a general chat channel. So Automatic Deflections starts off: every answer waits for someone on your team to read it first. The draft does the research and the writing. You keep the final say.
+
+Once the approved drafts have earned that trust, turn Automatic Deflections on, and confident answers are posted on their own. Anything below your threshold still waits for a person.
 
 ## The actual payoff
 

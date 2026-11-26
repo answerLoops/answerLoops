@@ -35,10 +35,23 @@ describe('normalizeCircleContent', () => {
       body: 'Login broken\n\nI cannot sign in',
       authorId: '3',
       authorName: 'Ada',
+      authorEmail: null,
       spaceId: '9',
       postId: '55',
       url: null,
     })
+  })
+
+  it('reads the author email when the payload carries one', async () => {
+    const { normalizeCircleContent } = await import('@/lib/circle/client')
+    const out = normalizeCircleContent({ id: 900, body: 'a reply', post_id: 55, user_id: 4, user_email: ' ada@example.com ' }, 'comment')
+    expect(out?.authorEmail).toBe('ada@example.com')
+  })
+
+  it('builds the ingest message id for a post or comment', async () => {
+    const { circleMessageId } = await import('@/lib/circle/client')
+    expect(circleMessageId('post', '55')).toBe('circle-post-55')
+    expect(circleMessageId('comment', '900')).toBe('circle-comment-900')
   })
 
   it('extracts body when it arrives as a { body: string } object', async () => {

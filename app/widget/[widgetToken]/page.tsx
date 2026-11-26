@@ -16,17 +16,16 @@ import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { getWidgetLogoVersion } from '@/lib/db/queries/widget-logos'
 import { widgetLogoPath } from '@/lib/widget/logo'
 import { brandPalette } from '@/lib/widget/appearance'
+import { mayOpenOnOwnHost } from '@/lib/widget/own-host-embed'
+import { widgetUsageLimits } from '@/lib/widget/usage-limits'
 
 export const dynamic = 'force-dynamic'
 
 // Each allowed render mints a short-lived token that unlocks the chat and lead
-// endpoints, so minting is throttled per client address and per widget.
-// Generous for a real visitor (one render per page view) and tight enough that
-// a script cannot farm tokens.
-const RENDER_IP_MAX = 30
-const RENDER_IP_WINDOW_MS = 60_000
-const RENDER_TOKEN_MAX = 600
-const RENDER_TOKEN_WINDOW_MS = 60_000
+// endpoints, so rendering is throttled per client address and per widget,
+// with limits from lib/widget/usage-limits.ts. Generous for a real visitor
+// (one render per page view).
+const RENDER_WINDOW_MS = 60_000
 
 // Widget tokens are 48 hex characters (see lib/db/queries/widgets.ts); checked
 // before the value is used as rate-limit key material.
@@ -49,11 +48,14 @@ export default async function WidgetPage({ params }: Props) {
   const headerList = await headers()
   const embedOrigin = resolveEmbedOrigin(headerList.get('referer'))
   const selfHost = normalizeHost(headerList.get('host'))
-  const decision = isEmbedAllowed(
-    embedOrigin,
-    parseAllowedOrigins(org.widget_allowed_origins),
-    selfHost
-  )
+  const allowedOrigins = parseAllowedOrigins(org.widget_allowed_origins)
+  let decision = isEmbedAllowed(embedOrigin, allowedOrigins, selfHost)
+  // A page on this instance's own host only counts for the widgets that may
+  // open there (lib/widget/own-host-embed.ts); any other widget is decided on
+  // its listed domains alone.
+  if (decision.viaOwnHost && !(await mayOpenOnOwnHost(org, widgetToken))) {
+    decision = isEmbedAllowed(embedOrigin, allowedOrigins, null)
+  }
 
   if (!decision.allowed) {
     // Rendered rather than 404'd so whoever embedded it sees why, in the panel
@@ -63,9 +65,10 @@ export default async function WidgetPage({ params }: Props) {
   }
 
   const ip = clientIp({ headers: headerList })
+  const limits = widgetUsageLimits()
   const [ipLimit, tokenLimit] = await Promise.all([
-    rateLimitShared(`widget-render-ip:${ip}`, RENDER_IP_MAX, RENDER_IP_WINDOW_MS),
-    rateLimitShared(`widget-render-token:${widgetToken}`, RENDER_TOKEN_MAX, RENDER_TOKEN_WINDOW_MS),
+    rateLimitShared(`widget-render-ip:${ip}`, limits.loadsPerAddressPerMinute, RENDER_WINDOW_MS),
+    rateLimitShared(`widget-render-token:${widgetToken}`, limits.loadsPerWidgetPerMinute, RENDER_WINDOW_MS),
   ])
   if (!ipLimit.ok || !tokenLimit.ok) {
     return (
@@ -91,13 +94,13 @@ export default async function WidgetPage({ params }: Props) {
 
   // Only true when this request is embedded on the org's own instance (the
   // Settings preview link, or a self-host testing the widget on localhost) —
-  // never on a real customer's site, since isEmbedAllowed above already
-  // required embedOrigin === selfHost for this branch when it's true.
+  // never on a real customer's site, since it is only set when this render was
+  // allowed by the own-host rule above.
   // Gates whether the chat route's config-error message names the missing
   // AI provider: safe for the org owner testing their own setup, but never
   // shown to an anonymous customer-site visitor (see NoAIProviderConfiguredError
   // handling in app/api/widget/chat/route.ts).
-  const isSelfPreview = embedOrigin !== null && embedOrigin === selfHost
+  const isSelfPreview = decision.viaOwnHost === true
 
   // Minted only now that isEmbedAllowed() has passed, and required by the
   // chat/lead endpoints on every call — see lib/widget/render-token.ts for

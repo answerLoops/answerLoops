@@ -12,7 +12,7 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage: h.processCommunityMessage }))
-vi.mock('@/lib/db/queries/tickets', () => ({ getTicketByThreadId: h.getTicketByThreadId }))
+vi.mock('@/lib/db/queries/tickets', () => ({ getTicketByThreadId: h.getTicketByThreadId, isPostedByAnswerLoops: vi.fn(async () => false) }))
 vi.mock('@/lib/ingest/limits', async (orig) => ({
   ...(await orig<typeof import('@/lib/ingest/limits')>()),
   isIngestRateLimited: vi.fn(async () => false),
@@ -22,6 +22,7 @@ vi.mock('@/lib/db/queries/integrations', () => ({
     platform: 'circle', enabled: 1, org_id: 6, bot_token: null, team_id: null, channel_ids: '2',
   })),
   parseChannelIds: vi.fn(() => ['2']),
+  parseTeamMemberIds: vi.fn(() => []),
 }))
 
 beforeEach(() => {
