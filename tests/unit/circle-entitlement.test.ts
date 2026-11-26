@@ -3,13 +3,12 @@ import fs from 'fs'
 import path from 'path'
 
 // The Circle channel adds one billing feature (`circle_integration`, a
-// Standard-plan entitlement) and reuses the generic `integrations` columns —
-// there is no migration. These assertions catch the split-brain regression:
+// Standard-plan entitlement). Its two own columns are pinned in
+// circle-replies-migration.test.ts. These assertions catch the split-brain regression:
 // the feature added to the `Feature` union type but left out of
 // STANDARD_FEATURES (so it's gated off for every plan), or the server action's
 // requireFeature union not widened so `saveCircleIntegrationAction` can't type-
-// check its own gate call. They also pin that Circle has NO auto-deflect toggle
-// — it is ingest-only, so a deflection field in its schema would be a bug.
+// check its own gate call.
 
 const ROOT = process.cwd()
 const read = (rel: string) => fs.readFileSync(path.join(ROOT, rel), 'utf-8')
@@ -42,13 +41,5 @@ describe('lib/actions/integrations.ts: Circle action gating', () => {
 
   it('exports deleteCircleIntegrationAction', () => {
     expect(src).toContain('export async function deleteCircleIntegrationAction')
-  })
-
-  it('the Circle schema/action has no auto-deflect toggle (ingest-only)', () => {
-    const start = src.indexOf('CircleIntegrationSchema')
-    const end = src.indexOf('deleteCircleIntegrationAction')
-    expect(start).toBeGreaterThan(-1)
-    const block = src.slice(start, end)
-    expect(block).not.toMatch(/autoDeflect|auto_deflect|deflectionEnabled|automaticDeflection/i)
   })
 })

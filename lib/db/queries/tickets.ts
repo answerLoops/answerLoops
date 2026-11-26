@@ -869,6 +869,38 @@ export async function recordAnswerLoopsReply(
 }
 
 /**
+ * Whether answerLoops itself posted the message with this channel id, in this
+ * workspace and channel: an answer (stored by recordAnswerLoopsReply), a reply
+ * a team member sent from the dashboard (addTicketReply keeps the posted id),
+ * or the rating prompt sent after an answer. Channels that deliver every new
+ * message to the webhook, answerLoops's own included, use this to skip them.
+ */
+export async function isPostedByAnswerLoops(messageId: string, orgId: number, platform: SourcePlatform): Promise<boolean> {
+  const db = getDb()
+  const inChannel = and(eq(tickets.orgId, orgId), eq(tickets.sourcePlatform, platform))
+  const [reply] = await db
+    .select({ id: ticketReplies.id })
+    .from(ticketReplies)
+    .innerJoin(tickets, eq(tickets.id, ticketReplies.ticketId))
+    .where(and(
+      inChannel,
+      or(
+        and(eq(ticketReplies.authorRole, 'ai'), eq(ticketReplies.sourceMessageId, messageId)),
+        and(eq(ticketReplies.authorRole, 'staff'), eq(ticketReplies.discordMsgId, messageId))
+      )
+    ))
+    .limit(1)
+  if (reply) return true
+  const [prompt] = await db
+    .select({ id: csatMessages.messageId })
+    .from(csatMessages)
+    .innerJoin(tickets, eq(tickets.id, csatMessages.ticketId))
+    .where(and(inChannel, eq(csatMessages.messageId, messageId)))
+    .limit(1)
+  return !!prompt
+}
+
+/**
  * Keep a message in a ticket's thread without treating it as a customer
  * follow-up: it does not reopen the ticket, log an event, or notify anyone.
  * Used for maintainers' messages so the conversation reads completely.

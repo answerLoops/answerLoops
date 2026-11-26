@@ -24,11 +24,6 @@ interface DemoChannel {
   answer: string
   steps: string[]
   review: string
-  /**
-   * How the example ends. Most channels post the reviewed answer back to the
-   * conversation; an ingest-only channel ends with a draft for the team.
-   */
-  delivery?: { stage: string; status: string; note: string }
 }
 
 const CHANNELS: DemoChannel[] = [
@@ -59,7 +54,7 @@ const CHANNELS: DemoChannel[] = [
     review: 'Checked raid signup and preparation steps against both guild guides.',
   },
   {
-    name: 'Circle', color: '#7c3aed', destination: 'the community',
+    name: 'Circle', color: '#7c3aed', destination: 'the print-swap post',
     author: 'Artist', avatar: 'AL', room: 'Print swap',
     question: 'I’m joining the community print swap. How should I export my digital illustration so the colors and edges print correctly?',
     sources: ['Print swap submission guide', 'Artwork preparation checklist'],
@@ -70,11 +65,6 @@ const CHANNELS: DemoChannel[] = [
       'Export in the requested format, then share a preview in the print-swap space for feedback.',
     ],
     review: 'Checked export preparation and submission steps against the print-swap guides.',
-    delivery: {
-      stage: 'Draft ready',
-      status: 'Draft ready for your team',
-      note: 'Your team posts it in Circle',
-    },
   },
 ]
 
@@ -209,17 +199,15 @@ export function AnimatedChat() {
         {current >= 4 && (
           <div className="demo-delivered demo-enter">
             <Check size={15} />
-            <span>{channel.delivery?.status ?? `Reply sent to ${channel.destination}`}</span>
-            <span>{channel.delivery?.note ?? 'Auto-reply enabled'}</span>
+            <span>Reply sent to {channel.destination}</span>
+            <span>Auto-reply enabled</span>
           </div>
         )}
       </div>
       <figcaption className="support-demo-footer">
         <span>
           <span className="demo-dot" />
-          {current === STAGES.length - 1 && channel.delivery
-            ? channel.delivery.stage
-            : STAGES[current]}
+          {STAGES[current]}
         </span>
         {!reducedMotion && (
           <button

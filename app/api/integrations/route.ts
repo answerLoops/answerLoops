@@ -1,5 +1,5 @@
 import { requireOrgAccess } from '@/lib/auth/org'
-import { listIntegrations, parseChannelIds } from '@/lib/db/queries/integrations'
+import { listIntegrations, parseChannelIds, parseTeamMemberIds } from '@/lib/db/queries/integrations'
 import { logger } from '@/lib/logger'
 import { getRequestId } from '@/lib/request-id'
 
@@ -48,6 +48,7 @@ export async function GET(request: Request) {
         bot_token_last4: row.bot_token ? row.bot_token.slice(-4) : null,
         bot_secret: showSetupValue ? row.bot_secret : null,
         channel_ids: parseChannelIds(row as Parameters<typeof parseChannelIds>[0]),
+        team_member_ids: parseTeamMemberIds(row),
       }
     })
 

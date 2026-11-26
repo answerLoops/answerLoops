@@ -141,6 +141,9 @@ describe('saveCircleIntegrationAction', () => {
       channelIds: ['12', '34'],
       escalationRoleId: null, // Circle has no escalation user; a stale form value is ignored
       confidenceThreshold: 0.7,
+      botUsername: null, // blank "post replies as" posts as the token's admin
+      teamMemberIds: [],
+      autoDeflectEnabled: false,
     })
     expect(result).toEqual({ webhookUrl: 'https://app.example/api/circle/webhook', webhookSecret: 'new-webhook-token' })
   })
@@ -179,5 +182,66 @@ describe('saveCircleIntegrationAction', () => {
     const result = await save({ communityUrl: 'https://community.example', apiToken: 'api-token', confidenceThreshold: '1.5' })
     expect(result?.error).toBeTruthy()
     expect(h.upsertIntegration).not.toHaveBeenCalled()
+  })
+
+  describe('replies', () => {
+    const base = { communityUrl: 'https://community.example', apiToken: 'api-token' }
+
+    it('saves the "post replies as" member email, trimmed', async () => {
+      await save({ ...base, postAsEmail: ' support@example.com ' })
+      expect(h.upsertIntegration).toHaveBeenCalledWith(expect.objectContaining({ botUsername: 'support@example.com' }))
+    })
+
+    it('refuses a "post replies as" value that is not an email address', async () => {
+      const result = await save({ ...base, postAsEmail: 'support-team' })
+      expect(result).toEqual({ error: 'Post replies as must be a member’s email address, or blank to post as the admin.' })
+      expect(h.upsertIntegration).not.toHaveBeenCalled()
+    })
+
+    it('clears the "post replies as" member when the field is left blank', async () => {
+      h.getIntegration.mockResolvedValue(existing({ bot_username: 'support@example.com' }))
+      await save({ ...base, postAsEmail: '' })
+      expect(h.upsertIntegration).toHaveBeenCalledWith(expect.objectContaining({ botUsername: null }))
+    })
+
+    it('forgets the member id learned from earlier replies when the "post replies as" member changes', async () => {
+      h.getIntegration.mockResolvedValue(existing({ bot_username: 'support@example.com', bot_user_id: '31' }))
+      await save({ ...base, postAsEmail: 'helper@example.com' })
+      expect(h.upsertIntegration).toHaveBeenCalledWith(expect.objectContaining({ botUsername: 'helper@example.com', botUserId: null }))
+    })
+
+    it('keeps the learned member id when the "post replies as" member is unchanged', async () => {
+      h.getIntegration.mockResolvedValue(existing({ bot_username: 'support@example.com', bot_user_id: '31' }))
+      await save({ ...base, postAsEmail: 'Support@Example.com' })
+      expect(h.upsertIntegration.mock.calls[0][0].botUserId).toBeUndefined()
+    })
+
+    it('saves team member ids as a list, dropping blanks', async () => {
+      await save({ ...base, teamMemberIds: ' 101, ,202 ' })
+      expect(h.upsertIntegration).toHaveBeenCalledWith(expect.objectContaining({ teamMemberIds: ['101', '202'] }))
+    })
+
+    it('refuses team member ids that are not numeric', async () => {
+      const result = await save({ ...base, teamMemberIds: '101, erin' })
+      expect(result).toEqual({ error: 'Team member Circle IDs must be numeric member IDs, separated by commas.' })
+      expect(h.upsertIntegration).not.toHaveBeenCalled()
+    })
+
+    it('turns Automatic Deflections on when the switch is on', async () => {
+      await save({ ...base, autoDeflectEnabled: 'on' })
+      expect(h.upsertIntegration).toHaveBeenCalledWith(expect.objectContaining({ autoDeflectEnabled: true }))
+    })
+
+    it('turns Automatic Deflections off when the switch is off, since an unchecked switch sends nothing', async () => {
+      h.getIntegration.mockResolvedValue(existing({ auto_deflect_enabled: 1 }))
+      await save({ ...base })
+      expect(h.upsertIntegration).toHaveBeenCalledWith(expect.objectContaining({ autoDeflectEnabled: false }))
+    })
+
+    it('a plain member cannot change any of these', async () => {
+      h.requireOrgAccess.mockResolvedValue({ ok: false, error: 'You do not have permission to do that.' })
+      await save({ ...base, postAsEmail: 'support@example.com', teamMemberIds: '101', autoDeflectEnabled: 'on' })
+      expect(h.upsertIntegration).not.toHaveBeenCalled()
+    })
   })
 })

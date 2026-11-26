@@ -1,7 +1,5 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import fs from 'node:fs'
-import path from 'node:path'
 import { NextRequest } from 'next/server'
 import { WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 
@@ -13,9 +11,12 @@ import { WEBHOOK_MAX_BODY_BYTES } from '@/lib/ingest/limits'
 
 const h = vi.hoisted(() => ({
   processCommunityMessage: vi.fn(),
+  recordThreadContextMessage: vi.fn(),
   getTicketByThreadId: vi.fn(),
+  isPostedByAnswerLoops: vi.fn(),
   getIntegrationByBotSecret: vi.fn(),
   parseChannelIds: vi.fn(),
+  parseTeamMemberIds: vi.fn(),
   isIngestRateLimited: vi.fn(),
   fetchCircleRecord: vi.fn(),
   decryptToken: vi.fn((value: string) => `decrypted(${value})`),
@@ -23,11 +24,18 @@ const h = vi.hoisted(() => ({
   warn: vi.fn(),
 }))
 
-vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage: h.processCommunityMessage }))
-vi.mock('@/lib/db/queries/tickets', () => ({ getTicketByThreadId: h.getTicketByThreadId }))
+vi.mock('@/lib/ingest/pipeline', () => ({
+  processCommunityMessage: h.processCommunityMessage,
+  recordThreadContextMessage: h.recordThreadContextMessage,
+}))
+vi.mock('@/lib/db/queries/tickets', () => ({
+  getTicketByThreadId: h.getTicketByThreadId,
+  isPostedByAnswerLoops: h.isPostedByAnswerLoops,
+}))
 vi.mock('@/lib/db/queries/integrations', () => ({
   getIntegrationByBotSecret: h.getIntegrationByBotSecret,
   parseChannelIds: h.parseChannelIds,
+  parseTeamMemberIds: h.parseTeamMemberIds,
 }))
 vi.mock('@/lib/ingest/limits', async (orig) => ({
   ...(await orig<typeof import('@/lib/ingest/limits')>()),
@@ -54,6 +62,9 @@ beforeEach(() => {
   vi.clearAllMocks()
   h.getIntegrationByBotSecret.mockResolvedValue(integration())
   h.parseChannelIds.mockReturnValue([])
+  h.parseTeamMemberIds.mockReturnValue([])
+  h.isPostedByAnswerLoops.mockResolvedValue(false)
+  h.recordThreadContextMessage.mockResolvedValue(true)
   h.isIngestRateLimited.mockResolvedValue(false)
   h.getTicketByThreadId.mockResolvedValue(null)
   h.fetchCircleRecord.mockResolvedValue({ ok: false, reason: 'off' })
@@ -359,20 +370,119 @@ describe('Circle webhook: Admin API token', () => {
   })
 })
 
-// Circle is ingest-only. There is no request to send for this, so the client
-// module's exports and request methods are checked directly.
-describe('lib/circle/client.ts is read-only', () => {
-  const src = fs.readFileSync(path.join(process.cwd(), 'lib/circle/client.ts'), 'utf-8')
+// answerLoops's own comments come back through the "Posted a comment"
+// Workflow like any other. They are recognised by the comment id stored when
+// the reply was posted, or by the member the replies are posted as.
+describe('Circle webhook: answerLoops’s own replies', () => {
+  const ownReplyLog = () => droppedLog()?.[1]
 
-  it('exports no function that writes to Circle', () => {
-    const exportedNames = [...src.matchAll(/export (?:async )?function (\w+)/g)].map((m) => m[1])
-    expect(exportedNames.length).toBeGreaterThan(0)
-    for (const name of exportedNames) {
-      expect(name).not.toMatch(/^(send|post|create|reply|update|delete)/i)
-    }
+  it('skips a comment whose id answerLoops stored when it posted the reply', async () => {
+    h.isPostedByAnswerLoops.mockResolvedValue(true)
+    const res = await send(comment())
+    expect(res.status).toBe(200)
+    expect(h.isPostedByAnswerLoops).toHaveBeenCalledWith('circle-comment-9', 6, 'circle')
+    expect(h.processCommunityMessage).not.toHaveBeenCalled()
+    expect(h.recordThreadContextMessage).not.toHaveBeenCalled()
+    expect(ownReplyLog()).toMatchObject({ orgId: 6, kind: 'comment', id: '9', reason: 'own reply' })
   })
 
-  it('only issues GET requests', () => {
-    expect(src).not.toMatch(/method:\s*['"](POST|PUT|PATCH|DELETE)['"]/)
+  // The posting member is often a real person: with "post replies as" blank,
+  // replies go out as the token's admin. A comment by that member which isn't
+  // one answerLoops posted is something they wrote by hand, so it stays on the
+  // ticket as team context instead of being thrown away.
+  it('keeps a hand-written comment by the member id Circle reported for answerLoops’s replies as team context', async () => {
+    h.getIntegrationByBotSecret.mockResolvedValue(integration({ bot_user_id: '31' }))
+    const res = await send(comment({ user_id: 31 }))
+    expect(res.status).toBe(200)
+    expect(h.processCommunityMessage).not.toHaveBeenCalled()
+    expect(h.recordThreadContextMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ messageId: 'circle-comment-9', platform: 'circle' }),
+      6
+    )
+  })
+
+  it('keeps a hand-written comment by the "post replies as" member, matched by email ignoring case, as team context', async () => {
+    h.getIntegrationByBotSecret.mockResolvedValue(integration({ bot_username: 'support@example.com' }))
+    const res = await send(comment({ user_email: 'Support@Example.com' }))
+    expect(res.status).toBe(200)
+    expect(h.processCommunityMessage).not.toHaveBeenCalled()
+    expect(h.recordThreadContextMessage).toHaveBeenCalledWith(expect.objectContaining({ messageId: 'circle-comment-9' }), 6)
+  })
+
+  it('drops a comment by the posting member when its id is one answerLoops posted', async () => {
+    h.getIntegrationByBotSecret.mockResolvedValue(integration({ bot_user_id: '31' }))
+    h.isPostedByAnswerLoops.mockResolvedValue(true)
+    await send(comment({ user_id: 31 }))
+    expect(h.recordThreadContextMessage).not.toHaveBeenCalled()
+    expect(ownReplyLog()).toMatchObject({ reason: 'own reply' })
+  })
+
+  it('skips an own short comment before the length check, so it is logged as an own reply', async () => {
+    h.isPostedByAnswerLoops.mockResolvedValue(true)
+    await send(comment({ body: 'Thanks!' }))
+    expect(ownReplyLog()).toMatchObject({ reason: 'own reply' })
+  })
+
+  it('ingests a comment from anyone else', async () => {
+    h.getIntegrationByBotSecret.mockResolvedValue(integration({ bot_user_id: '31', bot_username: 'support@example.com' }))
+    const res = await send(comment({ user_id: 4, user_email: 'erin@example.com' }))
+    expect(res.status).toBe(200)
+    expect(h.processCommunityMessage).toHaveBeenCalledTimes(1)
+  })
+
+  it('treats a post by the posting member like a team member’s post, opening no ticket', async () => {
+    h.getIntegrationByBotSecret.mockResolvedValue(integration({ bot_user_id: '4' }))
+    await send(post())
+    expect(h.isPostedByAnswerLoops).not.toHaveBeenCalled()
+    expect(h.processCommunityMessage).not.toHaveBeenCalled()
+    expect(droppedLog()?.[1]).toMatchObject({ kind: 'post', reason: 'team member' })
+  })
+})
+
+// Comments from the team member ids saved on the card are part of the
+// conversation staff read, never a support request.
+describe('Circle webhook: team members', () => {
+  beforeEach(() => {
+    h.parseTeamMemberIds.mockReturnValue(['4'])
+  })
+
+  it('keeps a team member’s comment on a tracked post as thread context, with no ticket', async () => {
+    h.getTicketByThreadId.mockResolvedValue({ id: 70 })
+    const res = await send(comment())
+    expect(res.status).toBe(200)
+    expect(h.recordThreadContextMessage).toHaveBeenCalledWith(
+      { messageId: 'circle-comment-9', content: LONG, authorName: 'erin', threadId: '42', platform: 'circle' },
+      6
+    )
+    expect(h.processCommunityMessage).not.toHaveBeenCalled()
+  })
+
+  it('keeps a short team comment too, since it belongs to a tracked conversation', async () => {
+    h.getTicketByThreadId.mockResolvedValue({ id: 70 })
+    await send(comment({ body: 'On it!' }))
+    expect(h.recordThreadContextMessage).toHaveBeenCalledWith(expect.objectContaining({ content: 'On it!' }), 6)
+  })
+
+  it('acknowledges a team member’s comment on a post with no ticket without opening one', async () => {
+    h.recordThreadContextMessage.mockResolvedValue(false)
+    const res = await send(comment())
+    expect(res.status).toBe(200)
+    expect(h.processCommunityMessage).not.toHaveBeenCalled()
+    expect(droppedLog()?.[1]).toMatchObject({ kind: 'comment', id: '9', reason: 'team member' })
+  })
+
+  it('does not open a ticket for a team member’s post', async () => {
+    const res = await send(post())
+    expect(res.status).toBe(200)
+    expect(h.processCommunityMessage).not.toHaveBeenCalled()
+    expect(h.recordThreadContextMessage).not.toHaveBeenCalled()
+    expect(droppedLog()?.[1]).toMatchObject({ kind: 'post', id: '42', reason: 'team member' })
+  })
+
+  it('ingests comments from members not on the list', async () => {
+    h.parseTeamMemberIds.mockReturnValue(['5', '6'])
+    await send(comment())
+    expect(h.recordThreadContextMessage).not.toHaveBeenCalled()
+    expect(h.processCommunityMessage).toHaveBeenCalledTimes(1)
   })
 })

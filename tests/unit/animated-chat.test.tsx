@@ -139,7 +139,7 @@ describe('support workflow animation', () => {
       answer: /Keep your layered original and prepare a separate print-ready export/,
       step: 'Use the printer’s requested color profile and check the soft proof before exporting.',
       review: 'Checked export preparation and submission steps against the print-swap guides.',
-      delivered: 'Draft ready for your team',
+      delivered: 'Reply sent to the print-swap post',
     },
   ])('shows a coherent $channel question, sources, answer, review, and destination', (example) => {
     render(<AnimatedChat />)
@@ -230,11 +230,10 @@ describe('support workflow animation', () => {
     advance(20000)
     expect(screen.getByText('Reply delivered')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Circle' }))
-    expect(screen.getByText('Draft ready for your team')).toBeVisible()
-    expect(screen.getByText('Your team posts it in Circle')).toBeVisible()
-    expect(screen.getByText('Draft ready')).toBeVisible()
-    expect(screen.queryByText('Reply delivered')).not.toBeInTheDocument()
-    expect(screen.queryByText(/Reply sent to/)).not.toBeInTheDocument()
+    expect(screen.getByText('Reply sent to the print-swap post')).toBeVisible()
+    expect(screen.getByText('Auto-reply enabled')).toBeVisible()
+    expect(screen.getByText('Reply delivered')).toBeVisible()
+    expect(screen.queryByText(/Draft ready|by hand/)).not.toBeInTheDocument()
     expect(screen.getByText(/Keep your layered original/)).toBeVisible()
     expect(vi.getTimerCount()).toBe(0)
   })

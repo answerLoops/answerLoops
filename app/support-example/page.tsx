@@ -42,7 +42,7 @@ export default async function SupportExamplePage() {
             'Automatic replies are off by default.',
             'Enabled channels require a score above the configured threshold.',
             'Your team can review and edit drafts in the ticket queue.',
-            'On Circle, every draft waits for your team to post it.',
+            'On Circle, the reviewed answer is posted as a comment on the member’s post.',
           ],
         },
       ]}

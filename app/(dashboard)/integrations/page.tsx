@@ -29,8 +29,8 @@ const PLATFORM: Partial<Record<IntegrationId, string>> = {
 }
 
 // Platforms whose connected state can be "manual review": the automatic-answers
-// switch is off, so answers wait for approval. Circle and Email never show it.
-const HAS_REVIEW_STATE = new Set<IntegrationId>(['discord', 'slack', 'google-chat', 'telegram', 'discourse'])
+// switch is off, so answers wait for approval. Email never shows it.
+const HAS_REVIEW_STATE = new Set<IntegrationId>(['discord', 'slack', 'google-chat', 'telegram', 'discourse', 'circle'])
 
 interface IntegrationRow {
   platform: string
