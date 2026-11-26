@@ -2,6 +2,7 @@ import Image from 'next/image'
 import ReactMarkdown, { type Components } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
+import { splitEmailQuote } from '@/lib/tickets/email-quote'
 import type { SourcePlatform } from '@/types'
 
 function isSafeExternalUrl(value: string | undefined): value is string {
@@ -47,6 +48,38 @@ const markdownComponents: Components = {
     ),
 }
 
+function Markdown({ text }: { text: string }) {
+  return (
+    <div className="text-sm text-gray-800 break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+        {text}
+      </ReactMarkdown>
+    </div>
+  )
+}
+
+// A comment sent by replying to a GitHub notification email arrives with the
+// quoted notification and GitHub's footer attached. Show the reply, and keep the
+// rest one click away.
+function GithubMarkdown({ text }: { text: string }) {
+  const { reply, quoted } = splitEmailQuote(text)
+  return (
+    <>
+      <Markdown text={reply} />
+      {quoted && (
+        <details className="mt-3 text-xs text-gray-500" data-testid="quoted-email">
+          <summary className="w-fit cursor-pointer select-none font-medium text-gray-500 hover:text-gray-700">
+            Show quoted email
+          </summary>
+          <div className="mt-2 border-l-2 border-gray-200 pl-3 text-gray-500">
+            <Markdown text={quoted} />
+          </div>
+        </details>
+      )}
+    </>
+  )
+}
+
 // Renders ticket/reply content, turning any [Attachment: name] — url
 // lines into clickable links. GitHub messages additionally support safe Markdown.
 export function TicketContent({
@@ -64,11 +97,7 @@ export function TicketContent({
     <div className={className}>
       {text &&
         (sourcePlatform === 'github' ? (
-          <div className="text-sm text-gray-800 break-words [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-              {text}
-            </ReactMarkdown>
-          </div>
+          <GithubMarkdown text={text} />
         ) : (
           <p className="text-sm text-gray-800 whitespace-pre-wrap">{text}</p>
         ))}

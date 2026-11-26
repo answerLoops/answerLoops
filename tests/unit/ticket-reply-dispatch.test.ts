@@ -15,6 +15,7 @@ const {
   sendEmailReply,
   sendToChannel,
   postToDiscourseTopic,
+  postToCirclePost,
   createComment,
   getRepoByOwnerAndName,
   getTicketById,
@@ -27,6 +28,7 @@ const {
   sendEmailReply: vi.fn(async (_channelId: string, _content: string, _orgId: number, _ticketId?: number) => 'email-msg-id'),
   sendToChannel: vi.fn(async (_channelId: string, _content: string, _orgId: number) => 'discord-msg-id'),
   postToDiscourseTopic: vi.fn(async (_topicId: string, _content: string, _orgId: number) => 'discourse-post-id'),
+  postToCirclePost: vi.fn(async (_postId: string, _content: string, _orgId: number): Promise<string | null> => '777'),
   createComment: vi.fn(async (_params: { owner: string; repo: string; issue_number: number; body: string }) => ({ data: { id: 999 } })),
   getRepoByOwnerAndName: vi.fn(async () => ({ id: 1, org_id: 3, installation_id: 42 })),
   getTicketById: vi.fn(),
@@ -45,6 +47,7 @@ vi.mock('@/lib/email/reply', () => ({ sendEmailReply }))
 vi.mock('@/lib/discord/send', () => ({ sendToChannel }))
 vi.mock('@/lib/google-chat/send', () => ({ sendToGoogleChatSpace: vi.fn() }))
 vi.mock('@/lib/discourse/send', () => ({ postToDiscourseTopic }))
+vi.mock('@/lib/circle/send', () => ({ postToCirclePost }))
 vi.mock('@/lib/db/queries/github', () => ({ getRepoByOwnerAndName }))
 vi.mock('@/lib/github/app', () => ({
   getInstallationOctokitById: vi.fn(async () => ({ rest: { issues: { createComment } } })),
@@ -142,7 +145,7 @@ describe('updateAIDraftAction: approve now sends on every platform, not just Git
     expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'approved')
   })
 
-  it('approve never sends for a circle ticket — ingest-only, reviewer copies the answer in by hand', async () => {
+  it('approve posts the real draft as a comment on the Circle post (routes channelId = source_thread_id)', async () => {
     getTicketById.mockResolvedValue(
       ticket({ source_platform: 'circle', source_channel_id: '9', source_thread_id: '55' })
     )
@@ -150,11 +153,25 @@ describe('updateAIDraftAction: approve now sends on every platform, not just Git
 
     await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
 
-    expect(sendToSlackChannel).not.toHaveBeenCalled()
+    expect(postToCirclePost).toHaveBeenCalledWith('55', 'the approved answer', 3)
     expect(sendToChannel).not.toHaveBeenCalled()
-    expect(postToDiscourseTopic).not.toHaveBeenCalled()
-    // the draft status is still recorded
     expect(updateTicketAIDraftStatus).toHaveBeenCalledWith(1, 'approved')
+    // Kept under the same id the Circle webhook gives the comment when it
+    // comes back, so the echo is recognised as answerLoops's own.
+    expect(recordAnswerLoopsReply).toHaveBeenCalledWith(1, 'the approved answer', { messageId: 'circle-comment-777' })
+  })
+
+  it('approve records nothing when Circle refuses the comment', async () => {
+    postToCirclePost.mockResolvedValueOnce(null)
+    getTicketById.mockResolvedValue(
+      ticket({ source_platform: 'circle', source_channel_id: '9', source_thread_id: '55' })
+    )
+    const { updateAIDraftAction } = await import('@/lib/actions/tickets')
+
+    await updateAIDraftAction(null, formData({ ticketId: '1', action: 'approve' }))
+
+    expect(postToCirclePost).toHaveBeenCalled()
+    expect(recordAnswerLoopsReply).not.toHaveBeenCalled()
   })
 })
 
@@ -250,6 +267,17 @@ describe('postReplyAction: manual staff reply dispatches through the same shared
 
     expect(sendToSlackChannel).toHaveBeenCalled()
     expect(sendToSlackChannel.mock.calls[0][1]).toContain('here is the answer')
+  })
+
+  it('posts a staff reply as a comment on the Circle post and keeps the comment id on the reply', async () => {
+    getTicketById.mockResolvedValue(ticket({ source_platform: 'circle', source_channel_id: '9', source_thread_id: '55' }))
+    const { postReplyAction } = await import('@/lib/actions/tickets')
+    const { addTicketReply } = await import('@/lib/db/queries/tickets')
+
+    await postReplyAction(null, formData({ ticketId: '1', staffName: 'Sarah', content: 'here is the answer' }))
+
+    expect(postToCirclePost).toHaveBeenCalledWith('55', expect.stringContaining('here is the answer'), 3)
+    expect(addTicketReply).toHaveBeenCalledWith(1, 'Sarah', 'here is the answer', 'circle-comment-777')
   })
 
   it('posts a staff reply as a GitHub issue comment', async () => {

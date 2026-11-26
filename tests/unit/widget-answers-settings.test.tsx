@@ -114,6 +114,57 @@ describe('an owner or admin', () => {
   })
 })
 
+describe('examples of each choice', () => {
+  const example = (scope: string) => screen.getByTestId(`widget-answer-scope-example-${scope}`)
+
+  it('shows what a visitor would see under both choices for the same uncovered question', () => {
+    render(<WidgetAnswersSettings canManage initialScope="general" initialGuidance={null} />)
+    expect(screen.getByText(/a visitor asks .Can I pay by invoice\?. and none of your articles cover it/i)).toBeTruthy()
+    expect(example('knowledge-base-only').textContent).toMatch(/I don't have information about paying by invoice/)
+    expect(example('knowledge-base-only').textContent).toMatch(/email, phone or support page from your articles/i)
+    expect(example('general').textContent).toMatch(/invoices are usually available on annual plans/i)
+    expect(example('general').textContent).toMatch(/not taken from your articles, so it can be wrong/i)
+  })
+
+  it('marks the example for the saved choice', () => {
+    render(<WidgetAnswersSettings canManage initialScope="knowledge-base-only" initialGuidance={null} />)
+    expect(example('knowledge-base-only').dataset.selected).toBe('true')
+    expect(example('general').dataset.selected).toBe('false')
+  })
+
+  it('moves the mark when the choice changes, and back if the save is refused', async () => {
+    h.saveWidgetAnswerScopeAction.mockResolvedValueOnce({ scope: 'general' })
+    render(<WidgetAnswersSettings canManage initialScope="knowledge-base-only" initialGuidance={null} />)
+    await userEvent.selectOptions(scopeSelect(), 'general')
+    await waitFor(() => expect(screen.getByText('Saved.')).toBeTruthy())
+    expect(example('general').dataset.selected).toBe('true')
+    expect(example('knowledge-base-only').dataset.selected).toBe('false')
+
+    h.saveWidgetAnswerScopeAction.mockResolvedValueOnce({ error: 'You do not have permission to do that.' })
+    await userEvent.selectOptions(scopeSelect(), 'knowledge-base-only')
+    await waitFor(() => expect(screen.getByText('You do not have permission to do that.')).toBeTruthy())
+    expect(example('general').dataset.selected).toBe('true')
+  })
+
+  it('says in plain words that knowledge-base-only offers contact details and still answers greetings', () => {
+    render(<WidgetAnswersSettings canManage initialScope="knowledge-base-only" initialGuidance={null} />)
+    expect(screen.getByText(/shows the contact details from your articles, or suggests contacting you directly/i)).toBeTruthy()
+    expect(screen.getByText(/always replies to a greeting or thanks/i)).toBeTruthy()
+  })
+
+  it('shows members the examples too, without controls', () => {
+    render(<WidgetAnswersSettings canManage={false} initialScope="knowledge-base-only" initialGuidance={null} />)
+    expect(example('knowledge-base-only').dataset.selected).toBe('true')
+    expect(screen.queryByLabelText('What the widget answers from')).toBeNull()
+  })
+
+  it('marks the general example for a member whose workspace answers from general knowledge', () => {
+    render(<WidgetAnswersSettings canManage={false} initialScope="general" initialGuidance={null} />)
+    expect(example('general').dataset.selected).toBe('true')
+    expect(example('knowledge-base-only').dataset.selected).toBe('false')
+  })
+})
+
 describe('a member who cannot manage the widget', () => {
   it('sees the settings as text with no controls', () => {
     render(<WidgetAnswersSettings canManage={false} initialScope="knowledge-base-only" initialGuidance="Be warm." />)

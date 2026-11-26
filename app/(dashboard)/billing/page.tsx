@@ -4,6 +4,14 @@ import { useEffect, useState, useTransition } from 'react'
 import { ORDERED_PLANS, type Plan, overageUnits } from '@/lib/billing/plans'
 import { useUpgrade } from '@/components/billing/use-upgrade'
 import { Page, PageHeader } from '@/components/dashboard/page-shell'
+import { TALK_TO_US_HREF } from '@/components/marketing/nav-shared'
+import {
+  formatPrice,
+  isCustomPriced,
+  PLAN_COPY,
+  replyAllowanceLabel,
+  replyLimitNote,
+} from '@/lib/marketing/pricing'
 
 interface BillingData {
   planId: string
@@ -15,39 +23,6 @@ interface BillingData {
   limit: number | null
   cancelAtPeriodEnd: boolean
   currentPeriodEnd: string | null
-}
-
-const PLAN_FEATURES: Record<string, string[]> = {
-  standard: [
-    '500 estimated AI replies/mo',
-    'Knowledge base (URL import)',
-    'Discord + Slack integration',
-    'Widget with lead capture',
-    'MCP server + REST Agent API access',
-    'Multi-language AI responses',
-    'CSV export',
-    'Email support',
-  ],
-  pro: [
-    '3,000 estimated AI replies/mo, then $5 per 100',
-    'Everything in Standard',
-    'CSAT scoring',
-    'Human escalation routing',
-    'Simulation / dry-run mode',
-    'Knowledge gap dashboard',
-    'White-label widget (remove branding)',
-    'Priority support',
-  ],
-  enterprise: [
-    'Unlimited AI replies',
-    'Everything in Pro',
-    'Custom AI model config',
-    'Unlimited data retention',
-    'White-glove migration off Zendesk/Intercom/Confluence',
-    'SLA + automatic breach alerting',
-    '6x higher MCP/Agent API rate limits',
-    'Custom invoicing',
-  ],
 }
 
 function CheckIcon() {
@@ -109,6 +84,7 @@ const NEXT_TIER: Record<string, string | null> = {
 function LimitWarningBanner({ planId, onUpgrade, pending }: { planId: string; onUpgrade: (planId: string) => void; pending: boolean }) {
   const nextPlan = NEXT_TIER[planId] ?? null
   const nextPlanName = nextPlan ? ORDERED_PLANS.find((p) => p.id === nextPlan)?.name : null
+  const nextPlanCustom = !!nextPlan && isCustomPriced(nextPlan as Plan['id'])
   const plan = ORDERED_PLANS.find((p) => p.id === planId)
   const softCap = !!plan && plan.overageRatePer100Cents !== null
 
@@ -128,13 +104,22 @@ function LimitWarningBanner({ planId, onUpgrade, pending }: { planId: string; on
         </div>
       </div>
       {nextPlan && (
-        <button
-          onClick={() => onUpgrade(nextPlan)}
-          disabled={pending}
-          className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60 transition-colors whitespace-nowrap"
-        >
-          {pending ? 'Redirecting…' : `Upgrade to ${nextPlanName} →`}
-        </button>
+        nextPlanCustom ? (
+          <a
+            href={TALK_TO_US_HREF}
+            className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700 transition-colors whitespace-nowrap"
+          >
+            Talk to us about {nextPlanName} →
+          </a>
+        ) : (
+          <button
+            onClick={() => onUpgrade(nextPlan)}
+            disabled={pending}
+            className="shrink-0 rounded-lg bg-amber-600 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-60 transition-colors whitespace-nowrap"
+          >
+            {pending ? 'Redirecting…' : `Upgrade to ${nextPlanName} →`}
+          </button>
+        )
       )}
     </div>
   )
@@ -156,7 +141,7 @@ function planSummary(
   status: string
 ): string | null {
   if (!plan) return null
-  const parts = [plan.name, `$${(plan.priceMonthly / 100).toFixed(0)}/mo`]
+  const parts = [plan.name, isCustomPriced(plan.id) ? 'Custom pricing' : `${formatPrice(plan.priceMonthly)}/mo`]
   if (currentPeriodEnd && !cancelAtPeriodEnd && !isTrialing && status === 'active') {
     parts.push(`Renews ${formatDate(currentPeriodEnd)}`)
   }
@@ -258,7 +243,9 @@ function PlanCard({
   pending: boolean
 }) {
   const label = current && isTrialing ? 'Trialing' : current ? 'Current plan' : null
-  const features = PLAN_FEATURES[plan.id] ?? []
+  const features = PLAN_COPY[plan.id].features
+  const customPriced = isCustomPriced(plan.id)
+  const nextPlan = ORDERED_PLANS[ORDERED_PLANS.findIndex((p) => p.id === plan.id) + 1]
   const highlighted = plan.id === 'pro'
 
   return (
@@ -288,11 +275,20 @@ function PlanCard({
             )}
           </div>
           <div className="mt-2">
-            <span className="text-2xl font-bold text-gray-900">${(plan.priceMonthly / 100).toFixed(0)}</span>
-            <span className="text-xs text-gray-500">/mo</span>
+            {customPriced ? (
+              <span className="text-2xl font-bold text-gray-900">Custom pricing</span>
+            ) : (
+              <>
+                <span className="text-2xl font-bold text-gray-900">{formatPrice(plan.priceMonthly)}</span>
+                <span className="text-xs text-gray-500">/mo</span>
+              </>
+            )}
           </div>
         </div>
       </div>
+
+      <p className="text-xs font-semibold text-gray-900">{replyAllowanceLabel(plan)}</p>
+      <p className="mt-0.5 mb-4 text-xs text-gray-500">{replyLimitNote(plan, nextPlan)}</p>
 
       <ul className="space-y-2 flex-1 mb-5">
         {features.map((f) => (
@@ -307,6 +303,13 @@ function PlanCard({
         <div className="w-full rounded-lg border border-brand-200 bg-brand-50 px-3 py-2 text-center text-xs font-medium text-brand-700">
           {isTrialing ? 'Active trial' : 'Your current plan'}
         </div>
+      ) : customPriced ? (
+        <a
+          href={TALK_TO_US_HREF}
+          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-center text-xs font-semibold text-gray-800 transition-colors hover:bg-gray-50"
+        >
+          Talk to us
+        </a>
       ) : (
         <button
           onClick={() => onUpgrade(plan.id)}

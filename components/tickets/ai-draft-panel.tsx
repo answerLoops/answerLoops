@@ -3,7 +3,6 @@
 import { useActionState, useState } from 'react'
 import { updateAIDraftAction } from '@/lib/actions/tickets'
 import { Button } from '@/components/ui/button'
-import { isIngestOnlyPlatform } from '@/lib/channels/ingest-only'
 import type { AIDraftStatus } from '@/types'
 
 interface AIDraftPanelProps {
@@ -19,9 +18,6 @@ const PLATFORM_NAME: Record<string, string> = {
 
 export function AIDraftPanel({ ticketId, draft, status, sourcePlatform = 'discord' }: AIDraftPanelProps) {
   const platformName = PLATFORM_NAME[sourcePlatform] ?? 'Discord'
-  // An ingest-only channel never receives the answer: approving or editing
-  // only records it on the ticket, and the team copies it in by hand.
-  const ingestOnly = isIngestOnlyPlatform(sourcePlatform)
   const [state, formAction, isPending] = useActionState(updateAIDraftAction, null)
   const [editing, setEditing] = useState(false)
   const [editedDraft, setEditedDraft] = useState(draft)
@@ -45,11 +41,7 @@ export function AIDraftPanel({ ticketId, draft, status, sourcePlatform = 'discor
         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 min-w-0">
           <span className="text-xs font-semibold text-brand-700">AI Draft Answer</span>
           {status === 'posted' && (
-            <span className="text-xs text-brand-500">
-              {ingestOnly
-                ? `Draft ready — copy it into ${platformName} by hand`
-                : `Posted to ${platformName} — awaiting review`}
-            </span>
+            <span className="text-xs text-brand-500">Posted to {platformName} — awaiting review</span>
           )}
           {status === 'approved' && (
             <span className="text-xs text-green-600 font-medium">Approved</span>
@@ -96,7 +88,7 @@ export function AIDraftPanel({ ticketId, draft, status, sourcePlatform = 'discor
             />
             <div className="flex gap-2">
               <Button type="submit" size="sm" disabled={isPending}>
-                {isPending ? 'Saving…' : ingestOnly ? 'Save answer' : `Save & post to ${platformName}`}
+                {isPending ? 'Saving…' : `Save & post to ${platformName}`}
               </Button>
               <Button type="button" size="sm" variant="secondary" onClick={() => setEditing(false)}>Cancel</Button>
             </div>

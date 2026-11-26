@@ -241,3 +241,85 @@ describe('CoverageTab: try a customer question', () => {
     await waitFor(() => expect(screen.getByRole('alert').textContent).toContain('Too many requests'))
   })
 })
+
+describe('CoverageTab: what a visitor gets for an uncovered question', () => {
+  const withScope = (widgetAnswerScope: unknown) => ({ ...coverage, widgetAnswerScope })
+
+  async function ask(question: string) {
+    await renderTab()
+    const input = await screen.findByLabelText('Customer question to test')
+    const user = userEvent.setup()
+    await user.type(input, question)
+    await user.click(screen.getByRole('button', { name: 'Check' }))
+  }
+
+  it('shows that the widget says it does not know, with a link to change it', async () => {
+    route({ coverage: withScope('knowledge-base-only') })
+    await renderTab()
+    const mode = await screen.findByTestId('coverage-uncovered-mode')
+    expect(mode.textContent).toBe("Says it doesn't know and offers ways to get help")
+    const change = screen.getByRole('link', { name: /change in settings/i })
+    expect(change.getAttribute('href')).toBe('/settings?tab=widget')
+    expect(screen.getByText(/shows the contact details from your articles/i)).toBeTruthy()
+    expect(screen.queryByText(/answers from general knowledge instead/i)).toBeNull()
+  })
+
+  it('shows that the widget answers from general knowledge', async () => {
+    route({ coverage: withScope('general') })
+    await renderTab()
+    expect((await screen.findByTestId('coverage-uncovered-mode')).textContent).toBe('Answers from general knowledge')
+    expect(screen.getByText(/answers from general knowledge instead, and that answer can be wrong\./i)).toBeTruthy()
+  })
+
+  it('tells the tester result for the active mode: knowledge-base-only', async () => {
+    route({ coverage: withScope('knowledge-base-only'), search: { results: [], matched: false, degraded: false } })
+    await ask('do you ship to mars')
+    expect(await screen.findByText(/^Not covered/)).toBeTruthy()
+    expect(screen.getByText(/would say it doesn't have that information and offer the contact details/i)).toBeTruthy()
+    expect(screen.queryByText(/answer this from general knowledge/i)).toBeNull()
+  })
+
+  it('tells the tester result for the active mode: general', async () => {
+    route({ coverage: withScope('general'), search: { results: [], matched: false, degraded: false } })
+    await ask('do you ship to mars')
+    expect(await screen.findByText(/^Not covered/)).toBeTruthy()
+    const result = screen.getByText(/answer this from general knowledge/i)
+    expect(result.textContent).not.toMatch(/say it doesn't know/i)
+  })
+
+  it('shows no mode and covers both possibilities when the setting could not be read', async () => {
+    route({ coverage: withScope(null), search: { results: [], matched: false, degraded: false } })
+    await ask('do you ship to mars')
+    expect(await screen.findByText(/^Not covered/)).toBeTruthy()
+    expect(screen.queryByTestId('coverage-uncovered-mode')).toBeNull()
+    expect(screen.getByText(/or say it doesn't know if your widget answers only from your knowledge base/i)).toBeTruthy()
+  })
+
+  it.each([
+    ['could not be read', withScope(null)],
+    ['is missing from the response', coverage],
+    ['is a value the tab does not recognise', withScope('strict')],
+  ])('keeps the intro generic and offers no settings link when the setting %s', async (_label, body) => {
+    route({ coverage: body })
+    await renderTab()
+    expect(
+      await screen.findByText(/unless your widget is set to answer only from your knowledge base, in which case it says it doesn't have that/i)
+    ).toBeTruthy()
+    expect(screen.queryByTestId('coverage-uncovered-mode')).toBeNull()
+    expect(screen.queryByRole('link', { name: /change in settings/i })).toBeNull()
+  })
+
+  it('gives the generic Not covered text when the setting is missing from the response', async () => {
+    route({ coverage, search: { results: [], matched: false, degraded: false } })
+    await ask('do you ship to mars')
+    expect(await screen.findByText(/^Not covered/)).toBeTruthy()
+    expect(screen.getByText(/or say it doesn't know if your widget answers only from your knowledge base/i)).toBeTruthy()
+  })
+
+  it('links to the widget settings from the general mode too', async () => {
+    route({ coverage: withScope('general') })
+    await renderTab()
+    await screen.findByTestId('coverage-uncovered-mode')
+    expect(screen.getByRole('link', { name: /change in settings/i }).getAttribute('href')).toBe('/settings?tab=widget')
+  })
+})

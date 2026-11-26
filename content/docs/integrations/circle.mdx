@@ -1,6 +1,6 @@
 ---
 title: Circle
-description: Turn Circle posts and comments into tickets with AI-drafted, reviewed answers that your team posts in Circle.
+description: Turn Circle posts and comments into tickets with AI-drafted, reviewed answers that answerLoops posts back as comments in Circle.
 icon: CircleDot
 ---
 
@@ -8,30 +8,34 @@ icon: CircleDot
   platform="circle"
   source={{
     title: 'Your Circle community',
-    text: 'A member publishes a post or a comment in one of the spaces you chose to watch, or in any space if you left the list blank.',
+    text: 'A member publishes a post or a comment in one of the spaces you chose to watch, or in any space if you left the list blank. Answers are posted as comments, as the member you choose or as the admin.',
   }}
   trigger={{
     title: 'Circle Workflow webhook',
     text: 'Two Workflows you create in Circle, one for published posts and one for new comments, send each event to answerLoops as it happens. If an event arrives without the text, answerLoops fetches it with your Admin API token.',
   }}
   steps={[
-    { title: 'Create ticket', text: 'The post or comment becomes a ticket. Content under 10 characters and posts in spaces you did not choose are skipped. A comment on a post that already has a ticket is added to that ticket.' },
+    { title: 'Create ticket', text: 'The post or comment becomes a ticket. Content under 10 characters, posts in spaces you did not choose, and answerLoops’s own comments are skipped. A comment on a post that already has a ticket is added to that ticket.' },
     { title: 'Find the answer', text: 'answerLoops searches your knowledge base for what is relevant to the question and drafts an answer grounded in it.' },
-    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides whether the draft is flagged for follow-up.' },
+    { title: 'Review confidence', text: 'A separate AI reviews the draft and scores how confident it is. Your confidence threshold, 0.8 by default, decides which path the answer takes.' },
   ]}
   outcomes={[
-    { tone: 'review', title: 'Draft ready for your team', text: 'The reviewed draft waits on the ticket. Your team checks it, edits it if needed, and posts the answer in Circle.' },
-    { tone: 'escalate', title: 'Flagged for follow-up', text: 'Below the threshold, the draft is flagged as low-confidence on the ticket so your team checks it closely before posting.' },
-    { tone: 'info', title: 'Nothing posts to Circle', text: 'answerLoops reads from Circle and never writes to it. Every answer your members see is one your team posted.' },
+    { tone: 'post', title: 'Posted on the post', text: 'With Automatic Deflections on and a confident answer, answerLoops comments the answer on the member’s post on its own.' },
+    { tone: 'review', title: 'Held as a draft', text: 'Automatic Deflections is off by default, so even a confident answer waits on your dashboard. Your team approves, edits, or dismisses it, and the post gets no automatic reply until you do.' },
+    { tone: 'escalate', title: 'Your team is pulled in', text: 'Below the threshold, the draft is flagged as low-confidence on the ticket so a person takes over.' },
   ]}
-  replyLabel="Your team copies the answer into the Circle post by hand"
+  replyLabel="Replies appear as comments on the same Circle post"
 />
 
 ## Overview
 
-answerLoops receives posts and comments from the Circle spaces you select and turns each one into a ticket. It drafts an answer from your workspace knowledge, and a separate AI reviews that draft. Your team reads the reviewed draft on the ticket and posts the answer in Circle by hand. answerLoops never posts anything to Circle.
+answerLoops receives posts and comments from the Circle spaces you select and turns each one into a ticket. It drafts an answer from your workspace knowledge, and a separate AI reviews that draft. answerLoops then posts the answer back as a comment on the member's post, through Circle's Admin API, as the member you choose or as the admin who owns the API token.
 
 Posts and comments reach answerLoops through Circle Workflows that your community administrator sets up.
+
+<Callout type="info">
+  **Automatic Deflections** is off by default, same as every other channel. While it's off, even a high-confidence answer is held as a draft on the dashboard awaiting Approve/Edit/Dismiss, and the post gets no automatic reply. Turn it on in **Integrations → Circle → Edit spaces & deflections → Automatic Deflections → Update** once you've reviewed enough approved drafts to trust answers going out unsupervised.
+</Callout>
 
 ### What you need in Circle
 
@@ -44,7 +48,7 @@ Posts and comments reach answerLoops through Circle Workflows that your communit
 
 In Circle, go to **Settings → Developers → Tokens**, create a new token, and choose type **Admin V2**. Copy it.
 
-answerLoops uses this token only when a webhook arrives without the text of the post or comment. It then looks up that one record. Each lookup counts toward your community's monthly Admin API quota in Circle.
+answerLoops uses this token to post replies as comments, and to look up a post or comment when a webhook arrives without its text. Each reply and each lookup counts toward your community's monthly Admin API quota in Circle.
 
 The token stops working if the admin who created it loses admin rights in the community. If that happens, create a new token as a current admin and save it on the Circle card.
 
@@ -57,6 +61,9 @@ Go to **Integrations → Circle** and fill in:
 | Community URL | Your Circle community's base URL, e.g. `https://community.example.com` |
 | Admin API token | The token from step 1. Required. |
 | Watched space IDs | Numeric space IDs, comma-separated. Leave blank to watch every space. Only posts in these spaces open tickets. A comment on a post that already has a ticket is always added to it. |
+| Post replies as | Optional. The email of the community member replies are posted as. Leave blank to post as the admin who created the API token. See [Replies](#replies). |
+| Team member Circle IDs | Optional. Numeric member IDs of your team, comma-separated. See [Team members](#team-members). |
+| Automatic Deflections | Off by default. When on, confident answers are posted on their own. |
 
 Click **Connect**. The card then shows two Endpoint URLs, one for posts and one for comments, with your secret already in them.
 
@@ -92,11 +99,27 @@ In each Workflow, click **Test webhook** to send a sample event to answerLoops. 
 
 ### 5. Set the confidence threshold
 
-**Confidence threshold** (0–1, default `0.8`) is the score below which the draft is flagged as low-confidence on the ticket.
+**Confidence threshold** (0–1, default `0.8`) is the score below which an answer is treated as low-confidence: held as a draft and flagged on the ticket, or (with Automatic Deflections on) replaced in Circle by a short note that a team member will follow up.
 
-## Answering in Circle
+## Replies
 
-Open the ticket in answerLoops, read the draft, and edit it if needed. Click **Copy draft** and paste it as a comment on the member's Circle post. Then click **Approve** on the ticket to record the answer there. Approving doesn't post anything to Circle.
+answerLoops replies by adding a comment to the member's Circle post. A comment on a post that has a ticket gets its reply on that same post. Replies go out when:
+
+- your team clicks **Approve** on a draft, or edits it and clicks **Save & post to Circle**,
+- your team types a reply in the ticket's reply box and clicks **Send reply to Circle**, or
+- Automatic Deflections is on and the answer clears your confidence threshold.
+
+### Who replies are posted as
+
+By default, replies are posted as the admin who created the Admin API token. To post as someone else, enter that community member's email in **Post replies as**. A dedicated member, such as a "Support" account, works best. When Circle sends answerLoops's replies back through the **Posted a comment** Workflow, answerLoops recognises them and skips them. Anything else that member writes in Circle is treated like a team member's comment: it's kept on the ticket for context and never opens a ticket.
+
+### Team members
+
+Enter your team's Circle member IDs in **Team member Circle IDs**, comma-separated. A comment from one of these members on a post that has a ticket is kept on the ticket, so the conversation reads in full. It doesn't open a new ticket, reopen a resolved one, or notify anyone. Posts from team members don't open tickets either. These are the numeric member IDs Circle's Admin API uses.
+
+### answerLoops's own comments
+
+Circle sends every new comment through the **Posted a comment** Workflow, including the ones answerLoops posts. answerLoops recognises its own comments and skips them, so a reply never becomes a new ticket or a follow-up on its own ticket.
 
 ## Good to know
 
@@ -111,7 +134,7 @@ The old secret stops working as soon as you confirm. The card then shows both En
 
 ## Disconnecting
 
-Click **Edit spaces**, then **Disconnect**, and confirm. New posts and comments stop creating tickets right away. If you connect again later, answerLoops generates a new secret, so both Workflow URLs will need updating.
+Click **Edit spaces & deflections**, then **Disconnect**, and confirm. New posts and comments stop creating tickets right away. If you connect again later, answerLoops generates a new secret, so both Workflow URLs will need updating.
 
 ---
 
@@ -126,6 +149,11 @@ Circle is configured entirely per-organization in the Settings UI. There is no c
 <AccordionGroup>
   <Accordion title="Posts aren't creating tickets">
     Open **Workflows** in Circle and check that both Workflows are turned on. Then open **Workflows → History** and look at the most recent runs. Make sure each Workflow's Endpoint URL matches the one on the Circle card, includes the right `kind=post` or `kind=comment`, and has `token=` set to the secret shown on the card. Click **Test webhook** in the Workflow to send a sample event. If you set **Watched space IDs**, posts in any other space are ignored on purpose, so clear the field to watch everything. Posts shorter than 10 characters are skipped.
+
+    Every delivery answerLoops accepts but doesn't turn into a ticket is logged as `Circle webhook delivery acknowledged without ingesting`, with the post or comment id and a reason: `no record`, `no id`, `too short`, `no author`, `outside watched spaces`, `own reply` (a comment answerLoops posted), or `team member` (a post, or a comment on a post with no ticket, from a member in **Team member Circle IDs** or the member replies are posted as). The log never includes the post's text. On a self-hosted install, search the app logs for that line to see why a post was skipped.
+  </Accordion>
+  <Accordion title="The ticket's link opens the wrong page">
+    A ticket links to the post's `url` from the webhook payload only when it is an `https://` address on your **Community URL**'s host. Otherwise the link is built as `<Community URL>/posts/<post id>`. If links point at the wrong place, check that the **Community URL** on the Circle card matches the address members use, including any custom domain.
   </Accordion>
   <Accordion title="Events stopped arriving after I reconnected Circle">
     Disconnecting and connecting again creates a new secret. Copy the new secret from the Circle card and update the `token` value in the Endpoint URL of both Workflows.
@@ -140,7 +168,16 @@ Circle is configured entirely per-organization in the Settings UI. There is no c
     Circle Workflows have no trigger for edited or deleted posts, so the ticket keeps the text as it was first published. If a member rewrites their question, answer the new version in Circle directly.
   </Accordion>
   <Accordion title="A draft appears but nothing is posted in Circle">
-    That's expected. answerLoops drafts and reviews the answer, then leaves it on the ticket for your team. Click **Copy draft**, paste it as a comment on the Circle post, then click **Approve** on the ticket to record it. If you'd rather write your own answer, type it in the reply box and click **Save reply**. If the draft is flagged as low-confidence, check it more closely before you post it.
+    Automatic Deflections is off by default, so even a confident answer waits on the ticket. Click **Approve** to post it as a comment, or edit it first and click **Save & post to Circle**. To have confident answers posted on their own, turn on **Automatic Deflections** on the Circle card. A draft flagged as low-confidence is never posted on its own.
+  </Accordion>
+  <Accordion title="I approved a draft but no comment appeared in Circle">
+    Check the **Admin API token** on the Circle card. It must be a valid **Admin V2** token that hasn't been revoked and belongs to someone who is still an admin of the community. If you set **Post replies as**, that email must belong to a member of the community. On a self-hosted install, search the app logs for `Circle did not accept the reply comment`, which includes the status Circle returned, or `failed to post Circle reply` when Circle couldn't be reached. Your community's monthly Admin API quota also applies to replies.
+  </Accordion>
+  <Accordion title="Replies are posted under the wrong name">
+    Replies are posted as the member whose email is in **Post replies as**, or as the admin who created the API token when that field is blank. Change the email on the Circle card and click **Update**. Comments already posted keep their author.
+  </Accordion>
+  <Accordion title="My team's comments are showing up as customer follow-ups">
+    Add each team member's numeric Circle member ID to **Team member Circle IDs** on the Circle card. Their comments are then kept on the ticket as context, without reopening it or notifying anyone.
   </Accordion>
 </AccordionGroup>
 

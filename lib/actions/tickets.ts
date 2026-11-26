@@ -32,9 +32,6 @@ async function sendReply(
   // the synthetic messageId from create_ticket, which would otherwise look
   // "present" and trigger a doomed live API call.
   if (ticket.source_platform === 'mcp') return null
-  // Circle is ingest-only (stage 1) — the reviewer copies the answer into
-  // Circle by hand. Approve/edit still records the draft; nothing is sent.
-  if (ticket.source_platform === 'circle') return null
   const channelId = ticket.source_thread_id ?? ticket.source_channel_id
   if (!channelId) return null
   return postReply(

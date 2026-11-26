@@ -171,7 +171,7 @@ export function WidgetSection() {
 
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-blue-100 bg-blue-50/60 px-3 py-2">
         <p className="min-w-0 flex-1 text-xs text-gray-700">
-          The widget only answers from your published articles. See exactly what it can and can&apos;t answer, and test a question.
+          The widget answers from your published articles. See which questions they cover, and test a question.
         </p>
         <a href="/kb?tab=coverage" className="shrink-0 text-xs font-medium text-brand-600 hover:underline">
           See what the assistant knows →

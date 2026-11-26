@@ -15,18 +15,20 @@ const h = vi.hoisted(() => ({
 }))
 
 vi.mock('@/lib/ingest/pipeline', () => ({ processCommunityMessage: h.processCommunityMessage }))
-vi.mock('@/lib/db/queries/tickets', () => ({ getTicketByThreadId: h.getTicketByThreadId }))
+vi.mock('@/lib/db/queries/tickets', () => ({ getTicketByThreadId: h.getTicketByThreadId, isPostedByAnswerLoops: vi.fn(async () => false) }))
 vi.mock('@/lib/ingest/limits', async (orig) => ({
   ...(await orig<typeof import('@/lib/ingest/limits')>()),
   isIngestRateLimited: vi.fn(async () => false),
 }))
+// getIntegrationByBotSecret returns a hydrated row, so bot_token is the
+// decrypted Admin API token.
 vi.mock('@/lib/db/queries/integrations', () => ({
   getIntegrationByBotSecret: vi.fn(async () => ({
-    platform: 'circle', enabled: 1, org_id: 6, bot_token: 'encrypted', team_id: 'https://community.example', channel_ids: null,
+    platform: 'circle', enabled: 1, org_id: 6, bot_token: 'circle-api-token', team_id: 'https://community.example', channel_ids: null,
   })),
   parseChannelIds: vi.fn(() => []),
+  parseTeamMemberIds: vi.fn(() => []),
 }))
-vi.mock('@/lib/crypto/tokens', () => ({ decryptToken: () => 'circle-api-token' }))
 vi.mock('@/lib/circle/client', async (orig) => ({
   ...(await orig<typeof import('@/lib/circle/client')>()),
   fetchCircleRecord: h.fetchCircleRecord,

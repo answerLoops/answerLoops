@@ -1,4 +1,4 @@
-import type { PlanId } from '@/lib/billing/plans'
+import type { Plan, PlanId } from '@/lib/billing/plans'
 import { INCLUDED_AI_SUMMARY } from '@/lib/marketing/plan-summary'
 
 export function formatPrice(cents: number): string {
@@ -19,6 +19,27 @@ export const CUSTOM_PRICED_PLAN_IDS: readonly PlanId[] = ['enterprise']
 
 export function isCustomPriced(id: PlanId): boolean {
   return CUSTOM_PRICED_PLAN_IDS.includes(id)
+}
+
+/** The bold line on a plan card: what the plan includes each month. */
+export function replyAllowanceLabel(plan: Plan): string {
+  return plan.deflectionsPerMonth === null
+    ? 'Unlimited AI replies'
+    : `${plan.deflectionsPerMonth.toLocaleString('en-US')} estimated AI replies/month`
+}
+
+/** What happens at that limit, shown under the allowance. */
+export function replyLimitNote(plan: Plan, nextPlan?: Plan): string {
+  if (plan.overageRatePer100Cents !== null) {
+    return `Then ${formatPrice(plan.overageRatePer100Cents)} per additional 100 replies.`
+  }
+  if (plan.deflectionsPerMonth === null) return 'No overage charges.'
+  if (!nextPlan) return 'Replies pause at the limit.'
+  const included =
+    nextPlan.deflectionsPerMonth === null
+      ? 'unlimited'
+      : nextPlan.deflectionsPerMonth.toLocaleString('en-US')
+  return `Replies pause at the limit. ${nextPlan.name} includes ${included}.`
 }
 
 export const PLAN_COPY: Record<
@@ -56,6 +77,7 @@ export const PLAN_COPY: Record<
     features: [
       'Everything in Pro',
       'Bring local or custom models, like Ollama or vLLM',
+      'Higher MCP and Agent API rate limits',
       'Unlimited data retention',
       'Migration assistance',
       'SLA tracking and breach alerts',

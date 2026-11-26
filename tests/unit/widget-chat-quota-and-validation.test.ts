@@ -171,6 +171,62 @@ describe('widget chat: no rejected request may consume quota', () => {
   })
 })
 
+describe('widget chat: the conversation the widget sends back', () => {
+  // The exact shape the widget client sent after a reply that showed the
+  // contact card: the assistant turn is a tool call with no text.
+  const cardReply = {
+    id: 'a1',
+    role: 'assistant',
+    toolCalls: [
+      {
+        id: 'call-1',
+        type: 'function',
+        function: { name: 'show_contact_options', arguments: '{"message":"Reach us:","options":[]}' },
+      },
+    ],
+  }
+  const cardResult = { id: 't1', role: 'tool', toolCallId: 'call-1', content: '{"ok":true}' }
+
+  const accepted: [string, unknown[]][] = [
+    ['a follow-up after a reply that only showed a card', [userMsg('Do you ship to Canada?'), cardReply, cardResult, userMsg('thanks!')]],
+    ['a follow-up after a reply with text and a card', [userMsg('hi'), { ...cardReply, content: 'Here you go:' }, cardResult, userMsg('ok')]],
+    [
+      'a follow-up after a knowledge-base search whose result is longer than a visitor message',
+      [
+        userMsg('how do I install?'),
+        { id: 'a2', role: 'assistant', toolCalls: [{ id: 'call-2', type: 'function', function: { name: 'search_knowledge_base', arguments: '{"query":"install"}' } }] },
+        { id: 't2', role: 'tool', toolCallId: 'call-2', content: 'article text '.repeat(1000) },
+        { id: 'a3', role: 'assistant', content: 'Run npm i.' },
+        userMsg('and on windows?'),
+      ],
+    ],
+  ]
+
+  it.each(accepted)('answers %s', async (_label, messages) => {
+    const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages })
+    expect(res.status).toBe(200)
+    await drain(res)
+    expect(h.streamCalls).toEqual([{ query: (messages.at(-1) as { content: string }).content }])
+  })
+
+  const rejected: [string, unknown[], string][] = [
+    ['an assistant reply whose text is not a string', [{ role: 'assistant', content: 42 }, userMsg('hi')], 'Malformed messages'],
+    ['an assistant reply whose tool calls are not a list', [{ role: 'assistant', toolCalls: 'x' }, userMsg('hi')], 'Malformed messages'],
+    ['a tool result with no tool call id', [{ role: 'tool', content: 'x' }, userMsg('hi')], 'Malformed messages'],
+    ['a tool result with no text', [{ role: 'tool', toolCallId: 'c' }, userMsg('hi')], 'Malformed messages'],
+    ['a message with no role', [{ content: 'x' }, userMsg('hi')], 'Malformed messages'],
+    ['an earlier visitor message past the length cap', [userMsg('x'.repeat(4001)), cardReply, cardResult, userMsg('hi')], 'Message too long'],
+  ]
+
+  it.each(rejected)('still refuses %s, without reserving quota', async (_label, messages, error) => {
+    const res = await callRoute({ widgetToken: VALID_TOKEN, visitorId: 'v', messages })
+    expect(res.status).toBe(400)
+    expect(await res.text()).toBe(error)
+    expect(h.reserveGeneration).not.toHaveBeenCalled()
+    expect(h.streamCalls).toHaveLength(0)
+  })
+})
+
 describe('widget chat: a request shaped as anything other than agent/run is still throttled', () => {
   it('rate-limits a non-run envelope before it ever reaches widgetToken validation', async () => {
     // A single-route runtime accepts other methods (info, threads/list, ...);
