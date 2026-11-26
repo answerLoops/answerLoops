@@ -101,15 +101,16 @@ describe('what counts toward the allowance is stated plainly', () => {
 
 describe('every stated plan allowance says estimated, as the pricing cards do', () => {
   const cases: [string, RegExp][] = [
-    ['app/(dashboard)/billing/page.tsx', /500 estimated AI replies\/mo/],
-    ['app/(dashboard)/billing/page.tsx', /3,000 estimated AI replies\/mo/],
+    // Billing and the pricing cards both read this one label.
+    ['lib/marketing/pricing.ts', /estimated AI replies\/month/],
+    ['app/(dashboard)/billing/page.tsx', /replyAllowanceLabel/],
     ['components/billing/embedded-checkout-panel.tsx', /estimated AI replies\/mo/],
     ['content/docs/reference/billing-plans.mdx', /500 estimated AI replies a month/],
     ['content/docs/reference/billing-plans.mdx', /3,000 estimated AI replies a month/],
     ['content/docs/reference/billing-plans.mdx', /Estimated AI replies\/mo/],
     ['content/docs/product/billing.mdx', /Included estimated AI replies per month/],
     ['content/docs/quickstart-cloud.mdx', /Estimated AI replies per month/],
-    ['components/marketing/pricing-toggle.tsx', /estimated AI replies\/month/],
+    ['components/marketing/pricing-toggle.tsx', /replyAllowanceLabel/],
     ['components/marketing/pricing-comparison-table.tsx', /Estimated AI replies \/ month/],
   ]
   for (const [file, pattern] of cases) {
