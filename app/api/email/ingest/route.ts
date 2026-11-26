@@ -33,21 +33,12 @@ import { rateLimitShared } from '@/lib/ratelimit'
 import { readBodyCapped, readBodyBytesCapped } from '@/lib/http/read-body-capped'
 import { logger } from '@/lib/logger'
 import { notifyTicketActivity } from '@/lib/tickets/notify-activity'
+import { stripQuotedReplies } from '@/lib/email/quoted-replies'
 
 const MOD = 'api/email/ingest'
 const MAX_BODY_BYTES = 2_000_000
 const REPLY_THROTTLE_WINDOW_MS = 60 * 60 * 1000
 const REPLY_THROTTLE_MAX = 5
-
-// Strips quoted reply chains ("On ... wrote:") from email body text.
-function stripQuotedReplies(text: string): string {
-  return text
-    .split('\n')
-    .filter((line) => !line.startsWith('>'))
-    .join('\n')
-    .replace(/\nOn [\s\S]+?wrote:\s*$/, '')
-    .trim()
-}
 
 // Normalise sender: "Jane Smith <jane@example.com>" → { name, email }
 function parseSender(from: string): { name: string; email: string } {
