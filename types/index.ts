@@ -245,6 +245,34 @@ export interface KBArticle {
   can_view_answers?: boolean
   /** A saved resolution only: documentation related to it changed after it was last saved and verified. */
   related_docs_changed?: { at: string; source: string } | null
+  /** Present on the article list: needs-review and superseded state (lib/kb/review-state.ts). */
+  review?: ArticleReview
+  /** Present on the article list: whether this viewer (owner or admin) may supersede or restore it. */
+  can_supersede?: boolean
+}
+
+/**
+ * Where an article stands for review, separate from `published`.
+ * 'needs_review' keeps answering customers; 'superseded' is excluded from every answer.
+ */
+export type ArticleReviewState = 'current' | 'needs_review' | 'superseded'
+
+/** What replaced a superseded article: another article, a documentation link, or nothing left (its replacement article was deleted). */
+export type ArticleReplacement =
+  | { kind: 'article'; article_id: number; question: string }
+  | { kind: 'url'; url: string }
+  | null
+
+export interface ArticleReview {
+  state: ArticleReviewState
+  /** When the current state was set; null for 'current' articles never flagged. */
+  at: string | null
+  /** Who set it, by name or email; null when automatic, unknown or the user was deleted. */
+  by_name: string | null
+  /** The reason given when it was flagged. */
+  note: string | null
+  /** Set only while superseded. */
+  replacement: ArticleReplacement
 }
 
 export type KBArticleEventType =
@@ -255,6 +283,11 @@ export type KBArticleEventType =
   | 'review_rejected'
   | 'review_reopened'
   | 'verified'
+  | 'flagged_for_review'
+  | 'auto_flagged_for_review'
+  | 'review_flag_cleared'
+  | 'superseded'
+  | 'restored'
 
 export type KBArticleEventOrigin = 'manual' | 'ticket_promotion' | 'review_queue' | 'import' | 'sync'
 
