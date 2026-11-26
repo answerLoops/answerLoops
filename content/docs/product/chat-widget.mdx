@@ -306,8 +306,20 @@ Two settings under **Settings → Widget** shape what visitors are told in your 
 
 **What the widget answers from** has two choices:
 
-- **Only from my knowledge base.** The widget answers only from your published articles. When they don't cover a question it says so plainly and points the visitor to support. It doesn't guess at prices, features, dates or policies the articles don't state, and it politely declines requests that aren't about your product, such as writing code or general trivia. This is the right choice for a widget anyone on the internet can use, because every answer reads as your company speaking.
+- **Only from my knowledge base.** The widget answers only from your published articles. When they don't cover a question, it says so plainly and gives the visitor a way to get help, so the chat never ends at a flat "I don't know". It doesn't guess at prices, features, dates or policies the articles don't state, and it politely declines requests that aren't about your product, such as writing code or general trivia. This is the right choice for a widget anyone on the internet can use, because every answer reads as your company speaking.
 - **My knowledge base, then general knowledge.** When no article covers a question, the widget answers from general knowledge, and that answer can be wrong. Workspaces that existed before this setting keep this choice until an owner changes it.
+
+The setting shows an example of each choice for the same question, so you can compare them before picking.
+
+With **Only from my knowledge base**, a few cases are handled specially:
+
+- **Contact options.** For a question your articles don't cover, the widget looks up the article that says how to reach you and shows its email address, phone number or support page as a contact card. Put your contact details in an article, for example a "Contact us" page, so the widget can offer them. If no article lists any, the widget suggests the visitor contact you directly.
+- **Partly covered questions.** When an article covers part of a question, the widget answers that part from it and says which part it doesn't have information on.
+- **Greetings and thanks.** A message like "hi" or "thank you" always gets a friendly reply and an offer to help, never "I don't have that information".
+
+The contact article is only offered as a way to get help. It doesn't count as an answer to the question, so the question still goes to the [Review queue](/docs/product/knowledge-base#review-queue).
+
+The **Knowledge coverage** tab shows which choice is active, and its **Try a customer question** check says what a visitor would get for a question no article covers.
 
 Visitors often ask loosely. "What does it cost?" rarely uses the words on your pricing page. When no article closely matches a question, the widget still hands the assistant the few closest articles, and tells it they may not cover the question. The assistant answers from them when they do. When they don't, it treats the question as not covered, following the choice above. Either way, the question goes to the [Review queue](/docs/product/knowledge-base#review-queue) so you can add an article that answers it directly.
 
@@ -405,7 +417,7 @@ The widget chat endpoint is public (no login required), so it enforces limits to
 - Up to **500 answers/hour and 3,000 answers/day per workspace**, across all visitors and widget tokens
 - Loading the widget panel itself is limited to **30 loads/minute per visitor address** and **600/minute per widget token**
 - The display-settings lookup the snippet makes on every page load is limited to **120/minute per visitor address** and **1,200/minute per widget**
-- Each message capped at **4,000 characters**; at most **50 messages** per request
+- Each visitor message capped at **4,000 characters**; at most **50 messages** per request (the widget sends back the assistant's earlier replies, cards and search results with each message, which count toward the request size below rather than the per-message cap)
 - Request bodies capped at **512KB**
 
 The lead-capture endpoint, used when a visitor leaves an email address, is limited separately at **30/minute per token** and **5/minute per visitor**, with a 64KB body cap and a validated address.

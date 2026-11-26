@@ -106,7 +106,11 @@ describe('the widget grounds answers in published KB articles only', () => {
 
     await ask()
 
-    expect(h.getWidgetKBContext).toHaveBeenCalledOnce()
+    // The question's own lookup, plus the contact-details lookup a
+    // knowledge-base-only widget also makes (this workspace has no stored
+    // scope, so it gets the narrower one). Both read published articles only.
+    expect(h.getWidgetKBContext).toHaveBeenCalledTimes(2)
+    for (const call of h.getWidgetKBContext.mock.calls) expect(call[2]).toBe(7)
     // These return resolution notes and AI drafts from real tickets.
     expect(h.getPriorAnswers, 'ticket-derived context reached the widget').not.toHaveBeenCalled()
     expect(h.getCandidateVectors).not.toHaveBeenCalled()

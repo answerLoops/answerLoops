@@ -18,9 +18,50 @@ const SCOPE_LABELS: Record<WidgetAnswerScope, string> = {
 
 const SCOPE_HELP: Record<WidgetAnswerScope, string> = {
   'knowledge-base-only':
-    'The widget answers only from your published articles. If they do not cover a question it says so and points to support, and it declines requests that are not about your product.',
+    'The widget answers only from your published articles. If they do not cover a question it says so and shows the contact details from your articles, or suggests contacting you directly if they list none. It declines requests that are not about your product, and always replies to a greeting or thanks.',
   general:
     'The widget answers from your published articles and, when they do not cover a question, from general knowledge.',
+}
+
+// One question your articles don't cover, and roughly what a visitor would see
+// under each choice, so an owner can compare them before picking.
+const EXAMPLE_QUESTION = 'Can I pay by invoice?'
+
+const SCOPE_EXAMPLE: Record<WidgetAnswerScope, { reply: string; note: string }> = {
+  'knowledge-base-only': {
+    reply: "I don't have information about paying by invoice. You can reach our team here:",
+    note: 'Followed by the email, phone or support page from your articles.',
+  },
+  general: {
+    reply: 'Yes, invoices are usually available on annual plans. Ask your account manager to set it up.',
+    note: 'A plausible guess, not taken from your articles, so it can be wrong.',
+  },
+}
+
+function ScopeExamples({ selected }: { selected: WidgetAnswerScope }) {
+  return (
+    <div className="space-y-2" data-testid="widget-answer-scope-examples">
+      <p className="text-[0.6875rem] text-gray-500">
+        Example: a visitor asks &ldquo;{EXAMPLE_QUESTION}&rdquo; and none of your articles cover it.
+      </p>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {(['knowledge-base-only', 'general'] as const).map((option) => (
+          <div
+            key={option}
+            data-testid={`widget-answer-scope-example-${option}`}
+            data-selected={option === selected}
+            className={`min-w-0 rounded-md border px-3 py-2 ${
+              option === selected ? 'border-brand-300 bg-brand-50' : 'border-gray-200 bg-gray-50'
+            }`}
+          >
+            <p className="text-[0.6875rem] font-medium text-gray-700">{SCOPE_LABELS[option]}</p>
+            <p className="mt-1 break-words text-[0.6875rem] text-gray-700">&ldquo;{SCOPE_EXAMPLE[option].reply}&rdquo;</p>
+            <p className="mt-1 break-words text-[0.625rem] text-gray-500">{SCOPE_EXAMPLE[option].note}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 export function WidgetAnswersSettings({
@@ -103,6 +144,7 @@ export function WidgetAnswersSettings({
             {SCOPE_LABELS[scope]}. Only owners and admins can change this.
           </p>
         )}
+        <ScopeExamples selected={scope} />
       </div>
 
       <div className="space-y-2 border-t border-gray-100 pt-3">
