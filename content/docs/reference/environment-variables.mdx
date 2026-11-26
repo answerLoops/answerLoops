@@ -57,6 +57,21 @@ Callback URL to register: `https://<your-domain>/api/auth/callback/google`
 |---|---|
 | `TRUST_PROXY_HOPS` | Optional. Number of proxies between the public internet and the app. Defaults to `1`. Set to `2` for Cloudflare in front of a platform load balancer |
 | `ORIGIN_VERIFY_SECRET` | Optional. A shared secret between your CDN or edge proxy and the app. Requires a matching rule at the edge; see the [self-hosting guide](/docs/self-hosting/environment-variables) |
+| `TRUST_CLOUDFLARE_IP_HEADER` | Optional, self-hosted only. Set to `true` when the app can be reached only through Cloudflare, so visitor addresses are read from Cloudflare's `CF-Connecting-IP` header. Without it, addresses come from `X-Forwarded-For` as set by `TRUST_PROXY_HOPS`, which also works behind Cloudflare. Not needed when `ORIGIN_VERIFY_SECRET` is set |
+
+### Website widget limits
+
+Optional, and mainly for self-hosted instances. Each sets one of the website widget's [rate limits](/docs/product/chat-widget#rate-limits-and-input-caps); leave it unset for the default. A value that is not a whole number from 1 to 1,000,000 is ignored.
+
+| Variable | Default | What it limits |
+|---|---|---|
+| `WIDGET_LIMIT_PER_VISITOR_PER_MINUTE` | `20` | Chat requests per visitor address, per widget |
+| `WIDGET_LIMIT_PER_WIDGET_PER_MINUTE` | `100` | Chat requests per widget, across all visitors |
+| `WIDGET_LIMIT_PER_ADDRESS_PER_MINUTE` | `60` | Any widget chat request from one address |
+| `WIDGET_LIMIT_PER_WORKSPACE_PER_HOUR` | `500` | Answers per workspace per hour |
+| `WIDGET_LIMIT_PER_WORKSPACE_PER_DAY` | `3000` | Answers per workspace per day. Workspace owners can set a lower daily limit in **Settings → Widget**, never a higher one |
+| `WIDGET_LIMIT_LOADS_PER_ADDRESS_PER_MINUTE` | `30` | Widget panel loads per visitor address |
+| `WIDGET_LIMIT_LOADS_PER_WIDGET_PER_MINUTE` | `600` | Widget panel loads per widget |
 
 ### Public URLs and multi-domain
 

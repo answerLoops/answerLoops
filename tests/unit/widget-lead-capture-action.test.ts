@@ -28,6 +28,8 @@ vi.mock('@/lib/db/queries/widget-logos', () => ({
 }))
 vi.mock('@/lib/db/queries/widgets', () => ({
   getWidgetAppearance: vi.fn(async () => ({ title: null, welcome: null, brandColor: null })),
+  getWidgetDailyAnswerLimit: vi.fn(async () => null),
+  setWidgetDailyAnswerLimit: vi.fn(),
   setWidgetAppearance: vi.fn(),
   getWidgetLeadCaptureMode: h.getWidgetLeadCaptureMode,
   setWidgetLeadCaptureMode: h.setWidgetLeadCaptureMode,

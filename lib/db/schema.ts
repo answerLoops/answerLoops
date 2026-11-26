@@ -71,6 +71,10 @@ export const orgs = pgTable('orgs', {
   // instructions. NULL means none. Cleaned and length-limited by
   // normalizeWidgetGuidance before it is stored.
   widgetGuidance: text('widget_guidance'),
+  // The owner's own daily limit on widget answers (migration 0090). NULL means
+  // the instance's ceiling applies. Validated by normalizeDailyLimit on write
+  // and clamped to the ceiling on read (lib/widget/usage-limits.ts).
+  widgetDailyAnswerLimit: integer('widget_daily_answer_limit'),
   // How a Pro or above workspace customises its widget (migration 0078): the
   // chat header title, the welcome message and a brand color. NULL means the
   // answerLoops default. Cleaned and validated by lib/widget/appearance.ts at

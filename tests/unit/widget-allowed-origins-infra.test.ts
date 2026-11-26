@@ -331,13 +331,14 @@ describe('lib/db/queries/widgets: compiled SQL', () => {
   it('getOrgByWidgetToken selects the allowlist column and returns it', async () => {
     const { getOrgByWidgetToken } = await queries()
     // Positional row, in select order: id, name, widget_token,
-    // widget_token_expires_at, widget_allowed_origins,
+    // widget_token_expires_at, widget_slug, widget_allowed_origins,
     // widget_lead_capture_mode, widget_answer_scope, widget_guidance,
-    // widget_title, widget_welcome, widget_brand_color,
-    // widget_starter_questions, widget_starter_enabled, plan_id.
+    // widget_daily_answer_limit, widget_title, widget_welcome,
+    // widget_brand_color, widget_starter_questions, widget_starter_enabled,
+    // widget_follow_ups_enabled, plan_id.
     rowsFor.push({
       match: 'select',
-      rows: [[7, 'Acme', 'tok-abc', null, 'example.com', 'on-failure', 'general', null, null, null, null, null, null, null, 'pro']],
+      rows: [[7, 'Acme', 'tok-abc', null, null, 'example.com', 'on-failure', 'general', null, null, null, null, null, null, null, null, 'pro']],
     })
 
     const org = await getOrgByWidgetToken('tok-abc')
@@ -357,18 +358,20 @@ describe('lib/db/queries/widgets: compiled SQL', () => {
       id: 7,
       name: 'Acme',
       widget_token: 'tok-abc',
+      widget_slug: null,
       plan_id: 'pro',
       widget_allowed_origins: 'example.com',
       widget_lead_capture_mode: 'on-failure',
       widget_answer_scope: 'general',
       widget_guidance: null,
+      widget_daily_answer_limit: null,
       widget_appearance: { title: null, welcome: null, brandColor: null, starterQuestions: [], starterEnabled: true, followUpsEnabled: true },
     })
   })
 
   it('getOrgByWidgetToken passes a NULL allowlist straight through', async () => {
     const { getOrgByWidgetToken } = await queries()
-    rowsFor.push({ match: 'select', rows: [[7, 'Acme', 'tok-abc', null, null, 'on-failure', null]] })
+    rowsFor.push({ match: 'select', rows: [[7, 'Acme', 'tok-abc', null, null, null, 'on-failure', null]] })
 
     const org = await getOrgByWidgetToken('tok-abc')
     // null must survive as null — the caller distinguishes "no allowlist" from
