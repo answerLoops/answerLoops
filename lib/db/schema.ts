@@ -899,10 +899,19 @@ export const integrations = pgTable(
     pairingCodeHash: text('pairing_code_hash'),
     pairingCodeEnc: text('pairing_code_enc'),
     pairingCodeExpiresAt: text('pairing_code_expires_at'),
-    // Discourse only: the forum account the bot posts replies as, sent as the
-    // `Api-Username` header on every write. Distinct from escalationRoleId,
-    // which is the human tagged on low-confidence answers.
+    // The account replies are posted as. Discourse: the forum username, sent
+    // as the `Api-Username` header on every write. Circle: the member email
+    // comments are created as (null posts as the token's admin). Distinct from
+    // escalationRoleId, which is the human tagged on low-confidence answers.
     botUsername: text('bot_username'),
+    // Circle only: the member id Circle reported as the author of a comment
+    // answerLoops posted, so that member's later comments are recognised as
+    // answerLoops's own. Learned from the create-comment response, and cleared
+    // when the "post replies as" member changes.
+    botUserId: text('bot_user_id'),
+    // Circle only: JSON array of member ids whose comments are the team's own.
+    // They are kept on the ticket as thread context and never open a ticket.
+    teamMemberIds: text('team_member_ids'),
     channelIds: text('channel_ids'),
     guildChannelMap: text('guild_channel_map'),
     teamId: text('team_id'),

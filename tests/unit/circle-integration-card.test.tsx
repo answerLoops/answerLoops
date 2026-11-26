@@ -80,6 +80,9 @@ function circleRow(overrides: Record<string, unknown> = {}) {
     escalation_role_id: null,
     confidence_threshold: 0.8,
     enabled: 1,
+    bot_username: null,
+    team_member_ids: [],
+    auto_deflect_enabled: 0,
     ...overrides,
   }
 }
@@ -344,14 +347,119 @@ describe('CircleIntegrationCard', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1)
   })
 
-  it('connected view has no "Sync now" / "Register webhook" control and no auto-deflect toggle', async () => {
+  it('connected view has no "Sync now" / "Register webhook" control', async () => {
     mockFetch.mockResolvedValue(integrationsResponse([circleRow()]))
     render(<CircleIntegrationCard />)
 
     await waitFor(() => expect(screen.getByText('https://community.acme.com')).toBeTruthy())
     expect(screen.queryByRole('button', { name: /sync now/i })).toBeNull()
     expect(screen.queryByRole('button', { name: /register webhook/i })).toBeNull()
-    expect(screen.queryByRole('checkbox')).toBeNull()
-    expect(screen.queryByText(/auto-deflect/i)).toBeNull()
+  })
+
+  describe('replies', () => {
+    it('says answerLoops replies in Circle, with no copy-by-hand wording', async () => {
+      mockFetch.mockResolvedValue(integrationsResponse([circleRow()]))
+      render(<CircleIntegrationCard />)
+
+      await waitFor(() => expect(screen.getByText('https://community.acme.com')).toBeTruthy())
+      expect(screen.getByText(/posts replies as comments on the Circle post/i)).toBeTruthy()
+      expect(screen.queryByText(/ingest-only|by hand/i)).toBeNull()
+    })
+
+    it('summary shows the admin when no "post replies as" member is saved, and Automatic Deflections off', async () => {
+      mockFetch.mockResolvedValue(integrationsResponse([circleRow()]))
+      render(<CircleIntegrationCard />)
+
+      await waitFor(() => expect(screen.getByText('https://community.acme.com')).toBeTruthy())
+      expect(screen.getByText('Post replies as')).toBeTruthy()
+      expect(screen.getByText('— (the API token’s admin)')).toBeTruthy()
+      expect(screen.getByText('Team member IDs')).toBeTruthy()
+      expect(screen.getByText('— (none)')).toBeTruthy()
+      expect(screen.getByText('Automatic Deflections: Off')).toBeTruthy()
+    })
+
+    it('summary shows the saved member email, team member ids, and Automatic Deflections on', async () => {
+      mockFetch.mockResolvedValue(integrationsResponse([
+        circleRow({ bot_username: 'support@acme.com', team_member_ids: ['101', '202'], auto_deflect_enabled: 1 }),
+      ]))
+      render(<CircleIntegrationCard />)
+
+      await waitFor(() => expect(screen.getByText('support@acme.com')).toBeTruthy())
+      expect(screen.getByText('101, 202')).toBeTruthy()
+      expect(screen.getByText('Automatic Deflections: On')).toBeTruthy()
+    })
+
+    it('the edit form is filled from the saved values and submits them', async () => {
+      mockFetch
+        .mockResolvedValueOnce(integrationsResponse([
+          circleRow({ bot_username: 'support@acme.com', team_member_ids: ['101', '202'], auto_deflect_enabled: 1 }),
+        ]))
+        .mockResolvedValueOnce(integrationsResponse([circleRow()]))
+      vi.mocked(saveCircleIntegrationAction).mockResolvedValue({})
+
+      const user = userEvent.setup()
+      render(<CircleIntegrationCard />)
+
+      await waitFor(() => expect(screen.getByText('support@acme.com')).toBeTruthy())
+      await user.click(screen.getByRole('button', { name: /edit spaces/i }))
+
+      const postAs = document.querySelector('input[name="postAsEmail"]') as HTMLInputElement
+      const team = document.querySelector('input[name="teamMemberIds"]') as HTMLInputElement
+      const toggle = document.querySelector('input[name="autoDeflectEnabled"]') as HTMLInputElement
+      expect(postAs.value).toBe('support@acme.com')
+      expect(postAs.type).toBe('email')
+      expect(team.value).toBe('101, 202')
+      expect(toggle.checked).toBe(true)
+
+      await user.clear(postAs)
+      await user.type(postAs, 'helper@acme.com')
+      await user.click(screen.getByRole('button', { name: /^update$/i }))
+
+      await waitFor(() => expect(saveCircleIntegrationAction).toHaveBeenCalled())
+      const fd = vi.mocked(saveCircleIntegrationAction).mock.calls[0][1] as FormData
+      expect(fd.get('postAsEmail')).toBe('helper@acme.com')
+      expect(fd.get('teamMemberIds')).toBe('101, 202')
+      expect(fd.get('autoDeflectEnabled')).toBe('on')
+    })
+
+    it('turning Automatic Deflections on asks for confirmation first, naming Circle', async () => {
+      mockFetch
+        .mockResolvedValueOnce(integrationsResponse([]))
+        .mockResolvedValueOnce(integrationsResponse([circleRow({ auto_deflect_enabled: 1 })]))
+      vi.mocked(saveCircleIntegrationAction).mockResolvedValue({})
+
+      const user = userEvent.setup()
+      render(<CircleIntegrationCard />)
+
+      await waitFor(() => expect(screen.getByPlaceholderText('https://community.example.com')).toBeTruthy())
+      const toggle = document.querySelector('input[name="autoDeflectEnabled"]') as HTMLInputElement
+      expect(toggle.checked).toBe(false)
+
+      await user.click(toggle)
+      expect(screen.getByText('Turn on Automatic Deflections for Circle?')).toBeTruthy()
+      expect(toggle.checked).toBe(false)
+
+      await user.click(screen.getByRole('button', { name: /^turn on$/i }))
+      expect(toggle.checked).toBe(true)
+
+      await user.click(screen.getByRole('button', { name: /^connect$/i }))
+      await waitFor(() => expect(saveCircleIntegrationAction).toHaveBeenCalled())
+      const fd = vi.mocked(saveCircleIntegrationAction).mock.calls[0][1] as FormData
+      expect(fd.get('autoDeflectEnabled')).toBe('on')
+    })
+
+    it('an unchanged off switch submits nothing for it, which the save reads as off', async () => {
+      mockFetch.mockResolvedValue(integrationsResponse([]))
+      vi.mocked(saveCircleIntegrationAction).mockResolvedValue({ error: 'stop here' })
+
+      const user = userEvent.setup()
+      render(<CircleIntegrationCard />)
+
+      await waitFor(() => expect(screen.getByPlaceholderText('https://community.example.com')).toBeTruthy())
+      await user.click(screen.getByRole('button', { name: /^connect$/i }))
+      await waitFor(() => expect(saveCircleIntegrationAction).toHaveBeenCalled())
+      const fd = vi.mocked(saveCircleIntegrationAction).mock.calls[0][1] as FormData
+      expect(fd.has('autoDeflectEnabled')).toBe(false)
+    })
   })
 })

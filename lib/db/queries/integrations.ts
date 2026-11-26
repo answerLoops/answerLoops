@@ -29,6 +29,10 @@ export interface Integration {
   pairing_code: string | null
   pairing_code_expires_at: string | null
   bot_username: string | null
+  /** Circle: the member id answerLoops's comments are posted as, once Circle has reported it. */
+  bot_user_id: string | null
+  /** Circle: JSON array of team member ids. Read it with parseTeamMemberIds. */
+  team_member_ids: string | null
   channel_ids: string | null
   guild_channel_map: string | null
   connected_guild_id: string | null
@@ -54,6 +58,8 @@ function toIntegration(row: typeof integrations.$inferSelect): Integration {
     pairing_code: row.pairingCodeEnc,
     pairing_code_expires_at: row.pairingCodeExpiresAt ?? null,
     bot_username: row.botUsername ?? null,
+    bot_user_id: row.botUserId ?? null,
+    team_member_ids: row.teamMemberIds ?? null,
     channel_ids: row.channelIds,
     guild_channel_map: row.guildChannelMap ?? null,
     connected_guild_id: row.connectedGuildId ?? null,
@@ -350,6 +356,9 @@ export async function upsertIntegration(input: {
   botToken?: string | null
   botSecret?: string | null
   botUsername?: string | null
+  // Circle: undefined leaves the column as it is; null clears it.
+  botUserId?: string | null
+  teamMemberIds?: string[]
   channelIds?: string[]
   connectedGuildId?: string | null
   teamId?: string | null
@@ -369,6 +378,7 @@ export async function upsertIntegration(input: {
   enabled?: boolean
 }): Promise<Integration> {
   const channelIdsJson = input.channelIds ? JSON.stringify(input.channelIds) : null
+  const teamMemberIdsJson = input.teamMemberIds ? JSON.stringify(input.teamMemberIds) : null
   const encryptedBotToken = input.botToken ? encryptToken(input.botToken) : null
   const encryptedWebhookSecret = input.webhookSecret ? encryptToken(input.webhookSecret) : null
   const secretColumns = input.botSecret
@@ -388,6 +398,8 @@ export async function upsertIntegration(input: {
         botToken: encryptedBotToken ?? undefined,
         ...(secretColumns ?? {}),
         botUsername: input.botUsername !== undefined ? (input.botUsername ?? null) : undefined,
+        botUserId: input.botUserId !== undefined ? (input.botUserId ?? null) : undefined,
+        teamMemberIds: teamMemberIdsJson ?? undefined,
         channelIds: channelIdsJson ?? undefined,
         connectedGuildId: input.connectedGuildId !== undefined ? (input.connectedGuildId ?? null) : undefined,
         teamId: input.teamId ?? undefined,
@@ -417,6 +429,8 @@ export async function upsertIntegration(input: {
       botSecretEnc: secretColumns?.botSecretEnc ?? null,
       botSecretHash: secretColumns?.botSecretHash ?? null,
       botUsername: input.botUsername ?? null,
+      botUserId: input.botUserId ?? null,
+      teamMemberIds: teamMemberIdsJson,
       channelIds: channelIdsJson,
       connectedGuildId: input.connectedGuildId ?? null,
       teamId: input.teamId ?? null,
@@ -450,6 +464,28 @@ export async function deleteIntegration(orgId: number, platform: Platform): Prom
   await getDb()
     .delete(integrations)
     .where(and(eq(integrations.orgId, orgId), eq(integrations.platform, platform)))
+}
+
+/**
+ * Record the member id a platform reported as the author of a reply answerLoops
+ * posted (Circle). Only this column is written.
+ */
+export async function setIntegrationBotUserId(orgId: number, platform: Platform, botUserId: string): Promise<void> {
+  await getDb()
+    .update(integrations)
+    .set({ botUserId, updatedAt: new Date().toISOString() })
+    .where(and(eq(integrations.orgId, orgId), eq(integrations.platform, platform)))
+}
+
+/** Circle team member ids, or [] when none are saved or the stored value is unreadable. */
+export function parseTeamMemberIds(integration: Pick<Integration, 'team_member_ids'>): string[] {
+  if (!integration.team_member_ids) return []
+  try {
+    const parsed: unknown = JSON.parse(integration.team_member_ids)
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : []
+  } catch {
+    return []
+  }
 }
 
 export function parseChannelIds(integration: Integration): string[] {

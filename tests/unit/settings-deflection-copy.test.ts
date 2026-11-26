@@ -19,7 +19,7 @@ describe('Automatic Deflections help text', () => {
 
   it('covers every channel that has the toggle', () => {
     expect(withToggle.map((f) => f.name).sort()).toEqual(
-      ['discord.tsx', 'discourse.tsx', 'email.tsx', 'github.tsx', 'googlechat.tsx', 'slack.tsx', 'telegram.tsx'],
+      ['circle.tsx', 'discord.tsx', 'discourse.tsx', 'email.tsx', 'github.tsx', 'googlechat.tsx', 'slack.tsx', 'telegram.tsx'],
     )
   })
 
