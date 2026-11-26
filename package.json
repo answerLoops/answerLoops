@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "bot": "tsx watch bot/index.ts",
     "bot:start": "tsx bot/index.ts",
+    "bot:build": "esbuild bot/index.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/bot.cjs --log-level=warning",
     "dev:all": "concurrently \"pnpm dev\" \"pnpm bot\"",
     "test": "vitest run",
     "test:watch": "vitest",
