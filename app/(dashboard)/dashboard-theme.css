@@ -1,6 +1,6 @@
 /* Presentation only: shared by the dashboard shell and its portalled navigation. */
 .dashboard-theme {
-  --background: #e9eef3;
+  --background: #fff;
   --foreground: #082e50;
   --surface: #fff;
   --surface-muted: #f4f7f9;
@@ -73,7 +73,7 @@
 .dashboard-navigation a[aria-current='page'] { box-shadow: inset 3px 0 #168fa3; }
 .dashboard-navigation > div > div > p { color: #5d6b7c; letter-spacing: 0.12em; }
 .dashboard-topbar { box-shadow: none; }
-.dashboard-content { background: #e9eef3; }
+.dashboard-content { background: #fff; }
 .dashboard-content > .relative { padding-top: clamp(1.5rem, 3vw, 2.5rem); }
 .dashboard-page { margin-inline: auto; }
 .dashboard-page h1 { color: #082e50; font-weight: 500; line-height: 1.2; }

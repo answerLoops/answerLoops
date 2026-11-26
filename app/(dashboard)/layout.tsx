@@ -83,7 +83,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   )
 
   return (
-    <div className="dashboard-shell dashboard-theme brand-system flex h-dvh bg-[#e9eef3]">
+    <div className="dashboard-shell dashboard-theme brand-system flex h-dvh bg-white">
       <DashboardLive />
       {isFeedbackWidgetEnabled() && <FeedbackWidget />}
       {/* Sidebar — desktop only */}
