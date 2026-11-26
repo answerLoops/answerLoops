@@ -99,7 +99,16 @@ describe('verifyArticle', () => {
     expect(out).toEqual({ verifiedAt: expect.any(String), contentHash: hash })
     const update = calls.find((c) => c.sql.startsWith('update "kb_articles"'))!
     expect(update.params).toEqual(expect.arrayContaining([out!.verifiedAt, 12, hash, 'Checked against v2.4', 7, 3]))
-    expect(verbs()).toEqual(['begin', expect.stringMatching(/^select/), expect.stringMatching(/^update/), 'insert into "kb_article_events"', 'commit'])
+    // The second UPDATE clears a needs-review flag; it matches no row here, so
+    // only the verified event is written.
+    expect(verbs()).toEqual([
+      'begin',
+      expect.stringMatching(/^select/),
+      expect.stringMatching(/^update/),
+      'update "kb_articles" set',
+      'insert into "kb_article_events"',
+      'commit',
+    ])
   })
 
   it('locks the row while it reads the text, so an edit cannot slip in before the hash is taken', async () => {
