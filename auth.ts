@@ -6,6 +6,7 @@ import { getDb } from '@/lib/db/drizzle'
 import { users, memberships, orgs } from '@/lib/db/schema'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { resolveOrgIdForSessionUpdate, resolveOrgAccess } from '@/lib/auth/membership'
+import { sessionIdleSeconds } from '@/lib/auth/session-lifetime'
 import { orgHasProductAccess, isAccessExempt } from '@/lib/billing/access'
 import { appOrigin } from '@/lib/site'
 import { isWebsitePath } from '@/lib/marketing/website-paths'
@@ -136,6 +137,15 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   pages: {
     signIn: '/login',
     error: '/login',
+  },
+
+  // A sign-in lasts AUTH_SESSION_IDLE_HOURS (default 8) without activity,
+  // instead of the auth library's 30 days. Each request re-issues the cookie
+  // with a fresh expiry, so this is an idle limit, not a fixed one; the
+  // dashboard's idle timer covers a tab left open (lib/auth/session-lifetime.ts).
+  session: {
+    strategy: 'jwt',
+    maxAge: sessionIdleSeconds(),
   },
 
   // Without this, Auth.js always completes the OAuth flow on the fixed

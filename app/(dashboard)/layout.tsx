@@ -4,6 +4,8 @@ import { LogoMark } from '@/components/logo'
 import { getUnreadCount } from '@/lib/db/queries/notifications'
 import { NotificationBell } from '@/components/notifications/notification-bell'
 import { DashboardLive } from '@/components/dashboard/dashboard-live'
+import { IdleSignOut } from '@/components/auth/idle-sign-out'
+import { sessionIdleHours } from '@/lib/auth/session-lifetime'
 import { SidebarNav } from '@/components/dashboard/sidebar-nav'
 import { SectionNav } from '@/components/dashboard/section-nav'
 import { MobileDrawer } from '@/components/ui/mobile-drawer'
@@ -85,6 +87,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="dashboard-shell dashboard-theme brand-system flex h-dvh bg-white">
       <DashboardLive />
+      <IdleSignOut idleHours={sessionIdleHours()} />
       {isFeedbackWidgetEnabled() && <FeedbackWidget />}
       {/* Sidebar — desktop only */}
       <aside className="dashboard-sidebar hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white md:flex">
