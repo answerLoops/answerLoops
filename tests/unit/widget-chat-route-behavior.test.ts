@@ -156,7 +156,9 @@ describe('widget chat route: a missing AI provider releases the slot and builds 
 
 describe('widget chat route: retrieval failure is non-fatal', () => {
   it('still streams an answer without KB context when the embedding step throws', async () => {
-    h.embedText.mockRejectedValueOnce(new Error('embedding provider down'))
+    // Down for every lookup, including the contact-details lookup a
+    // knowledge-base-only widget also makes (lib/widget/contact-context.ts).
+    h.embedText.mockRejectedValue(new Error('embedding provider down'))
     const res = await callRoute('embedding failure question')
     expect(res.status).toBe(200)
     await drain(res)

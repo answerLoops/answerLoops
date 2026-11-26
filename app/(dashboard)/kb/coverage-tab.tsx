@@ -7,9 +7,52 @@ import { ARTICLE_USAGE_RETENTION_DAYS, ARTICLE_USAGE_WINDOW_DAYS, type Coverage,
 import type { ArticleUsage } from '@/lib/db/queries/kb-usage'
 import type { KBSearchResult } from '@/types'
 import { WIDGET_CONTEXT_ARTICLES } from '@/lib/widget/context-size'
+import { isWidgetAnswerScope, type WidgetAnswerScope } from '@/lib/widget/answer-scope'
 
+type CoverageResponse = Coverage & {
+  articleUsage?: ArticleUsage[]
+  articleUsageAvailable?: boolean
+  // The widget's setting for questions no article covers; null when it could not be read.
+  widgetAnswerScope?: WidgetAnswerScope | null
+}
 
-type CoverageResponse = Coverage & { articleUsage?: ArticleUsage[]; articleUsageAvailable?: boolean }
+// What a visitor gets for a question no article covers, under each setting
+// (Settings → Widget → What the widget answers from).
+const UNCOVERED: Record<WidgetAnswerScope, { label: string; summary: string; testResult: string }> = {
+  'knowledge-base-only': {
+    label: "Says it doesn't know and offers ways to get help",
+    summary:
+      "it tells the visitor it doesn't have that information and shows the contact details from your articles, or suggests contacting you directly if they list none.",
+    testResult:
+      "The assistant would say it doesn't have that information and offer the contact details from your articles. Add or edit an article to cover it.",
+  },
+  general: {
+    label: 'Answers from general knowledge',
+    summary: 'it answers from general knowledge instead, and that answer can be wrong.',
+    testResult: 'The assistant would answer this from general knowledge, which can be wrong. Add or edit an article to cover it.',
+  },
+}
+
+const UNCOVERED_UNKNOWN_RESULT =
+  "The assistant would answer this from general knowledge, which can be wrong, or say it doesn't know if your widget answers only from your knowledge base. Add or edit an article to cover it."
+
+const WIDGET_SETTINGS_HREF = '/settings?tab=widget'
+
+function UncoveredMode({ scope }: { scope: WidgetAnswerScope }) {
+  return (
+    <div className="flex flex-col gap-1 rounded-2xl border border-slate-200/80 bg-white px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <div className="min-w-0">
+        <p className="text-xs text-slate-500">When no article covers a question, your widget</p>
+        <p className="break-words text-sm font-semibold text-slate-900" data-testid="coverage-uncovered-mode">
+          {UNCOVERED[scope].label}
+        </p>
+      </div>
+      <Link href={WIDGET_SETTINGS_HREF} className="shrink-0 text-xs font-medium text-brand-600 hover:underline">
+        Change in Settings →
+      </Link>
+    </div>
+  )
+}
 
 const STATUS_BADGE: Record<Exclude<CoverageStatus, 'live'>, { label: string; hint: string; className: string }> = {
   unpublished: {
@@ -99,7 +142,7 @@ type TestResult =
   | { kind: 'degraded' }
   | { kind: 'error'; message: string }
 
-function QuestionTester() {
+function QuestionTester({ scope }: { scope: WidgetAnswerScope | null }) {
   const [question, setQuestion] = useState('')
   const [testing, setTesting] = useState(false)
   const [result, setResult] = useState<TestResult | null>(null)
@@ -186,7 +229,7 @@ function QuestionTester() {
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2" role="status">
           <p className="text-xs font-medium text-amber-800">Not covered — no article is a close enough match.</p>
           <p className="mt-0.5 text-xs text-amber-700">
-            The assistant would answer this from general knowledge, which can be wrong, or say it doesn't know if your widget answers only from your knowledge base. Add or edit an article to cover it.
+            {scope ? UNCOVERED[scope].testResult : UNCOVERED_UNKNOWN_RESULT}
           </p>
         </div>
       )}
@@ -231,6 +274,8 @@ export function CoverageTab() {
 
   const { summary, groups } = coverage
   const articleUsageAvailable = coverage.articleUsageAvailable !== false
+  // The route only ever sends a known scope, but an unrecognised one is shown as unknown rather than crashing the tab.
+  const scope = isWidgetAnswerScope(coverage.widgetAnswerScope) ? coverage.widgetAnswerScope : null
   const articleUsageById = new Map<number, ArticleUsage>(
     (coverage.articleUsage ?? []).map((usage): [number, ArticleUsage] => [usage.article_id, usage])
   )
@@ -240,10 +285,16 @@ export function CoverageTab() {
       <div className="rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-3">
         <p className="text-sm text-slate-700">
           Your chat assistant answers from the articles listed here. If a question doesn&apos;t match any of them
-          closely enough, it answers from general knowledge instead, and that answer can be wrong, unless your widget is set to answer only from your knowledge base, in which case it says it doesn&apos;t have that. Anything marked
-          Unpublished (for example internal documents you keep private) or Not searchable is <strong>not</strong> used by the assistant.
+          closely enough,{' '}
+          {scope
+            ? UNCOVERED[scope].summary
+            : "it answers from general knowledge instead, and that answer can be wrong, unless your widget is set to answer only from your knowledge base, in which case it says it doesn't have that."}{' '}
+          Anything marked Unpublished (for example internal documents you keep private) or Not searchable is{' '}
+          <strong>not</strong> used by the assistant.
         </p>
       </div>
+
+      {scope && <UncoveredMode scope={scope} />}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard label="Live articles" value={summary.live} tone="good" />
@@ -252,7 +303,7 @@ export function CoverageTab() {
         <StatCard label="Not searchable" value={summary.notSearchable} tone={summary.notSearchable > 0 ? 'bad' : 'neutral'} />
       </div>
 
-      <QuestionTester />
+      <QuestionTester scope={scope} />
 
       {summary.total === 0 ? (
         <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
