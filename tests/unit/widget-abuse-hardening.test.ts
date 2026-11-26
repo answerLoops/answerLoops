@@ -36,8 +36,9 @@ describe('widget chat route reuses the shared rate limiter', () => {
 
   it('rate-limits both by widget token and by token+IP', () => {
     const src = read('app/api/widget/chat/route.ts')
-    expect(src).toMatch(/rateLimitShared\(`widget-token:\$\{widgetToken\}`, TOKEN_MAX, TOKEN_WINDOW_MS\)/)
-    expect(src).toMatch(/rateLimitShared\(`widget-ip:\$\{widgetToken\}:\$\{ip\}`, IP_TOKEN_MAX, IP_TOKEN_WINDOW_MS\)/)
+    // Limits from lib/widget/usage-limits.ts (widget-usage-limits.test.ts covers the values).
+    expect(src).toMatch(/rateLimitShared\(`widget-token:\$\{widgetToken\}`, limits\.perWidgetPerMinute, MINUTE_MS\)/)
+    expect(src).toMatch(/rateLimitShared\(`widget-ip:\$\{widgetToken\}:\$\{ip\}`, limits\.perVisitorPerMinute, MINUTE_MS\)/)
   })
 
   it('also rate-limits by IP alone, ahead of the widgetToken-keyed checks', () => {
@@ -46,7 +47,7 @@ describe('widget chat route reuses the shared rate limiter', () => {
     // a token that was never validated — this is the only throttle standing
     // between that shape and an unmetered path into the runtime.
     const src = read('app/api/widget/chat/route.ts')
-    expect(src).toMatch(/rateLimitShared\(`widget-any:\$\{ip\}`, GLOBAL_IP_MAX, GLOBAL_IP_WINDOW_MS\)/)
+    expect(src).toMatch(/rateLimitShared\(`widget-any:\$\{ip\}`, limits\.perAddressPerMinute, MINUTE_MS\)/)
   })
 
   it('rejects with 429 when any limiter trips', () => {

@@ -30,6 +30,8 @@ vi.mock('@/lib/db/queries/widget-logos', () => ({
 vi.mock('@/lib/db/queries/widgets', () => ({
   setWidgetAppearance: h.setWidgetAppearance,
   getWidgetAppearance: h.getWidgetAppearance,
+  getWidgetDailyAnswerLimit: vi.fn(async () => null),
+  setWidgetDailyAnswerLimit: vi.fn(),
   ensureWidgetToken: h.ensureWidgetToken,
   getWidgetAllowedOrigins: h.getWidgetAllowedOrigins,
   getWidgetLeadCaptureMode: vi.fn(async () => 'on-failure'),

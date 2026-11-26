@@ -15,7 +15,10 @@ import {
   setWidgetSlug,
   getWidgetAppearance,
   setWidgetAppearance,
+  getWidgetDailyAnswerLimit,
+  setWidgetDailyAnswerLimit,
 } from '@/lib/db/queries/widgets'
+import { normalizeDailyLimit, widgetUsageLimits } from '@/lib/widget/usage-limits'
 import { orgHasFeature } from '@/lib/billing/entitlements-server'
 import { deleteWidgetLogo, getWidgetLogoVersion } from '@/lib/db/queries/widget-logos'
 import { widgetLogoPath } from '@/lib/widget/logo'
@@ -28,7 +31,7 @@ import {
   normalizeWidgetWelcome,
   type WidgetAppearance,
 } from '@/lib/widget/appearance'
-import { parseAllowedOrigins } from '@/lib/widget/origin'
+import { splitAllowedOrigins } from '@/lib/widget/origin'
 import { isWidgetLeadCaptureMode, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import {
   isWidgetAnswerScope,
@@ -61,6 +64,10 @@ interface WidgetTokenResult {
   customizationAvailable?: boolean
   /** The address of the workspace's logo, or null. Only given while the plan includes customization. */
   logoUrl?: string | null
+  /** The owner's own daily answer limit, or null when they set none. */
+  dailyAnswerLimit?: number | null
+  /** The most answers a day this instance allows any workspace. */
+  dailyAnswerCeiling?: number
   error?: string
 }
 
@@ -81,8 +88,11 @@ export async function getWidgetTokenAction(): Promise<WidgetTokenResult> {
   const appearance = await getWidgetAppearance(access.orgId)
   const customizationAvailable = await orgHasFeature(access.orgId, 'white_label_widget')
   const logo = customizationAvailable ? await getWidgetLogoVersion(access.orgId) : null
+  const dailyAnswerLimit = await getWidgetDailyAnswerLimit(access.orgId)
   return {
     token: info.token,
+    dailyAnswerLimit,
+    dailyAnswerCeiling: widgetUsageLimits().perWorkspacePerDay,
     appearance,
     customizationAvailable,
     logoUrl: logo ? widgetLogoPath(info.token, logo.etag) : null,
@@ -127,8 +137,15 @@ export async function saveWidgetOriginsAction(
 
   // Normalise before storing so the request-time check compares bare hostnames
   // against bare hostnames, and the user sees exactly what will be matched
-  // rather than whatever they pasted.
-  const origins = parseAllowedOrigins(raw)
+  // rather than whatever they pasted. An entry that cannot be used is reported
+  // and nothing is saved, so the owner never ends up with a list that quietly
+  // differs from what they typed.
+  const { origins, rejected } = splitAllowedOrigins(raw)
+  if (rejected.length > 0) {
+    return {
+      error: `${rejected.length === 1 ? 'This entry' : 'These entries'} can't be used: ${rejected.join(', ')}. Enter your site's own domain, such as example.com or acme.vercel.app. Each domain also covers its subdomains, so an ending many sites share, such as co.uk or vercel.app, is not accepted.`,
+    }
+  }
   await setWidgetAllowedOrigins(access.orgId, origins)
   return { origins }
 }
@@ -155,6 +172,34 @@ export async function saveWidgetLeadCaptureModeAction(
 
   await setWidgetLeadCaptureMode(access.orgId, mode)
   return { mode }
+}
+
+interface WidgetDailyLimitResult {
+  /** What was stored: the owner's limit, or null for none of their own. */
+  limit?: number | null
+  error?: string
+}
+
+/**
+ * Saves the owner's daily limit on widget answers, or clears it when the field
+ * is left empty. It decides when the live widget stops answering, so it gets
+ * the owner/admin gate like the other widget settings, and the value is
+ * validated here against the instance's ceiling rather than trusted from the form.
+ */
+export async function saveWidgetDailyLimitAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<WidgetDailyLimitResult> {
+  const access = await requireOrgAccess(WIDGET_ADMIN_ROLES)
+  if (!access.ok) return { error: access.error }
+
+  const raw = formData.get('limit')
+  if (raw !== null && typeof raw !== 'string') return { error: 'Invalid input' }
+  const result = normalizeDailyLimit(raw, widgetUsageLimits().perWorkspacePerDay)
+  if (!result.ok) return { error: result.error }
+
+  await setWidgetDailyAnswerLimit(access.orgId, result.value)
+  return { limit: result.value }
 }
 
 interface WidgetAnswerScopeResult {

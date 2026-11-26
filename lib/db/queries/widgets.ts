@@ -4,6 +4,7 @@ import { getDb } from '../drizzle'
 import { orgs, subscriptions } from '../schema'
 import { isUniqueViolation } from '@/lib/ingest/db-errors'
 import { validateWidgetSlug } from '@/lib/widget/slug'
+import { normalizeDailyLimit, widgetUsageLimits } from '@/lib/widget/usage-limits'
 import {
   SAFE_WIDGET_LEAD_CAPTURE_MODE_FALLBACK,
   isWidgetLeadCaptureMode,
@@ -33,6 +34,8 @@ export interface WidgetOrg {
   id: number
   name: string
   widget_token: string
+  /** The widget's public name, or null when it has none. */
+  widget_slug: string | null
   plan_id: string
   /** Raw newline-separated allowlist; empty/null means unrestricted. */
   widget_allowed_origins: string | null
@@ -42,6 +45,8 @@ export interface WidgetOrg {
   widget_answer_scope: WidgetAnswerScope
   /** The owner's note on tone and next steps, or null. */
   widget_guidance: string | null
+  /** The owner's own daily answer limit, or null for the instance's ceiling. See lib/widget/usage-limits.ts. */
+  widget_daily_answer_limit: number | null
   /** Chat title, welcome message and brand color the owner chose, each null for the default. */
   widget_appearance: WidgetAppearance
 }
@@ -66,10 +71,12 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       name: orgs.name,
       widget_token: orgs.widgetToken,
       widget_token_expires_at: orgs.widgetTokenExpiresAt,
+      widget_slug: orgs.widgetSlug,
       widget_allowed_origins: orgs.widgetAllowedOrigins,
       widget_lead_capture_mode: orgs.widgetLeadCaptureMode,
       widget_answer_scope: orgs.widgetAnswerScope,
       widget_guidance: orgs.widgetGuidance,
+      widget_daily_answer_limit: orgs.widgetDailyAnswerLimit,
       widget_title: orgs.widgetTitle,
       widget_welcome: orgs.widgetWelcome,
       widget_brand_color: orgs.widgetBrandColor,
@@ -95,6 +102,7 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
     id: row.id,
     name: row.name,
     widget_token: row.widget_token!,
+    widget_slug: row.widget_slug ?? null,
     plan_id: row.plan_id ?? 'none',
     widget_allowed_origins: row.widget_allowed_origins,
     // Defensive fallback for a row written before validation existed, or
@@ -118,6 +126,12 @@ async function findWidgetOrg(match: SQL): Promise<WidgetOrg | null> {
       const result = normalizeWidgetGuidance(row.widget_guidance)
       return result.ok ? result.value : null
     })(),
+    // A value that could not have been written by the setter (zero, negative)
+    // reads as no limit of the owner's own; the ceiling is applied by the caller.
+    widget_daily_answer_limit:
+      typeof row.widget_daily_answer_limit === 'number' && row.widget_daily_answer_limit >= 1
+        ? row.widget_daily_answer_limit
+        : null,
     // Same defensive read: anything that would not pass the write-side checks
     // is treated as not set, so a hand-edited row cannot put oversized text or
     // an unusable color into a live widget.
@@ -249,6 +263,27 @@ export async function setWidgetGuidance(orgId: number, guidance: string | null):
   const result = normalizeWidgetGuidance(guidance)
   if (!result.ok) throw new Error(result.error)
   await getDb().update(orgs).set({ widgetGuidance: result.value }).where(eq(orgs.id, orgId))
+}
+
+/** The owner's own daily answer limit for the settings UI, or null when they set none. */
+export async function getWidgetDailyAnswerLimit(orgId: number): Promise<number | null> {
+  const [row] = await getDb()
+    .select({ limit: orgs.widgetDailyAnswerLimit })
+    .from(orgs)
+    .where(eq(orgs.id, orgId))
+    .limit(1)
+  return typeof row?.limit === 'number' && row.limit >= 1 ? row.limit : null
+}
+
+/**
+ * Set the owner's daily answer limit, or clear it with null. Validated against
+ * the instance's ceiling here as well as in the action, so no caller can store
+ * a value the widget would then ignore.
+ */
+export async function setWidgetDailyAnswerLimit(orgId: number, limit: number | null): Promise<void> {
+  const result = normalizeDailyLimit(limit, widgetUsageLimits().perWorkspacePerDay)
+  if (!result.ok) throw new Error(result.error)
+  await getDb().update(orgs).set({ widgetDailyAnswerLimit: result.value }).where(eq(orgs.id, orgId))
 }
 
 /** What the owner has chosen for the widget's title, welcome message, brand color and starter questions. */

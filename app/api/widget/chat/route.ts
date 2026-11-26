@@ -31,6 +31,8 @@ import { logger } from '@/lib/logger'
 import { requestsHuman, isGreetingOrAck, type WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import { isValidWidgetToken, isValidVisitorId, isValidTurnId } from '@/lib/widget/request-validation'
 import { checkWidgetMessages, type WidgetChatMessage } from '@/lib/widget/chat-messages'
+import { dailyLimitAlert, effectiveDailyLimit, widgetUsageLimits } from '@/lib/widget/usage-limits'
+import { sendWidgetDailyLimitEmail } from '@/lib/email/send'
 import { setLeadSignal, setTurnAnswer } from '@/lib/widget/lead-signal-stash'
 import { buildWidgetInstructions, widgetContactBlock } from '@/lib/widget/instructions'
 import { CONTACT_LOOKUP_QUERY, contactArticlesForTurn, needsContactLookup } from '@/lib/widget/contact-context'
@@ -41,23 +43,14 @@ import type { WidgetAnswerScope } from '@/lib/widget/answer-scope'
 
 const MOD = 'api/widget/chat'
 
-// Per-IP+token: catches a single abusive visitor. Per-token: caps total cost
-// exposure for one org even if the IP rotates (proxies, mobile networks, botnets).
-const IP_TOKEN_MAX = 20
-const IP_TOKEN_WINDOW_MS = 60_000
-const TOKEN_MAX = 100
-const TOKEN_WINDOW_MS = 60_000
-
-// Applies to every request regardless of envelope method or shape — the
-// per-token limits below only run once a request is known to be a
-// well-formed agent/run call with a real widgetToken, so without this a
-// request shaped any other way (missing `method`, a non-"agent/run" method,
-// or simply malformed) would reach the CopilotKit runtime completely
-// unthrottled. Generous relative to IP_TOKEN_MAX since it also has to admit
-// this widget's own legitimate non-run traffic (e.g. the runtime's info
-// handshake).
-const GLOBAL_IP_MAX = 60
-const GLOBAL_IP_WINDOW_MS = 60_000
+// Request limits come from lib/widget/usage-limits.ts (defaults, overridable
+// per instance by env var). Per visitor address and widget: one heavy visitor.
+// Per widget: total load on one workspace even when addresses vary. Per
+// address, whatever the request's shape: applies before anything else, since
+// the per-widget limits only run once a request is a well-formed agent/run
+// call with a real widgetToken, and this widget's own non-run traffic (the
+// runtime's info handshake) has to fit under it too.
+const MINUTE_MS = 60_000
 
 // Each visitor message is capped well above normal chat length; the whole array is
 // capped so a caller can't send thousands of messages to inflate model cost.
@@ -73,11 +66,10 @@ const ALLOWED_ENVELOPE_METHODS = new Set(['agent/run', 'info'])
 
 // Per-org ceiling on widget answers, independent of the plan's monthly
 // allowance (soft-cap plans keep answering past it). Bounds how much model
-// spend any one org's public widget can trigger in a short period.
-const ORG_HOURLY_MAX = 500
-const ORG_HOURLY_WINDOW_MS = 60 * 60_000
-const ORG_DAILY_MAX = 3_000
-const ORG_DAILY_WINDOW_MS = 24 * 60 * 60_000
+// spend any one org's public widget can trigger in a short period. The daily
+// figure is the instance's ceiling, which the owner can lower in Settings.
+const ORG_HOURLY_WINDOW_MS = 60 * MINUTE_MS
+const ORG_DAILY_WINDOW_MS = 24 * 60 * MINUTE_MS
 
 // Bounds the whole conversation the client sends, including assistant replies
 // and tool results (knowledge-base search results), which have no per-message
@@ -253,7 +245,8 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   // simply doesn't look like a chat run reaches the CopilotKit runtime with
   // no rate limiting at all.
   const ip = clientIp(request)
-  const globalIpLimit = await rateLimitShared(`widget-any:${ip}`, GLOBAL_IP_MAX, GLOBAL_IP_WINDOW_MS)
+  const limits = widgetUsageLimits()
+  const globalIpLimit = await rateLimitShared(`widget-any:${ip}`, limits.perAddressPerMinute, MINUTE_MS)
   if (!globalIpLimit.ok) {
     return new Response('Too many requests', { status: 429 })
   }
@@ -314,8 +307,8 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
   // Independent counters, so checked concurrently — both are always charged,
   // which can only make the limits stricter, never looser.
   const [tokenLimit, ipLimit] = await Promise.all([
-    rateLimitShared(`widget-token:${widgetToken}`, TOKEN_MAX, TOKEN_WINDOW_MS),
-    rateLimitShared(`widget-ip:${widgetToken}:${ip}`, IP_TOKEN_MAX, IP_TOKEN_WINDOW_MS),
+    rateLimitShared(`widget-token:${widgetToken}`, limits.perWidgetPerMinute, MINUTE_MS),
+    rateLimitShared(`widget-ip:${widgetToken}:${ip}`, limits.perVisitorPerMinute, MINUTE_MS),
   ])
   if (!tokenLimit.ok) {
     return new Response('Too many requests', { status: 429 })
@@ -329,10 +322,17 @@ async function validateAndPrepare(request: Request): Promise<Response | Request>
     return new Response('Invalid widget token', { status: 404 })
   }
 
+  const dailyLimit = effectiveDailyLimit(org.widget_daily_answer_limit, limits.perWorkspacePerDay)
   const [orgHourly, orgDaily] = await Promise.all([
-    rateLimitShared(`widget-org-hour:${org.id}`, ORG_HOURLY_MAX, ORG_HOURLY_WINDOW_MS),
-    rateLimitShared(`widget-org-day:${org.id}`, ORG_DAILY_MAX, ORG_DAILY_WINDOW_MS),
+    rateLimitShared(`widget-org-hour:${org.id}`, limits.perWorkspacePerHour, ORG_HOURLY_WINDOW_MS),
+    rateLimitShared(`widget-org-day:${org.id}`, dailyLimit, ORG_DAILY_WINDOW_MS),
   ])
+  // Tell the owner as the day's count crosses 80% of the limit and when it
+  // reaches it, once each, in the background so the visitor never waits on it.
+  const dailyAlert = dailyLimitAlert(orgDaily.count, dailyLimit)
+  if (dailyAlert) {
+    void sendWidgetDailyLimitEmail({ orgId: org.id, orgName: org.name, kind: dailyAlert, limit: dailyLimit })
+  }
   if (!orgHourly.ok || !orgDaily.ok) {
     return new Response('Too many requests', { status: 429 })
   }

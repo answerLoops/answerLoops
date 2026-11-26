@@ -88,6 +88,7 @@ Before going live, confirm these in your production `.env`:
 - [ ] `OPENAI_API_KEY` is set, or every workspace saves its own key in Settings
 - [ ] `BOT_SECRET` is set, and `BOT_TARGET_URL` points at the app as the bot sees it
 - [ ] `TRUST_PROXY_HOPS` matches the number of proxies in front of the app (the default `1` fits a single proxy)
+- [ ] Behind Cloudflare, either `TRUST_PROXY_HOPS` counts Cloudflare as a hop, or the app is reachable only through Cloudflare and `TRUST_CLOUDFLARE_IP_HEADER=true` is set
 
 All of these are described in [Environment variables](/docs/self-hosting/environment-variables).
 

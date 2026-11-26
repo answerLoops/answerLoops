@@ -502,3 +502,64 @@ export async function notifyAdminsOauthDisconnected(orgId: number, provider: 'gm
     `,
   })
 }
+
+/**
+ * Tells a workspace's owners and admins that its website widget has used 80%
+ * of its daily answer limit, or all of it. Sent at most once each per day (see
+ * dailyLimitAlert in lib/widget/usage-limits.ts), so a busy day costs two
+ * emails at most. Best-effort: a failure is logged and never affects the
+ * visitor's answer.
+ */
+export async function sendWidgetDailyLimitEmail(input: {
+  orgId: number
+  orgName: string
+  kind: 'warning' | 'reached'
+  limit: number
+}): Promise<void> {
+  if (MOCK_EXTERNALS || !process.env.RESEND_API_KEY) return
+  try {
+    const to = await getAdminEmails(input.orgId)
+    if (to.length === 0) return
+
+    const base = appOrigin() ?? process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? 'http://localhost:3000'
+    const settingsUrl = `${base.replace(/\/+$/, '')}/settings?tab=widget`
+    const limit = input.limit.toLocaleString('en-US')
+    const reached = input.kind === 'reached'
+    const subject = reached
+      ? `Your website chat reached its daily limit of ${limit} answers`
+      : `Your website chat has used 80% of its daily limit`
+    // Written once and filled with the plain name for the text part and the
+    // escaped name for the HTML part.
+    const bodyFor = (name: string) =>
+      reached
+        ? `The chat widget for ${name} has answered ${limit} questions in the last day, its daily limit. Visitors are told the chat is busy until the day's count resets. If this traffic is expected, you can raise the limit in Settings.`
+        : `The chat widget for ${name} has used 80% of its daily limit of ${limit} answers. When it reaches the limit, visitors are told the chat is busy until the day's count resets. If this traffic is expected, you can raise the limit in Settings.`
+
+    const { error } = await client().emails.send({
+      from: from(),
+      to,
+      subject,
+      text: `${bodyFor(input.orgName)}\n\nWidget settings: ${settingsUrl}`,
+      html: `
+      <div style="${BASE_STYLE}">
+        <h2 style="font-size:18px;font-weight:600;margin-bottom:8px">${escapeHtml(subject)}</h2>
+        <p style="${MUTED};margin-bottom:16px">${bodyFor(escapeHtml(input.orgName))}</p>
+        <a href="${settingsUrl}"
+           style="display:inline-block;background:#4f46e5;color:#fff;font-size:14px;font-weight:500;padding:10px 20px;border-radius:8px;text-decoration:none">
+          Open widget settings
+        </a>
+      </div>
+    `,
+    })
+    if (error) {
+      logger.warn('Widget daily limit email was not accepted', { module: 'email', orgId: input.orgId, kind: input.kind })
+    }
+  } catch (err) {
+    logger.warn('Failed to send widget daily limit email', {
+      module: 'email',
+      orgId: input.orgId,
+      kind: input.kind,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+}

@@ -190,10 +190,12 @@ describe('widget token actions cannot act on a defaulted org', () => {
     // for an email; the public slug decides what name live embeds depend on;
     // the answer scope and the guidance note decide what the widget tells a
     // visitor in the workspace's name; saving and resetting the appearance
-    // change what every visitor sees. All eight are owner/admin. Reading the
+    // change what every visitor sees; the daily answer limit decides when the
+    // live widget stops answering. All nine are owner/admin. Reading the
     // token stays open to any member so they can still see the embed snippet.
     const gated = [...s.matchAll(/requireOrgAccess\(WIDGET_ADMIN_ROLES\)/g)]
-    expect(gated.length).toBe(8)
+    expect(gated.length).toBe(9)
+    expect(s).toMatch(/export async function saveWidgetDailyLimitAction[\s\S]*?requireOrgAccess\(WIDGET_ADMIN_ROLES\)/)
     const ungated = [...s.matchAll(/requireOrgAccess\(\)/g)]
     expect(ungated.length).toBe(1)
   })

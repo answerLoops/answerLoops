@@ -28,20 +28,24 @@ export function trustedProxyHops(): number {
 /**
  * Whether `cf-connecting-ip` may be believed for this request.
  *
+ * The header is only meaningful when the app can be reached solely through
+ * Cloudflare, which the app cannot tell on its own.
+ *
  * - ORIGIN_VERIFY_SECRET configured (any deployment): only when the request
  *   carries the matching edge header.
- * - Managed cloud production without the secret: never. The header is only
- *   meaningful when the origin is reachable solely through the edge, which
- *   cannot be established without the secret, so the `x-forwarded-for`
- *   policy below is used instead.
- * - Self-hosted and local development without the secret: accepted, so
- *   installs behind Cloudflare keep working with no extra setup.
+ * - Production without the secret: only on a self-hosted instance whose
+ *   operator has stated it is reachable solely through Cloudflare, with
+ *   TRUST_CLOUDFLARE_IP_HEADER=true. Never on the managed cloud. Otherwise the
+ *   `x-forwarded-for` policy below is used, which still gives each visitor
+ *   their own address behind Cloudflare when TRUST_PROXY_HOPS is right.
+ * - Local development: accepted, so trying the app behind a tunnel needs no
+ *   extra setup.
  */
 function trustsCloudflareHeader(req: { headers: Headers }): boolean {
   if (originVerifyConfigured()) return isOriginVerified(req)
-  const managedCloudProduction =
-    process.env.NODE_ENV === 'production' && process.env.DEPLOYMENT_MODE === 'cloud'
-  return !managedCloudProduction
+  if (process.env.NODE_ENV !== 'production') return true
+  if (process.env.DEPLOYMENT_MODE === 'cloud') return false
+  return process.env.TRUST_CLOUDFLARE_IP_HEADER?.trim().toLowerCase() === 'true'
 }
 
 /** Takes anything with headers — NextRequest and plain Request both qualify. */

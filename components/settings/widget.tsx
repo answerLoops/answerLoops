@@ -5,6 +5,7 @@ import { getWidgetTokenAction, regenerateWidgetTokenAction, saveWidgetOriginsAct
 import type { WidgetLeadCaptureMode } from '@/lib/widget/lead-capture'
 import type { WidgetAnswerScope } from '@/lib/widget/answer-scope'
 import { WidgetAnswersSettings } from '@/components/settings/widget-answers'
+import { WidgetDailyLimitSettings } from '@/components/settings/widget-daily-limit'
 import { WidgetAppearanceSettings } from '@/components/settings/widget-appearance'
 import { EMPTY_WIDGET_APPEARANCE, type WidgetAppearance } from '@/lib/widget/appearance'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,8 @@ export function WidgetSection() {
   const [leadCaptureMsg, setLeadCaptureMsg] = useState<string | null>(null)
   const [answerScope, setAnswerScope] = useState<WidgetAnswerScope>('knowledge-base-only')
   const [guidance, setGuidance] = useState<string | null>(null)
+  const [dailyLimit, setDailyLimit] = useState<number | null>(null)
+  const [dailyCeiling, setDailyCeiling] = useState<number | null>(null)
   const [appearance, setAppearance] = useState<WidgetAppearance>(EMPTY_WIDGET_APPEARANCE)
   const [customizationAvailable, setCustomizationAvailable] = useState(false)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
@@ -112,6 +115,8 @@ export function WidgetSection() {
           if (result.leadCaptureMode) setLeadCaptureMode(result.leadCaptureMode)
           if (result.answerScope) setAnswerScope(result.answerScope)
           setGuidance(result.guidance ?? null)
+          setDailyLimit(result.dailyAnswerLimit ?? null)
+          setDailyCeiling(result.dailyAnswerCeiling ?? null)
           setAppearance(result.appearance ?? EMPTY_WIDGET_APPEARANCE)
           setCustomizationAvailable(result.customizationAvailable === true)
           setLogoUrl(result.logoUrl ?? null)
@@ -280,8 +285,8 @@ export function WidgetSection() {
               <p className="text-xs font-medium text-gray-900">Allowed domains</p>
               <p className="text-[0.6875rem] text-gray-500">
                 The embed token is visible in your page source, so anyone can copy it. List the domains
-                you embed on — the widget will not load anywhere else. Subdomains are included. Your
-                answerLoops domain is always allowed, so the preview link works without setup.
+                you embed on — the widget will not load anywhere else. Subdomains are included. The
+                preview link works without setup while you are signed in.
               </p>
             </div>
             {canManage ? (
@@ -298,7 +303,7 @@ export function WidgetSection() {
                   <Button size="sm" onClick={saveOrigins} disabled={savingOrigins || origins === savedOrigins}>
                     {savingOrigins ? 'Saving…' : 'Save domains'}
                   </Button>
-                  {originsMsg && <p className="text-[0.6875rem] text-gray-600">{originsMsg}</p>}
+                  {originsMsg && <p className="min-w-0 basis-full break-words text-[0.6875rem] text-gray-600 [overflow-wrap:anywhere] sm:basis-auto">{originsMsg}</p>}
                 </div>
               </>
             ) : (
@@ -353,6 +358,16 @@ export function WidgetSection() {
             initialScope={answerScope}
             initialGuidance={guidance}
           />
+
+          {/* Keyed the same way, for the same reason. */}
+          {dailyCeiling !== null && (
+            <WidgetDailyLimitSettings
+              key={`${dailyLimit ?? ''}:${dailyCeiling}`}
+              canManage={canManage}
+              initialLimit={dailyLimit}
+              ceiling={dailyCeiling}
+            />
+          )}
 
           {/* Keyed the same way, for the same reason. */}
           <WidgetAppearanceSettings

@@ -21,12 +21,15 @@ vi.mock('next/navigation', () => ({
 const h = vi.hoisted(() => ({
   getWidgetTokenAction: vi.fn(),
   saveWidgetLeadCaptureModeAction: vi.fn(),
+  saveWidgetOriginsAction: vi.fn(),
+  saveWidgetDailyLimitAction: vi.fn(),
 }))
 
 vi.mock('@/lib/actions/widget', () => ({
   getWidgetTokenAction: h.getWidgetTokenAction,
   regenerateWidgetTokenAction: vi.fn(),
-  saveWidgetOriginsAction: vi.fn(),
+  saveWidgetOriginsAction: h.saveWidgetOriginsAction,
+  saveWidgetDailyLimitAction: h.saveWidgetDailyLimitAction,
   saveWidgetLeadCaptureModeAction: h.saveWidgetLeadCaptureModeAction,
   saveWidgetAnswerScopeAction: vi.fn(),
   saveWidgetGuidanceAction: vi.fn(),
@@ -166,5 +169,90 @@ describe('WidgetSection: widget token load failure', () => {
     // forever and the component stuck on "Loading…".
     await waitFor(() => expect(screen.getByText('Failed to load widget token.')).toBeTruthy())
     expect(screen.queryByText('Loading…')).toBeNull()
+  })
+})
+
+describe('WidgetSection: daily answer limit', () => {
+  it('does not render the limit control until the action reports a ceiling', async () => {
+    h.getWidgetTokenAction.mockResolvedValue({ ...baseToken, dailyAnswerLimit: 300 })
+    await renderWidgetSection()
+    expect(screen.queryByTestId('widget-daily-limit')).toBeNull()
+  })
+
+  it('renders the control for an admin, seeded with the saved limit and the ceiling', async () => {
+    h.getWidgetTokenAction.mockResolvedValue({ ...baseToken, dailyAnswerLimit: 300, dailyAnswerCeiling: 5000 })
+    await renderWidgetSection()
+    expect(screen.getByTestId('widget-daily-limit')).toBeTruthy()
+    const input = screen.getByLabelText('Daily answer limit') as HTMLInputElement
+    expect(input.value).toBe('300')
+    expect(input.placeholder).toBe('5,000')
+  })
+
+  it('treats a missing limit as none of their own, so the field starts empty', async () => {
+    h.getWidgetTokenAction.mockResolvedValue({ ...baseToken, dailyAnswerCeiling: 5000 })
+    await renderWidgetSection()
+    expect((screen.getByLabelText('Daily answer limit') as HTMLInputElement).value).toBe('')
+  })
+
+  it('saves through saveWidgetDailyLimitAction from inside the section', async () => {
+    h.getWidgetTokenAction.mockResolvedValue({ ...baseToken, dailyAnswerLimit: null, dailyAnswerCeiling: 5000 })
+    h.saveWidgetDailyLimitAction.mockResolvedValue({ limit: 40 })
+    await renderWidgetSection()
+
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText('Daily answer limit'), '40')
+    await user.click(screen.getByRole('button', { name: 'Save limit' }))
+
+    await waitFor(() => expect(screen.getByText('Saved.')).toBeTruthy())
+    const [, fd] = h.saveWidgetDailyLimitAction.mock.calls[0] as [unknown, FormData]
+    expect(fd.get('limit')).toBe('40')
+  })
+
+  it('shows a member the effective limit as read-only text', async () => {
+    h.getWidgetTokenAction.mockResolvedValue({
+      ...baseToken,
+      canManage: false,
+      dailyAnswerLimit: null,
+      dailyAnswerCeiling: 5000,
+    })
+    await renderWidgetSection()
+    expect(screen.queryByLabelText('Daily answer limit')).toBeNull()
+    expect(screen.getByText('5,000 answers a day. Only owners and admins can change this.')).toBeTruthy()
+  })
+})
+
+describe('WidgetSection: allowed domains save message', () => {
+  it('shows the action error when entries are refused, and keeps the typed list', async () => {
+    h.getWidgetTokenAction.mockResolvedValue({ ...baseToken, allowedOrigins: 'example.com' })
+    const refusal =
+      "This entry can't be used: not a domain!. Enter a site's domain, such as example.com; each domain also covers its subdomains."
+    h.saveWidgetOriginsAction.mockResolvedValue({ error: refusal })
+    await renderWidgetSection()
+
+    const textarea = screen.getByPlaceholderText(/example\.com/) as HTMLTextAreaElement
+    const user = userEvent.setup()
+    await user.clear(textarea)
+    await user.type(textarea, 'not a domain!')
+    await user.click(screen.getByRole('button', { name: 'Save domains' }))
+
+    await waitFor(() => expect(screen.getByText(refusal)).toBeTruthy())
+    const [, fd] = h.saveWidgetOriginsAction.mock.calls[0] as [unknown, FormData]
+    expect(fd.get('origins')).toBe('not a domain!')
+    expect(textarea.value).toBe('not a domain!')
+    expect((screen.getByRole('button', { name: 'Save domains' }) as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('reports how many domains were saved when the action accepts them', async () => {
+    h.getWidgetTokenAction.mockResolvedValue({ ...baseToken, allowedOrigins: '' })
+    h.saveWidgetOriginsAction.mockResolvedValue({ origins: ['example.com', 'docs.example.com'] })
+    await renderWidgetSection()
+
+    const textarea = screen.getByPlaceholderText(/example\.com/) as HTMLTextAreaElement
+    const user = userEvent.setup()
+    await user.type(textarea, 'https://example.com{enter}docs.example.com')
+    await user.click(screen.getByRole('button', { name: 'Save domains' }))
+
+    await waitFor(() => expect(screen.getByText('Saved. The widget will load on 2 domains.')).toBeTruthy())
+    expect(textarea.value).toBe('example.com\ndocs.example.com')
   })
 })

@@ -199,6 +199,7 @@ Where you paste the snippet depends on how your site is built. Find your platfor
 | Branding | **Settings → Widget** | Standard shows the answerLoops logo and a "Powered by answerLoops" line. Pro and Enterprise can remove the answerLoops branding; **Settings → Widget** shows an upgrade option when your plan does not include it. Self-hosted installs have it unlocked. |
 | Title, welcome message, logo and color | **Settings → Widget** | Pro and above. The title in the chat header, the first message visitors see, your logo and your brand color. See [Widget appearance](#widget-appearance). |
 | Allowed domains | **Settings → Widget** | The domains the widget may load on. Subdomains are included. |
+| Daily answer limit | **Settings → Widget** | The most questions the widget answers in a day, up to 3,000. Owners and admins get an email at 80% and when it is reached. See [Rate limits and input caps](#rate-limits-and-input-caps). |
 | Embed token | **Settings → Widget** | Issued per workspace and expires after 90 days; **Regenerate token** issues a new one. |
 | Public name | **Settings → Widget** | An optional stable name for the snippet, so regenerating the token never breaks a page. See [Rotating the token](#rotating-the-token). |
 | Ask for an email | **Settings → Widget** | When the widget collects a visitor's email address: only after an unanswered question (default), before the conversation starts, or never. |
@@ -249,10 +250,10 @@ example.com
 docs.example.com
 ```
 
-Subdomains of a listed domain are included, so `example.com` also covers `support.example.com`. Ports are ignored. Embeds on any other domain show a short message explaining that the widget is not enabled there, rather than failing silently.
+Subdomains of a listed domain are included, so `example.com` also covers `support.example.com`. Ports are ignored. Each entry must be a site's own domain. An ending that many unrelated sites share, such as `com`, `co.uk`, `github.io` or `vercel.app`, is refused when you save; list your site under it instead, such as `acme.vercel.app`. Embeds on any other domain show a short message explaining that the widget is not enabled there, rather than failing silently.
 
 <Callout type="warn" title="The widget will not load until you list a domain">
-  The widget will not load anywhere until you list at least one domain. Your own answerLoops domain is always permitted, so the **Preview widget** link in Settings works without any configuration.
+  The widget will not load anywhere until you list at least one domain. The **Preview widget** link in Settings works without any configuration while you are signed in to the workspace. On a self-hosted instance, the instance's own domain is also always permitted.
 </Callout>
 
 If the panel says it could not confirm which site it is embedded on, the page is blocking referrer information; loading the page over HTTPS usually resolves it.
@@ -414,7 +415,7 @@ The widget chat endpoint is public (no login required), so it enforces limits to
 
 - Up to **100 requests/minute per widget token** (caps total cost exposure for one site even if traffic comes from many IPs)
 - Up to **20 requests/minute per visitor** (token + IP combination)
-- Up to **500 answers/hour and 3,000 answers/day per workspace**, across all visitors and widget tokens
+- Up to **500 answers/hour and 3,000 answers/day per workspace**, across all visitors and widget tokens. You can set a lower daily limit under **Settings → Widget → Daily answer limit**; owners and admins are emailed when the day's answers reach 80% of the limit and again when they reach it
 - Loading the widget panel itself is limited to **30 loads/minute per visitor address** and **600/minute per widget token**
 - The display-settings lookup the snippet makes on every page load is limited to **120/minute per visitor address** and **1,200/minute per widget**
 - Each visitor message capped at **4,000 characters**; at most **50 messages** per request (the widget sends back the assistant's earlier replies, cards and search results with each message, which count toward the request size below rather than the per-message cap)
@@ -426,7 +427,7 @@ The on-failure check — a small lookup the widget makes right after a turn fini
 
 The answer-flag endpoint, used when a visitor flags an answer and adds a reason or an email, is limited at **60/minute per token** and **10/minute per visitor**, with a 32KB body cap. A workspace can collect at most **200 flags a day**. A flag can only be made on an answer the widget really gave, and the question and reply stored with it have emails, phone numbers and long digit runs replaced, and are cleared after 90 days.
 
-Requests over these limits return `429 Too Many Requests`. The chat and lead-capture limits are enforced across every running instance rather than per process, so those numbers are the real ceiling. The on-failure check is the one exception — see the single-instance callout under Lead capture above. None of these limits are currently configurable.
+Requests over these limits return `429 Too Many Requests`. The chat and lead-capture limits are enforced across every running instance rather than per process, so those numbers are the real ceiling. The on-failure check is the one exception — see the single-instance callout under Lead capture above. On the hosted service, the daily answer limit is the one you can change. A self-hosted instance can change the chat and panel-load limits with [environment variables](/docs/reference/environment-variables#website-widget-limits).
 
 Separately from rate limits, every widget answer counts toward your plan's monthly AI reply allowance. On Standard, the widget stops answering once the allowance is used up and resumes at the next calendar-month reset; Pro keeps answering and bills overage. See [Billing plans](/docs/reference/billing-plans).
 
