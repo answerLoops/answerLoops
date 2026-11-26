@@ -14,6 +14,8 @@ import {
   formatPrice,
   isCustomPriced,
   PLAN_COPY,
+  replyAllowanceLabel,
+  replyLimitNote,
 } from '@/lib/marketing/pricing'
 export function PricingToggle({ plans }: { plans: Plan[] }) {
   const [annual, setAnnual] = useState(true)
@@ -109,30 +111,14 @@ export function PricingToggle({ plans }: { plans: Plan[] }) {
                 </>
               )}
               <p className="mt-5 border-t border-slate-200 pt-5 font-semibold">
-                {plan.deflectionsPerMonth === null
-                  ? 'Unlimited AI replies'
-                  : `${plan.deflectionsPerMonth.toLocaleString(
-                      'en-US',
-                    )} estimated AI replies/month`}
+                {replyAllowanceLabel(plan)}
               </p>
               {/* Space is only reserved while the cards sit side by side, so
                   their buttons line up: two lines at lg, where the Standard
                   line wraps, and one from xl up where every line fits. Stacked
                   cards need none. */}
               <p className="mt-1 text-sm text-slate-600 lg:min-h-12 xl:min-h-6">
-                {plan.overageRatePer100Cents !== null
-                  ? `Then ${formatPrice(
-                      plan.overageRatePer100Cents,
-                    )} per additional 100 replies.`
-                  : plan.deflectionsPerMonth === null
-                  ? 'No overage charges.'
-                  : nextPlan
-                  ? `Replies pause at the limit. ${nextPlan.name} includes ${
-                      nextPlan.deflectionsPerMonth === null
-                        ? 'unlimited'
-                        : nextPlan.deflectionsPerMonth.toLocaleString('en-US')
-                    }.`
-                  : 'Replies pause at the limit.'}
+                {replyLimitNote(plan, nextPlan)}
               </p>
               {customPriced ? (
                 /* No self-serve checkout for a custom-priced plan; the one
