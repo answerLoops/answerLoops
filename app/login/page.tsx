@@ -28,7 +28,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   AccessDenied:
     'We could not sign you in with this account. Try again or contact hello@answerloops.com for help.',
   EmailNotVerified:
-    'Your Google account has not verified this email address yet. Verify it with Google, then try again.',
+    'Your account has not verified this email address yet. Verify it with your sign-in provider, then try again.',
   Default: 'Something went wrong. Try again.',
 }
 
@@ -41,7 +41,7 @@ interface Props {
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { error, code, callbackUrl } = await searchParams
+  const { error, code } = await searchParams
   const promoCode = parsePromoCode(code)
 
   if (await auth()) {

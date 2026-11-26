@@ -44,9 +44,9 @@ database. When you finish, the app is at <http://localhost:3000>.
 - **Node.js 22 and pnpm 11 or newer**, to run the app and the tests. If you use
   nvm, `nvm use` picks the right Node version from [`.nvmrc`](./.nvmrc). You can
   skip these only if you run everything in Docker (see Step 3).
-- **A Google OAuth client**, because Google is the only way to sign in.
+- **A Google or GitHub OAuth client**, to sign in.
   [This guide](https://answerloops.com/docs/self-hosting/oauth) shows how to
-  create one.
+  create either.
 - **An OpenAI API key**, optional. You only need it to see AI answers. The app
   starts and the tests run without one. To use another provider or a local
   model, see the [self-hosting FAQ](https://answerloops.com/docs/self-hosting/faq).

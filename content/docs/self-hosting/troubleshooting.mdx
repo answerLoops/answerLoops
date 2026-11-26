@@ -19,8 +19,8 @@ If you run the published-image or from-source stack, add `-f docker-compose.ghcr
 |---|---|---|
 | App will not start | Missing setting, or the database is not ready | [Startup and database](#startup-and-database) |
 | `ECONNREFUSED` on port 5432 | Wrong database host, or Postgres still starting | [Startup and database](#startup-and-database) |
-| `redirect_uri_mismatch` | Google redirect URI does not match `AUTH_URL` | [Sign-in and access](#sign-in-and-access) |
-| No sign-in button | Google credentials not set | [Sign-in and access](#sign-in-and-access) |
+| `redirect_uri_mismatch` | Provider redirect URI does not match `AUTH_URL` | [Sign-in and access](#sign-in-and-access) |
+| No sign-in button | OAuth credentials not set | [Sign-in and access](#sign-in-and-access) |
 | No AI draft on a ticket | No usable AI key | [Answers and AI](#answers-and-ai) |
 | Bot connects but never replies | Automatic Deflections is off | [Channels](#channels) |
 | Knowledge-base syncs never finish | Bot service is not running | [Channels](#channels) |
@@ -74,17 +74,18 @@ If you run the published-image or from-source stack, add `-f docker-compose.ghcr
 ## Sign-in and access
 
 <Accordions>
-  <Accordion title="Google shows redirect_uri_mismatch">
-    The redirect URI registered in Google does not match what your instance sends. Sign-in is Google only, so there is a single address to fix:
+  <Accordion title="Provider shows redirect_uri_mismatch">
+    The redirect URI registered in Google or GitHub does not match what your instance sends. Ensure the callback URL in your provider settings matches your deployment:
 
     ```
     https://<your-domain>/api/auth/callback/google
+    https://<your-domain>/api/auth/callback/github
     ```
 
-    Add it exactly as shown under your OAuth client's authorized redirect URIs. Then make sure `AUTH_URL` in `.env` matches your public address, including `https://`, with no trailing slash. See [OAuth setup](/docs/self-hosting/oauth).
+    Add the matching address under your OAuth client's authorized redirect URIs. Then make sure `AUTH_URL` in `.env` matches your public address, including `https://`, with no trailing slash. See [OAuth setup](/docs/self-hosting/oauth).
   </Accordion>
   <Accordion title="The sign-in page has no button">
-    The page only offers a method whose credentials are set. Set `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` in `.env` and restart.
+    The page only offers a method whose credentials are set. Set Google credentials (`AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`) or GitHub credentials (`AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET`) in `.env` and restart.
   </Accordion>
 </Accordions>
 

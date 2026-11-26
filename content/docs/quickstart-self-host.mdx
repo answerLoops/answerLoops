@@ -59,9 +59,12 @@ AUTH_URL=http://localhost:3000
 AUTH_SECRET=<run: openssl rand -hex 32>
 ENCRYPTION_KEY=<run: openssl rand -hex 32>
 
-# Google sign-in (the sign-in page shows no button without these)
+# Sign-in (Google or GitHub; the sign-in page shows no button without credentials)
 AUTH_GOOGLE_ID=<your-google-oauth-client-id>
 AUTH_GOOGLE_SECRET=<your-google-oauth-client-secret>
+# Or GitHub sign-in:
+# AUTH_GITHUB_ID=<your-github-oauth-client-id>
+# AUTH_GITHUB_SECRET=<your-github-oauth-client-secret>
 
 # AI (required for deflection and KB search)
 OPENAI_API_KEY=<your-openai-api-key>

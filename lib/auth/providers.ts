@@ -7,7 +7,7 @@
  * means adding one entry here; the page and the sign-in action both read this
  * list rather than naming providers themselves.
  */
-export type SignInProviderId = 'google'
+export type SignInProviderId = 'google' | 'github'
 
 export interface SignInProvider {
   id: SignInProviderId
@@ -19,9 +19,18 @@ interface ProviderDefinition extends SignInProvider {
   requiredEnv: readonly string[]
 }
 
-const PROVIDERS: readonly ProviderDefinition[] = [
-  { id: 'google', label: 'Google', requiredEnv: ['AUTH_GOOGLE_ID', 'AUTH_GOOGLE_SECRET'] },
-]
+const PROVIDER_DEFINITIONS = {
+  google: { label: 'Google', requiredEnv: ['AUTH_GOOGLE_ID', 'AUTH_GOOGLE_SECRET'] },
+  github: { label: 'GitHub', requiredEnv: ['AUTH_GITHUB_ID', 'AUTH_GITHUB_SECRET'] },
+} as const satisfies Record<SignInProviderId, { label: string; requiredEnv: readonly string[] }>
+
+const PROVIDERS: readonly ProviderDefinition[] = (
+  Object.keys(PROVIDER_DEFINITIONS) as SignInProviderId[]
+).map((id) => ({
+  id,
+  label: PROVIDER_DEFINITIONS[id].label,
+  requiredEnv: PROVIDER_DEFINITIONS[id].requiredEnv,
+}))
 
 export function configuredSignInProviders(
   env: Record<string, string | undefined> = process.env,
@@ -39,8 +48,9 @@ export function configuredSignInProviders(
  * through.
  */
 export function parseSignInProvider(
-  value: string | null | undefined,
+  value: unknown,
   env: Record<string, string | undefined> = process.env,
 ): SignInProviderId | null {
+  if (typeof value !== 'string') return null
   return configuredSignInProviders(env).find((p) => p.id === value)?.id ?? null
 }

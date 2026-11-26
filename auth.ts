@@ -1,7 +1,10 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
+import GitHub from 'next-auth/providers/github'
+import { fetchGitHubProfile } from '@/lib/auth/github'
+import { isAllowedSignIn } from '@/lib/auth/signin'
 import { NextResponse } from 'next/server'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { getDb } from '@/lib/db/drizzle'
 import { users, memberships, orgs } from '@/lib/db/schema'
 import { DEFAULT_ORG_ID } from '@/lib/db/schema'
@@ -131,6 +134,12 @@ const useSecureCookies = process.env.NODE_ENV === 'production'
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   providers: [
     Google,
+    GitHub({
+      userinfo: {
+        url: 'https://api.github.com/user',
+        request: (context: { tokens: { access_token?: string }; provider: { userinfo?: { url?: string } } }) => fetchGitHubProfile(context),
+      },
+    }),
   ],
 
   pages: {
@@ -272,11 +281,7 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
     // person by email identity, so an unverified address would let someone claim
     // a mailbox that is not theirs, or spend a stranger's trial on it.
     async signIn({ user, account, profile }) {
-      if (!user.email || !account) return false
-      if (account.provider === 'google' && (profile as { email_verified?: boolean } | undefined)?.email_verified !== true) {
-        return '/login?error=EmailNotVerified'
-      }
-      return true
+      return isAllowedSignIn({ user, account, profile })
     },
 
     async authorized({ request, auth: session }) {
