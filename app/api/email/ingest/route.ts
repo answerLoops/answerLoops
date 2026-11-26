@@ -39,14 +39,25 @@ const MAX_BODY_BYTES = 2_000_000
 const REPLY_THROTTLE_WINDOW_MS = 60 * 60 * 1000
 const REPLY_THROTTLE_MAX = 5
 
+// Removes a trailing "On ... wrote:" block (and everything after its start).
+// Runs in a single linear pass, so large inputs cannot cause excessive CPU use.
+function stripTrailingWroteBlock(text: string): string {
+  let end = text.length
+  while (end > 0 && /\s/.test(text[end - 1])) end--
+  const wroteStart = end - 6
+  if (wroteStart < 0 || text.slice(wroteStart, end) !== 'wrote:') return text
+  const start = text.indexOf('\nOn ')
+  if (start === -1 || wroteStart < start + 5) return text
+  return text.slice(0, start)
+}
+
 // Strips quoted reply chains ("On ... wrote:") from email body text.
 function stripQuotedReplies(text: string): string {
-  return text
+  const withoutQuotes = text
     .split('\n')
     .filter((line) => !line.startsWith('>'))
     .join('\n')
-    .replace(/\nOn [\s\S]+?wrote:\s*$/, '')
-    .trim()
+  return stripTrailingWroteBlock(withoutQuotes).trim()
 }
 
 // Normalise sender: "Jane Smith <jane@example.com>" → { name, email }
