@@ -431,7 +431,6 @@ const TelegramIntegrationSchema = z.object({
   chatIds: z.string().optional(),
   escalationUsername: z.string().optional(),
   confidenceThreshold: z.coerce.number().min(0).max(1).optional(),
-  autoDeflectEnabled: z.coerce.boolean().optional(),
 })
 
 export async function saveTelegramIntegrationAction(
@@ -445,7 +444,9 @@ export async function saveTelegramIntegrationAction(
   const parsed = TelegramIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { botToken, chatIds, escalationUsername, confidenceThreshold, autoDeflectEnabled } = parsed.data
+  const { botToken, chatIds, escalationUsername, confidenceThreshold } = parsed.data
+  // An unchecked switch submits nothing, so its absence means off.
+  const autoDeflectEnabled = formData.get('autoDeflectEnabled') === 'on'
   const chatIdList = (chatIds ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -545,7 +546,6 @@ const DiscourseIntegrationSchema = z.object({
   categoryIds: z.string().optional(),
   escalationUser: z.string().optional(),
   confidenceThreshold: z.coerce.number().min(0).max(1).optional(),
-  autoDeflectEnabled: z.coerce.boolean().optional(),
 })
 
 export async function saveDiscourseIntegrationAction(
@@ -562,7 +562,9 @@ export async function saveDiscourseIntegrationAction(
   const parsed = DiscourseIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { siteUrl, apiKey, botUsername, categoryIds, escalationUser, confidenceThreshold, autoDeflectEnabled } = parsed.data
+  const { siteUrl, apiKey, botUsername, categoryIds, escalationUser, confidenceThreshold } = parsed.data
+  // An unchecked switch submits nothing, so its absence means off.
+  const autoDeflectEnabled = formData.get('autoDeflectEnabled') === 'on'
   const categoryList = (categoryIds ?? '')
     .split(',')
     .map((s) => s.trim())
@@ -733,7 +735,6 @@ const EmailIntegrationSchema = z.object({
   allowedSenders: z.string().optional(),
   escalationEmail: z.string().optional(),
   confidenceThreshold: z.coerce.number().min(0).max(1).optional(),
-  autoDeflectEnabled: z.coerce.boolean().optional(),
 })
 
 export async function saveEmailIntegrationAction(
@@ -747,7 +748,9 @@ export async function saveEmailIntegrationAction(
   const parsed = EmailIntegrationSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { error: parsed.error.issues[0].message }
 
-  const { allowedSenders, escalationEmail, confidenceThreshold, autoDeflectEnabled } = parsed.data
+  const { allowedSenders, escalationEmail, confidenceThreshold } = parsed.data
+  // An unchecked switch submits nothing, so its absence means off.
+  const autoDeflectEnabled = formData.get('autoDeflectEnabled') === 'on'
 
   const senderList = (allowedSenders ?? '')
     .split(',')
