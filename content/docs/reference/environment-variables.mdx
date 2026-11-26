@@ -80,6 +80,7 @@ Optional, and mainly for self-hosted instances. Each sets one of the website wid
 | `APP_URL` | Optional. Public origin of the app, read at request time (changing it needs a restart, not a rebuild). Used, for example, as the server address advertised in the OpenAPI spec. Falls back to `NEXT_PUBLIC_APP_URL` |
 | `NEXT_PUBLIC_APP_URL` | Optional. Base URL of a dedicated dashboard subdomain (e.g. `https://app.example.com`) on the same deployment as your root domain. When set, marketing-page links go there instead of a relative `/dashboard` path. Most deployments serve everything from one domain and leave it unset |
 | `AUTH_COOKIE_DOMAIN` | Optional. Shares the session cookie across subdomains of your apex (e.g. `.example.com`). Required alongside `NEXT_PUBLIC_APP_URL`, because a session cookie is host-only by default |
+| `AUTH_SESSION_IDLE_HOURS` | Optional. Hours without activity before a dashboard sign-in ends, a whole number from 1 to 720. Defaults to `8`. Activity is clicking, typing or scrolling in any open dashboard tab, so a tab left open on screen still signs out. A missing or out-of-range value uses the default |
 
 ## AI providers
 

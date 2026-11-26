@@ -37,11 +37,12 @@ interface Props {
     error?: string
     callbackUrl?: string
     code?: string
+    signedOut?: string
   }>
 }
 
 export default async function LoginPage({ searchParams }: Props) {
-  const { error, code, callbackUrl } = await searchParams
+  const { error, code, callbackUrl, signedOut } = await searchParams
   const promoCode = parsePromoCode(code)
 
   if (await auth()) {
@@ -55,6 +56,8 @@ export default async function LoginPage({ searchParams }: Props) {
   const errorMessage = error
     ? ERROR_MESSAGES[error] ?? ERROR_MESSAGES.Default
     : null
+  // Set by the dashboard's idle timer (components/auth/idle-sign-out.tsx).
+  const idleSignOut = !errorMessage && signedOut === 'idle'
 
   const providers = configuredSignInProviders()
   const startingPrice = ORDERED_PLANS[0].priceMonthly / 100
@@ -135,6 +138,15 @@ export default async function LoginPage({ searchParams }: Props) {
             <p className="mt-1.5 text-sm text-slate-500">
               {`New here? Your ${TRIAL_DAYS}-day free trial starts automatically, with no card required. Already have an account? You'll go straight back in.`}
             </p>
+
+            {idleSignOut && (
+              <div
+                role="status"
+                className="mt-5 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+              >
+                You were signed out after a period of inactivity. Sign in again to continue.
+              </div>
+            )}
 
             {errorMessage && (
               <div
