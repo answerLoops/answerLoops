@@ -247,8 +247,14 @@ describe('migration 0091 check constraints', () => {
 describe('migration ordering', () => {
   const files = fs.readdirSync(path.join(ROOT, 'drizzle')).filter((f) => f.endsWith('.sql'))
 
-  it('sorts after every other migration and its number is not reused', () => {
-    expect([...files].sort().at(-1)).toBe(path.basename(MIGRATION))
+  // Later migrations come after this one, so only its own place is pinned:
+  // straight after the 0090 migrations, with its number unused by any other
+  // file.
+  it('runs right after the 0090 migrations and its number is not reused', () => {
+    const ordered = sorted(files)
+    const index = ordered.indexOf(path.basename(MIGRATION))
+    expect(index).toBeGreaterThan(0)
+    expect(ordered[index - 1].startsWith('0090_')).toBe(true)
     expect(files.filter((f) => f.startsWith('0091_'))).toEqual([path.basename(MIGRATION)])
   })
 
