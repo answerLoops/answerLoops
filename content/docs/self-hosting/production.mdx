@@ -152,6 +152,8 @@ If you would rather not manage a server, reverse proxy, and certificates, deploy
 - **App:** starts with `pnpm start` (the Dockerfile default) and uses `/api/health` as its deploy health check.
 - **Bot:** starts with `pnpm bot:start`, the same image started as the bot. It has no web port, so it has no health check.
 
+Inside the image, `pnpm start` runs the Next.js standalone server (`node server.js`) and `pnpm bot:start` runs the bot from a single pre-built file (`node bot.cjs`). The image carries only what those two need at runtime: no source tree, no development dependencies and no build tools. The app listens on every interface at `PORT`, which defaults to `3000`, so a platform that sets its own `PORT` works without changes.
+
 Railway does not read this file when it deploys. Settings reach Railway only when you run `railway config apply` (Railway CLI 5.42.1 or newer, logged in and linked to your project), so preview any change with `railway config plan` first. Environment variables stay in Railway and are never written to the file. If a service still has a "Config file path" set in the Railway dashboard, clear it before you apply, because a service cannot be managed by both systems.
 
 The platform provides HTTPS, so you skip the proxy section above. You still set the same environment variables, and you need a managed Postgres with `pgvector`. Set `BOT_TARGET_URL` on the bot to the app's public address, since the two run as separate services.

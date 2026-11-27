@@ -1,0 +1,9 @@
+{
+  "name": "answerloops-runtime",
+  "private": true,
+  "description": "Copied into the production image as /app/package.json. Keeps `pnpm start` and `pnpm bot:start` working as start commands against the standalone server and the bundled bot. Not used outside the image.",
+  "scripts": {
+    "start": "node server.js",
+    "bot:start": "node bot.cjs"
+  }
+}

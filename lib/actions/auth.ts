@@ -65,3 +65,14 @@ export async function logoutAndReturnTo(callbackUrl: string): Promise<void> {
     : '/login'
   await signOut({ redirectTo: target })
 }
+
+// Called by the dashboard's idle timer (components/auth/idle-sign-out.tsx) once
+// a signed-in tab has gone AUTH_SESSION_IDLE_HOURS with no activity. The login
+// page says why, and signing back in returns to the page that was open.
+export async function logoutAfterIdle(returnTo: string): Promise<void> {
+  const params = new URLSearchParams({ signedOut: 'idle' })
+  if (returnTo.startsWith('/') && !returnTo.startsWith('//') && !returnTo.startsWith('/\\')) {
+    params.set('callbackUrl', returnTo)
+  }
+  await signOut({ redirectTo: `/login?${params.toString()}` })
+}

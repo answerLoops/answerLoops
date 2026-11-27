@@ -124,7 +124,26 @@ const legacyDocPageIds = collectDocPageIds(docsNav);
 
 const withMDX = createMDX();
 
+// The Docker build sets NEXT_OUTPUT_STANDALONE=1 so the production image ships
+// .next/standalone (server.js plus only the traced node_modules files) instead
+// of the full dependency tree. Left off elsewhere so `next start` keeps working
+// for local runs and the e2e server.
+const standalone = process.env.NEXT_OUTPUT_STANDALONE === '1'
+
 const nextConfig: NextConfig = {
+  ...(standalone ? { output: 'standalone' as const } : {}),
+  // Files loaded by a path built at runtime, which file tracing cannot follow.
+  // Without them the standalone image is missing them:
+  //  - pdf-parse's worker: lib/ingest/file-parsers.ts points pdf-parse at it,
+  //    and uploaded PDFs cannot be parsed without it.
+  //  - Sentry's vendored ESM hook: registered as a loader hook at startup;
+  //    without it Sentry logs a warning and records no channel-based spans.
+  outputFileTracingIncludes: {
+    '/*': [
+      './node_modules/pdf-parse/dist/worker/**/*',
+      './node_modules/.pnpm/@sentry+server-runtime-injection@*/node_modules/@sentry/server-runtime-injection/build/esm/**/*.js',
+    ],
+  },
   async headers() {
     return [
       // Everything except /widget/* and the homepage keeps the frame-blocking
