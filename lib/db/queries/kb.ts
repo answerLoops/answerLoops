@@ -1,4 +1,5 @@
-import { eq, and, desc, sql, or, ilike, isNotNull, cosineDistance } from 'drizzle-orm'
+import { eq, and, desc, sql, or, ilike, isNotNull, ne, cosineDistance } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 import { getDb } from '../drizzle'
 import { kbArticles, tickets, users } from '../schema'
 import { assertWithinArticleCap } from './kb-article-cap'
@@ -8,7 +9,7 @@ import { dropExactDuplicates } from '@/lib/kb/duplicates'
 import { DuplicateArticleError, findExactDuplicate } from './kb-duplicates'
 import { toVerification, VERIFICATION_NOTE_MAX } from '@/lib/kb/verification'
 import { relatedDocsChange } from '@/lib/kb/docs-change'
-import type { KBArticle, KBSearchResult, PriorAnswer, WidgetKBContext } from '@/types'
+import type { ArticleReview, ArticleReviewState, KBArticle, KBSearchResult, PriorAnswer, WidgetKBContext } from '@/types'
 import { KB_MATCH_THRESHOLD, KB_NEAR_MISS_FLOOR, chooseWidgetContext } from '@/lib/kb/widget-context'
 
 // Defined with the widget's choice of articles (lib/kb/widget-context.ts);
@@ -167,6 +168,12 @@ export async function getArticleBySourceTicket(ticketId: number, orgId: number):
   return row ? toArticle(row) : null
 }
 
+// The person who set an article's review state, and the article that replaced
+// it, joined under their own names so they do not collide with the verifier
+// and the article itself.
+const reviewer = alias(users, 'reviewer')
+const replacementArticle = alias(kbArticles, 'replacement_article')
+
 export async function listArticles(publishedOnly = true, orgId: number): Promise<KBArticle[]> {
   const conditions = publishedOnly
     ? and(eq(kbArticles.published, 1), eq(kbArticles.orgId, orgId))
@@ -180,10 +187,18 @@ export async function listArticles(publishedOnly = true, orgId: number): Promise
       sourceTicketNumber: tickets.orgTicketNumber,
       verifierName: users.name,
       verifierEmail: users.email,
+      reviewerName: reviewer.name,
+      reviewerEmail: reviewer.email,
+      replacementQuestion: replacementArticle.question,
     })
     .from(kbArticles)
     .leftJoin(tickets, eq(tickets.id, kbArticles.sourceTicketId))
     .leftJoin(users, eq(users.id, kbArticles.verifiedBy))
+    .leftJoin(reviewer, eq(reviewer.id, kbArticles.reviewStateBy))
+    .leftJoin(
+      replacementArticle,
+      and(eq(replacementArticle.id, kbArticles.supersededByArticleId), eq(replacementArticle.orgId, orgId))
+    )
     .where(conditions)
     .orderBy(desc(kbArticles.updatedAt))
   return rows.map((r) => ({
@@ -191,7 +206,31 @@ export async function listArticles(publishedOnly = true, orgId: number): Promise
     source_ticket_number: r.sourceTicketNumber ?? null,
     verification: toVerification(r.article, r.verifierName ?? r.verifierEmail ?? null),
     related_docs_changed: relatedDocsChange(r.article),
+    review: toReview(r.article, r.reviewerName ?? r.reviewerEmail ?? null, r.replacementQuestion ?? null),
   }))
+}
+
+/** The review facts the dashboard shows for one article. */
+function toReview(
+  row: typeof kbArticles.$inferSelect,
+  reviewerName: string | null,
+  replacementQuestion: string | null
+): ArticleReview {
+  const state = row.reviewState as ArticleReviewState
+  let replacement: ArticleReview['replacement'] = null
+  if (state === 'superseded') {
+    if (row.supersededByUrl) replacement = { kind: 'url', url: row.supersededByUrl }
+    else if (row.supersededByArticleId != null && replacementQuestion != null) {
+      replacement = { kind: 'article', article_id: row.supersededByArticleId, question: replacementQuestion }
+    }
+  }
+  return {
+    state,
+    at: row.reviewStateAt ?? null,
+    by_name: row.reviewStateBy == null ? null : reviewerName,
+    note: state === 'needs_review' ? (row.reviewNote ?? null) : null,
+    replacement,
+  }
 }
 
 /**
@@ -224,6 +263,25 @@ export async function verifyArticle(
       .update(kbArticles)
       .set({ verifiedAt, verifiedBy: input.userId, verifiedContentHash: hash, verificationNote: note })
       .where(and(eq(kbArticles.id, input.articleId), eq(kbArticles.orgId, orgId)))
+    // Checking the answer is what a needs-review flag asks for, so verifying
+    // clears it, with its own history entry ahead of the verification.
+    const cleared = await tx
+      .update(kbArticles)
+      .set({ reviewState: 'current', reviewStateAt: verifiedAt, reviewStateBy: input.userId, reviewNote: null })
+      .where(
+        and(eq(kbArticles.id, input.articleId), eq(kbArticles.orgId, orgId), eq(kbArticles.reviewState, 'needs_review'))
+      )
+      .returning({ id: kbArticles.id })
+    if (cleared.length > 0) {
+      await recordArticleEvent(tx, {
+        orgId,
+        articleId: input.articleId,
+        type: 'review_flag_cleared',
+        actorUserId: input.userId,
+        origin: 'manual',
+        contentHash: hash,
+      })
+    }
     await recordArticleEvent(tx, {
       orgId,
       articleId: input.articleId,
@@ -295,6 +353,10 @@ const DUPLICATE_OVERFETCH = 3
 
 // `minScore` defaults to the match bar every answer path uses. Only the
 // website widget asks for less, to find near misses (getWidgetKBContext).
+//
+// Superseded articles are never used for answers, so they are always left out.
+// The dashboard search goes through here too and shows what answers would draw
+// on; the article list's Superseded filter is where the team finds them.
 export async function searchArticles(
   vector: number[],
   limit = 10,
@@ -325,6 +387,7 @@ export async function searchArticles(
         and(
           eq(kbArticles.published, 1),
           eq(kbArticles.orgId, orgId),
+          ne(kbArticles.reviewState, 'superseded'),
           isNotNull(kbArticles.embeddingVec),
           // Only rows on the workspace's pinned embedding model: a row from any
           // other model is skipped until the re-embed job moves it, so two
@@ -351,6 +414,7 @@ export async function searchArticles(
   )
 }
 
+/** Literal text search. Leaves out superseded articles the same way searchArticles does. */
 export async function textSearchArticles(query: string, limit = 10, orgId: number): Promise<KBArticle[]> {
   const pattern = `%${escapeLikePattern(query)}%`
   const rows = await getDb()
@@ -360,6 +424,7 @@ export async function textSearchArticles(query: string, limit = 10, orgId: numbe
       and(
         eq(kbArticles.published, 1),
         eq(kbArticles.orgId, orgId),
+        ne(kbArticles.reviewState, 'superseded'),
         or(ilike(kbArticles.question, pattern), ilike(kbArticles.answer, pattern))
       )
     )

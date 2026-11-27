@@ -1,10 +1,10 @@
-import { and, desc, eq, inArray, or } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNotNull, or, sql } from 'drizzle-orm'
 import { getDb } from '../drizzle'
 import { kbArticleEvents, kbArticles, kbReviewItems, tickets, users } from '../schema'
 import type { KBArticleEvent, KBArticleEventOrigin, KBArticleEventType, KBArticleHistoryEntry } from '@/types'
 
-// Either a database or an open transaction; both can insert.
-type Executor = Pick<ReturnType<typeof getDb>, 'insert'>
+// Either a database or an open transaction; both can insert and update.
+type Executor = Pick<ReturnType<typeof getDb>, 'insert' | 'update'>
 
 export interface ArticleEventInput {
   orgId: number
@@ -24,6 +24,19 @@ export interface ArticleEventInput {
  * leaves a history entry behind. Events are never updated or deleted here.
  */
 export async function recordArticleEvent(tx: Executor, input: ArticleEventInput): Promise<void> {
+  await insertEvent(tx, input)
+  if (input.type === 'edited' && input.articleId != null && input.contentHash) {
+    await flagVerifiedArticleAfterEdit(tx, {
+      orgId: input.orgId,
+      articleId: input.articleId,
+      contentHash: input.contentHash,
+      actorUserId: input.actorUserId ?? null,
+      origin: input.origin,
+    })
+  }
+}
+
+async function insertEvent(tx: Pick<Executor, 'insert'>, input: ArticleEventInput): Promise<void> {
   await tx.insert(kbArticleEvents).values({
     orgId: input.orgId,
     articleId: input.articleId,
@@ -33,6 +46,59 @@ export async function recordArticleEvent(tx: Executor, input: ArticleEventInput)
     sourceTicketId: input.sourceTicketId ?? null,
     reviewItemId: input.reviewItemId ?? null,
     contentHash: input.contentHash ?? null,
+  })
+}
+
+/**
+ * Marks a verified article as needing review when an edit changes its text away
+ * from what was verified, and records an 'auto_flagged_for_review' event with
+ * the same actor and origin as the edit. Every path that edits an article
+ * records an 'edited' event through recordArticleEvent, so this runs for hand
+ * edits, ticket refreshes, imports and syncs alike, inside the edit's own
+ * transaction.
+ *
+ * Only an article in the 'current' state is flagged: one already flagged keeps
+ * its original reason, and a superseded one stays superseded. An article that
+ * was never verified, or whose new text matches what was verified, is left
+ * alone. One conditional UPDATE decides all of that, so two concurrent edits
+ * cannot flag twice. The article keeps answering customers either way.
+ */
+async function flagVerifiedArticleAfterEdit(
+  tx: Executor,
+  input: {
+    orgId: number
+    articleId: number
+    contentHash: string
+    actorUserId: number | null
+    origin: KBArticleEventOrigin
+  }
+): Promise<void> {
+  const flagged = await tx
+    .update(kbArticles)
+    .set({
+      reviewState: 'needs_review',
+      reviewStateAt: new Date().toISOString(),
+      reviewStateBy: input.actorUserId,
+      reviewNote: null,
+    })
+    .where(
+      and(
+        eq(kbArticles.id, input.articleId),
+        eq(kbArticles.orgId, input.orgId),
+        eq(kbArticles.reviewState, 'current'),
+        isNotNull(kbArticles.verifiedAt),
+        sql`${kbArticles.verifiedContentHash} IS DISTINCT FROM ${input.contentHash}`
+      )
+    )
+    .returning({ id: kbArticles.id })
+  if (flagged.length === 0) return
+  await insertEvent(tx, {
+    orgId: input.orgId,
+    articleId: input.articleId,
+    type: 'auto_flagged_for_review',
+    actorUserId: input.actorUserId,
+    origin: input.origin,
+    contentHash: input.contentHash,
   })
 }
 

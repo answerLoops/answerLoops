@@ -6,6 +6,14 @@ import { requireOrgAccess } from '@/lib/auth/org'
 import { logger } from '@/lib/logger'
 import { getTicketById } from '@/lib/db/queries/tickets'
 import { countArticles, createArticle, getArticleBySourceTicket, verifyArticle } from '@/lib/db/queries/kb'
+import {
+  clearReviewFlag,
+  flagArticleForReview,
+  restoreArticle,
+  supersedeArticle,
+  type Replacement,
+  type ReviewStateChangeResult,
+} from '@/lib/db/queries/kb-review-state'
 import { ArticleCapReachedError } from '@/lib/db/queries/kb-article-cap'
 import { DuplicateArticleError } from '@/lib/db/queries/kb-duplicates'
 import { embedTextWithModel } from '@/lib/ai/embed'
@@ -13,6 +21,7 @@ import { NoAIProviderConfiguredError } from '@/lib/ai/models'
 import { aiUnavailableMessage } from '@/lib/ai/errors'
 import { MAX_ARTICLES_PER_ORG } from '@/lib/kb/limits'
 import { VERIFICATION_NOTE_MAX } from '@/lib/kb/verification'
+import { REVIEW_NOTE_MAX, parseReplacementUrl } from '@/lib/kb/review-state'
 import { rateLimitShared } from '@/lib/ratelimit'
 import { parseAttachmentLines } from '@/lib/slack/attachment-lines'
 
@@ -248,4 +257,160 @@ export async function verifyArticleAction(
 
   refresh()
   return { ok: true }
+}
+
+// Review-state changes share one budget per workspace. Generous for a person
+// working down a list; it stops a script or a stuck button from flooding the
+// article history.
+const REVIEW_STATE_MAX = 120
+const REVIEW_STATE_WINDOW_MS = 10 * 60_000
+
+const ArticleIdSchema = z.object({ articleId: z.coerce.number().int().positive() })
+
+const FlagArticleSchema = ArticleIdSchema.extend({
+  note: z.string().trim().max(REVIEW_NOTE_MAX, `Keep the reason under ${REVIEW_NOTE_MAX} characters`),
+})
+
+const SupersedeSchema = ArticleIdSchema.extend({
+  replacementKind: z.enum(['article', 'url']),
+  replacementArticleId: z.string().optional(),
+  replacementUrl: z.string().optional(),
+})
+
+export type ReviewStateActionState = { ok: true } | { error: string } | null
+
+const STATE_ERRORS: Record<Exclude<ReviewStateChangeResult, { ok: true }>['reason'], string> = {
+  not_found: 'Article not found',
+  wrong_state: 'This article changed in the meantime. Reload the page and try again.',
+  invalid_replacement: 'Choose a different published article that has not been replaced itself.',
+}
+
+/**
+ * Shared by the four review-state actions: checks the role, parses the form,
+ * applies the workspace's rate limit, runs the change and refreshes the page.
+ * The article must belong to the session's workspace; the id in the form is
+ * never trusted on its own.
+ */
+async function changeReviewState<T>(
+  formData: FormData,
+  roles: readonly ('owner' | 'admin' | 'member')[] | undefined,
+  parse: (formData: FormData) => { ok: true; value: T } | { ok: false; error: string },
+  run: (value: T, ctx: { orgId: number; userId: number }) => Promise<ReviewStateChangeResult>,
+  failure: string
+): Promise<ReviewStateActionState> {
+  const access = await requireOrgAccess(roles)
+  if (!access.ok) return { error: access.error }
+  const orgId = access.orgId
+
+  const parsed = parse(formData)
+  if (!parsed.ok) return { error: parsed.error }
+
+  const limit = await rateLimitShared(`kb-review-state:${orgId}`, REVIEW_STATE_MAX, REVIEW_STATE_WINDOW_MS)
+  if (!limit.ok) return { error: 'You are changing articles too quickly. Try again in a few minutes.' }
+
+  try {
+    const result = await run(parsed.value, { orgId, userId: access.userId })
+    if (!result.ok) return { error: STATE_ERRORS[result.reason] }
+  } catch (err) {
+    logger.error('failed to change knowledge article review state', { module: 'actions/kb', orgId, error: err })
+    return { error: failure }
+  }
+
+  refresh()
+  return { ok: true }
+}
+
+function parseArticleId(formData: FormData) {
+  const parsed = ArticleIdSchema.safeParse({ articleId: formData.get('articleId') })
+  return parsed.success
+    ? ({ ok: true, value: parsed.data } as const)
+    : ({ ok: false, error: 'Invalid input' } as const)
+}
+
+/**
+ * Flags an article for the team to look at again, with an optional reason.
+ * The article keeps answering customers, so any member of the workspace may
+ * do this.
+ */
+export async function flagArticleForReviewAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<ReviewStateActionState> {
+  return changeReviewState(
+    formData,
+    undefined,
+    (fd) => {
+      const parsed = FlagArticleSchema.safeParse({ articleId: fd.get('articleId'), note: fd.get('note') ?? '' })
+      return parsed.success
+        ? { ok: true, value: parsed.data }
+        : { ok: false, error: parsed.error.issues[0]?.message ?? 'Invalid input' }
+    },
+    (v, ctx) => flagArticleForReview({ articleId: v.articleId, userId: ctx.userId, note: v.note }, ctx.orgId),
+    'Could not flag this article. Try again.'
+  )
+}
+
+/** Removes the needs-review mark. Nothing changes for customers, so any member may do this. */
+export async function clearReviewFlagAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<ReviewStateActionState> {
+  return changeReviewState(
+    formData,
+    undefined,
+    parseArticleId,
+    (v, ctx) => clearReviewFlag({ articleId: v.articleId, userId: ctx.userId }, ctx.orgId),
+    'Could not clear the flag. Try again.'
+  )
+}
+
+/**
+ * Replaces an article with another article or a documentation link. It stops
+ * being used for answers, so this is limited to owners and admins.
+ */
+export async function supersedeArticleAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<ReviewStateActionState> {
+  return changeReviewState(
+    formData,
+    ['owner', 'admin'],
+    (fd) => {
+      const parsed = SupersedeSchema.safeParse({
+        articleId: fd.get('articleId'),
+        replacementKind: fd.get('replacementKind'),
+        replacementArticleId: fd.get('replacementArticleId') ?? undefined,
+        replacementUrl: fd.get('replacementUrl') ?? undefined,
+      })
+      if (!parsed.success) return { ok: false, error: 'Choose what replaces this article.' }
+      const { articleId, replacementKind } = parsed.data
+      let replacement: Replacement
+      if (replacementKind === 'url') {
+        const url = parseReplacementUrl(parsed.data.replacementUrl ?? '')
+        if (!url) return { ok: false, error: 'Enter a full link that starts with http:// or https://' }
+        replacement = { url }
+      } else {
+        const id = Number(parsed.data.replacementArticleId)
+        if (!Number.isInteger(id) || id <= 0) return { ok: false, error: 'Choose the article that replaces this one.' }
+        replacement = { articleId: id }
+      }
+      return { ok: true, value: { articleId, replacement } }
+    },
+    (v, ctx) => supersedeArticle({ articleId: v.articleId, userId: ctx.userId, replacement: v.replacement }, ctx.orgId),
+    'Could not mark this article as superseded. Try again.'
+  )
+}
+
+/** Brings a superseded article back into answers. Limited to owners and admins. */
+export async function restoreArticleAction(
+  _prevState: unknown,
+  formData: FormData
+): Promise<ReviewStateActionState> {
+  return changeReviewState(
+    formData,
+    ['owner', 'admin'],
+    parseArticleId,
+    (v, ctx) => restoreArticle({ articleId: v.articleId, userId: ctx.userId }, ctx.orgId),
+    'Could not restore this article. Try again.'
+  )
 }

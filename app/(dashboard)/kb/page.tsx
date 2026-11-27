@@ -19,6 +19,7 @@ import { CoverageTab } from './coverage-tab'
 import { ArticleAnswers } from '@/components/dashboard/article-answers'
 import { ArticleHistory } from '@/components/dashboard/article-history'
 import { ArticleVerificationControl } from '@/components/dashboard/article-verification'
+import { ArticleReviewStateControl, type ReplacementOption } from '@/components/dashboard/article-review-state'
 import { ReviewTab } from './review-tab'
 import { FlagsTab } from './flags-tab'
 import { GapsTab } from './gaps-tab'
@@ -591,10 +592,13 @@ function RelatedDocsNotice({ change }: { change: { at: string; source: string } 
 
 function ArticlesList({
   articles,
+  replacementPool,
   onDeleted,
   onVerified,
 }: {
   articles: (Article | KBSearchResult)[]
+  /** Every listed article that could replace another: not superseded. */
+  replacementPool: ReplacementOption[]
   onDeleted: () => void
   onVerified: () => void
 }) {
@@ -705,6 +709,15 @@ function ArticlesList({
               {a.verification && (
                 <ArticleVerificationControl articleId={a.id} verification={a.verification} onVerified={onVerified} />
               )}
+              {'review' in a && a.review && (
+                <ArticleReviewStateControl
+                  articleId={a.id}
+                  review={a.review}
+                  canSupersede={'can_supersede' in a && a.can_supersede === true}
+                  replacementOptions={replacementPool.filter((o) => o.id !== a.id)}
+                  onChanged={onVerified}
+                />
+              )}
               <ArticleHistory articleId={a.id} />
               {'can_view_answers' in a && a.can_view_answers && <ArticleAnswers articleId={a.id} />}
             </div>
@@ -713,6 +726,30 @@ function ArticlesList({
       </ul>
     </div>
   )
+}
+
+type ReviewFilter = 'all' | 'needs_review' | 'superseded'
+
+function matchesReviewFilter(a: Article, filter: ReviewFilter): boolean {
+  if (filter === 'all') return true
+  return 'review' in a && a.review?.state === filter
+}
+
+function countReviewStates(articles: KBArticle[]): { needs_review: number; superseded: number } {
+  let needsReview = 0
+  let superseded = 0
+  for (const a of articles) {
+    if (a.review?.state === 'needs_review') needsReview++
+    else if (a.review?.state === 'superseded') superseded++
+  }
+  return { needs_review: needsReview, superseded }
+}
+
+function emptyListMessage(filter: ReviewFilter, resolutionsOnly: boolean): string {
+  if (filter === 'needs_review') return 'No articles need review.'
+  if (filter === 'superseded') return 'No articles have been superseded.'
+  if (resolutionsOnly) return 'No saved resolutions yet. Promote a resolved ticket from its detail page to add one.'
+  return 'No articles match.'
 }
 
 const KB_TABS = [
@@ -820,12 +857,17 @@ export default function KBPage() {
   const [dialog, setDialog] = useState<'write' | 'file' | 'url' | null>(null)
   const [sortOrder, setSortOrder] = useState<ArticleSortOrder>('newest')
   const [resolutionsOnly, setResolutionsOnly] = useState(false)
+  const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all')
+  // The full list, kept apart from `articles` (which search replaces), so the
+  // replacement picker and the filter counts always see every article.
+  const [allArticles, setAllArticles] = useState<KBArticle[]>([])
 
   async function loadAll() {
     setLoading(true)
     try {
       const all = await fetchKbArticles()
       setArticles(all)
+      setAllArticles(all)
       setArticleCount(all.length)
     } finally {
       setLoading(false)
@@ -842,6 +884,7 @@ export default function KBPage() {
       .then((data) => {
         if (!cancelled) {
           setArticles(data)
+          setAllArticles(data)
           setArticleCount(data.length)
         }
       })
@@ -852,11 +895,18 @@ export default function KBPage() {
     return () => { cancelled = true }
   }, [])
 
-  // Sorting and the resolutions filter apply to the plain list only. Search
-  // results keep the order of their match score.
+  // Sorting and the filters apply to the plain list only. Search results keep
+  // the order of their match score, and never include superseded articles.
   const visibleArticles = query.trim()
     ? articles
-    : sortBySaved(resolutionsOnly ? articles.filter(isResolution) : articles, sortOrder)
+    : sortBySaved(
+        articles.filter((a) => (!resolutionsOnly || isResolution(a)) && matchesReviewFilter(a, reviewFilter)),
+        sortOrder
+      )
+  const reviewCounts = countReviewStates(allArticles)
+  const replacementPool: ReplacementOption[] = allArticles
+    .filter((a) => a.review?.state !== 'superseded')
+    .map((a) => ({ id: a.id, question: a.question }))
 
   const [searchError, setSearchError] = useState<string | null>(null)
   const [searchDegraded, setSearchDegraded] = useState(false)
@@ -1133,14 +1183,31 @@ export default function KBPage() {
                 />
                 Saved resolutions only
               </label>
+              <label className="flex items-center gap-2 text-xs text-gray-500">
+                Show
+                <select
+                  value={reviewFilter}
+                  onChange={(e) => setReviewFilter(e.target.value as ReviewFilter)}
+                  className="rounded-md border border-gray-200 bg-white px-2 py-2 text-xs text-gray-700 sm:py-1"
+                >
+                  <option value="all">All articles</option>
+                  <option value="needs_review">Needs review ({reviewCounts.needs_review})</option>
+                  <option value="superseded">Superseded ({reviewCounts.superseded})</option>
+                </select>
+              </label>
             </div>
           )}
           {visibleArticles.length === 0 ? (
             <p className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-              No saved resolutions yet. Promote a resolved ticket from its detail page to add one.
+              {emptyListMessage(reviewFilter, resolutionsOnly)}
             </p>
           ) : (
-            <ArticlesList articles={visibleArticles} onDeleted={loadAll} onVerified={loadAll} />
+            <ArticlesList
+              articles={visibleArticles}
+              replacementPool={replacementPool}
+              onDeleted={loadAll}
+              onVerified={loadAll}
+            />
           )}
         </>
       )}
