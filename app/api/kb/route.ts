@@ -14,8 +14,11 @@ export async function GET(request: Request) {
     // Whether this viewer may open an article's recent answers (owners and
     // admins only; the answers route enforces it too).
     const canViewAnswers = access.role === 'owner' || access.role === 'admin'
+    // Superseding and restoring change what customers are answered from, so
+    // only owners and admins see those controls (the actions enforce it too).
+    const canSupersede = canViewAnswers
     const articles = await listArticles(true, access.orgId)
-    return Response.json(articles.map((a) => ({ ...a, can_view_answers: canViewAnswers })))
+    return Response.json(articles.map((a) => ({ ...a, can_view_answers: canViewAnswers, can_supersede: canSupersede })))
   } catch (err) {
     logger.error('failed to list KB articles', { module: MOD, requestId: getRequestId(request), error: err })
     return Response.json({ error: 'Internal server error' }, { status: 500 })

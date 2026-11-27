@@ -17,6 +17,7 @@ import {
   uuid,
   unique,
   customType,
+  type AnyPgColumn,
 } from 'drizzle-orm/pg-core'
 import { sql } from 'drizzle-orm'
 import type { RepoSyncResult } from '../../types'
@@ -613,6 +614,20 @@ export const kbArticles = pgTable(
     // updated_at and verified_at (lib/kb/docs-change.ts), so it needs no clearing.
     docsChangedAt: text('docs_changed_at'),
     docsChangedSource: text('docs_changed_source'),
+    // Review state, separate from `published` (migration 0091,
+    // lib/kb/review-state.ts): 'current', 'needs_review' (stays live, flagged
+    // for the team) or 'superseded' (excluded from every answer). The
+    // replacement is another article in the workspace or an http(s) link, never
+    // both; deleting the replacement article clears the reference but the
+    // article stays superseded.
+    reviewState: text('review_state').notNull().default('current'),
+    reviewStateAt: text('review_state_at'),
+    reviewStateBy: integer('review_state_by').references(() => users.id, { onDelete: 'set null' }),
+    reviewNote: text('review_note'),
+    supersededByArticleId: integer('superseded_by_article_id').references((): AnyPgColumn => kbArticles.id, {
+      onDelete: 'set null',
+    }),
+    supersededByUrl: text('superseded_by_url'),
     createdAt: text('created_at').notNull().default(now),
     updatedAt: text('updated_at').notNull().default(now),
   },
@@ -622,6 +637,7 @@ export const kbArticles = pgTable(
     index('idx_kb_articles_source').on(t.sourceTicketId),
     index('idx_kb_articles_source_id').on(t.sourceId),
     index('idx_kb_articles_source_file').on(t.sourceFileId),
+    index('idx_kb_articles_org_review_state').on(t.orgId, t.reviewState),
     index('idx_kb_articles_embedding_vec').using('hnsw', t.embeddingVec.op('vector_cosine_ops')),
   ]
 )
@@ -864,6 +880,7 @@ export const kbArticleEvents = pgTable(
     orgId: integer('org_id').notNull().references(() => orgs.id, { onDelete: 'cascade' }),
     articleId: integer('article_id').references(() => kbArticles.id, { onDelete: 'cascade' }),
     // 'created' | 'promoted' | 'edited' | 'review_approved' | 'review_rejected' | 'review_reopened' | 'verified'
+    // | 'flagged_for_review' | 'auto_flagged_for_review' | 'review_flag_cleared' | 'superseded' | 'restored'
     type: text('type').notNull(),
     // Null for automated events (imports and syncs) and for users since deleted.
     actorUserId: integer('actor_user_id').references(() => users.id, { onDelete: 'set null' }),

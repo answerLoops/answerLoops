@@ -52,8 +52,8 @@ describe.skipIf(!url)('Account provisioning & identity uniqueness on PostgreSQL'
     await createTable(memberships, 'memberships')
     await createTable(trialClaims, 'trial_claims')
 
-    // Apply migration 0091 (unique index on provider/provider_account_id).
-    const migrationSql = fs.readFileSync('drizzle/0091_users_provider_account_unique.sql', 'utf8')
+    // Apply migration 0092 (unique index on provider/provider_account_id).
+    const migrationSql = fs.readFileSync('drizzle/0092_users_provider_account_unique.sql', 'utf8')
     for (const stmt of migrationSql.split('--> statement-breakpoint')) {
       if (stmt.trim()) {
         await client.unsafe(stmt)
@@ -321,7 +321,7 @@ describe.skipIf(!url)('Account provisioning & identity uniqueness on PostgreSQL'
     expect(allUsers.length).toBe(1)
   })
 
-  it('confirms 0091 migration is applied by the normal migration runner (runMigrations)', async () => {
+  it('confirms 0092 migration is applied by the normal migration runner (runMigrations)', async () => {
     const migrationSchema = `mig_test_${randomUUID().replaceAll('-', '')}`
     await admin.unsafe(`CREATE SCHEMA ${migrationSchema}`)
 
@@ -335,7 +335,7 @@ describe.skipIf(!url)('Account provisioning & identity uniqueness on PostgreSQL'
     })
     const migDb = drizzle(migClient)
 
-    // Pre-create users table in migration schema so 0091 can apply
+    // Pre-create users table in migration schema so 0092 can apply
     const createTableInMig = async (table: any, name: string) => {
       const columns = Object.values(getTableColumns(table)).map((c: any) =>
         c.name === 'id' ? 'id serial primary key' : `"${c.name}" ${c.getSQLType()}`
@@ -355,7 +355,7 @@ describe.skipIf(!url)('Account provisioning & identity uniqueness on PostgreSQL'
       CREATE TABLE IF NOT EXISTS kb_sync_jobs (id serial primary key, status text);
     `)
 
-    // Pre-seed __custom_migrations with 0000..0090 so runMigrations executes only 0091
+    // Pre-seed __custom_migrations with every other migration so runMigrations executes only 0092
     await migClient.unsafe(`
       CREATE TABLE IF NOT EXISTS __custom_migrations (
         filename TEXT PRIMARY KEY,
@@ -365,7 +365,7 @@ describe.skipIf(!url)('Account provisioning & identity uniqueness on PostgreSQL'
     const migrationsDir = path.resolve(process.cwd(), 'drizzle')
     const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort()
     for (const f of files) {
-      if (f !== '0091_users_provider_account_unique.sql') {
+      if (f !== '0092_users_provider_account_unique.sql') {
         await migClient.unsafe(`INSERT INTO __custom_migrations (filename) VALUES ('${f}') ON CONFLICT DO NOTHING;`)
       }
     }
@@ -374,12 +374,12 @@ describe.skipIf(!url)('Account provisioning & identity uniqueness on PostgreSQL'
     state.getDb.mockReturnValue(migDb)
     await runMigrations()
 
-    // Verify 0091 is recorded in __custom_migrations
+    // Verify 0092 is recorded in __custom_migrations
     const [rec] = await migClient<{ filename: string }[]>`
-      SELECT filename FROM __custom_migrations WHERE filename = '0091_users_provider_account_unique.sql'
+      SELECT filename FROM __custom_migrations WHERE filename = '0092_users_provider_account_unique.sql'
     `
     expect(rec).toBeDefined()
-    expect(rec.filename).toBe('0091_users_provider_account_unique.sql')
+    expect(rec.filename).toBe('0092_users_provider_account_unique.sql')
 
     // Verify the unique index actually exists in PostgreSQL catalog
     const [idx] = await migClient<{ indexname: string }[]>`

@@ -63,9 +63,15 @@ function makeExecutor() {
     })),
     update: vi.fn(() => ({
       set: () => ({
-        where: async () => {
-          h.log.push('update')
-        },
+        // Awaited directly by the refresh; `.returning()` is the conditional
+        // needs-review flag after an edit, which finds no verified article here.
+        where: () => ({
+          then: (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) => {
+            h.log.push('update')
+            return Promise.resolve().then(res, rej)
+          },
+          returning: async () => [],
+        }),
       }),
     })),
   }

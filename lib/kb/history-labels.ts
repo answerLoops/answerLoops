@@ -44,6 +44,16 @@ function title(type: KBArticleEventType, origin: KBArticleEventOrigin): string {
       return 'Moved back to review'
     case 'verified':
       return 'Verified'
+    case 'flagged_for_review':
+      return 'Flagged for review'
+    case 'auto_flagged_for_review':
+      return 'Flagged for review: changed since last verified'
+    case 'review_flag_cleared':
+      return 'Review flag cleared'
+    case 'superseded':
+      return 'Marked as superseded'
+    case 'restored':
+      return 'Restored to answers'
     default:
       return 'Changed'
   }

@@ -68,6 +68,9 @@ const verbs = () => calls.map((c) => c.sql.split(' ').slice(0, 3).join(' '))
 
 const article = { question: 'How do I reset?', answer: 'Use the link.', embedding: [0.1, 0.2], model: 'm' }
 
+/** The conditional UPDATE that flags a verified article after an edit (lib/db/queries/kb-events.ts). */
+const isAutoFlag = (c: Call) => c.sql.startsWith('update "kb_articles" set "review_state"')
+
 beforeEach(() => {
   calls = []
   respond = () => [articleRow(42)]
@@ -103,7 +106,8 @@ describe('createArticle events', () => {
   })
 
   it('records a refresh that changes the words as an edit by the acting user, keeping the ticket link', async () => {
-    respond = (c) => (c.sql.startsWith('select "id", "question"') ? [[7, 'old q', 'old a']] : [articleRow(7)])
+    respond = (c) =>
+      isAutoFlag(c) ? [] : c.sql.startsWith('select "id", "question"') ? [[7, 'old q', 'old a']] : [articleRow(7)]
     const { createArticle } = await import('@/lib/db/queries/kb')
     await createArticle({ ...article, sourceTicketId: 9, createdBy: 99 }, 3)
     expect(event()).toMatchObject({
@@ -114,7 +118,15 @@ describe('createArticle events', () => {
       source_ticket_id: 9,
       content_hash: contentHash(article.question, article.answer),
     })
-    expect(verbs()).toEqual(['begin', expect.stringMatching(/^select/), expect.stringMatching(/^update/), 'insert into "kb_article_events"', expect.stringMatching(/^select/), 'commit'])
+    expect(verbs()).toEqual([
+      'begin',
+      expect.stringMatching(/^select/),
+      expect.stringMatching(/^update/),
+      'insert into "kb_article_events"',
+      'update "kb_articles" set',
+      expect.stringMatching(/^select/),
+      'commit',
+    ])
   })
 
   it('records nothing when a refresh leaves the words unchanged, even if only whitespace differs', async () => {
@@ -178,6 +190,7 @@ describe('source article events', () => {
     const row = articleRow(7)
     row[2] = q
     row[3] = a
+    if (isAutoFlag(c)) return []
     return c.sql.includes('"source_page"') && c.sql.startsWith('select') ? [row] : [articleRow(7)]
   }
 
