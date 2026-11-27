@@ -388,13 +388,13 @@ describe('WidgetChat: rich cards', () => {
     await openThread(fake)
     await fake.emit.runInitialized()
     await fake.emit.event([{ id: 'u1', role: 'user', content: 'q' }] as Message[])
-    expect(document.querySelector('.animate-bounce')).not.toBeNull()
+    expect(screen.getByTestId('typing-indicator')).toBeTruthy()
 
     await fake.emit.event([
       { id: 'u1', role: 'user', content: 'q' },
       { id: 'a1', role: 'assistant', content: 'Partial' },
     ] as Message[])
-    expect(document.querySelector('.animate-bounce')).toBeNull()
+    expect(screen.queryByTestId('typing-indicator')).toBeNull()
     expect(screen.getByText('Partial')).toBeTruthy()
   })
 })
