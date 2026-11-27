@@ -359,6 +359,15 @@ A public name is as visible as the token and grants nothing more. The allowed-do
 
 Reply text shows bold, italic, inline code, short lists and links as formatted text. Nothing else in a reply is interpreted: images, headings, tables and HTML never appear, and a link must be `http` or `https`, opening in a new tab.
 
+## Copying a reply
+
+Each finished reply has a **Copy** button under it, so a visitor can take a list of steps, an address or a command with them without selecting text by hand. With a mouse, the button appears when the visitor hovers over the reply or moves keyboard focus to it. On a touch screen it is always shown.
+
+- **Plain text, as read.** The copy is what the visitor sees, without formatting characters: paragraphs are separated by a blank line, each bullet or numbered item is on its own line, and a link is copied as its words followed by its address.
+- **The reply's text only.** Cards under a reply are not included, and a message that is only a card has no Copy button. A reply that is still arriving gets its button once it is complete.
+- **Confirmation.** The button reads **Copied** for about two seconds, and screen readers announce it. If the visitor's browser blocks copying, it reads **Couldn't copy** instead.
+- **Nothing is recorded.** Copying happens in the visitor's browser and nothing about it is sent to answerLoops or to you.
+
 ## Keeping the conversation
 
 The chat keeps the conversation in the visitor's own browser, so refreshing the page or moving to another page of your site does not lose it. It is forgotten a day after the last message, and nothing extra is sent to anyone to bring it back. The most recent messages are kept, up to a few dozen. A **New chat** button in the chat header clears it and starts again. If the browser blocks storage (some private windows do), the chat still works and simply starts fresh each time.
