@@ -355,6 +355,16 @@ A **public name** is a stable label for your widget, such as `acme-support`, tha
 
 A public name is as visible as the token and grants nothing more. The allowed-domains list still decides where the widget loads. Names are unique across the instance, so one that another workspace holds is refused. Snippets that carry the token keep working until it expires or is regenerated. Clearing the name stops the widget loading on any page that still uses it. Only owners and admins can set or clear it.
 
+## Typing a question
+
+The question box grows as the visitor types, up to about five lines, and then scrolls inside itself. **Enter** sends the question and **Shift+Enter** starts a new line. While a visitor is composing characters with an input method, for example in Japanese or Chinese, Enter confirms the characters and does not send. Questions have the same length limit as before, and the box simply stops accepting characters at the limit.
+
+The visitor can start typing their next question while an answer is still arriving. The send button stays off until that answer has finished, and while the box is empty.
+
+- **Cursor on open.** On a computer with a mouse or trackpad, the cursor is placed in the box each time the chat opens, so the visitor can type straight away. On phones and tablets it is not, so the on-screen keyboard does not cover the conversation before the visitor has read it. The embed script tells the chat each time its panel opens with a message that carries nothing but that fact, sent only to your answerLoops address.
+- **Unsent text is kept.** If the visitor closes the chat with a half-typed question, it is there when they open it again, even if the chat had to load fresh. It is kept only in the visitor's own browser, for this widget, until it is sent or a day has passed, and it is never sent anywhere. If the browser blocks storage, the box simply starts empty.
+- **Sized for phones.** On touch screens the text is large enough that the page does not zoom in when the box is tapped, and the box and send button are easy to tap.
+
 ## Reply formatting
 
 Reply text shows bold, italic, inline code, short lists and links as formatted text. Nothing else in a reply is interpreted: images, headings, tables and HTML never appear, and a link must be `http` or `https`, opening in a new tab.

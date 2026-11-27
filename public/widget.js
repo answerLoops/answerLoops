@@ -83,6 +83,8 @@
   var FRAME_MAX_AGE_MS = 4 * 60 * 1000;
   var iframe = null;
   var frameLoadedAt = 0;
+  // True once the frame's current page has finished loading.
+  var frameReady = false;
 
   // Rebuilds a color that already passed the #rrggbb check from its three
   // numeric channels, so what reaches the page is made only of digits and
@@ -178,14 +180,37 @@
   // the widget, so it would defeat the allowed-domains check rather than
   // support it.
   function loadFrame() {
-    if (!iframe) {
+    var created = !iframe;
+    if (created) {
       iframe = document.createElement('iframe');
       iframe.title = 'Support chat';
       iframe.setAttribute('allow', 'clipboard-write');
-      panel.appendChild(iframe);
+      iframe.addEventListener('load', function () {
+        frameReady = true;
+        announceOpen();
+      });
     }
+    frameReady = false;
     iframe.src = baseUrl + '/widget/' + panelToken;
     frameLoadedAt = Date.now();
+    // Added only once its address is set, so the browser never loads (and
+    // reports loaded) an empty page in it first.
+    if (created) panel.appendChild(iframe);
+  }
+
+  // Moves keyboard focus into the open chat and tells the chat page it was
+  // opened, so it can put the cursor in the question box on devices with a
+  // mouse (it leaves touch screens alone). Sent each time the panel opens,
+  // because the chat page can stay loaded while the panel is closed. The
+  // message carries no data and is addressed to the chat's own origin.
+  function announceOpen() {
+    if (!isOpen || !iframe || !frameReady) return;
+    try {
+      if (typeof iframe.focus === 'function') iframe.focus();
+    } catch (e) {}
+    try {
+      if (iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'answerloops:panel-opened' }, baseUrl);
+    } catch (e) {}
   }
 
   function togglePanel() {
@@ -195,6 +220,8 @@
       panel.classList.add('cp-open');
       bubble.setAttribute('aria-label', 'Close support chat');
       setBubbleIcon(20, CLOSE_ICON_PATH);
+      // A frame that is still loading announces itself from its load event.
+      announceOpen();
     } else {
       panel.classList.remove('cp-open');
       bubble.setAttribute('aria-label', 'Open support chat');
