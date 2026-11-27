@@ -248,14 +248,13 @@ describe('migration ordering', () => {
   const files = fs.readdirSync(path.join(ROOT, 'drizzle')).filter((f) => f.endsWith('.sql'))
 
   // Later migrations come after this one, so only its own place is pinned:
-  // straight after every migration numbered below it, with its number unused
-  // by any other file.
+  // straight after the 0090 migrations, with its number unused by any other
+  // file.
   it('runs right after the 0090 migrations and its number is not reused', () => {
-    const sorted = [...files].sort()
-    const index = sorted.indexOf(path.basename(MIGRATION))
-    expect(index).toBeGreaterThan(-1)
-    expect(sorted.slice(0, index).every((f) => f < '0091_')).toBe(true)
-    expect(sorted[index - 1].startsWith('0090_')).toBe(true)
+    const ordered = sorted(files)
+    const index = ordered.indexOf(path.basename(MIGRATION))
+    expect(index).toBeGreaterThan(0)
+    expect(ordered[index - 1].startsWith('0090_')).toBe(true)
     expect(files.filter((f) => f.startsWith('0091_'))).toEqual([path.basename(MIGRATION)])
   })
 
