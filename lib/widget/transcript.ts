@@ -36,6 +36,7 @@ export const RECOVERY_WINDOW_MS = 60 * 1000
 const transcriptKey = (widgetToken: string) => `al_chat:${widgetToken}`
 const pendingKey = (widgetToken: string) => `al_pending:${widgetToken}`
 const recoveryKey = (widgetToken: string) => `al_recovered:${widgetToken}`
+const draftKey = (widgetToken: string) => `al_draft:${widgetToken}`
 
 function local(): Storage | null {
   try {
@@ -208,5 +209,47 @@ export function takePending(widgetToken: string, now: number = Date.now()): stri
     return parsed.text
   } catch {
     return null
+  }
+}
+
+/**
+ * Keeps the question a visitor has typed but not sent, so closing and
+ * reopening the panel (which can load the chat page fresh) does not lose it.
+ * Only the unsent text is kept, in this browser, for this widget; it is never
+ * sent anywhere. An empty or whitespace-only box removes it. It is forgotten
+ * after the same time as a conversation.
+ */
+export function saveDraft(widgetToken: string, text: string, now: number = Date.now()): void {
+  try {
+    if (!text.trim()) {
+      local()?.removeItem(draftKey(widgetToken))
+      return
+    }
+    local()?.setItem(draftKey(widgetToken), JSON.stringify({ text: text.slice(0, MESSAGE_MAX_CHARS), at: now }))
+  } catch {
+    // Storage blocked or full: the box still works, it just is not kept.
+  }
+}
+
+/** The unsent question saved for this widget, or '' when there is none. Stored data is treated as untrusted. */
+export function loadDraft(widgetToken: string, now: number = Date.now()): string {
+  try {
+    const raw = local()?.getItem(draftKey(widgetToken))
+    if (!raw) return ''
+    const parsed: unknown = JSON.parse(raw)
+    if (!isRecord(parsed) || typeof parsed.text !== 'string' || typeof parsed.at !== 'number') return ''
+    if (now - parsed.at > TRANSCRIPT_MAX_AGE_MS || parsed.text.length > MESSAGE_MAX_CHARS) return ''
+    return parsed.text
+  } catch {
+    return ''
+  }
+}
+
+/** Forgets the saved question, once it has been sent. */
+export function clearDraft(widgetToken: string): void {
+  try {
+    local()?.removeItem(draftKey(widgetToken))
+  } catch {
+    // Nothing to clear if storage is blocked.
   }
 }

@@ -191,7 +191,7 @@ describe('WidgetChat: sending a message', () => {
 })
 
 describe('WidgetChat: run lifecycle', () => {
-  it('shows the typing indicator while a run is in progress and disables input', async () => {
+  it('keeps the question box usable while a run is in progress, but holds the send button', async () => {
     const fake = makeFakeAgent()
     await renderWidget(fake)
     const user = userEvent.setup()
@@ -199,21 +199,24 @@ describe('WidgetChat: run lifecycle', () => {
 
     fake.emit.runInitialized()
 
-    const input = screen.getByPlaceholderText('Ask a question…') as HTMLInputElement
-    expect(input.disabled).toBe(true)
+    const input = screen.getByPlaceholderText('Ask a question…') as HTMLTextAreaElement
+    expect(input.disabled).toBe(false)
+    await user.type(input, 'next question')
+    expect(input.value).toBe('next question')
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeDisabled()
   })
 
-  it('clears the typing indicator and re-enables input once the run finishes', async () => {
+  it('lets the typed question be sent once the run finishes', async () => {
     const fake = makeFakeAgent()
     await renderWidget(fake)
     const user = userEvent.setup()
     await user.click(screen.getByRole('button', { name: 'Skip' }))
 
     fake.emit.runInitialized()
+    await user.type(screen.getByPlaceholderText('Ask a question…'), 'next question')
     fake.emit.runFinalized()
 
-    const input = screen.getByPlaceholderText('Ask a question…') as HTMLInputElement
-    expect(input.disabled).toBe(false)
+    expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled()
   })
 
   it('shows an error message when a run fails, and clears it on the next attempt', async () => {
