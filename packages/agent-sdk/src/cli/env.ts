@@ -3,15 +3,18 @@ import { existsSync, readFileSync, appendFileSync, writeFileSync } from "node:fs
 import { join } from "node:path";
 import { log, fail } from "./util.js";
 
-const REQUIRED_VARS = ["DATABASE_URL", "AUTH_URL", "AUTH_GOOGLE_ID", "AUTH_GOOGLE_SECRET"] as const;
+const BASE_REQUIRED_VARS = ["DATABASE_URL", "AUTH_URL"] as const;
 
-const HOW_TO_GET: Record<(typeof REQUIRED_VARS)[number], string> = {
+const HOW_TO_GET: Record<string, string> = {
   DATABASE_URL:
     "a Postgres connection string you run and control, e.g. postgresql://user:pass@host:5432/db",
   AUTH_URL: "the public URL this instance will be reachable at, e.g. http://localhost:3000",
   AUTH_GOOGLE_ID:
     "a Google OAuth client ID — console.cloud.google.com, register callback {AUTH_URL}/api/auth/callback/google",
   AUTH_GOOGLE_SECRET: "the matching Google OAuth client secret from the same client",
+  AUTH_GITHUB_ID:
+    "a GitHub OAuth app client ID — github.com/settings/developers, register callback {AUTH_URL}/api/auth/callback/github",
+  AUTH_GITHUB_SECRET: "the matching GitHub OAuth app client secret from the same app",
 };
 
 /** Minimal KEY=VALUE parser — no quoting/escaping support, matches what .env.example actually uses. */
@@ -60,10 +63,44 @@ export function ensureEnv(repoDir: string): void {
     writeFileSync(envPath, "");
   }
 
-  const missing = REQUIRED_VARS.filter((v) => !existing[v] && !process.env[v]);
-  if (missing.length > 0) {
+  const getVal = (key: string): string => {
+    const fileVal = existing[key]?.trim();
+    if (fileVal) return fileVal;
+    const envVal = process.env[key]?.trim();
+    if (envVal) return envVal;
+    return "";
+  };
+
+  const missingBase = BASE_REQUIRED_VARS.filter((v) => !getVal(v));
+
+  const hasGoogleId = !!getVal("AUTH_GOOGLE_ID");
+  const hasGoogleSecret = !!getVal("AUTH_GOOGLE_SECRET");
+  const hasGoogle = hasGoogleId && hasGoogleSecret;
+
+  const hasGithubId = !!getVal("AUTH_GITHUB_ID");
+  const hasGithubSecret = !!getVal("AUTH_GITHUB_SECRET");
+  const hasGithub = hasGithubId && hasGithubSecret;
+
+  const hasAtLeastOneProvider = hasGoogle || hasGithub;
+
+  if (missingBase.length > 0 || !hasAtLeastOneProvider) {
     console.error(`Missing required configuration in ${envPath}:`);
-    for (const v of missing) console.error(`  ${v} — ${HOW_TO_GET[v]}`);
+    for (const v of missingBase) {
+      console.error(`  ${v} — ${HOW_TO_GET[v]}`);
+    }
+    if (!hasAtLeastOneProvider) {
+      console.error(
+        `  At least one complete OAuth provider pair is required (Google or GitHub):`,
+      );
+      if (!hasGoogle) {
+        if (!hasGoogleId) console.error(`    AUTH_GOOGLE_ID — ${HOW_TO_GET.AUTH_GOOGLE_ID}`);
+        if (!hasGoogleSecret) console.error(`    AUTH_GOOGLE_SECRET — ${HOW_TO_GET.AUTH_GOOGLE_SECRET}`);
+      }
+      if (!hasGithub) {
+        if (!hasGithubId) console.error(`    AUTH_GITHUB_ID — ${HOW_TO_GET.AUTH_GITHUB_ID}`);
+        if (!hasGithubSecret) console.error(`    AUTH_GITHUB_SECRET — ${HOW_TO_GET.AUTH_GITHUB_SECRET}`);
+      }
+    }
     console.error(
       `\nAdd these to ${envPath} (or export them before running this command), then re-run.`,
     );

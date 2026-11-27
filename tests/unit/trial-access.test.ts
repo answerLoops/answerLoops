@@ -73,8 +73,10 @@ describe('sign-in guards in auth.ts', () => {
     expect(src).toContain("{ error: 'Terms not accepted' }, { status: 403 }")
   })
   it('starts no trial while provisioning a new account, only an existing owner who has accepted the terms', () => {
-    expect(src).toContain('existing.role === \'owner\' && user.termsAcceptedAt')
-    expect(src).not.toMatch(/insert\(subscriptions\)/)
+    const provSrc = read('lib/auth/provision.ts')
+    expect(provSrc).toContain("existing.role === 'owner' && user.termsAcceptedAt")
+    expect(provSrc).toContain('await beginTrial({')
+    expect(provSrc).not.toMatch(/insert\(subscriptions\)/)
   })
   it('the terms step is reachable without a subscription', () => {
     expect(read('lib/billing/access.ts')).toContain("'/accept-terms'")

@@ -64,7 +64,7 @@ app reads it when it starts.
 
 ### Step 2. Values
 
-Open `.env` and set these seven values. Each line is `NAME=value`.
+Open `.env` and set these values. Each line is `NAME=value`.
 
 | Variable | Value |
 |---|---|
@@ -72,13 +72,16 @@ Open `.env` and set these seven values. Each line is `NAME=value`.
 | `AUTH_SECRET` | A random value. Generate one with `openssl rand -hex 32` |
 | `ENCRYPTION_KEY` | A second random value from the same command |
 | `BOT_SECRET` | A third random value from the same command |
-| `AUTH_GOOGLE_ID` | The client ID from your Google OAuth client |
-| `AUTH_GOOGLE_SECRET` | The client secret from the same client |
+| `AUTH_GOOGLE_ID` | The client ID from your Google OAuth client (optional if GitHub is set) |
+| `AUTH_GOOGLE_SECRET` | The client secret from the same client (optional if GitHub is set) |
+| `AUTH_GITHUB_ID` | The client ID from your GitHub OAuth app (optional if Google is set) |
+| `AUTH_GITHUB_SECRET` | The client secret from the same app (optional if Google is set) |
 | `OPENAI_API_KEY` | Your OpenAI key, or leave it empty for now |
 
 Run `openssl rand -hex 32` three times and use a different result each time.
-In your Google OAuth client, the redirect URI must be exactly
-`http://localhost:3000/api/auth/callback/google`.
+At least one complete OAuth provider pair is required:
+- In your Google OAuth client, the redirect URI must be `http://localhost:3000/api/auth/callback/google`.
+- In your GitHub OAuth app, the callback URL must be `http://localhost:3000/api/auth/callback/github`.
 
 ### Step 3. Run it
 

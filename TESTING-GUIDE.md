@@ -17,11 +17,10 @@ AUTH_SECRET=                # random 32+ char string
 ENCRYPTION_KEY=             # 64-char hex string
 ```
 
-At least one OAuth provider:
+At least one OAuth provider (Google or GitHub):
 ```
-AUTH_GITHUB_ID / AUTH_GITHUB_SECRET
-AUTH_DISCORD_ID / AUTH_DISCORD_SECRET
 AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET
+AUTH_GITHUB_ID / AUTH_GITHUB_SECRET
 ```
 
 Optional but needed for full validation:

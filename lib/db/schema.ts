@@ -156,7 +156,11 @@ export const users = pgTable('users', {
   marketingOptInAt: timestamp('marketing_opt_in_at', { withTimezone: true }),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: text('created_at').notNull().default(now),
-})
+}, (t) => [
+  uniqueIndex('users_provider_provider_account_id_unique')
+    .on(t.provider, t.providerAccountId)
+    .where(sql`provider IS NOT NULL AND provider_account_id IS NOT NULL`),
+])
 
 // One row per person who has ever started a trial. Not cascaded from orgs or
 // users on purpose: deleting a workspace or an account must not hand the same

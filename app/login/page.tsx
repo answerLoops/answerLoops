@@ -23,12 +23,18 @@ const ERROR_MESSAGES: Record<string, string> = {
   OAuthSignin: 'Could not start sign-in. Try again.',
   OAuthCallback: 'Sign-in was cancelled or failed. Try again.',
   OAuthCreateAccount: 'Could not create account. Try again.',
-  OAuthAccountNotLinked: 'This email is already linked to another provider.',
+  OAuthAccountNotLinked: 'This email is already linked to another account.',
   Callback: 'Sign-in callback failed. Try again.',
   AccessDenied:
     'We could not sign you in with this account. Try again or contact hello@answerloops.com for help.',
   EmailNotVerified:
     'Your account has not verified this email address yet. Verify it with your sign-in provider, then try again.',
+  GoogleAccountExists:
+    'An account with this email was created with Google. Please sign in with Google.',
+  GitHubAccountExists:
+    'An account with this email was created with GitHub. Please sign in with GitHub.',
+  GitHubApiError:
+    'GitHub could not be reached to verify your account. Try again later.',
   Default: 'Something went wrong. Try again.',
 }
 
