@@ -33,6 +33,8 @@
 
 # production
 /build
+# bundled bot (pnpm bot:build)
+/dist/
 
 # misc
 .DS_Store

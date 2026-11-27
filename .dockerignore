@@ -3,6 +3,7 @@ node_modules
 .claude
 npm-debug.log
 .next
+dist
 .git
 data
 e2e/.tmp
