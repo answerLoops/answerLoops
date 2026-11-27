@@ -10,10 +10,13 @@ export const QUESTION_BOX_MAX_LINES = 5
  * Whether this device has a mouse or trackpad. Only these get the cursor put in
  * the box when the chat opens; on a touch screen that would pop the on-screen
  * keyboard up over the answer area before the visitor has read anything.
+ *
+ * The same test as the `pointer-fine:` sizes below, so a device that gets the
+ * smaller mouse-sized box is also the one that gets the cursor.
  */
 export function hasFinePointer(): boolean {
   try {
-    return typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    return typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches
   } catch {
     return false
   }

@@ -177,11 +177,11 @@ describe('isSendKey', () => {
 })
 
 describe('hasFinePointer', () => {
-  it('asks for a hovering, fine pointer', () => {
+  it('asks for a fine pointer, the same test the mouse-sized styles use', () => {
     const matchMedia = vi.fn(() => ({ matches: true }) as MediaQueryList)
     vi.stubGlobal('matchMedia', matchMedia)
     expect(hasFinePointer()).toBe(true)
-    expect(matchMedia).toHaveBeenCalledWith('(hover: hover) and (pointer: fine)')
+    expect(matchMedia).toHaveBeenCalledWith('(pointer: fine)')
     vi.unstubAllGlobals()
   })
 

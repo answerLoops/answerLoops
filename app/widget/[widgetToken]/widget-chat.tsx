@@ -453,9 +453,12 @@ function WidgetChatBody({
   }
 
   // Put the cursor in the question box when the panel opens, on a device with
-  // a mouse or trackpad only. The embed script says when the panel opens,
-  // because the chat page can stay loaded while it is closed. Opened in its
-  // own tab, the chat counts as open as soon as it loads.
+  // a mouse or trackpad only. The chat page can stay loaded while the panel is
+  // closed, so the embed script says each time it opens. It also moves focus
+  // into this frame first, so a chat page that is still starting up when the
+  // panel opens (and so misses that message) finds its frame already focused
+  // and takes that as the open. Opened in its own tab, the chat counts as open
+  // as soon as it loads. Runs again once the box exists (`ready`).
   useEffect(() => {
     const focusBox = () => {
       if (hasFinePointer()) questionBoxRef.current?.focus({ preventScroll: true })
@@ -466,7 +469,7 @@ function WidgetChatBody({
       if (typeof data === 'object' && data !== null && (data as { type?: unknown }).type === PANEL_OPENED_MESSAGE) focusBox()
     }
     window.addEventListener('message', onMessage)
-    if (window.parent === window) focusBox()
+    if (window.parent === window || document.hasFocus()) focusBox()
     return () => window.removeEventListener('message', onMessage)
   }, [ready])
   // The conversation as drawn: whatever has happened in this page since it

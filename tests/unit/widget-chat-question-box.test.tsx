@@ -63,7 +63,7 @@ async function renderWidget(fake = makeFakeAgent()) {
 const box = () => screen.getByRole('textbox', { name: 'Your question' }) as HTMLTextAreaElement
 
 function setPointer(fine: boolean) {
-  vi.stubGlobal('matchMedia', (q: string) => ({ matches: fine && q === '(hover: hover) and (pointer: fine)' }))
+  vi.stubGlobal('matchMedia', (q: string) => ({ matches: fine && q === '(pointer: fine)' }))
 }
 
 /** Makes the chat page think it is inside the embed's frame, with `parent` as the host page. */
@@ -79,6 +79,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.restoreAllMocks()
   Object.defineProperty(window, 'parent', { value: window, configurable: true })
   vi.unstubAllGlobals()
   vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 200 })))
@@ -135,6 +136,7 @@ describe('WidgetChat: the cursor goes into the box when the panel opens', () => 
     setPointer(true)
     const host = {}
     embedIn(host)
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false)
     await renderWidget()
     expect(box()).not.toHaveFocus()
     await opened(host)
@@ -150,9 +152,34 @@ describe('WidgetChat: the cursor goes into the box when the panel opens', () => 
     expect(box()).not.toHaveFocus()
   })
 
+  it('when the panel opened while the chat was still starting up, so the frame already has focus', async () => {
+    setPointer(true)
+    embedIn({})
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true)
+    await renderWidget()
+    expect(box()).toHaveFocus()
+  })
+
+  it('not when the frame does not have focus and no open message has arrived', async () => {
+    setPointer(true)
+    embedIn({})
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false)
+    await renderWidget()
+    expect(box()).not.toHaveFocus()
+  })
+
+  it('not on a touch screen, even when the frame already has focus', async () => {
+    setPointer(false)
+    embedIn({})
+    vi.spyOn(document, 'hasFocus').mockReturnValue(true)
+    await renderWidget()
+    expect(box()).not.toHaveFocus()
+  })
+
   it('ignores the message when it does not come from the host page', async () => {
     setPointer(true)
     embedIn({})
+    vi.spyOn(document, 'hasFocus').mockReturnValue(false)
     await renderWidget()
     await opened({})
     expect(box()).not.toHaveFocus()
