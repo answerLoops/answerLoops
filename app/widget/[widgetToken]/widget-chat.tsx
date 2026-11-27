@@ -26,6 +26,7 @@ import {
   WidgetActionsProvider,
 } from './genui-cards'
 import { ChatMarkdown } from './chat-markdown'
+import { QuestionBox, hasFinePointer } from './question-box'
 import { AnswerFeedback, type AnswerFeedbackConfig } from './answer-feedback'
 import { CopyReply } from './copy-reply'
 import { LogoAvatar, WelcomeAvatar } from './welcome-avatar'
@@ -38,7 +39,10 @@ import {
 import {
   VISITOR_ID_STORAGE_KEY,
   beginRecovery,
+  clearDraft,
+  loadDraft,
   loadTranscript,
+  saveDraft,
   saveTranscript,
   startNewChat,
   takePending,
@@ -300,13 +304,23 @@ interface StoredChat {
   restored: Message[]
   /** A question held for an automatic resend after a reload, if any. */
   pending: string | null
+  /** The question the visitor had typed but not sent, restored into the box. */
+  draft: string
 }
 
-const NOT_LOADED: StoredChat = { loaded: false, restored: [], pending: null }
+const NOT_LOADED: StoredChat = { loaded: false, restored: [], pending: null, draft: '' }
 
 function readStoredChat(widgetToken: string): StoredChat {
-  return { loaded: true, restored: loadTranscript(widgetToken), pending: takePending(widgetToken) }
+  return {
+    loaded: true,
+    restored: loadTranscript(widgetToken),
+    pending: takePending(widgetToken),
+    draft: loadDraft(widgetToken),
+  }
 }
+
+/** What the embed script (public/widget.js) posts into the chat each time the panel opens. */
+const PANEL_OPENED_MESSAGE = 'answerloops:panel-opened'
 
 const subscribeNever = () => () => {}
 const readStoredOnServer = () => NOT_LOADED
@@ -383,7 +397,10 @@ function WidgetChatBody({
   answerFlagsEnabled: boolean
 }) {
   const bottomRef = useRef<HTMLDivElement>(null)
-  const [input, setInput] = useState('')
+  // What the visitor has typed; null until they type, so the box shows the
+  // saved draft (stored.draft) until then.
+  const [typed, setTyped] = useState<string | null>(null)
+  const questionBoxRef = useRef<HTMLTextAreaElement>(null)
   const [email, setEmail] = useState('')
   // 'up-front' starts gated (the original hardcoded behaviour); 'off' and
   // 'on-failure' both let the visitor straight into the conversation — they
@@ -428,6 +445,30 @@ function WidgetChatBody({
   const readStored = useCallback(() => (storedRef.current ??= readStoredChat(widgetToken)), [widgetToken])
   const stored = useSyncExternalStore(subscribeNever, readStored, readStoredOnServer)
   const ready = stored.loaded
+  const input = typed ?? stored.draft
+
+  function changeInput(value: string) {
+    setTyped(value)
+    saveDraft(widgetToken, value)
+  }
+
+  // Put the cursor in the question box when the panel opens, on a device with
+  // a mouse or trackpad only. The embed script says when the panel opens,
+  // because the chat page can stay loaded while it is closed. Opened in its
+  // own tab, the chat counts as open as soon as it loads.
+  useEffect(() => {
+    const focusBox = () => {
+      if (hasFinePointer()) questionBoxRef.current?.focus({ preventScroll: true })
+    }
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window.parent || window.parent === window) return
+      const data: unknown = event.data
+      if (typeof data === 'object' && data !== null && (data as { type?: unknown }).type === PANEL_OPENED_MESSAGE) focusBox()
+    }
+    window.addEventListener('message', onMessage)
+    if (window.parent === window) focusBox()
+    return () => window.removeEventListener('message', onMessage)
+  }, [ready])
   // The conversation as drawn: whatever has happened in this page since it
   // opened, else the restored one.
   const [liveMessages, setMessages] = useState<Message[] | null>(null)
@@ -654,11 +695,11 @@ function WidgetChatBody({
     window.location.reload()
   }
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-    setInput('')
-    sendMessage(input)
+  function handleSend(question: string) {
+    if (!question.trim() || isLoading) return
+    setTyped('')
+    clearDraft(widgetToken)
+    sendMessage(question)
   }
 
   // Every non-'ok' outcome is reported to the visitor and leaves them where
@@ -918,24 +959,13 @@ function WidgetChatBody({
 
           {/* Input */}
           <div className="border-t border-gray-100 px-3 py-3 shrink-0">
-            <form onSubmit={handleSubmit} className="flex items-center gap-2">
-              <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Ask a question…"
-                className="flex-1 rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-900 placeholder-gray-400 focus:border-brand-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-100 transition-colors"
-                disabled={isLoading}
-              />
-              <button
-                type="submit"
-                disabled={isLoading || !input.trim()}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-600 text-on-brand disabled:opacity-40 hover:bg-brand-700 transition-colors"
-              >
-                <svg className="h-3.5 w-3.5 rotate-90" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                </svg>
-              </button>
-            </form>
+            <QuestionBox
+              value={input}
+              onChange={changeInput}
+              onSend={handleSend}
+              busy={isLoading}
+              boxRef={questionBoxRef}
+            />
             {showBranding && (
               <p className="text-center text-[0.625rem] text-gray-300 mt-2">Powered by answerLoops</p>
             )}
