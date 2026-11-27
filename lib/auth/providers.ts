@@ -1,3 +1,8 @@
+import Google from 'next-auth/providers/google'
+import GitHub from 'next-auth/providers/github'
+import type { Provider } from 'next-auth/providers'
+import { fetchGitHubProfile } from './github'
+
 /**
  * The sign-in methods this deployment can actually complete.
  *
@@ -7,7 +12,7 @@
  * means adding one entry here; the page and the sign-in action both read this
  * list rather than naming providers themselves.
  */
-export type SignInProviderId = 'google'
+export type SignInProviderId = 'google' | 'github'
 
 export interface SignInProvider {
   id: SignInProviderId
@@ -19,9 +24,18 @@ interface ProviderDefinition extends SignInProvider {
   requiredEnv: readonly string[]
 }
 
-const PROVIDERS: readonly ProviderDefinition[] = [
-  { id: 'google', label: 'Google', requiredEnv: ['AUTH_GOOGLE_ID', 'AUTH_GOOGLE_SECRET'] },
-]
+const PROVIDER_DEFINITIONS = {
+  google: { label: 'Google', requiredEnv: ['AUTH_GOOGLE_ID', 'AUTH_GOOGLE_SECRET'] },
+  github: { label: 'GitHub', requiredEnv: ['AUTH_GITHUB_ID', 'AUTH_GITHUB_SECRET'] },
+} as const satisfies Record<SignInProviderId, { label: string; requiredEnv: readonly string[] }>
+
+const PROVIDERS: readonly ProviderDefinition[] = (
+  Object.keys(PROVIDER_DEFINITIONS) as SignInProviderId[]
+).map((id) => ({
+  id,
+  label: PROVIDER_DEFINITIONS[id].label,
+  requiredEnv: PROVIDER_DEFINITIONS[id].requiredEnv,
+}))
 
 export function configuredSignInProviders(
   env: Record<string, string | undefined> = process.env,
@@ -39,8 +53,36 @@ export function configuredSignInProviders(
  * through.
  */
 export function parseSignInProvider(
-  value: string | null | undefined,
+  value: unknown,
   env: Record<string, string | undefined> = process.env,
 ): SignInProviderId | null {
+  if (typeof value !== 'string') return null
   return configuredSignInProviders(env).find((p) => p.id === value)?.id ?? null
+}
+
+export const PROVIDER_FACTORIES: Record<
+  SignInProviderId,
+  (env: Record<string, string | undefined>) => Provider
+> = {
+  google: (env) =>
+    Google({
+      clientId: env.AUTH_GOOGLE_ID?.trim() ?? process.env.AUTH_GOOGLE_ID?.trim(),
+      clientSecret: env.AUTH_GOOGLE_SECRET?.trim() ?? process.env.AUTH_GOOGLE_SECRET?.trim(),
+    }),
+  github: (env) =>
+    GitHub({
+      clientId: env.AUTH_GITHUB_ID?.trim() ?? process.env.AUTH_GITHUB_ID?.trim(),
+      clientSecret: env.AUTH_GITHUB_SECRET?.trim() ?? process.env.AUTH_GITHUB_SECRET?.trim(),
+      userinfo: {
+        url: 'https://api.github.com/user',
+        request: (context: { tokens: { access_token?: string }; provider: { userinfo?: { url?: string } } }) =>
+          fetchGitHubProfile(context),
+      },
+    }),
+}
+
+export function getRegisteredProviders(
+  env: Record<string, string | undefined> = process.env,
+): Provider[] {
+  return configuredSignInProviders(env).map((p) => PROVIDER_FACTORIES[p.id](env))
 }

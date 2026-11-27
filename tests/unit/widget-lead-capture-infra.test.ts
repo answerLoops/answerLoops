@@ -125,14 +125,14 @@ describe('lib/db/schema: orgs.widgetLeadCaptureMode matches the migration', () =
   })
 })
 
-describe('auth.ts: a brand-new org gets the product default, not the column default', () => {
+describe('lib/auth/provision.ts: a brand-new org gets the product default, not the column default', () => {
   it('sets widgetLeadCaptureMode explicitly on the new-org insert', () => {
     // No existing harness in this repo mocks the DB-backed OAuth sign-in flow
-    // auth.ts's new-org path runs inside, so this is a source-level check —
+    // lib/auth/provision.ts's new-org path runs inside, so this is a source-level check —
     // same convention as the other source-shape assertions in this file.
-    const src = fs.readFileSync(path.join(ROOT, 'auth.ts'), 'utf-8')
+    const src = fs.readFileSync(path.join(ROOT, 'lib/auth/provision.ts'), 'utf-8')
     const insertIdx = src.indexOf('.insert(orgs)')
-    expect(insertIdx, 'auth.ts no longer inserts into orgs the way this test expects').toBeGreaterThan(-1)
+    expect(insertIdx, 'lib/auth/provision.ts no longer inserts into orgs the way this test expects').toBeGreaterThan(-1)
     const valuesBlock = src.slice(insertIdx, insertIdx + 400)
     expect(valuesBlock).toContain('widgetLeadCaptureMode: DEFAULT_WIDGET_LEAD_CAPTURE_MODE')
     expect(src).toMatch(/import \{ DEFAULT_WIDGET_LEAD_CAPTURE_MODE \} from '@\/lib\/widget\/lead-capture'/)

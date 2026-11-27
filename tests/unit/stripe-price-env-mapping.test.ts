@@ -117,16 +117,20 @@ describe('documented env vars match what the code reads', () => {
   it('.env.example never lists a variable that no code path reads', () => {
     // The inverse of the check above: a var here that nothing reads doesn't
     // just rot, it invites a self-hoster to fill in a working credential (a
-    // real GitHub OAuth app, say) for a provider that quietly does nothing.
+    // real Discord OAuth app, say) for a provider that quietly does nothing.
     const example = fs.readFileSync(path.join(process.cwd(), '.env.example'), 'utf-8')
     const names = [...example.matchAll(/^([A-Z][A-Z0-9_]+)=/gm)].map((m) => m[1])
     expect(names.length).toBeGreaterThan(20)
+
+    for (const name of ['AUTH_GOOGLE_ID', 'AUTH_GOOGLE_SECRET', 'AUTH_GITHUB_ID', 'AUTH_GITHUB_SECRET']) {
+      expect(names, `${name} is a supported sign-in method and must be in .env.example`).toContain(name)
+    }
 
     // Not an exhaustive reverse-check of every source file — that belongs to
     // a wider repo-scan test, if one is ever written. This guards the two
     // failure modes already seen once each: a dead OAuth provider var, and a
     // renamed-but-not-removed Stripe price var.
-    for (const name of ['AUTH_GITHUB_ID', 'AUTH_GITHUB_SECRET', 'AUTH_DISCORD_ID', 'AUTH_DISCORD_SECRET', 'DISCORD_CLIENT_SECRET', 'STRIPE_PRICE_SCALE']) {
+    for (const name of ['AUTH_DISCORD_ID', 'AUTH_DISCORD_SECRET', 'DISCORD_CLIENT_SECRET', 'STRIPE_PRICE_SCALE']) {
       expect(names, `${name} is listed but no sign-in provider or billing path reads it`).not.toContain(name)
     }
   })

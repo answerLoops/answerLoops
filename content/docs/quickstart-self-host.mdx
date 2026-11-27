@@ -59,9 +59,12 @@ AUTH_URL=http://localhost:3000
 AUTH_SECRET=<run: openssl rand -hex 32>
 ENCRYPTION_KEY=<run: openssl rand -hex 32>
 
-# Google sign-in (the sign-in page shows no button without these)
+# Sign-in (Google or GitHub; the sign-in page shows no button without credentials)
 AUTH_GOOGLE_ID=<your-google-oauth-client-id>
 AUTH_GOOGLE_SECRET=<your-google-oauth-client-secret>
+# Or GitHub sign-in:
+# AUTH_GITHUB_ID=<your-github-oauth-client-id>
+# AUTH_GITHUB_SECRET=<your-github-oauth-client-secret>
 
 # AI (required for deflection and KB search)
 OPENAI_API_KEY=<your-openai-api-key>
@@ -99,7 +102,7 @@ Drizzle migrations run automatically on first start — no manual migration step
 
 ## 4. Create your account
 
-Open [http://localhost:3000](http://localhost:3000) and sign in with Google. On first login you'll see the onboarding wizard:
+Open [http://localhost:3000](http://localhost:3000) and sign in with Google or GitHub. On first login you'll see the onboarding wizard:
 
 1. **Connect your community** — Discord 1-click invite, Slack token, or skip
 2. **Seed your knowledge base** — drag-drop docs files or paste a URL

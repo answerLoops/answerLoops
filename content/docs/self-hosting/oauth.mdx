@@ -1,16 +1,16 @@
 ---
 title: OAuth Setup
-description: Configure Google login for your self-hosted instance.
+description: Configure Google and GitHub sign-in for your self-hosted instance.
 icon: KeyRound
 ---
 
-answerLoops signs your team in with Google. This page walks you through creating a Google OAuth client, which is a set of credentials that lets answerLoops ask Google who is signing in. When you are done, the sign-in page shows a **Google** button.
+answerLoops signs your team in with Google or GitHub. This page walks you through creating OAuth credentials that let answerLoops authenticate users. When you are done, the sign-in page displays buttons for each configured method.
 
 <Callout type="info">
-  Google is the only sign-in method. Discord, Slack, and GitHub connections inside the product are for linking channels, and you set those up after you are signed in.
+  Discord and Slack connections inside the product are for linking community channels, and the GitHub App integration in Settings connects repositories for documentation sync and issue tracking. Sign-in uses its own Google or GitHub OAuth credentials configured in your environment.
 </Callout>
 
-The sign-in page only offers a method whose credentials are set. Without the two variables below it shows a notice that sign-in is not set up, instead of a button.
+The sign-in page only offers a method whose credentials are set. If neither provider is configured, it shows a notice that sign-in is not set up, instead of a button.
 
 ## Create the Google client
 
@@ -40,27 +40,63 @@ The sign-in page only offers a method whose credentials are set. Without the two
   </Step>
 </Steps>
 
-Restart the app after changing `.env`.
+Restart the app after changing `.env`. When configured, the sign-in page displays the **Sign in with Google** button.
+
+## Create the GitHub OAuth application
+
+<Steps>
+  <Step>
+    Go to [github.com/settings/developers](https://github.com/settings/developers), then select **OAuth Apps** → **New OAuth App**.
+  </Step>
+  <Step>
+    Set the **Application name** (for example, `answerLoops`).
+  </Step>
+  <Step>
+    Set the **Homepage URL** to your deployment address:
+
+    - Local: `http://localhost:3000`
+    - Production: `https://<your-domain>`
+  </Step>
+  <Step>
+    Add the **Authorization callback URL**:
+
+    - Local: `http://localhost:3000/api/auth/callback/github`
+    - Production: `https://<your-domain>/api/auth/callback/github`
+  </Step>
+  <Step>
+    Select **Register application**, then select **Generate a new client secret**.
+  </Step>
+  <Step>
+    Copy the **Client ID** and **Client secret**, and add them to `.env`:
+
+    ```dotenv
+    AUTH_GITHUB_ID=<your-github-client-id>
+    AUTH_GITHUB_SECRET=<your-github-client-secret>
+    ```
+  </Step>
+</Steps>
+
+Restart the app after changing `.env`. When configured, the sign-in page displays the **Sign in with GitHub** button.
 
 ## How sign-in works
 
 <Mermaid
-  caption="The Google sign-in redirect: you start on answerLoops, approve on Google, and Google sends you back to your own callback address."
+  caption="The sign-in redirect: you start on answerLoops, approve on your provider, and the provider sends you back to your callback address."
   chart={`sequenceDiagram
   participant You
   participant App as answerLoops
-  participant Google
-  You->>App: Select Google on the sign-in page
-  App->>Google: Redirect to Google to approve
-  Google->>You: Ask you to approve
-  You->>Google: Approve
-  Google->>App: Redirect to /api/auth/callback/google
+  participant Provider as Sign-in Provider
+  You->>App: Select sign-in method
+  App->>Provider: Redirect to provider to approve
+  Provider->>You: Ask you to approve
+  You->>Provider: Approve
+  Provider->>App: Redirect to /api/auth/callback/<provider>
   App->>You: Signed in, open the dashboard`} />
 
 The callback address in the fifth message is built from `AUTH_URL`, so that variable must match the public address you actually use.
 
 <Callout type="warn">
-  The redirect URI in Google must match your address exactly. A trailing slash, `http` versus `https`, or a different port each count as a mismatch. If Google shows a `redirect_uri_mismatch` error, see [troubleshooting](/docs/self-hosting/troubleshooting#sign-in-and-access).
+  The redirect URI in Google or GitHub must match your address exactly. A trailing slash, `http` versus `https`, or a different port each count as a mismatch. If your provider shows a `redirect_uri_mismatch` error, see [troubleshooting](/docs/self-hosting/troubleshooting#sign-in-and-access).
 </Callout>
 
 ## Where to go next

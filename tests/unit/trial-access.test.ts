@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import { hasActiveAccess } from '@/lib/billing/plans'
 import { tierForStatus } from '@/lib/billing/platform-ai-budget'
+import { isAllowedSignIn } from '@/lib/auth/signin'
 
 // When the trial ends the product locks and a card is needed to continue; the
 // AI budget keeps applying while it runs. Plus the structural guarantees that
@@ -47,8 +48,23 @@ describe('paying after the trial', () => {
 describe('sign-in guards in auth.ts', () => {
   const src = read('auth.ts')
   it('refuses an unverified provider email', () => {
-    expect(src).toContain('email_verified')
-    expect(src).toContain('/login?error=EmailNotVerified')
+    expect(src).toContain('isAllowedSignIn({ user, account, profile })')
+    expect(
+      isAllowedSignIn({
+        user: { email: 'user@example.com' },
+        account: { provider: 'google' },
+        profile: { email_verified: false },
+        env: { AUTH_GOOGLE_ID: 'id', AUTH_GOOGLE_SECRET: 'secret' },
+      }),
+    ).toBe('/login?error=EmailNotVerified')
+    expect(
+      isAllowedSignIn({
+        user: { email: 'user@example.com' },
+        account: { provider: 'github' },
+        profile: { email_verified: false },
+        env: { AUTH_GITHUB_ID: 'id', AUTH_GITHUB_SECRET: 'secret' },
+      }),
+    ).toBe('/login?error=EmailNotVerified')
   })
   it('sends anyone without recorded terms to the terms step before billing or onboarding', () => {
     const gate = src.indexOf('!access.termsAcceptedAt && pathname !== ACCEPT_TERMS_PATH')
@@ -57,8 +73,10 @@ describe('sign-in guards in auth.ts', () => {
     expect(src).toContain("{ error: 'Terms not accepted' }, { status: 403 }")
   })
   it('starts no trial while provisioning a new account, only an existing owner who has accepted the terms', () => {
-    expect(src).toContain('existing.role === \'owner\' && user.termsAcceptedAt')
-    expect(src).not.toMatch(/insert\(subscriptions\)/)
+    const provSrc = read('lib/auth/provision.ts')
+    expect(provSrc).toContain("existing.role === 'owner' && user.termsAcceptedAt")
+    expect(provSrc).toContain('await beginTrial({')
+    expect(provSrc).not.toMatch(/insert\(subscriptions\)/)
   })
   it('the terms step is reachable without a subscription', () => {
     expect(read('lib/billing/access.ts')).toContain("'/accept-terms'")

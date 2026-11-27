@@ -19,7 +19,7 @@ Set variables in your `.env` file (local) or in your hosting provider's environm
 </Callout>
 
 <Cards>
-  <Card icon="Server" title="Required for every install" href="#core-required">Database, session secret, public URL, encryption key, and Google sign-in.</Card>
+  <Card icon="Server" title="Required for every install" href="#core-required">Database, session secret, public URL, encryption key, and sign-in credentials.</Card>
   <Card icon="Sparkles" title="AI provider" href="#ai-providers">An OpenAI key powers drafts and search out of the box.</Card>
   <Card icon="MessageSquare" title="Channels" href="#discord">Discord, Slack, Google Chat, GitHub, Telegram and email.</Card>
 </Cards>
@@ -38,17 +38,22 @@ Set variables in your `.env` file (local) or in your hosting provider's environm
 
 ### Sign-in (required)
 
-Google is the only sign-in provider answerLoops configures. Both variables are required.
+Sign-in methods are configurable. Configure at least one provider (Google, GitHub, or both). If neither is configured, the sign-in page displays a setup notice instead of buttons.
 
 | Variable | Description |
 |---|---|
 | `AUTH_GOOGLE_ID` | Google OAuth client ID |
 | `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
+| `AUTH_GITHUB_ID` | GitHub OAuth client ID |
+| `AUTH_GITHUB_SECRET` | GitHub OAuth client secret |
 
-Callback URL to register: `https://<your-domain>/api/auth/callback/google`
+Callback URLs to register:
+
+- Google: `https://<your-domain>/api/auth/callback/google`
+- GitHub: `https://<your-domain>/api/auth/callback/github`
 
 <Callout type="info">
-  `DISCORD_CLIENT_ID` and `SLACK_CLIENT_ID` below are separate: they power the "connect a Discord server" and "Add to Slack" flows inside the product, not sign-in. There is no Discord, Slack or GitHub provider for dashboard sign-in.
+  `DISCORD_CLIENT_ID` and `SLACK_CLIENT_ID` below are separate: they power the "connect a Discord server" and "Add to Slack" flows inside the product, not sign-in. Similarly, the GitHub App settings (`GITHUB_APP_ID`, etc.) connect repositories for documentation sync and issue tracking, while `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` power dashboard sign-in via a GitHub OAuth App.
 </Callout>
 
 ### Networking

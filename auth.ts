@@ -1,10 +1,12 @@
 import NextAuth from 'next-auth'
-import Google from 'next-auth/providers/google'
+import { isAllowedSignIn } from '@/lib/auth/signin'
+import { verifyAccountIdentity } from '@/lib/auth/identity'
+import { getRegisteredProviders } from '@/lib/auth/providers'
+import { provisionUser } from '@/lib/auth/provision'
 import { NextResponse } from 'next/server'
-import { and, eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { getDb } from '@/lib/db/drizzle'
-import { users, memberships, orgs } from '@/lib/db/schema'
-import { DEFAULT_ORG_ID } from '@/lib/db/schema'
+import { orgs, DEFAULT_ORG_ID } from '@/lib/db/schema'
 import { resolveOrgIdForSessionUpdate, resolveOrgAccess } from '@/lib/auth/membership'
 import { sessionIdleSeconds } from '@/lib/auth/session-lifetime'
 import { orgHasProductAccess, isAccessExempt } from '@/lib/billing/access'
@@ -12,8 +14,6 @@ import { appOrigin } from '@/lib/site'
 import { isWebsitePath } from '@/lib/marketing/website-paths'
 import { isKnownRoute } from '@/lib/marketing/known-routes'
 import { notFoundResponse } from '@/lib/marketing/not-found-response'
-import { beginTrial } from '@/lib/auth/signup'
-import { DEFAULT_WIDGET_LEAD_CAPTURE_MODE } from '@/lib/widget/lead-capture'
 
 const PUBLIC_PATHS = ['/', '/login', '/api/auth', '/api/ingest', '/api/feedback', '/api/slack', '/api/widget', '/widget', '/widget.js', '/api/billing/webhook', '/api/newsletter', '/unsubscribe', '/api/health', '/api/github/webhook', '/api/telegram/webhook', '/api/circle/webhook', '/api/discourse/webhook', '/api/email/ingest', '/api/mcp', '/api/v1/agent', '/openapi.json', '/.well-known', '/api/google-chat', '/api/nav-state', '/api/kb/sync-jobs/run', '/api/kb/embedding-migration/run', '/api/kb/retitle-imports/run', '/api/kb/docs-reprocess/run', '/api/billing/trial-reminders/run','/vs', '/alternatives', '/about', '/blog', '/changelog', '/pricing', '/agentic-support', '/docs', '/privacy', '/terms', '/robots.txt', '/sitemap.xml', '/llms.txt', '/llms-full.txt', '/architecture', '/circle-ai-answers', '/discourse-ai-answers', '/dual-agent-ai-support', '/discord-github-support', '/mcp-support-agents', '/open-source-support', '/self-hosted-ai-support', '/self-hosting-proof', '/support-example', '/support-workflow']
 const ONBOARDING_PATH = '/onboarding'
@@ -36,89 +36,6 @@ function isPublic(pathname: string): boolean {
 // with next.config.ts's redirects() — that's the other half of the host
 // split, sending a website path hit on the app subdomain back here.
 
-async function provisionUser(
-  email: string,
-  name: string | null,
-  image: string | null,
-  provider: string,
-  providerAccountId: string | null
-): Promise<{ userId: number; orgId: number }> {
-  const db = getDb()
-  const signedInAt = new Date()
-
-  // Upsert user. Everyone who signs in is recorded here — this table is the
-  // list of people we can later contact, subject to their marketing choice —
-  // and each sign-in stamps last_login_at. The provider's account id is
-  // written once; it is the stable identity the trial ledger keys on.
-  //
-  // Nothing about consent is written here. Signing in is one action for a new
-  // and a returning person, and this is the first moment we can tell them
-  // apart; a new person accepts the terms on the step that follows
-  // (lib/actions/terms.ts), and the access gate in `authorized` below holds
-  // them there until they have.
-  await db
-    .insert(users)
-    .values({ email, name, image, provider, providerAccountId, lastLoginAt: signedInAt })
-    .onConflictDoUpdate({
-      target: users.email,
-      set: {
-        name: name ?? undefined,
-        image: image ?? undefined,
-        lastLoginAt: signedInAt,
-        providerAccountId: sql`COALESCE(${users.providerAccountId}, ${providerAccountId})`,
-      },
-    })
-
-  const [user] = await db
-    .select({ id: users.id, termsAcceptedAt: users.termsAcceptedAt })
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1)
-
-  // Returning user: find existing membership
-  const [existing] = await db
-    .select({ orgId: memberships.orgId, role: memberships.role })
-    .from(memberships)
-    .where(eq(memberships.userId, user.id))
-    .limit(1)
-
-  if (existing) {
-    // An account that predates the card-free trial and never subscribed has
-    // never had a trial. Offer it once; startTrial leaves an org that already
-    // has a subscription row alone and refuses anyone the ledger has seen, so
-    // this cannot reset a customer or hand out a second trial. Only once the
-    // terms are accepted: someone still on that step gets theirs from it.
-    if (existing.role === 'owner' && user.termsAcceptedAt) {
-      await beginTrial({ userId: user.id, orgId: existing.orgId, email, name, providerAccountId })
-    }
-    return { userId: user.id, orgId: existing.orgId }
-  }
-
-  // New user: create a fresh org workspace. The trial starts when they accept
-  // the terms, not here.
-  //
-  // widgetLeadCaptureMode is set explicitly rather than left to the column's
-  // own default: that default is 'up-front' so existing workspaces aren't
-  // silently switched when the column was added, but a brand-new workspace
-  // should start on the product's actual recommended behavior. See
-  // lib/widget/lead-capture.ts and lib/db/schema.ts's doc comment on the column.
-  const [newOrg] = await db
-    .insert(orgs)
-    .values({
-      name: 'My Workspace',
-      slug: `org-${user.id}-${Date.now()}`,
-      widgetLeadCaptureMode: DEFAULT_WIDGET_LEAD_CAPTURE_MODE,
-    })
-    .returning({ id: orgs.id })
-
-  await db
-    .insert(memberships)
-    .values({ userId: user.id, orgId: newOrg.id, role: 'owner' })
-    .onConflictDoNothing()
-
-  return { userId: user.id, orgId: newOrg.id }
-}
-
 // Cloud runs the dashboard at app.answerloops.com alongside the marketing
 // site's root domain (a Railway custom-domain plan cap means they share one
 // service rather than each getting its own — see next.config.ts). A session
@@ -130,9 +47,7 @@ const cookieDomain = process.env.AUTH_COOKIE_DOMAIN
 const useSecureCookies = process.env.NODE_ENV === 'production'
 
 export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
-  providers: [
-    Google,
-  ],
+  providers: getRegisteredProviders(),
 
   pages: {
     signIn: '/login',
@@ -277,15 +192,23 @@ export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth({
   }),
 
   callbacks: {
-    // Runs once per OAuth sign-in, before a session exists. An address the
-    // provider has not verified is refused here: the trial is limited to one per
-    // person by email identity, so an unverified address would let someone claim
-    // a mailbox that is not theirs, or spend a stranger's trial on it.
+    // Runs once per OAuth sign-in, before a session exists. Validates identity
+    // and email verification, and ensures provider identity matches existing accounts.
     async signIn({ user, account, profile }) {
-      if (!user.email || !account) return false
-      if (account.provider === 'google' && (profile as { email_verified?: boolean } | undefined)?.email_verified !== true) {
-        return '/login?error=EmailNotVerified'
+      const allowed = isAllowedSignIn({ user, account, profile })
+      if (allowed !== true) return allowed
+
+      if (!user?.email || !account?.provider || !account?.providerAccountId?.trim()) {
+        return false
       }
+
+      const identityCheck = await verifyAccountIdentity({
+        provider: account.provider,
+        providerAccountId: account.providerAccountId,
+        email: user.email,
+      })
+      if (!identityCheck.allowed) return identityCheck.redirectUrl
+
       return true
     },
 

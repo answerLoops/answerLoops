@@ -45,8 +45,9 @@ are present, generates `AUTH_SECRET`/`ENCRYPTION_KEY` if absent, and either:
 
 - starts the stack and polls until `/api/health` responds — success, or
 - exits with a clear list of missing required config (`DATABASE_URL`,
-  `AUTH_URL`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`) and exactly what each
-  one is.
+  `AUTH_URL`, and at least one complete OAuth provider pair:
+  `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` or `AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET`)
+  and exactly what each one is.
 
 ### 2. Fill in whatever it reports missing
 
@@ -60,10 +61,12 @@ For each variable the CLI names:
   Confirm the connection string actually works.
 - `AUTH_URL` — the public URL they'll reach the instance at
   (`http://localhost:3000` for local, or their real domain).
-- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` — login is Google OAuth only. Tell
-  the user to create an OAuth client in Google Cloud Console and register
-  the callback URL `{AUTH_URL}/api/auth/callback/google`. Wait for them to
-  paste the real client ID and secret — do not proceed with a placeholder.
+- `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` or `AUTH_GITHUB_ID` / `AUTH_GITHUB_SECRET` —
+  login supports Google and GitHub OAuth. The user must provide at least one
+  complete pair:
+  - Google: create an OAuth client in Google Cloud Console and register callback `{AUTH_URL}/api/auth/callback/google`.
+  - GitHub: create an OAuth app in GitHub Developer Settings and register callback `{AUTH_URL}/api/auth/callback/github`.
+  Wait for them to paste the real client ID and secret — do not proceed with a placeholder.
 
 Add each real value to the `.env` the CLI created (in the cloned repo
 directory), then re-run `npx @answerloops/agent-sdk setup` from that

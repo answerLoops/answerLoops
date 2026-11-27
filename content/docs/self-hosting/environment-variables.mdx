@@ -16,7 +16,7 @@ This is the shortest working configuration. Everything else is optional and can 
 | `AUTH_URL` | The public address of your instance |
 | `AUTH_SECRET` | Random secret for sign-in sessions, at least 32 characters (production refuses to start without one) |
 | `ENCRYPTION_KEY` | Random secret that protects saved API keys and tokens (required in production) |
-| `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` | Google sign-in, the only way to sign in |
+| `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`, or `AUTH_GITHUB_ID` and `AUTH_GITHUB_SECRET` | Sign-in credentials; configure Google, GitHub, or both |
 | `OPENAI_API_KEY` | Answers and knowledge-base search, unless each workspace saves its own key in Settings |
 | `BOT_SECRET` | Lets the bot service run background jobs such as knowledge-base syncs and, on the hosted service, trial-ending reminder emails |
 
@@ -37,6 +37,6 @@ The [environment variables reference](/docs/reference/environment-variables) is 
 <Cards>
   <Card icon="Settings" title="Environment variables reference" href="/docs/reference/environment-variables">Look up any variable, its default and whether you need it.</Card>
   <Card icon="Container" title="Docker setup" href="/docs/self-hosting/docker">Run the app, bot and database with Docker Compose.</Card>
-  <Card icon="KeyRound" title="OAuth setup" href="/docs/self-hosting/oauth">Create the Google sign-in credentials.</Card>
+  <Card icon="KeyRound" title="OAuth setup" href="/docs/self-hosting/oauth">Create Google or GitHub sign-in credentials.</Card>
   <Card icon="Cpu" title="AI model settings" href="/docs/product/ai-config#self-hosted-installs">Use your own provider or a model you host.</Card>
 </Cards>
