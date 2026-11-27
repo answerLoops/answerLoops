@@ -39,9 +39,9 @@ const cardBase = 'w-full max-w-[88%] rounded-2xl rounded-bl-sm border border-gra
 export function CardSkeleton() {
   return (
     <div className={`${cardBase} space-y-2 p-3`} aria-hidden="true">
-      <div className="h-2.5 w-1/3 animate-pulse rounded bg-gray-100" />
-      <div className="h-2 w-full animate-pulse rounded bg-gray-100" />
-      <div className="h-2 w-4/5 animate-pulse rounded bg-gray-100" />
+      <div className="h-2.5 w-1/3 animate-pulse rounded bg-gray-100 motion-reduce:animate-none" />
+      <div className="h-2 w-full animate-pulse rounded bg-gray-100 motion-reduce:animate-none" />
+      <div className="h-2 w-4/5 animate-pulse rounded bg-gray-100 motion-reduce:animate-none" />
     </div>
   )
 }

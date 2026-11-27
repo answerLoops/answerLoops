@@ -27,6 +27,7 @@ import {
 } from './genui-cards'
 import { ChatMarkdown } from './chat-markdown'
 import { QuestionBox, hasFinePointer } from './question-box'
+import { useFollowLatest } from './use-follow-latest'
 import { AnswerFeedback, type AnswerFeedbackConfig } from './answer-feedback'
 import { CopyReply } from './copy-reply'
 import { LogoAvatar, WelcomeAvatar } from './welcome-avatar'
@@ -208,6 +209,32 @@ const EMPTY_QUESTIONS: string[] = []
 const AssistantAvatar = ({ logoUrl }: { logoUrl: string | null }) => (
   <LogoAvatar logoUrl={logoUrl} size={24} className="mr-2 mt-0.5" testId="reply-avatar" />
 )
+
+/**
+ * Shown before a reply starts. It uses the reply bubble's shape, padding and
+ * line height, so the reply's first line takes its place without the row
+ * changing size. The dots fade in turn rather than bounce, and stay still with
+ * reduced motion. Screen readers hear "Typing" once, not every change.
+ */
+function TypingIndicator({ logoUrl }: { logoUrl: string | null }) {
+  return (
+    <div className="flex justify-start" data-testid="typing-indicator">
+      <AssistantAvatar logoUrl={logoUrl} />
+      <div className="rounded-2xl rounded-bl-sm bg-gray-100 px-3 py-2 text-xs leading-relaxed">
+        <span className="flex h-[1.625em] items-center gap-1" aria-hidden="true">
+          {[0, 200, 400].map((delay) => (
+            <span
+              key={delay}
+              className="h-1.5 w-1.5 animate-pulse rounded-full bg-gray-400 motion-reduce:animate-none"
+              style={{ animationDelay: `${delay}ms` }}
+            />
+          ))}
+        </span>
+        <output className="sr-only">Typing</output>
+      </div>
+    </div>
+  )
+}
 
 interface MessageRowProps {
   message: Message
@@ -396,7 +423,9 @@ function WidgetChatBody({
   brandStyle: Record<string, string> | null
   answerFlagsEnabled: boolean
 }) {
-  const bottomRef = useRef<HTMLDivElement>(null)
+  // The scrolling conversation area. Held in state (set by a callback ref)
+  // because it only appears once the saved conversation has been read.
+  const [threadEl, setThreadEl] = useState<HTMLDivElement | null>(null)
   // What the visitor has typed; null until they type, so the box shows the
   // saved draft (stored.draft) until then.
   const [typed, setTyped] = useState<string | null>(null)
@@ -609,12 +638,6 @@ function WidgetChatBody({
     saveTranscript(widgetToken, liveMessages)
   }, [ready, isLoading, liveMessages, widgetToken])
 
-  useEffect(() => {
-    // Smooth scrolling restarts its animation on every streamed token and
-    // visibly lags behind the text; jump while a reply is arriving.
-    bottomRef.current?.scrollIntoView({ behavior: isLoading ? 'auto' : 'smooth' })
-  }, [messages, isLoading, failurePrompt])
-
   useGenuiRenderers()
 
   const toolResultsByMessage = useMemo(() => {
@@ -629,6 +652,14 @@ function WidgetChatBody({
     }
     return out
   }, [messages])
+
+  // Everything that can change the bottom of the conversation: messages
+  // (including each streamed piece of a reply), the typing dots and the
+  // follow-up prompt. The view follows it only while the visitor is at the
+  // bottom; otherwise "Jump to latest" is offered.
+  const typingDots = isLoading && (messages.length === 0 || messages[messages.length - 1].role !== 'assistant')
+  const threadContent = useMemo(() => ({ messages, typingDots, failurePrompt }), [messages, typingDots, failurePrompt])
+  const { showJump, jumpToLatest, followNow } = useFollowLatest(threadEl, threadContent, isLoading)
 
   const sendMessage = useCallback(
     (raw: string) => {
@@ -645,6 +676,8 @@ function WidgetChatBody({
         seededRef.current = true
         if (stored.restored.length > 0 && agent.messages.length === 0) agent.setMessages(stored.restored)
       }
+      // The visitor's own message always brings the view to the bottom.
+      followNow()
       agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: text })
       // Every run sends the whole thread and the endpoint refuses more than 50
       // messages, so a long conversation (or a restored one) keeps only its
@@ -661,7 +694,7 @@ function WidgetChatBody({
       // visitorId explicitly or the server never sees them.
       void agent.runAgent({ forwardedProps: { widgetToken, renderToken, visitorId, turnId, isSelfPreview } })
     },
-    [agent, isLoading, stored, widgetToken, renderToken, visitorId, isSelfPreview]
+    [agent, isLoading, stored, widgetToken, renderToken, visitorId, isSelfPreview, followNow]
   )
 
   // What every reply's thumbs need. A stable object, so rows that did not change
@@ -849,8 +882,10 @@ function WidgetChatBody({
         </div>
       ) : (
         <>
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
+          {/* Messages. The wrapper positions "Jump to latest" over the bottom of
+              the conversation, just above the question box. */}
+          <div className="relative flex min-h-0 flex-1 flex-col">
+          <div ref={setThreadEl} className="flex-1 overflow-y-auto px-4 py-4 space-y-3" data-testid="chat-thread">
             {messages.length === 0 && (
               <div
                 className="-mx-4 -mt-4 bg-gradient-to-b from-brand-50 to-white px-5 pb-5 pt-9 text-center"
@@ -893,18 +928,7 @@ function WidgetChatBody({
               />
             ))}
 
-            {showTyping && (
-              <div className="flex justify-start">
-                <AssistantAvatar logoUrl={logoUrl} />
-                <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-3 py-2">
-                  <span className="flex gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:0ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:150ms]" />
-                    <span className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce [animation-delay:300ms]" />
-                  </span>
-                </div>
-              </div>
-            )}
+            {showTyping && <TypingIndicator logoUrl={logoUrl} />}
 
             {error && (
               <p className="break-words text-center text-xs text-red-400">{error}</p>
@@ -957,7 +981,20 @@ function WidgetChatBody({
               </div>
             )}
 
-            <div ref={bottomRef} />
+          </div>
+          {showJump && (
+            <button
+              type="button"
+              onClick={jumpToLatest}
+              data-testid="jump-to-latest"
+              className="absolute bottom-3 left-1/2 flex min-h-9 -translate-x-1/2 items-center gap-1 rounded-full bg-brand-600 px-3.5 text-xs font-medium text-on-brand shadow-md hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 5v14M5 12l7 7 7-7" />
+              </svg>
+              Jump to latest
+            </button>
+          )}
           </div>
 
           {/* Input */}

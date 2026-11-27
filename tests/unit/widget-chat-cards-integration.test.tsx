@@ -70,6 +70,9 @@ vi.mock('@copilotkit/react-core/v2/headless', () => ({
 
 const TOKEN = 'a'.repeat(48)
 const scrollIntoView = vi.fn()
+// The conversation follows new content by scrolling its own area
+// (app/widget/[widgetToken]/use-follow-latest.ts).
+const scrollTo = vi.fn()
 // vi.resetModules() gives WidgetChat a fresh genui-cards module (and so a fresh
 // WidgetActionsContext) each test, so the card must come from that same
 // instance or it would read the context's default (canReply: false).
@@ -127,6 +130,8 @@ beforeEach(() => {
   h.renderToolCall.mockImplementation(() => null)
   scrollIntoView.mockClear()
   Element.prototype.scrollIntoView = scrollIntoView
+  scrollTo.mockClear()
+  HTMLElement.prototype.scrollTo = scrollTo as unknown as HTMLElement['scrollTo']
 })
 
 describe('WidgetChat + ChoicesCard: replying through a card', () => {
@@ -359,31 +364,36 @@ describe('WidgetChat: rows that draw nothing', () => {
 })
 
 describe('WidgetChat: scroll behaviour', () => {
-  it('scrolls smoothly when idle', async () => {
+  const behaviours = () => scrollTo.mock.calls.map(([arg]) => (arg as ScrollToOptions).behavior)
+
+  it('scrolls the conversation smoothly to new content when idle', async () => {
     const fake = makeFakeAgent()
     await openThread(fake)
     await fake.emit.event([{ id: 'u1', role: 'user', content: 'q' }] as Message[])
 
-    expect(scrollIntoView).toHaveBeenCalled()
-    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'smooth' })
+    expect(scrollTo).toHaveBeenCalled()
+    expect(behaviours().at(-1)).toBe('smooth')
   })
 
-  it('jumps (auto) while a run is loading and returns to smooth once it finishes', async () => {
+  it('follows instantly while a reply is arriving, and smoothly again once idle', async () => {
     const fake = makeFakeAgent()
     await openThread(fake)
 
     await fake.emit.runInitialized()
-    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'auto' })
-
-    scrollIntoView.mockClear()
+    scrollTo.mockClear()
     await fake.emit.event([
       { id: 'u1', role: 'user', content: 'q' },
       { id: 'a1', role: 'assistant', content: 'Streaming…' },
     ] as Message[])
-    expect(scrollIntoView).toHaveBeenCalled()
-    for (const [arg] of scrollIntoView.mock.calls) expect(arg).toEqual({ behavior: 'auto' })
+    expect(scrollTo).toHaveBeenCalled()
+    expect(new Set(behaviours())).toEqual(new Set(['auto']))
 
     await fake.emit.runFinalized()
-    expect(scrollIntoView).toHaveBeenLastCalledWith({ behavior: 'smooth' })
+    scrollTo.mockClear()
+    await fake.emit.event([
+      { id: 'u1', role: 'user', content: 'q' },
+      { id: 'a1', role: 'assistant', content: 'Streaming… done.' },
+    ] as Message[])
+    expect(behaviours().at(-1)).toBe('smooth')
   })
 })
