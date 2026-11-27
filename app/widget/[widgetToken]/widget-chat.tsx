@@ -27,6 +27,7 @@ import {
 } from './genui-cards'
 import { ChatMarkdown } from './chat-markdown'
 import { AnswerFeedback, type AnswerFeedbackConfig } from './answer-feedback'
+import { CopyReply } from './copy-reply'
 import { LogoAvatar, WelcomeAvatar } from './welcome-avatar'
 import { followUpCallIds, latestFollowUpCallId } from '@/lib/widget/follow-up-thread'
 import {
@@ -215,6 +216,8 @@ interface MessageRowProps {
   // the signed reference the server gave for this answer.
   feedback: AnswerFeedbackConfig | null
   answerToken: string | null
+  // False while this reply is still arriving: no Copy button until it is complete.
+  complete: boolean
 }
 
 /**
@@ -223,8 +226,10 @@ interface MessageRowProps {
  * instead of the whole thread re-rendering on each token.
  */
 const MessageRow = memo(
-  function MessageRow({ message, toolResults, logoUrl, feedback, answerToken }: MessageRowProps) {
+  function MessageRow({ message, toolResults, logoUrl, feedback, answerToken, complete }: MessageRowProps) {
     const renderToolCall = useRenderToolCall()
+    // The rendered reply, so Copy takes the text the visitor reads.
+    const bubbleRef = useRef<HTMLDivElement>(null)
 
     if (message.role === 'user') {
       return (
@@ -252,11 +257,19 @@ const MessageRow = memo(
     return (
       <>
         {text && (
-          <div className="flex justify-start">
-            <AssistantAvatar logoUrl={logoUrl} />
-            <div className="max-w-[80%] rounded-2xl rounded-bl-sm bg-gray-100 px-3 py-2 text-xs leading-relaxed break-words text-gray-800">
-              <ChatMarkdown text={text} />
+          // `group` lets the Copy button appear while the reply is hovered or focused.
+          <div className="group">
+            <div className="flex justify-start">
+              <AssistantAvatar logoUrl={logoUrl} />
+              <div
+                ref={bubbleRef}
+                className="max-w-[80%] rounded-2xl rounded-bl-sm bg-gray-100 px-3 py-2 text-xs leading-relaxed break-words text-gray-800"
+              >
+                <ChatMarkdown text={text} />
+              </div>
             </div>
+            {/* Only on the reply's text, never on a card-only message, and only once it has finished arriving. */}
+            {complete && <CopyReply bubbleRef={bubbleRef} />}
           </div>
         )}
         {text && feedback && answerToken && <AnswerFeedback config={feedback} answerToken={answerToken} />}
@@ -265,7 +278,7 @@ const MessageRow = memo(
     )
   },
   (prev, next) => {
-    if (prev.canReply !== next.canReply || prev.logoUrl !== next.logoUrl) return false
+    if (prev.canReply !== next.canReply || prev.logoUrl !== next.logoUrl || prev.complete !== next.complete) return false
     if (prev.feedback !== next.feedback || prev.answerToken !== next.answerToken) return false
     if (prev.message === next.message && prev.toolResults === next.toolResults) return true
     const a = prev.message
@@ -832,6 +845,7 @@ function WidgetChatBody({
                 logoUrl={logoUrl}
                 feedback={feedbackConfig}
                 answerToken={answerTokens[m.id] ?? null}
+                complete={!(isLoading && m.id === lastMessage?.id)}
               />
             ))}
 
