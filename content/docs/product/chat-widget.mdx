@@ -368,6 +368,15 @@ Each finished reply has a **Copy** button under it, so a visitor can take a list
 - **Confirmation.** The button reads **Copied** for about two seconds, and screen readers announce it. If the visitor's browser blocks copying, it reads **Couldn't copy** instead.
 - **Nothing is recorded.** Copying happens in the visitor's browser and nothing about it is sent to answerLoops or to you.
 
+## While a reply arrives
+
+Before a reply starts, three dots fade in turn in a reply-shaped bubble, and the reply's first words take their place without the conversation shifting. Cards that are still loading show a placeholder until their content arrives.
+
+- **Following new text.** While the visitor is at the bottom of the conversation, it follows the reply as it arrives. If they have scrolled up to re-read something, their view stays where it is, and a **Jump to latest** button appears just above the question box once there is something new below. Tapping it, or scrolling back down by hand, takes them to the newest message and the button goes away.
+- **Sending.** Sending a question always brings the conversation to the bottom, so the visitor sees their question and the reply.
+- **Reduced motion.** When the visitor's device asks for reduced motion, the dots and placeholders do not animate and the conversation jumps rather than glides when it scrolls.
+- **Screen readers.** Screen readers hear "Typing" once while the assistant works, not every piece of the reply as it streams.
+
 ## Keeping the conversation
 
 The chat keeps the conversation in the visitor's own browser, so refreshing the page or moving to another page of your site does not lose it. It is forgotten a day after the last message, and nothing extra is sent to anyone to bring it back. The most recent messages are kept, up to a few dozen. A **New chat** button in the chat header clears it and starts again. If the browser blocks storage (some private windows do), the chat still works and simply starts fresh each time.
