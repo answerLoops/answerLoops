@@ -303,7 +303,7 @@ describe('a refused call', () => {
     }
   })
 
-  it('treats other failures as before: a message, no reload', async () => {
+  it('treats other failures differently: a friendly message with Retry, no reload', async () => {
     await renderChat()
     const fake = h.current!
     const user = userEvent.setup()
@@ -311,7 +311,9 @@ describe('a refused call', () => {
     fake.emit.runInitialized()
     fake.emit.runFailed('HTTP 503: This assistant is temporarily unavailable.')
     expect(reload).not.toHaveBeenCalled()
-    expect(screen.getByText('This assistant is temporarily unavailable.')).toBeTruthy()
+    expect(screen.getByTestId('reply-failed')).toBeTruthy()
+    expect(screen.queryByText('This assistant is temporarily unavailable.')).toBeNull()
+    expect(screen.queryByTestId('session-expired')).toBeNull()
   })
 })
 

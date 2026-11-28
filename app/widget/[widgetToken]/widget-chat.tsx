@@ -28,6 +28,7 @@ import {
 import { ChatMarkdown } from './chat-markdown'
 import { QuestionBox, hasFinePointer } from './question-box'
 import { useFollowLatest } from './use-follow-latest'
+import { REPLY_FAILURE_COPY, classifyReplyFailure, type ReplyFailure } from '@/lib/widget/reply-failure'
 import { AnswerFeedback, type AnswerFeedbackConfig } from './answer-feedback'
 import { CopyReply } from './copy-reply'
 import { LogoAvatar, WelcomeAvatar } from './welcome-avatar'
@@ -209,6 +210,44 @@ const EMPTY_QUESTIONS: string[] = []
 const AssistantAvatar = ({ logoUrl }: { logoUrl: string | null }) => (
   <LogoAvatar logoUrl={logoUrl} size={24} className="mr-2 mt-0.5" testId="reply-avatar" />
 )
+
+/**
+ * Shown in the conversation when a reply did not come through: plain words for
+ * the kind of problem, in the assistant's own bubble, and a Retry that sends the
+ * same question again. Announced politely to screen readers. Never shows a
+ * status code or server message.
+ */
+function ReplyFailedBubble({
+  failure,
+  logoUrl,
+  retrying,
+  onRetry,
+}: {
+  failure: ReplyFailure
+  logoUrl: string | null
+  retrying: boolean
+  onRetry: () => void
+}) {
+  return (
+    <div className="flex justify-start" data-testid="reply-failed">
+      <AssistantAvatar logoUrl={logoUrl} />
+      <div className="max-w-[80%] space-y-2 rounded-2xl rounded-bl-sm bg-gray-100 px-3 py-2 text-xs leading-relaxed text-gray-800">
+        <output className="block break-words" aria-live="polite">
+          {REPLY_FAILURE_COPY[failure]}
+        </output>
+        <button
+          type="button"
+          onClick={onRetry}
+          disabled={retrying}
+          aria-busy={retrying}
+          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-brand-600 px-4 text-xs font-medium text-on-brand transition-colors hover:bg-brand-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-2 disabled:opacity-60"
+        >
+          {retrying ? 'Retrying…' : 'Retry'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 /**
  * Shown before a reply starts. It uses the reply bubble's shape, padding and
@@ -509,7 +548,16 @@ function WidgetChatBody({
   // before the first message is sent, so the agent sends the full thread).
   const seededRef = useRef(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // Why the last reply did not come through, if it did not (see
+  // lib/widget/reply-failure.ts). Shown as a bubble with a Retry button.
+  const [failure, setFailure] = useState<ReplyFailure | null>(null)
+  // True while a Retry is running, so the button shows it and cannot be pressed twice.
+  const [retrying, setRetrying] = useState(false)
+  // Whether the current run failed; a failed run can still report finishing.
+  const runFailedRef = useRef(false)
+  // Set the moment Retry is pressed, before React re-renders, so a second
+  // press in the same instant cannot send the question twice.
+  const retryInFlightRef = useRef(false)
   // The chat call is refused (HTTP 403) once the page's short-lived pass has
   // expired, which is what happens when a visitor leaves the chat open and
   // comes back. Reloading the panel gets a fresh one.
@@ -586,11 +634,18 @@ function WidgetChatBody({
     const { unsubscribe } = agent.subscribe({
       onEvent: ({ messages: current }) => setMessages([...current]),
       onRunInitialized: () => {
-        setError(null)
+        runFailedRef.current = false
         setIsLoading(true)
       },
       onRunFinalized: () => {
         setIsLoading(false)
+        // A reply came through: any failure bubble (including the one a Retry
+        // was answering) goes away.
+        retryInFlightRef.current = false
+        if (!runFailedRef.current) {
+          setFailure(null)
+          setRetrying(false)
+        }
         // A failed run never reaches the chat route's onFinish, so the stash
         // this reads has nothing for it — the fetch above just resolves to
         // 'none' and the prompt stays hidden. Safe to call unconditionally.
@@ -600,9 +655,12 @@ function WidgetChatBody({
       // isSelfPreview asked for one — see app/api/widget/chat/route.ts.
       // Real customer-site visitors get the generic fallback below.
       onRunFailed: ({ error: runError }) => {
+        runFailedRef.current = true
+        retryInFlightRef.current = false
         setIsLoading(false)
+        setRetrying(false)
         if (/^HTTP 403\b/.test(runError.message)) {
-          setError(null)
+          setFailure(null)
           // The page's short-lived pass ran out while the chat sat open. Get a
           // fresh one without the visitor having to do anything: remember the
           // question, reload the chat, and send it again. Only if that has
@@ -620,10 +678,10 @@ function WidgetChatBody({
           setSessionExpired(true)
           return
         }
-        // Strip the "HTTP 503: " transport prefix the AG-UI client adds —
-        // only the server's own message text is meant for display.
-        const message = runError.message.replace(/^HTTP \d+:\s*/, '')
-        setError(message || 'Something went wrong. Please try again.')
+        // The visitor only ever sees plain words for the kind of problem; the
+        // detail stays in the console for whoever is debugging.
+        console.error('[answerLoops widget] the reply did not come through', runError)
+        setFailure(classifyReplyFailure(runError.message, typeof navigator === 'undefined' || navigator.onLine !== false))
       },
     })
     return unsubscribe
@@ -657,9 +715,39 @@ function WidgetChatBody({
   // (including each streamed piece of a reply), the typing dots and the
   // follow-up prompt. The view follows it only while the visitor is at the
   // bottom; otherwise "Jump to latest" is offered.
-  const typingDots = isLoading && (messages.length === 0 || messages[messages.length - 1].role !== 'assistant')
-  const threadContent = useMemo(() => ({ messages, typingDots, failurePrompt }), [messages, typingDots, failurePrompt])
+  // A conversation restored from an earlier visit that ends on a question with
+  // no answer: the reply never came (or the page went away first). The
+  // question is still on screen, and the failure bubble offers to send it. (An
+  // automatic "timed out" recovery saves the conversation without its pending
+  // question and sends that itself, so it never lands here.)
+  const lastRestored = stored.restored[stored.restored.length - 1]
+  const restoredUnanswered = liveMessages === null && lastRestored?.role === 'user'
+  const shownFailure: ReplyFailure | null = failure ?? (restoredUnanswered ? 'general' : null)
+  const typingDots =
+    isLoading && !retrying && (messages.length === 0 || messages[messages.length - 1].role !== 'assistant')
+  const threadContent = useMemo(
+    () => ({ messages, typingDots, failurePrompt, shownFailure }),
+    [messages, typingDots, failurePrompt, shownFailure]
+  )
   const { showJump, jumpToLatest, followNow } = useFollowLatest(threadEl, threadContent, isLoading)
+
+  // Gives the agent the restored conversation the first time it is needed, so
+  // a run sends the whole thread.
+  const seedRestored = useCallback(() => {
+    if (seededRef.current) return
+    seededRef.current = true
+    if (stored.restored.length > 0 && agent.messages.length === 0) agent.setMessages(stored.restored)
+  }, [agent, stored])
+
+  // Runs one turn on the thread as it stands. agent.runAgent() called bare
+  // skips CopilotKitCore's forwardedProps merge (that only happens inside
+  // copilotkit.runAgent()), so widgetToken and visitorId are passed explicitly
+  // or the server never sees them.
+  const runTurn = useCallback(() => {
+    const turnId = crypto.randomUUID()
+    currentTurnRef.current = turnId
+    void agent.runAgent({ forwardedProps: { widgetToken, renderToken, visitorId, turnId, isSelfPreview } })
+  }, [agent, widgetToken, renderToken, visitorId, isSelfPreview])
 
   const sendMessage = useCallback(
     (raw: string) => {
@@ -670,12 +758,10 @@ function WidgetChatBody({
       // card from an earlier turn stays on screen under this turn's answer,
       // even once that answer actually helps.
       setFailurePrompt(null)
-      const turnId = crypto.randomUUID()
-      currentTurnRef.current = turnId
-      if (!seededRef.current) {
-        seededRef.current = true
-        if (stored.restored.length > 0 && agent.messages.length === 0) agent.setMessages(stored.restored)
-      }
+      // A new question replaces any failure bubble from the last one.
+      setFailure(null)
+      setRetrying(false)
+      seedRestored()
       // The visitor's own message always brings the view to the bottom.
       followNow()
       agent.addMessage({ id: crypto.randomUUID(), role: 'user', content: text })
@@ -689,13 +775,30 @@ function WidgetChatBody({
       // data, so without this the user's own bubble disappears for the whole
       // request round-trip (reappearing only once the server echoes it back).
       setMessages([...agent.messages])
-      // agent.runAgent() called bare skips CopilotKitCore's forwardedProps merge
-      // (that only happens inside copilotkit.runAgent()) — pass widgetToken and
-      // visitorId explicitly or the server never sees them.
-      void agent.runAgent({ forwardedProps: { widgetToken, renderToken, visitorId, turnId, isSelfPreview } })
+      runTurn()
     },
-    [agent, isLoading, stored, widgetToken, renderToken, visitorId, isSelfPreview, followNow]
+    [agent, isLoading, seedRestored, followNow, runTurn]
   )
+
+  // Sends the question that failed again. It is still the last message in the
+  // conversation, so nothing is added: the same thread is run once more. The
+  // thread is taken from what is on screen and handed to the agent, because
+  // after a failed run the agent can be a fresh one with no messages. The
+  // bubble stays (showing it is retrying) until a reply comes through or it
+  // fails again.
+  const retryLast = useCallback(() => {
+    if (isLoading || retryInFlightRef.current) return
+    const thread = trimForRequest(messages as Message[])
+    if (thread.length === 0 || thread[thread.length - 1].role !== 'user') return
+    retryInFlightRef.current = true
+    seededRef.current = true
+    agent.setMessages(thread)
+    setFailure((current) => current ?? 'general')
+    setRetrying(true)
+    followNow()
+    setMessages([...thread])
+    runTurn()
+  }, [agent, isLoading, messages, followNow, runTurn])
 
   // What every reply's thumbs need. A stable object, so rows that did not change
   // are not redrawn; null when flagging is off. The email field is only offered
@@ -928,10 +1031,10 @@ function WidgetChatBody({
               />
             ))}
 
-            {showTyping && <TypingIndicator logoUrl={logoUrl} />}
+            {showTyping && !retrying && <TypingIndicator logoUrl={logoUrl} />}
 
-            {error && (
-              <p className="break-words text-center text-xs text-red-400">{error}</p>
+            {shownFailure && (
+              <ReplyFailedBubble failure={shownFailure} logoUrl={logoUrl} retrying={retrying} onRetry={retryLast} />
             )}
 
             {sessionExpired && (

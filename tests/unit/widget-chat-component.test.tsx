@@ -219,7 +219,7 @@ describe('WidgetChat: run lifecycle', () => {
     expect(screen.getByRole('button', { name: 'Send message' })).toBeEnabled()
   })
 
-  it('shows an error message when a run fails, and clears it on the next attempt', async () => {
+  it('shows a friendly message with Retry when a run fails, never the server text, and clears it once a reply comes through', async () => {
     const fake = makeFakeAgent()
     await renderWidget(fake)
     const user = userEvent.setup()
@@ -228,16 +228,16 @@ describe('WidgetChat: run lifecycle', () => {
     fake.emit.runInitialized()
     fake.emit.runFailed()
 
-    // Displayed text is the server's own message with the AG-UI "HTTP 503: "
-    // transport prefix stripped — see widget-chat.tsx's onRunFailed handler.
-    expect(
-      screen.getByText('This assistant is temporarily unavailable. Please contact support directly.')
-    ).toBeTruthy()
+    // The server's 503 becomes plain words for a busy moment; its own text and
+    // the status code are never shown.
+    expect(screen.getByText("We're a little busy right now. Please try again in a moment.")).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeTruthy()
+    expect(screen.queryByText(/temporarily unavailable/)).toBeNull()
+    expect(screen.queryByText(/503/)).toBeNull()
 
     fake.emit.runInitialized()
-    expect(
-      screen.queryByText('This assistant is temporarily unavailable. Please contact support directly.')
-    ).toBeNull()
+    fake.emit.runFinalized()
+    expect(screen.queryByTestId('reply-failed')).toBeNull()
   })
 })
 

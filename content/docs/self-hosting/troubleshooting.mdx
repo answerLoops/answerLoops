@@ -148,7 +148,7 @@ If you run the published-image or from-source stack, add `-f docker-compose.ghcr
     - **401:** the secret does not match. Check that the value in `.env` has no trailing whitespace or newline, then restart the app and re-deliver the failed webhook from the GitHub App settings page.
   </Accordion>
   <Accordion title="The widget returns an error">
-    A 500 from the widget usually means the browser cannot reach the app, or the embed snippet no longer matches the workspace.
+    A 500 from the widget usually means the browser cannot reach the app, or the embed snippet no longer matches the workspace. Visitors see a short message such as "Sorry, that didn't go through" with a **Retry** button, never the error itself; the details are written to the browser console.
 
     1. Open the browser console and read the error from the failed request.
     2. Confirm the app is reachable at its public address.
