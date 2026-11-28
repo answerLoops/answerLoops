@@ -393,6 +393,18 @@ The chat keeps the conversation in the visitor's own browser, so refreshing the 
 
 The chat refreshes itself when it has been left open for a while: the visitor's next question is sent again automatically after a quick reload, with the conversation still on screen. Only if that fails twice in a row does the chat show "This chat session timed out" with a **Start a new session** button.
 
+## When a reply does not come through
+
+If a reply fails for any other reason, the visitor sees a short message in the assistant's own bubble with a **Retry** button, never a technical error:
+
+- **Lost connection:** "It looks like you're offline. Check your connection and try again."
+- **Busy or temporarily unavailable:** "We're a little busy right now. Please try again in a moment."
+- **Anything else:** "Sorry, that didn't go through. Please try again."
+
+**Retry** sends the same question again without the visitor retyping it, and without a second copy of it appearing in the conversation. While it runs, the button shows it is working and cannot be pressed twice. If the reply comes through, the message goes away and the answer appears; if it fails again, the message stays with Retry available. The visitor can also just type a new question, which replaces the message.
+
+The question is never lost. It stays in the conversation, and if the visitor reloads the page before it was answered, it is still there with Retry offered. Status codes and server messages are never shown, including in your own preview of the widget; they are written to the browser console for debugging. Screen readers announce the message politely.
+
 ## Follow-up questions
 
 After some answers the chat can offer two or three short questions the visitor might ask next, as buttons under the reply, for example "How does the AI check its answers?" after a general answer about how answerLoops works. Tapping one sends it as the visitor's next question. On Pro and above, turn them on or off with **Suggest follow-up questions** in **Settings → Widget → Widget appearance**. They are on by default.
